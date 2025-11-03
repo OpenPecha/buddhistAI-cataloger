@@ -68,13 +68,9 @@ const TextInstanceCard: React.FC<TextInstanceCardProps> = ({ instance }) => {
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900 mb-1">
+          <h3 className="text-lg font-semibold text-gray-900">
             {title}
           </h3>
-          <p className="text-sm text-gray-500 font-mono">
-            ID: 
-            {instance.id}
-          </p>
         </div>
         <div className="flex gap-2">
           <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getTypeColor(instance.type)}`}>

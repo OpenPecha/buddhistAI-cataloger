@@ -87,7 +87,7 @@ const EnhancedTextCreationForm = () => {
   // Handle text selection from editor
   const handleTextSelect = (
     text: string,
-    type: "title" | "colophon" | "incipit" | "content"
+    type: "title" | "colophon" | "incipit" | "content" | "person"
   ) => {
     // Detect language from selected text
     const detectedLanguage = detectLanguage(text);
@@ -104,6 +104,9 @@ const EnhancedTextCreationForm = () => {
         break;
       case "content":
         instanceFormRef.current?.addContent(text);
+        break;
+      case "person":
+        textFormRef.current?.setPersonSearch(text);
         break;
     }
   };
