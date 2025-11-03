@@ -1,5 +1,5 @@
 import { useState } from "react";
-import UnifiedCreationForm from "@/components/UnifiedCreationForm";
+import EnhancedTextCreationForm from "@/components/text-creation/EnhancedTextCreationForm";
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
@@ -97,7 +97,7 @@ const Index = () => {
         </div>
       )}
 
-      {activeTab === "create" && <UnifiedCreationForm />}
+      {activeTab === "create" && <EnhancedTextCreationForm />}
     </div>
   );
 };

@@ -36,7 +36,7 @@ const UnifiedCreationForm = () => {
   const createInstanceMutation = useCreateTextInstance();
 
   // Fetch texts for dropdown
-  const { data: texts = [] } = useTexts({ limit: 100, offset: 0 });
+  const { data: texts = [], isLoading: isLoadingTexts } = useTexts({ limit: 100, offset: 0 });
 
   // Debounce text search
   useEffect(() => {
@@ -212,7 +212,12 @@ const UnifiedCreationForm = () => {
                   ➕ Create New Text
                 </button>
 
-                {filteredTexts.length > 0 ? (
+                {isLoadingTexts ? (
+                  <div className="px-4 py-8 flex flex-col items-center justify-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
+                    <div className="text-sm text-gray-500">Loading texts...</div>
+                  </div>
+                ) : filteredTexts.length > 0 ? (
                   filteredTexts.map((text: OpenPechaText) => (
                     <button
                       key={text.id}
