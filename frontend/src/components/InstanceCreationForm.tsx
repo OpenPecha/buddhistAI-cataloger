@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, forwardRef, useImperativeHandle } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, X } from "lucide-react";
 
@@ -8,16 +8,22 @@ interface InstanceCreationFormProps {
   onCancel?: () => void;
 }
 
+export interface InstanceCreationFormRef {
+  addColophon: (text: string) => void;
+  addIncipit: (text: string, language?: string) => void;
+  addContent: (text: string) => void;
+}
+
 interface TitleEntry {
   language: string;
   value: string;
 }
 
-const InstanceCreationForm = ({
-  onSubmit,
-  isSubmitting,
-  onCancel,
-}: InstanceCreationFormProps) => {
+const InstanceCreationForm = forwardRef<
+  InstanceCreationFormRef,
+  InstanceCreationFormProps
+>(({ onSubmit, isSubmitting, onCancel }, ref) => {
+  // State declarations
   const [type, setType] = useState<"diplomatic" | "critical" | "collated">(
     "diplomatic"
   );
@@ -44,6 +50,29 @@ const InstanceCreationForm = ({
   >([]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Expose methods to parent component
+  useImperativeHandle(ref, () => ({
+    addColophon: (text: string) => {
+      setColophon(text);
+    },
+    addIncipit: (text: string, language?: string) => {
+      setShowIncipitTitle(true);
+      setIncipitTitles([
+        ...incipitTitles,
+        { language: language || "", value: text },
+      ]);
+    },
+    addContent: (text: string) => {
+      // Append to existing content with a newline separator if content already exists
+      setContent((prevContent) => {
+        if (prevContent.trim().length > 0) {
+          return prevContent + "\n" + text;
+        }
+        return text;
+      });
+    },
+  }));
 
   // Helper functions for incipit titles
   const addIncipitTitle = () => {
@@ -409,7 +438,7 @@ const InstanceCreationForm = ({
               Add Incipit Title
             </Button>
           ) : (
-            <div className="border rounded-lg p-4 bg-gray-50">
+            <div>
               <div className="flex items-center justify-between mb-3">
                 <label className="block text-sm font-medium text-gray-700">
                   Incipit Title
@@ -425,46 +454,49 @@ const InstanceCreationForm = ({
                 </Button>
               </div>
 
-              {incipitTitles.map((title, index) => (
-                <div key={index} className="flex gap-2 items-start mb-3">
-                  <input
-                    type="text"
-                    value={title.language}
-                    onChange={(e) =>
-                      updateIncipitTitle(index, "language", e.target.value)
-                    }
-                    className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Lang"
-                  />
-                  <input
-                    type="text"
-                    value={title.value}
-                    onChange={(e) =>
-                      updateIncipitTitle(index, "value", e.target.value)
-                    }
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter incipit title"
-                  />
-                  {incipitTitles.length > 1 && (
+              <div className="space-y-3 mb-4">
+                {incipitTitles.map((title, index) => (
+                  <div
+                    key={index}
+                    className="flex gap-2 items-start p-3 bg-gray-50 border border-gray-200 rounded-md"
+                  >
+                    <input
+                      type="text"
+                      value={title.language}
+                      onChange={(e) =>
+                        updateIncipitTitle(index, "language", e.target.value)
+                      }
+                      className="w-20 sm:w-32 px-2 sm:px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      placeholder="Lang"
+                    />
+                    <input
+                      type="text"
+                      value={title.value}
+                      onChange={(e) =>
+                        updateIncipitTitle(index, "value", e.target.value)
+                      }
+                      className="flex-1 min-w-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      placeholder="Enter incipit title"
+                    />
                     <Button
                       type="button"
                       onClick={() => removeIncipitLanguage(index)}
                       variant="outline"
                       size="sm"
-                      className="text-red-600"
+                      className="text-red-600 hover:text-red-700 flex-shrink-0"
                     >
                       <X className="h-4 w-4" />
                     </Button>
-                  )}
-                </div>
-              ))}
+                  </div>
+                ))}
+              </div>
 
               <Button
                 type="button"
                 onClick={addIncipitLanguage}
                 variant="outline"
                 size="sm"
-                className="flex items-center gap-1 mt-2"
+                className="flex items-center gap-1"
               >
                 <Plus className="h-4 w-4" />
                 Add Language
@@ -721,6 +753,8 @@ const InstanceCreationForm = ({
       </div>
     </form>
   );
-};
+});
+
+InstanceCreationForm.displayName = "InstanceCreationForm";
 
 export default InstanceCreationForm;
