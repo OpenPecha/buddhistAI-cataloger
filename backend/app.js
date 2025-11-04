@@ -23,6 +23,10 @@ const swaggerOptions = {
         url: `http://localhost:${port}`,
         description: 'Development server',
       },
+      {
+        url: 'https://openpecha-text-cataloger.onrender.com',
+        description: 'Production server',
+      },
     ],
   },
   apis: ['./routes/*.js'], // paths to files containing OpenAPI definitions
