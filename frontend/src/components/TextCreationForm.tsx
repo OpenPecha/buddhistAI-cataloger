@@ -19,6 +19,7 @@ interface TextCreationFormProps {
 
 export interface TextCreationFormRef {
   addTitle: (text: string, language?: string) => void;
+  setPersonSearch: (text: string) => void;
 }
 
 type ContributorType = "human" | "ai";
@@ -42,6 +43,20 @@ interface TitleEntry {
   value: string;
 }
 
+const LANGUAGE_OPTIONS = [
+  { code: "bo", name: "Tibetan" },
+  { code: "en", name: "English" },
+  { code: "zh", name: "Chinese" },
+  { code: "sa", name: "Sanskrit" },
+  { code: "fr", name: "French" },
+  { code: "mn", name: "Mongolian" },
+  { code: "pi", name: "Pali" },
+  { code: "cmg", name: "Classical Mongolian" },
+  { code: "ja", name: "Japanese" },
+  { code: "ru", name: "Russian" },
+  { code: "lzh", name: "Literary Chinese" },
+];
+
 const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
   ({ onDataChange }, ref) => {
     const navigate = useNavigate();
@@ -49,7 +64,18 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
       addTitle: (text: string, language?: string) => {
-        setTitles([...titles, { language: language || "", value: text }]);
+        // Check if the detected language is in the LANGUAGE_OPTIONS array
+        const isValidLanguage = language && LANGUAGE_OPTIONS.some(
+          (option) => option.code === language
+        );
+        
+        // Only set the language if it's found in the options, otherwise leave it empty
+        setTitles([...titles, { language: isValidLanguage ? language : "", value: text }]);
+      },
+      setPersonSearch: (text: string) => {
+        // Set the person search field and show the dropdown
+        setPersonSearch(text);
+        setShowPersonDropdown(true);
       },
     }));
 
@@ -345,14 +371,11 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">Select language</option>
-              <option value="bo">Tibetan (bo)</option>
-              <option value="en">English (en)</option>
-              <option value="sa">Sanskrit (sa)</option>
-              <option value="zh">Chinese (zh)</option>
-              <option value="lzh">Literary Chinese (lzh)</option>
-              <option value="hi">Hindi (hi)</option>
-              <option value="it">Italian (it)</option>
-              <option value="cmg">Classical Mongolian (cmg)</option>
+              {LANGUAGE_OPTIONS.map((lang) => (
+                <option key={lang.code} value={lang.code}>
+                  {lang.name}
+                </option>
+              ))}
             </select>
             {errors.language && (
               <p className="mt-1 text-sm text-red-600">{errors.language}</p>
@@ -423,14 +446,11 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                     className="w-20 sm:w-32 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   >
                     <option value="">Lang</option>
-                    <option value="bo">bo</option>
-                    <option value="en">en</option>
-                    <option value="sa">sa</option>
-                    <option value="zh">zh</option>
-                    <option value="lzh">lzh</option>
-                    <option value="hi">hi</option>
-                    <option value="it">it</option>
-                    <option value="cmg">cmg</option>
+                    {LANGUAGE_OPTIONS.map((lang) => (
+                      <option key={lang.code} value={lang.code}>
+                        {lang.name}
+                      </option>
+                    ))}
                   </select>
                   <input
                     type="text"
@@ -504,8 +524,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                             {getPersonDisplayName(contributor.person!)}
                           </div>
                           <div className="text-sm text-gray-500">
-                            Person ID: {contributor.person!.id} • Role:{" "}
-                            {contributor.role}
+                            Role: {contributor.role}
                           </div>
                         </>
                       ) : (
@@ -641,9 +660,6 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                       <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
                         <div className="text-blue-600 font-medium">
                           Selected: {getPersonDisplayName(selectedPerson)}
-                        </div>
-                        <div className="text-blue-500 text-xs mt-1">
-                          ID: {selectedPerson.id}
                         </div>
                       </div>
                     )}

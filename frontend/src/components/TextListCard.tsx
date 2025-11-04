@@ -1,15 +1,14 @@
 import { Link } from 'react-router-dom';
-import { Book, Globe, Hash, Calendar } from 'lucide-react';
+import { Book, Globe, Calendar } from 'lucide-react';
 import type { OpenPechaText } from '@/types/text';
 import { Badge } from './ui/badge';
-import { Card, CardHeader, CardTitle, CardContent, CardAction } from './ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 
 interface TextListCardProps {
   text: OpenPechaText;
-  onEdit?: (text: OpenPechaText) => void;
 }
 
-const TextListCard = ({ text, onEdit }: TextListCardProps) => {
+const TextListCard = ({ text }: TextListCardProps) => {
   const getLanguageLabel = (lang: string): string => {
     const labels: Record<string, string> = {
       bo: 'Tibetan',
@@ -64,12 +63,6 @@ const TextListCard = ({ text, onEdit }: TextListCardProps) => {
       
       <CardContent className="space-y-3">
         <div className="flex flex-wrap gap-2">
-          <Badge className="bg-gray-100 text-gray-800 flex items-center gap-2">
-            <Hash className="w-4 h-4 text-gray-400" />
-            <span className="font-medium">ID:</span>
-            <span className="font-mono text-xs">{text.id}</span>
-          </Badge>
-          
           <Badge className={`${getLanguageColor(text.language)} flex items-center gap-2`}>
             <Globe className="w-4 h-4" />
             <span className="font-medium">{getLanguageLabel(text.language)}</span>

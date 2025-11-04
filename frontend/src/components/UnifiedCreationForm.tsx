@@ -271,9 +271,6 @@ const UnifiedCreationForm = () => {
                 <div>
                   <strong>Language:</strong> {selectedText.language}
                 </div>
-                <div>
-                  <strong>ID:</strong> {selectedText.id}
-                </div>
               </div>
             </div>
           )}
