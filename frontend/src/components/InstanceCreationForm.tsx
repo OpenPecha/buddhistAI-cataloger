@@ -55,16 +55,16 @@ const InstanceCreationForm = forwardRef<
   // Alternative incipit titles management
   const [altIncipitTitles, setAltIncipitTitles] = useState<TitleEntry[][]>([]);
 
-  // Annotation management (span-based)
-  const [annotations, setAnnotations] = useState<
-    Array<{
-      span: { start: number; end: number };
-      index: number;
-      alignment_index: number[];
-    }>
-  >([]);
-
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Clear BDRC ID when switching to critical type
+  useEffect(() => {
+    if (type === "critical" && bdrc) {
+      setBdrc("");
+      setBdrcValidationStatus("idle");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [type]);
 
   // BDRC ID validation with debounce
   useEffect(() => {
@@ -197,42 +197,12 @@ const InstanceCreationForm = forwardRef<
     setAltIncipitTitles(updated);
   };
 
-  // Helper functions for annotations
-  const addAnnotation = () => {
-    setAnnotations([
-      ...annotations,
-      {
-        span: { start: 0, end: 0 },
-        index: annotations.length,
-        alignment_index: [0],
-      },
-    ]);
-  };
-
-  const removeAnnotation = (indexToRemove: number) => {
-    const updated = annotations
-      .filter((_, i) => i !== indexToRemove)
-      .map((item, i) => ({ ...item, index: i, alignment_index: [i] }));
-    setAnnotations(updated);
-  };
-
-  const updateAnnotation = (
-    index: number,
-    field: "start" | "end",
-    value: number
-  ) => {
-    const updated = [...annotations];
-    updated[index].span[field] = value;
-    setAnnotations(updated);
-  };
-
   // Data cleaning function
   const cleanFormData = () => {
     const cleaned: any = {
       metadata: {
         type: type,
       },
-      annotation: annotations,
       content: content.trim(),
     };
 
@@ -323,47 +293,6 @@ const InstanceCreationForm = forwardRef<
       return;
     }
 
-    // Validate annotation positions (only if annotations exist)
-    if (annotations.length > 0) {
-      const contentLength = content.trim().length;
-
-      for (let i = 0; i < annotations.length; i++) {
-        const annotation = annotations[i];
-        if (annotation.span.start < 0 || annotation.span.end < 0) {
-          setErrors({
-            annotations: `Annotation ${
-              i + 1
-            }: Start and End positions must be non-negative`,
-          });
-          return;
-        }
-        if (annotation.span.start >= annotation.span.end) {
-          setErrors({
-            annotations: `Annotation ${
-              i + 1
-            }: Start position must be less than End position`,
-          });
-          return;
-        }
-        if (annotation.span.end > contentLength) {
-          setErrors({
-            annotations: `Annotation ${i + 1}: End position (${
-              annotation.span.end
-            }) exceeds content length (${contentLength})`,
-          });
-          return;
-        }
-        if (annotation.span.start >= contentLength) {
-          setErrors({
-            annotations: `Annotation ${i + 1}: Start position (${
-              annotation.span.start
-            }) exceeds content length (${contentLength})`,
-          });
-          return;
-        }
-      }
-    }
-
     const cleanedData = cleanFormData();
     onSubmit(cleanedData);
   };
@@ -420,61 +349,60 @@ const InstanceCreationForm = forwardRef<
             </select>
           </div>
 
-          {/* BDRC ID */}
-          <div>
-            <label
-              htmlFor="bdrc"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              BDRC ID
-              {type === "diplomatic" && (
-                <span className="text-red-500"> *</span>
-              )}
-            </label>
-            <div className="relative">
-              <input
-                id="bdrc"
-                type="text"
-                value={bdrc}
-                onChange={(e) => setBdrc(e.target.value)}
-                onBlur={() => {
-                  // Clear the field if invalid when user leaves the input
-                  if (bdrcValidationStatus === "invalid") {
-                    setBdrc("");
-                    setBdrcValidationStatus("idle");
-                  }
-                }}
-                required={type === "diplomatic"}
-                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g., MW23703_4010"
-              />
-              {/* Validation Icons */}
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
-                {bdrcValidationStatus === "validating" && (
-                  <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
-                )}
-                {bdrcValidationStatus === "valid" && (
-                  <Check className="w-5 h-5 text-green-600" />
-                )}
-                {bdrcValidationStatus === "invalid" && (
-                  <button
-                    type="button"
-                    onClick={() => {
+          {/* BDRC ID - Only shown for diplomatic type */}
+          {type === "diplomatic" && (
+            <div>
+              <label
+                htmlFor="bdrc"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                BDRC ID <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  id="bdrc"
+                  type="text"
+                  value={bdrc}
+                  onChange={(e) => setBdrc(e.target.value)}
+                  onBlur={() => {
+                    // Clear the field if invalid when user leaves the input
+                    if (bdrcValidationStatus === "invalid") {
                       setBdrc("");
                       setBdrcValidationStatus("idle");
-                    }}
-                    className="hover:opacity-70 transition-opacity"
-                    title="Clear BDRC ID"
-                  >
-                    <XCircle className="w-5 h-5 text-red-600" />
-                  </button>
-                )}
+                    }
+                  }}
+                  required
+                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., MW23703_4010"
+                />
+                {/* Validation Icons */}
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+                  {bdrcValidationStatus === "validating" && (
+                    <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+                  )}
+                  {bdrcValidationStatus === "valid" && (
+                    <Check className="w-5 h-5 text-green-600" />
+                  )}
+                  {bdrcValidationStatus === "invalid" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBdrc("");
+                        setBdrcValidationStatus("idle");
+                      }}
+                      className="hover:opacity-70 transition-opacity"
+                      title="Clear BDRC ID"
+                    >
+                      <XCircle className="w-5 h-5 text-red-600" />
+                    </button>
+                  )}
+                </div>
               </div>
+              {errors.bdrc && (
+                <p className="mt-1 text-sm text-red-600">{errors.bdrc}</p>
+              )}
             </div>
-            {errors.bdrc && (
-              <p className="mt-1 text-sm text-red-600">{errors.bdrc}</p>
-            )}
-          </div>
+          )}
 
           {/* Wiki */}
           <div>
@@ -706,110 +634,6 @@ const InstanceCreationForm = forwardRef<
               </p>
             )}
           </div>
-        )}
-      </div>
-
-      {/* Annotation Section */}
-      <div className="border rounded-lg p-4">
-        <div className="flex justify-between items-center mb-3">
-          <h4 className="font-medium text-gray-900">Annotations</h4>
-          <Button
-            type="button"
-            onClick={addAnnotation}
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-1"
-          >
-            <Plus className="h-4 w-4" />
-            Add Annotation
-          </Button>
-        </div>
-
-        {annotations.map((annotation, index) => (
-          <div
-            key={`annotation-${annotation.index}-${index}`}
-            className="border rounded-lg p-3 mb-3 bg-gray-50"
-          >
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-gray-700">
-                Annotation {index + 1}
-              </span>
-              <Button
-                type="button"
-                onClick={() => removeAnnotation(index)}
-                variant="outline"
-                size="sm"
-                className="text-red-600"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label
-                  htmlFor={`annotation-${index}-start`}
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Start Position <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id={`annotation-${index}-start`}
-                  type="number"
-                  value={annotation.span.start}
-                  onChange={(e) =>
-                    updateAnnotation(
-                      index,
-                      "start",
-                      parseInt(e.target.value) || 0
-                    )
-                  }
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  min="0"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor={`annotation-${index}-end`}
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  End Position <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id={`annotation-${index}-end`}
-                  type="number"
-                  value={annotation.span.end}
-                  onChange={(e) =>
-                    updateAnnotation(
-                      index,
-                      "end",
-                      parseInt(e.target.value) || 0
-                    )
-                  }
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  min="0"
-                  placeholder="0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Index
-                </label>
-                <input
-                  type="number"
-                  value={annotation.index}
-                  disabled
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500"
-                />
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {errors.annotations && (
-          <p className="mt-1 text-sm text-red-600">{errors.annotations}</p>
         )}
       </div>
 

@@ -6,11 +6,12 @@ import {
   forwardRef,
   useImperativeHandle,
 } from "react";
-import { useNavigate } from "react-router-dom";
 import { usePersons } from "@/hooks/usePersons";
 import type { Person } from "@/types/person";
 import { Button } from "@/components/ui/button";
 import { X, Plus, User, Bot } from "lucide-react";
+import { detectLanguage } from "@/utils/languageDetection";
+import PersonFormModal from "@/components/PersonFormModal";
 
 interface TextCreationFormProps {
   onDataChange?: (textData: any) => void;
@@ -20,6 +21,8 @@ interface TextCreationFormProps {
 export interface TextCreationFormRef {
   addTitle: (text: string, language?: string) => void;
   setPersonSearch: (text: string) => void;
+  openContributorForm: () => void;
+  addFilenameAsTitle: (filename: string) => void;
 }
 
 type ContributorType = "human" | "ai";
@@ -59,8 +62,6 @@ const LANGUAGE_OPTIONS = [
 
 const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
   ({ onDataChange }, ref) => {
-    const navigate = useNavigate();
-
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
       addTitle: (text: string, language?: string) => {
@@ -70,12 +71,29 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         );
         
         // Only set the language if it's found in the options, otherwise leave it empty
-        setTitles([...titles, { language: isValidLanguage ? language : "", value: text }]);
+        setTitles((prevTitles) => [...prevTitles, { language: isValidLanguage ? language : "", value: text }]);
       },
       setPersonSearch: (text: string) => {
         // Set the person search field and show the dropdown
         setPersonSearch(text);
         setShowPersonDropdown(true);
+      },
+      openContributorForm: () => {
+        // Open the Add Contributor form
+        setShowAddContributor(true);
+      },
+      addFilenameAsTitle: (filename: string) => {
+        // Remove file extension from filename
+        const nameWithoutExtension = filename.replace(/\.[^/.]+$/, "");
+        
+        // Detect language from filename
+        const detectedLanguage = detectLanguage(nameWithoutExtension);
+        
+        // Add as a title using functional update to avoid stale state
+        setTitles((prevTitles) => [...prevTitles, { 
+          language: detectedLanguage, 
+          value: nameWithoutExtension 
+        }]);
       },
     }));
 
@@ -112,6 +130,9 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
 
     // Validation errors
     const [errors, setErrors] = useState<Record<string, string>>({});
+
+    // Person creation modal
+    const [showPersonFormModal, setShowPersonFormModal] = useState(false);
 
     // Reset contributor type to human when root type is selected
     useEffect(() => {
@@ -458,6 +479,15 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                     onChange={(e) => {
                       const newTitles = [...titles];
                       newTitles[index].value = e.target.value;
+                      
+                      // Auto-detect language if not already set
+                      if (!newTitles[index].language && e.target.value.trim()) {
+                        const detectedLang = detectLanguage(e.target.value);
+                        if (detectedLang) {
+                          newTitles[index].language = detectedLang;
+                        }
+                      }
+                      
                       setTitles(newTitles);
                     }}
                     className="flex-1 min-w-0 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
@@ -623,7 +653,10 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                         {/* Create Person Button - Always at top */}
                         <button
                           type="button"
-                          onClick={() => navigate("/persons")}
+                          onClick={() => {
+                            setShowPersonFormModal(true);
+                            setShowPersonDropdown(false);
+                          }}
                           className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b-2 border-blue-200 bg-blue-50/50 flex items-center gap-2 text-blue-600 font-medium"
                         >
                           <Plus className="w-4 h-4" />
@@ -798,6 +831,17 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
             />
           </div>
         </div>
+
+        {/* Person Creation Modal */}
+        <PersonFormModal
+          isOpen={showPersonFormModal}
+          onClose={() => setShowPersonFormModal(false)}
+          onSuccess={(createdPerson) => {
+            // Select the newly created person
+            setSelectedPerson(createdPerson);
+            setPersonSearch(getPersonDisplayName(createdPerson));
+          }}
+        />
       </div>
     );
   }
