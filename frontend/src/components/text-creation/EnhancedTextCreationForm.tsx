@@ -17,6 +17,7 @@ const EnhancedTextCreationForm = () => {
   const navigate = useNavigate();
   const textFormRef = useRef<TextCreationFormRef>(null);
   const instanceFormRef = useRef<InstanceCreationFormRef>(null);
+  const hasAddedFilenameRef = useRef<boolean>(false);
 
   // Workflow state
   const [currentStep, setCurrentStep] = useState<"select" | "upload" | "form">("select");
@@ -85,6 +86,8 @@ const EnhancedTextCreationForm = () => {
     setTextSearch(getTextDisplayName(text));
     setShowTextDropdown(false);
     setIsCreatingNewText(false);
+    setUploadedFilename(""); // Clear previous filename
+    hasAddedFilenameRef.current = false; // Reset flag
     setCurrentStep("upload");
   };
 
@@ -93,6 +96,8 @@ const EnhancedTextCreationForm = () => {
     setTextSearch("");
     setShowTextDropdown(false);
     setIsCreatingNewText(true);
+    setUploadedFilename(""); // Clear previous filename
+    hasAddedFilenameRef.current = false; // Reset flag
     setCurrentStep("upload");
   };
 
@@ -108,8 +113,26 @@ const EnhancedTextCreationForm = () => {
   const handleFileUpload = (content: string, filename: string) => {
     setEditedContent(content);
     setUploadedFilename(filename);
+    hasAddedFilenameRef.current = false; // Reset flag for new upload
     setCurrentStep("form");
   };
+
+  // Add filename as title after form is rendered
+  useEffect(() => {
+    if (
+      currentStep === "form" && 
+      isCreatingNewText && 
+      uploadedFilename && 
+      textFormRef.current &&
+      !hasAddedFilenameRef.current
+    ) {
+      // Use setTimeout to ensure the ref is fully mounted
+      setTimeout(() => {
+        textFormRef.current?.addFilenameAsTitle(uploadedFilename);
+        hasAddedFilenameRef.current = true; // Mark as added
+      }, 0);
+    }
+  }, [currentStep, isCreatingNewText, uploadedFilename]);
 
   // Handle unified creation: create text then instance
   const handleInstanceCreation = async (instanceData: any) => {
@@ -189,6 +212,7 @@ const EnhancedTextCreationForm = () => {
         break;
       case "person":
         textFormRef.current?.setPersonSearch(text);
+        textFormRef.current?.openContributorForm();
         break;
     }
   };

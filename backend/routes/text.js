@@ -592,8 +592,8 @@ router.get("/:id/instances", async (req, res) => {
  * /text/{id}/instances:
  *   post:
  *     summary: Create a new text instance
- *     description: Creates a new instance for a specific text in the OpenPecha API
- *     tags: [Texts]
+ *     description: Creates a new instance for a specific text in the OpenPecha API. Supports both diplomatic and critical instances, with or without annotations.
+ *     tags: [Instances]
  *     parameters:
  *       - in: path
  *         name: id
@@ -607,19 +607,26 @@ router.get("/:id/instances", async (req, res) => {
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - metadata
+ *               - content
  *             properties:
  *               metadata:
  *                 type: object
+ *                 required:
+ *                   - type
+ *                   - copyright
  *                 properties:
  *                   type:
  *                     type: string
- *                     description: Instance type (e.g., diplomatic)
+ *                     enum: [diplomatic, critical]
+ *                     description: Instance type (diplomatic or critical)
  *                   copyright:
  *                     type: string
  *                     description: Copyright information
  *                   bdrc:
  *                     type: string
- *                     description: BDRC identifier
+ *                     description: BDRC identifier (typically used for diplomatic instances)
  *                   colophon:
  *                     type: string
  *                     description: Colophon text
@@ -634,42 +641,93 @@ router.get("/:id/instances", async (req, res) => {
  *                         description: Tibetan incipit title
  *               annotation:
  *                 type: array
- *                 description: Annotation data
+ *                 description: Annotation data (optional). For diplomatic instances, include reference URLs.
  *                 items:
  *                   type: object
+ *                   required:
+ *                     - span
  *                   properties:
  *                     span:
  *                       type: object
+ *                       required:
+ *                         - start
+ *                         - end
  *                       properties:
  *                         start:
  *                           type: integer
+ *                           description: Start position of the annotation
  *                         end:
  *                           type: integer
- *                     index:
- *                       type: integer
- *                     alignment_index:
- *                       type: array
- *                       items:
- *                         type: integer
+ *                           description: End position of the annotation
+ *                     reference:
+ *                       type: string
+ *                       description: Reference URL (typically used for diplomatic instances to link to source images)
  *               content:
  *                 type: string
  *                 description: The text content
- *             example:
- *               metadata:
- *                 type: "diplomatic"
- *                 copyright: "public"
- *                 bdrc: "W123456"
- *                 colophon: "Sample colophon text"
- *                 incipit_title:
- *                   en: "Opening words"
- *                   bo: "དབུ་ཚིག"
- *               annotation:
- *                 - span:
- *                     start: 0
- *                     end: 20
- *                   index: 0
- *                   alignment_index: [0]
- *               content: "This is the text content to be stored"
+ *           examples:
+ *             diplomaticWithAnnotation:
+ *               summary: Valid diplomatic instance creation with annotation
+ *               value:
+ *                 metadata:
+ *                   type: "diplomatic"
+ *                   copyright: "public"
+ *                   bdrc: "W123456"
+ *                   colophon: "Sample colophon text"
+ *                   incipit_title:
+ *                     en: "Opening words"
+ *                     bo: "དབུ་ཚིག"
+ *                 annotation:
+ *                   - span:
+ *                       start: 0
+ *                       end: 10
+ *                     reference: "https://example.com/image1.png"
+ *                   - span:
+ *                       start: 11
+ *                       end: 20
+ *                     reference: "https://example.com/image2.png"
+ *                 content: "This is the text content to be stored"
+ *             criticalWithAnnotation:
+ *               summary: Valid critical instance creation with annotation
+ *               value:
+ *                 metadata:
+ *                   type: "critical"
+ *                   copyright: "public"
+ *                   colophon: "Sample colophon text"
+ *                   incipit_title:
+ *                     en: "Opening words"
+ *                     bo: "དབུ་ཚིག"
+ *                 annotation:
+ *                   - span:
+ *                       start: 0
+ *                       end: 10
+ *                   - span:
+ *                       start: 10
+ *                       end: 20
+ *                 content: "This is the text content to be stored"
+ *             criticalWithoutAnnotation:
+ *               summary: Valid critical instance creation without annotation
+ *               value:
+ *                 metadata:
+ *                   type: "critical"
+ *                   copyright: "public"
+ *                   colophon: "Sample colophon text"
+ *                   incipit_title:
+ *                     en: "Opening words"
+ *                     bo: "དབུ་ཚིག"
+ *                 content: "This is the text content to be stored"
+ *             diplomaticWithoutAnnotation:
+ *               summary: Valid diplomatic instance creation without annotation
+ *               value:
+ *                 metadata:
+ *                   type: "diplomatic"
+ *                   copyright: "public"
+ *                   bdrc: "W123456"
+ *                   colophon: "Sample colophon text"
+ *                   incipit_title:
+ *                     en: "Opening words"
+ *                     bo: "དབུ་ཚིག"
+ *                 content: "This is the text content to be stored"
  *     responses:
  *       201:
  *         description: Text instance created successfully
