@@ -37,7 +37,7 @@ app.add_middleware(
 
 app.include_router(person.router, prefix="/person", tags=["person"])
 app.include_router(text.router, prefix="/text", tags=["text"])
-app.include_router(translation.router, prefix="/v2/instances", tags=["translation"])
+app.include_router(translation.router, prefix="/instances", tags=["translation"])
 
 @app.get("/")
 def read_root():

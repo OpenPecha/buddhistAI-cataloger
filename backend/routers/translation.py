@@ -53,6 +53,26 @@ class TranslationResponse(BaseModel):
     text_id: str
 
 
+class InstanceListItem(BaseModel):
+    id: str
+    bdrc: Optional[str] = None
+    wiki: Optional[str] = None
+    type: str
+    copyright: str
+    colophon: Optional[str] = None
+    incipit_title: Optional[Dict[str, str]] = None
+    alt_incipit_titles: List[Dict[str, str]] = []
+
+
+@router.get("/{text_id}/instances", response_model=List[InstanceListItem])
+async def get_text_instances(text_id: str):
+    """Get all instances for a specific text"""
+    response = requests.get(f"{API_ENDPOINT}/texts/{text_id}/instances")
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+    return response.json()
+
+
 @router.post("/{instance_id}/translation", response_model=TranslationResponse, status_code=201)
 async def create_translation(instance_id: str, translation: CreateTranslation):
     """Create a translation for a specific instance"""

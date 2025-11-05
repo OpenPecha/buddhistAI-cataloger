@@ -69,7 +69,7 @@ class InstanceListItem(BaseModel):
     type: str
     copyright: str
     colophon: Optional[str] = None
-    incipit_title: Dict[str, str]
+    incipit_title: Optional[Dict[str, str]] = None
     alt_incipit_titles: Optional[List[Dict[str, str]]] = None
 
 class CreateInstance(BaseModel):
