@@ -42,7 +42,7 @@ class CreatePerson(BaseModel):
     wiki: Optional[str] = ""
 
 
-@router.get("/", response_model=List[Person])
+@router.get("", response_model=List[Person])
 async def get_persons(
     limit: int = 30,
     offset: int = 0,
