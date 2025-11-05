@@ -419,7 +419,9 @@ const EnhancedTextCreationForm = () => {
                     <h3 className="text-lg font-semibold mb-4 text-gray-700">
                       Text Information
                     </h3>
-                    <TextCreationForm ref={textFormRef} />
+                    <div className="border rounded-lg p-4 bg-white">
+                      <TextCreationForm ref={textFormRef} />
+                    </div>
                   </div>
                 )}
 

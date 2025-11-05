@@ -1,9 +1,9 @@
 import React from 'react';
-import type { OpenPechaTextInstance } from '@/types/text';
+import type { OpenPechaTextInstanceListItem } from '@/types/text';
 import { Link, useParams } from 'react-router-dom';
 
 interface TextInstanceCardProps {
-  instance: OpenPechaTextInstance;
+  instance: OpenPechaTextInstanceListItem;
 }
 
 const TextInstanceCard: React.FC<TextInstanceCardProps> = ({ instance }) => {
@@ -73,10 +73,10 @@ const TextInstanceCard: React.FC<TextInstanceCardProps> = ({ instance }) => {
           </h3>
         </div>
         <div className="flex gap-2">
-          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getTypeColor(instance.type)}`}>
+          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getTypeColor(instance.type || '')}`}>
             {instance.type}
           </span>
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getCopyrightColor(instance.copyright)}`}>
+          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getCopyrightColor(instance.copyright || '')}`}>
             {instance.copyright}
           </span>
         </div>

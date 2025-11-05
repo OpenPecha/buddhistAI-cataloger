@@ -37,12 +37,12 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
                 {segAnnotation.span?.start}-{segAnnotation.span?.end} ({segAnnotation.span ? segAnnotation.span.end - segAnnotation.span.start : 0})
               </span>
             </div>
-            {instance.base && segAnnotation.span && (
+            {instance.content && segAnnotation.span && (
               <textarea
                 className="w-full text-xs text-gray-600 font-mono bg-white border border-gray-200 rounded p-2 resize-none"
                 rows={1}
                 readOnly
-                value={instance.base.substring(segAnnotation.span.start, segAnnotation.span.end)}
+                value={instance.content.substring(segAnnotation.span.start, segAnnotation.span.end)}
               />
             )}
           </div>
@@ -75,19 +75,19 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
     <div className="bg-white rounded-lg border border-gray-200 p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-semibold text-gray-900">Base Text</h3>
+        <h3 className="text-lg font-semibold text-gray-900">Content</h3>
         <div className="flex items-center gap-2 text-sm text-gray-500">
-          <span>{instance.base?.length || 0} chars</span>
+          <span>{instance.content?.length || 0} chars</span>
           <span>•</span>
           <span>{getAnnotationCount()} annotations</span>
         </div>
       </div>
 
-      {/* Base Text */}
-      {instance.base && (
+      {/* Content Text */}
+      {instance.content && (
         <div className="mb-4">
           <textarea 
-            value={instance.base} 
+            value={instance.content} 
             className="w-full text-sm text-gray-800 font-mono bg-gray-50 border border-gray-200 rounded p-2 resize-none"
             rows={4}
             readOnly

@@ -7,7 +7,7 @@ import { useParams } from "react-router-dom";
 import TextInstanceCard from "@/components/TextInstanceCard";
 import BreadCrumb from "@/components/BreadCrumb";
 import InstanceCreationForm from "@/components/InstanceCreationForm";
-import type { OpenPechaTextInstance } from "@/types/text";
+import type { OpenPechaTextInstanceListItem } from "@/types/text";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle } from "lucide-react";
@@ -181,7 +181,7 @@ function TextInstanceCRUD() {
       </div>
 
       <div className="grid gap-6">
-        {instances.map((instance: OpenPechaTextInstance) => (
+        {instances.map((instance: OpenPechaTextInstanceListItem) => (
           <TextInstanceCard key={instance.id} instance={instance} />
         ))}
       </div>

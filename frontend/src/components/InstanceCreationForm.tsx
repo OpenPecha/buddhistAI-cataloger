@@ -11,7 +11,6 @@ interface InstanceCreationFormProps {
 export interface InstanceCreationFormRef {
   addColophon: (text: string) => void;
   addIncipit: (text: string, language?: string) => void;
-  addContent: (text: string) => void;
 }
 
 interface TitleEntry {
@@ -46,7 +45,6 @@ const InstanceCreationForm = forwardRef<
   const [bdrcValidationStatus, setBdrcValidationStatus] = useState<"idle" | "validating" | "valid" | "invalid">("idle");
   const [wiki, setWiki] = useState("");
   const [colophon, setColophon] = useState("");
-  const [content, setContent] = useState("");
 
   // Incipit title management
   const [showIncipitTitle, setShowIncipitTitle] = useState(false);
@@ -122,15 +120,6 @@ const InstanceCreationForm = forwardRef<
         { language: isValidLanguage ? language : "", value: text },
       ]);
     },
-    addContent: (text: string) => {
-      // Append to existing content with a newline separator if content already exists
-      setContent((prevContent) => {
-        if (prevContent.trim().length > 0) {
-          return prevContent + "\n" + text;
-        }
-        return text;
-      });
-    },
   }));
 
   // Helper functions for incipit titles
@@ -203,7 +192,6 @@ const InstanceCreationForm = forwardRef<
       metadata: {
         type: type,
       },
-      content: content.trim(),
     };
 
     // Add optional metadata fields only if non-empty
@@ -263,11 +251,6 @@ const InstanceCreationForm = forwardRef<
     // Validate required fields
     if (!type) {
       setErrors({ type: "Type is required" });
-      return;
-    }
-
-    if (!content.trim()) {
-      setErrors({ content: "Content is required and cannot be empty" });
       return;
     }
 
@@ -637,24 +620,6 @@ const InstanceCreationForm = forwardRef<
         )}
       </div>
 
-      {/* Content Section */}
-      <div className="border rounded-lg p-4">
-        <h4 className="font-medium text-gray-900 mb-3">
-          Content <span className="text-red-500">*</span>
-        </h4>
-        <textarea
-          id="content"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          rows={8}
-          required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Enter the text content..."
-        />
-        {errors.content && (
-          <p className="mt-1 text-sm text-red-600">{errors.content}</p>
-        )}
-      </div>
 
       {/* Form Actions */}
       <div className="flex justify-end space-x-3 pt-4">
