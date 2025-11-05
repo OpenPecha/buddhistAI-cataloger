@@ -54,7 +54,7 @@ class InstanceMetadata(BaseModel):
     bdrc: Optional[str] = None
     wiki: Optional[str] = None
     colophon: Optional[str] = None
-    incipit_title: Dict[str, str]
+    incipit_title: Optional[Dict[str, str]] = None
     alt_incipit_titles: Optional[List[Dict[str, str]]] = None
 
 class Instance(BaseModel):
