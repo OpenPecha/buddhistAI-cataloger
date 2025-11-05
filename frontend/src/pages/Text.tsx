@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useTexts } from "@/hooks/useTexts";
 import type { OpenPechaText } from "@/types/text";
 import { Button } from "@/components/ui/button";
@@ -87,9 +87,17 @@ const TextCRUD = () => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All Languages</option>
-                <option value="bo">Tibetan (bo)</option>
-                <option value="en">English (en)</option>
-                <option value="sa">Sanskrit (sa)</option>
+                <option value="bo">Tibetan</option>
+                <option value="en">English</option>
+                <option value="zh">Chinese</option>
+                <option value="sa">Sanskrit</option>
+                <option value="fr">French</option>
+                <option value="mn">Mongolian</option>
+                <option value="pi">Pali</option>
+                <option value="cmg">Classical Mongolian</option>
+                <option value="ja">Japanese</option>
+                <option value="ru">Russian</option>
+                <option value="lzh">Literary Chinese</option>
               </select>
             </div>
 

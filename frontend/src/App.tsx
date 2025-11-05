@@ -5,6 +5,7 @@ import TextInstanceCRUD from './pages/TextInstances';
 import Instance from './pages/Instance';
 import Headers from './components/layout/Header';
 import Index from './pages/Index';
+import Create from './pages/Create';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
 
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/create" element={<Create />} />
           <Route path="/texts" element={
             <TextCRUD />
           } />

@@ -121,11 +121,6 @@ const TextList = () => {
                   <span className="font-medium">Date:</span> {text.date}
                 </p>
               )}
-
-              {/* ID */}
-              <p className="text-gray-400 text-xs mt-3 pt-2 border-t">
-                ID: {text.id}
-              </p>
             </div>
           ))}
         </div>

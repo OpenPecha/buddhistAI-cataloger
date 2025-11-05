@@ -1,4 +1,4 @@
-import { User, ExternalLink, Hash } from 'lucide-react';
+import { User, ExternalLink } from 'lucide-react';
 import type { Person } from '@/types/person';
 import { Badge } from './ui/badge';
 import { Card, CardHeader, CardTitle, CardContent, CardAction } from './ui/card';
@@ -34,20 +34,14 @@ const PersonCard = ({ person, onEdit }: PersonCardProps) => {
       </CardHeader>
       
       <CardContent className="space-y-3">
-        <div className="flex flex-wrap gap-2">
-          <Badge className="bg-neutral-800 flex items-center gap-2">
-            <Hash className="w-4 h-4 text-gray-400" />
-            <span className="font-medium">ID:</span>
-            <span className="font-mono text-xs"> {person.id}</span>
-          </Badge>
-          
-          {person.bdrc && (
+        {person.bdrc && (
+          <div className="flex flex-wrap gap-2">
             <Badge className="bg-secondary-700 flex items-center gap-2">
               <span className="font-medium">BDRC ID:</span>
               <span className="font-mono text-xs">{person.bdrc}</span>
             </Badge>
-          )}
-        </div>
+          </div>
+        )}
         
         {person.wiki && (
           <div className="flex items-center gap-2">

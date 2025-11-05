@@ -2,6 +2,50 @@
 const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
 import type { OpenPechaText, OpenPechaTextInstance } from '@/types/text';
 
+// Helper function to handle API responses with better error messages
+const handleApiResponse = async (response: Response, customMessages?: { 404?: string; 500?: string }) => {
+  if (!response.ok) {
+    // Try to parse error response
+    const contentType = response.headers.get('content-type');
+    let errorMessage = '';
+
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.detail || errorData.details || errorData.message || errorData.error;
+      } catch {
+        // If JSON parsing fails, ignore and use default message
+      }
+    }
+
+    // Provide user-friendly messages based on status code
+    switch (response.status) {
+      case 404:
+        throw new Error(customMessages?.['404'] || errorMessage || 'The requested resource was not found. It may have been deleted or the link is incorrect.');
+      case 500:
+      case 502:
+      case 503:
+        throw new Error(customMessages?.['500'] || errorMessage || 'The server is experiencing issues. Please try again later.');
+      case 400:
+        throw new Error(errorMessage || 'Invalid request. Please check your data and try again.');
+      case 401:
+        throw new Error('You are not authorized to access this resource.');
+      case 403:
+        throw new Error('Access to this resource is forbidden.');
+      default:
+        throw new Error(errorMessage || `An error occurred while connecting to the server (Error ${response.status}).`);
+    }
+  }
+
+  // Check if response is JSON
+  const contentType = response.headers.get('content-type');
+  if (contentType && contentType.includes('application/json')) {
+    return await response.json();
+  } else {
+    throw new Error('The server returned an invalid response. Please contact support if this persists.');
+  }
+};
+
 // Real API function for Texts
 export const fetchTexts = async (params?: { limit?: number; offset?: number; language?: string; author?: string }): Promise<OpenPechaText[]> => {
   const queryParams = new URLSearchParams();
@@ -13,18 +57,31 @@ export const fetchTexts = async (params?: { limit?: number; offset?: number; lan
   
   const queryString = queryParams.toString();
   const url = queryString ? `${API_URL}/text?${queryString}` : `${API_URL}/text`;
-  const response = await fetch(url);
   
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+  try {
+    const response = await fetch(url);
+    const data = await handleApiResponse(response);
+    return data.results || data || [];
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unable to load texts. Please check your connection and try again.');
   }
-  
-  const data = await response.json();
-  return data.results || data || [];
 };
+
 export const fetchText = async (id: string): Promise<OpenPechaText> => {
-  const response = await fetch(`${API_URL}/text/${id}`);
-  return response.json();
+  try {
+    const response = await fetch(`${API_URL}/text/${id}`);
+    return await handleApiResponse(response, {
+      404: 'Text not found. It may have been deleted or the link is incorrect.'
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unable to load text details. Please check your connection and try again.');
+  }
 };
 
 // Real API function for creating texts
@@ -37,52 +94,73 @@ export const createText = async (textData: {
   bdrc?: string;
   alt_titles?: Array<{ [key: string]: string }>;
 }): Promise<OpenPechaText> => {
-  const response = await fetch(`${API_URL}/text`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(textData),
-  });
+  try {
+    const response = await fetch(`${API_URL}/text`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(textData),
+    });
 
-  if (!response.ok) {
-    const errorData = await response.json();
-    throw new Error(errorData.details || `HTTP error! status: ${response.status}`);
+    return await handleApiResponse(response, {
+      400: 'Invalid text data. Please check all required fields and try again.'
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unable to create text. Please check your connection and try again.');
   }
-
-  return await response.json();
 };
 
 export const fetchTextInstances = async (id: string): Promise<OpenPechaTextInstance> => {
-  const response = await fetch(`${API_URL}/text/${id}/instances`);
-  return response.json();
+  try {
+    const response = await fetch(`${API_URL}/text/${id}/instances`);
+    return await handleApiResponse(response, {
+      404: 'Text instances not found. The text may not exist or has no instances yet.'
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unable to load text instances. Please check your connection and try again.');
+  }
 };
 
 export const fetchInstance = async (id: string): Promise<OpenPechaTextInstance> => {
-  const response = await fetch(`${API_URL}/text/instances/${id}`);
-  return response.json();
+  try {
+    const response = await fetch(`${API_URL}/text/instances/${id}`);
+    return await handleApiResponse(response, {
+      404: 'Instance not found. It may have been deleted or the link is incorrect.'
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unable to load instance details. Please check your connection and try again.');
+  }
 };
 
 // Real API function for creating text instances
 export const createTextInstance = async (textId: string, instanceData: any): Promise<OpenPechaTextInstance> => {
-  const response = await fetch(`${API_URL}/text/${textId}/instances`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(instanceData),
-  });
+  try {
+    const response = await fetch(`${API_URL}/text/${textId}/instances`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(instanceData),
+    });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    
-    try {
-      const errorData = JSON.parse(errorText);
-      throw new Error(errorData.detail || errorData.details || errorData.message || `HTTP error! status: ${response.status}`);
-    } catch (e) {
-      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+    return await handleApiResponse(response, {
+      400: 'Invalid instance data. Please check all required fields and try again.',
+      404: 'Text not found. Cannot create instance for non-existent text.'
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
     }
+    throw new Error('Unable to create text instance. Please check your connection and try again.');
   }
-
-  return await response.json();
 };
