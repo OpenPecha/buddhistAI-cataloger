@@ -1,11 +1,15 @@
 import { useState, forwardRef, useImperativeHandle, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, X, Check, XCircle, Loader2 } from "lucide-react";
+import { Plus, X, Check, XCircle, Loader2, Eye, Copy } from "lucide-react";
+import { calculateAnnotations } from "@/utils/annotationCalculator";
+import { useBdrcValidation } from "@/hooks/useBdrcValidation";
 
 interface InstanceCreationFormProps {
   onSubmit: (instanceData: any) => void;
   isSubmitting: boolean;
   onCancel?: () => void;
+  content?: string; // Content from editor for annotation calculation
+  isCreatingNewText?: boolean; // Whether we're creating a new text or adding instance to existing text
 }
 
 export interface InstanceCreationFormRef {
@@ -35,14 +39,13 @@ const LANGUAGE_OPTIONS = [
 const InstanceCreationForm = forwardRef<
   InstanceCreationFormRef,
   InstanceCreationFormProps
->(({ onSubmit, isSubmitting, onCancel }, ref) => {
+>(({ onSubmit, isSubmitting, onCancel, content = "", isCreatingNewText = false }, ref) => {
   // State declarations
   const [type, setType] = useState<"diplomatic" | "critical">(
     "diplomatic"
   );
   const [copyright, setCopyright] = useState("public");
   const [bdrc, setBdrc] = useState("");
-  const [bdrcValidationStatus, setBdrcValidationStatus] = useState<"idle" | "validating" | "valid" | "invalid">("idle");
   const [wiki, setWiki] = useState("");
   const [colophon, setColophon] = useState("");
 
@@ -54,52 +57,22 @@ const InstanceCreationForm = forwardRef<
   const [altIncipitTitles, setAltIncipitTitles] = useState<TitleEntry[][]>([]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  // Preview modal state
+  const [showPreview, setShowPreview] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
+
+  // BDRC validation hook
+  const { validationStatus: bdrcValidationStatus, resetValidation: resetBdrcValidation } = useBdrcValidation(bdrc);
 
   // Clear BDRC ID when switching to critical type
   useEffect(() => {
     if (type === "critical" && bdrc) {
       setBdrc("");
-      setBdrcValidationStatus("idle");
+      resetBdrcValidation();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
-
-  // BDRC ID validation with debounce
-  useEffect(() => {
-    if (!bdrc.trim()) {
-      setBdrcValidationStatus("idle");
-      return;
-    }
-
-    // Set to validating immediately when user types
-    setBdrcValidationStatus("validating");
-
-    // Debounce API call
-    const timer = setTimeout(async () => {
-      try {
-        const response = await fetch("https://autocomplete.bdrc.io/autosuggest", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ query: bdrc.trim() }),
-        });
-
-        const data = await response.json();
-
-        if (Array.isArray(data) && data.length > 0) {
-          setBdrcValidationStatus("valid");
-        } else {
-          setBdrcValidationStatus("invalid");
-        }
-      } catch (error) {
-        console.error("Error validating BDRC ID:", error);
-        setBdrcValidationStatus("invalid");
-      }
-    }, 500); // 500ms debounce
-
-    return () => clearTimeout(timer);
-  }, [bdrc]);
 
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
@@ -241,6 +214,13 @@ const InstanceCreationForm = forwardRef<
       }
     }
 
+    // Add content and calculate annotations
+    if (content) {
+      const { annotations, cleanedContent } = calculateAnnotations(content);
+      cleaned.content = cleanedContent; // Content without newlines
+      cleaned.annotation = annotations;
+    }
+
     return cleaned;
   };
 
@@ -251,6 +231,12 @@ const InstanceCreationForm = forwardRef<
     // Validate required fields
     if (!type) {
       setErrors({ type: "Type is required" });
+      return;
+    }
+
+    // Validate content is not empty
+    if (!content || content.trim().length === 0) {
+      setErrors({ content: "Content is required. Please upload and edit a text file first." });
       return;
     }
 
@@ -351,7 +337,7 @@ const InstanceCreationForm = forwardRef<
                     // Clear the field if invalid when user leaves the input
                     if (bdrcValidationStatus === "invalid") {
                       setBdrc("");
-                      setBdrcValidationStatus("idle");
+                      resetBdrcValidation();
                     }
                   }}
                   required
@@ -371,7 +357,7 @@ const InstanceCreationForm = forwardRef<
                       type="button"
                       onClick={() => {
                         setBdrc("");
-                        setBdrcValidationStatus("idle");
+                        resetBdrcValidation();
                       }}
                       className="hover:opacity-70 transition-opacity"
                       title="Clear BDRC ID"
@@ -621,13 +607,29 @@ const InstanceCreationForm = forwardRef<
       </div>
 
 
+      {/* Content validation error */}
+      {errors.content && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-center">
+          <p className="text-sm font-medium">{errors.content}</p>
+        </div>
+      )}
+
       {/* Form Actions */}
-      <div className="flex justify-end space-x-3 pt-4">
+      <div className="flex justify-center space-x-3 pt-4">
         {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel
           </Button>
         )}
+        <Button 
+          type="button" 
+          variant="outline" 
+          onClick={() => setShowPreview(true)}
+          className="flex items-center gap-2"
+        >
+          <Eye className="h-4 w-4" />
+          Preview JSON
+        </Button>
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
@@ -639,6 +641,124 @@ const InstanceCreationForm = forwardRef<
           )}
         </Button>
       </div>
+
+      {/* JSON Preview Modal */}
+      {showPreview && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold text-gray-900">Request Preview</h3>
+              <button
+                onClick={() => {
+                  setShowPreview(false);
+                  setCopySuccess(false);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Modal Body - Scrollable JSON */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {isCreatingNewText && (
+                <>
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-800 mb-3">1. Text Metadata (POST /text)</h4>
+                    {(() => {
+                      try {
+                        const textData = (window as any).__getTextFormData?.();
+                        return (
+                          <pre className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm font-mono">
+                            {JSON.stringify(textData || {}, null, 2)}
+                          </pre>
+                        );
+                      } catch (error: any) {
+                        return (
+                          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                            <p className="text-sm text-yellow-800">
+                              <strong>Form incomplete:</strong> {error.message}
+                            </p>
+                            <p className="text-xs text-yellow-600 mt-2">
+                              Please fill out all required fields in the Text Information form above.
+                            </p>
+                          </div>
+                        );
+                      }
+                    })()}
+                  </div>
+                  <div className="border-t border-gray-300 pt-6">
+                    <h4 className="text-lg font-semibold text-gray-800 mb-3">2. Instance Data (POST /text/{"{text_id}"}/instances)</h4>
+                    <pre className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm font-mono">
+                      {JSON.stringify(cleanFormData(), null, 2)}
+                    </pre>
+                  </div>
+                </>
+              )}
+              {!isCreatingNewText && (
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-800 mb-3">Instance Data (POST /text/{"{text_id}"}/instances)</h4>
+                  <pre className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm font-mono">
+                    {JSON.stringify(cleanFormData(), null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+              {copySuccess && (
+                <span className="text-sm text-green-600 flex items-center gap-1">
+                  <Check className="h-4 w-4" />
+                  Copied!
+                </span>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  try {
+                    let dataToCopy;
+                    if (isCreatingNewText) {
+                      const textData = (window as any).__getTextFormData?.() || {};
+                      const instanceData = cleanFormData();
+                      dataToCopy = JSON.stringify({
+                        textData,
+                        instanceData
+                      }, null, 2);
+                    } else {
+                      dataToCopy = JSON.stringify(cleanFormData(), null, 2);
+                    }
+                    navigator.clipboard.writeText(dataToCopy);
+                    setCopySuccess(true);
+                    setTimeout(() => setCopySuccess(false), 2000);
+                  } catch (error) {
+                    // If text form is incomplete, copy only the instance data
+                    const dataToCopy = JSON.stringify(cleanFormData(), null, 2);
+                    navigator.clipboard.writeText(dataToCopy);
+                    setCopySuccess(true);
+                    setTimeout(() => setCopySuccess(false), 2000);
+                  }
+                }}
+                className="flex items-center gap-2"
+              >
+                <Copy className="h-4 w-4" />
+                Copy JSON
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  setShowPreview(false);
+                  setCopySuccess(false);
+                }}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </form>
   );
 });

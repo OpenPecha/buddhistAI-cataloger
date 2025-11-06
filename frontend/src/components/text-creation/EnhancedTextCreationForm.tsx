@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Code } from "lucide-react";
+import { FileText, Code, AlertCircle, CheckCircle, X } from "lucide-react";
 import FileUploadZone from "./FileUploadZone";
 import TextEditorView from "./TextEditorView";
 import TextCreationForm from "@/components/TextCreationForm";
@@ -9,7 +9,7 @@ import type { TextCreationFormRef } from "@/components/TextCreationForm";
 import InstanceCreationForm from "@/components/InstanceCreationForm";
 import type { InstanceCreationFormRef } from "@/components/InstanceCreationForm";
 import { useTexts, useCreateText, useCreateTextInstance } from "@/hooks/useTexts";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { detectLanguage } from "@/utils/languageDetection";
 import type { OpenPechaText } from "@/types/text";
 
@@ -22,10 +22,12 @@ const EnhancedTextCreationForm = () => {
   // Workflow state
   const [currentStep, setCurrentStep] = useState<"select" | "upload" | "form">("select");
   const [isCreatingNewText, setIsCreatingNewText] = useState(false);
+  const [searchParams] = useSearchParams();
+  const t_id = searchParams.get("t_id") || "";
 
   // Text selection state
   const [selectedText, setSelectedText] = useState<OpenPechaText | null>(null);
-  const [textSearch, setTextSearch] = useState("");
+  const [textSearch, setTextSearch] = useState(t_id);
   const [showTextDropdown, setShowTextDropdown] = useState(false);
   const [debouncedTextSearch, setDebouncedTextSearch] = useState("");
 
@@ -53,6 +55,23 @@ const EnhancedTextCreationForm = () => {
     }, 300);
     return () => clearTimeout(timer);
   }, [textSearch]);
+
+  // Auto-select text when t_id is provided in URL
+  useEffect(() => {
+    if (t_id && texts.length > 0 && !selectedText) {
+      // Try to find the text by ID
+      const foundText = texts.find((text: OpenPechaText) => text.id === t_id);
+      
+      if (foundText) {
+        // Automatically select the found text and go to upload step
+        setSelectedText(foundText);
+        setTextSearch(getTextDisplayName(foundText));
+        setShowTextDropdown(false);
+        setIsCreatingNewText(false);
+        setCurrentStep("upload");
+      }
+    }
+  }, [t_id, texts, selectedText]);
 
   // Filter texts based on search
   const filteredTexts = useMemo(() => {
@@ -207,9 +226,6 @@ const EnhancedTextCreationForm = () => {
       case "incipit":
         instanceFormRef.current?.addIncipit(text, detectedLanguage);
         break;
-      case "content":
-        instanceFormRef.current?.addContent(text);
-        break;
       case "person":
         textFormRef.current?.setPersonSearch(text);
         textFormRef.current?.openContributorForm();
@@ -217,10 +233,24 @@ const EnhancedTextCreationForm = () => {
     }
   };
 
+  // Show loading screen when auto-selecting text from URL
+  const isAutoSelecting = t_id && (isLoadingTexts || (texts.length > 0 && !selectedText && currentStep === "select"));
+
   return (
     <>
+      {/* Loading Screen - Show while auto-selecting text from URL */}
+      {isAutoSelecting && (
+        <Card className="p-8">
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">Loading Text...</h2>
+            <p className="text-gray-600">Preparing your workspace</p>
+          </div>
+        </Card>
+      )}
+
       {/* Step 1: Select or Create Text */}
-      {currentStep === "select" && (
+      {currentStep === "select" && !isAutoSelecting && (
         <Card className="p-8">
           <h2 className="text-2xl font-bold mb-6">Step 1: Select or Create Text</h2>
 
@@ -339,19 +369,61 @@ const EnhancedTextCreationForm = () => {
       {/* Step 3: Unified Form with Split View */}
       {currentStep === "form" && (
         <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gray-50 z-10">
-          {/* Error/Success Messages - Floating */}
+          {/* Error/Success Messages - Clean Modal */}
           {(error || success) && (
-            <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 w-full max-w-2xl px-4">
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg shadow-lg mb-2">
-                  {error}
-                </div>
-              )}
-              {success && (
-                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg shadow-lg">
-                  {success}
-                </div>
-              )}
+            <div className="fixed inset-0 flex items-start justify-center z-50 pt-20 pointer-events-none">
+              <div className="bg-white rounded-md shadow-lg border max-w-sm mx-4 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-auto">
+                {error && (
+                  <div className="p-4">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-800">{error}</p>
+                      </div>
+                      <button
+                        onClick={() => setError(null)}
+                        className="flex-shrink-0 text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                      <Button
+                        onClick={() => setError(null)}
+                        size="sm"
+                        className="text-sm px-4"
+                      >
+                        OK
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {success && (
+                  <div className="p-4">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-800">{success}</p>
+                      </div>
+                      <button
+                        onClick={() => setSuccess(null)}
+                        className="flex-shrink-0 text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="mt-4 flex justify-end">
+                      <Button
+                        onClick={() => setSuccess(null)}
+                        size="sm"
+                        className="text-sm px-4"
+                      >
+                        OK
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -435,6 +507,8 @@ const EnhancedTextCreationForm = () => {
                     onSubmit={handleInstanceCreation}
                     isSubmitting={isSubmitting}
                     onCancel={handleBackToUpload}
+                    content={editedContent}
+                    isCreatingNewText={isCreatingNewText}
                   />
                 </div>
               </div>

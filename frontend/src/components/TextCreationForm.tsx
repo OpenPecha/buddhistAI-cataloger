@@ -7,9 +7,10 @@ import {
   useImperativeHandle,
 } from "react";
 import { usePersons } from "@/hooks/usePersons";
+import { useBdrcValidation } from "@/hooks/useBdrcValidation";
 import type { Person } from "@/types/person";
 import { Button } from "@/components/ui/button";
-import { X, Plus, User, Bot } from "lucide-react";
+import { X, Plus, User, Loader2, Check, XCircle } from "lucide-react";
 import { detectLanguage } from "@/utils/languageDetection";
 import PersonFormModal from "@/components/PersonFormModal";
 
@@ -25,21 +26,10 @@ export interface TextCreationFormRef {
   addFilenameAsTitle: (filename: string) => void;
 }
 
-type ContributorType = "human" | "ai";
-
-interface HumanContributor {
-  type: "human";
+interface Contributor {
   person?: Person;
   role: "translator" | "reviser" | "author" | "scholar";
 }
-
-interface AIContributor {
-  type: "ai";
-  ai_id: string;
-  role: "translator" | "reviser" | "author" | "scholar";
-}
-
-type Contributor = HumanContributor | AIContributor;
 
 interface TitleEntry {
   language: string;
@@ -110,23 +100,15 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     // Contributor management
     const [contributors, setContributors] = useState<Contributor[]>([]);
     const [showAddContributor, setShowAddContributor] = useState(false);
-    const [contributorType, setContributorType] =
-      useState<ContributorType>("human");
 
-    // Human contributor fields
+    // Contributor fields
     const [personSearch, setPersonSearch] = useState("");
     const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
     const [showPersonDropdown, setShowPersonDropdown] = useState(false);
     const [debouncedPersonSearch, setDebouncedPersonSearch] = useState("");
-    const [humanRole, setHumanRole] = useState<
+    const [role, setRole] = useState<
       "translator" | "reviser" | "author" | "scholar"
     >("author");
-
-    // AI contributor fields
-    const [aiId, setAiId] = useState("");
-    const [aiRole, setAiRole] = useState<
-      "translator" | "reviser" | "author" | "scholar"
-    >("translator");
 
     // Validation errors
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -134,12 +116,8 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     // Person creation modal
     const [showPersonFormModal, setShowPersonFormModal] = useState(false);
 
-    // Reset contributor type to human when root type is selected
-    useEffect(() => {
-      if (selectedType === "root") {
-        setContributorType("human");
-      }
-    }, [selectedType]);
+    // BDRC validation hook
+    const { validationStatus: bdrcValidationStatus, resetValidation: resetBdrcValidation } = useBdrcValidation(bdrc);
 
     useEffect(() => {
       const timer = setTimeout(() => {
@@ -205,41 +183,23 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     const handleAddContributor = () => {
       const newErrors: Record<string, string> = {};
 
-      if (contributorType === "human") {
-        if (!selectedPerson) {
-          newErrors.contributor = "Please select a person";
-          setErrors(newErrors);
-          return;
-        }
-
-        const newContributor: HumanContributor = {
-          type: "human",
-          person: selectedPerson,
-          role: humanRole,
-        };
-
-        setContributors([...contributors, newContributor]);
-      } else {
-        if (!aiId.trim()) {
-          newErrors.contributor = "Please enter an AI model ID";
-          setErrors(newErrors);
-          return;
-        }
-
-        const newContributor: AIContributor = {
-          type: "ai",
-          ai_id: aiId.trim(),
-          role: aiRole,
-        };
-
-        setContributors([...contributors, newContributor]);
+      if (!selectedPerson) {
+        newErrors.contributor = "Please select a person";
+        setErrors(newErrors);
+        return;
       }
+
+      const newContributor: Contributor = {
+        person: selectedPerson,
+        role: role,
+      };
+
+      setContributors([...contributors, newContributor]);
 
       // Reset form
       setShowAddContributor(false);
       setSelectedPerson(null);
       setPersonSearch("");
-      setAiId("");
       setErrors({});
     };
 
@@ -276,18 +236,10 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
 
       // Build contributions array
       const contributionsArray = contributors.map((contributor) => {
-        if (contributor.type === "human") {
-          // Always use person_id
-          return {
-            person_id: contributor.person!.id,
-            role: contributor.role,
-          };
-        } else {
-          return {
-            ai_id: contributor.ai_id,
-            role: contributor.role,
-          };
-        }
+        return {
+          person_id: contributor.person!.id,
+          role: contributor.role,
+        };
       });
 
       // Build final payload
@@ -542,31 +494,14 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                   className="flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-md"
                 >
                   <div className="flex items-center gap-3">
-                    {contributor.type === "human" ? (
-                      <User className="h-5 w-5 text-blue-600" />
-                    ) : (
-                      <Bot className="h-5 w-5 text-purple-600" />
-                    )}
+                    <User className="h-5 w-5 text-blue-600" />
                     <div>
-                      {contributor.type === "human" ? (
-                        <>
-                          <div className="font-medium">
-                            {getPersonDisplayName(contributor.person!)}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            Role: {contributor.role}
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="font-medium">
-                            AI: {contributor.ai_id}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            Role: {contributor.role}
-                          </div>
-                        </>
-                      )}
+                      <div className="font-medium">
+                        {getPersonDisplayName(contributor.person!)}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        Role: {contributor.role}
+                      </div>
                     </div>
                   </div>
                   <button
@@ -588,43 +523,6 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
           {/* Add Contributor Form */}
           {showAddContributor && (
             <div className="p-4 border border-gray-300 rounded-md bg-gray-50 space-y-4">
-              {/* Contributor Type Toggle - Hide AI option for root type */}
-              {selectedType !== "root" && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Contributor Type
-                  </label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setContributorType("human")}
-                      className={`flex-1 px-4 py-2 rounded-md flex items-center justify-center gap-2 ${
-                        contributorType === "human"
-                          ? "bg-blue-600 text-white"
-                          : "bg-white text-gray-700 border border-gray-300"
-                      }`}
-                    >
-                      <User className="h-4 w-4" />
-                      Human
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setContributorType("ai")}
-                      className={`flex-1 px-4 py-2 rounded-md flex items-center justify-center gap-2 ${
-                        contributorType === "ai"
-                          ? "bg-purple-600 text-white"
-                          : "bg-white text-gray-700 border border-gray-300"
-                      }`}
-                    >
-                      <Bot className="h-4 w-4" />
-                      AI
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {contributorType === "human" ? (
-                <>
                   {/* Person Search */}
                   <div className="relative">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -704,8 +602,8 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                       Role
                     </label>
                     <select
-                      value={humanRole}
-                      onChange={(e) => setHumanRole(e.target.value as any)}
+                      value={role}
+                      onChange={(e) => setRole(e.target.value as any)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="author">Author</option>
@@ -714,41 +612,6 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                       <option value="scholar">Scholar</option>
                     </select>
                   </div>
-                </>
-              ) : (
-                <>
-                  {/* AI ID Input */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      AI Model ID
-                    </label>
-                    <input
-                      type="text"
-                      value={aiId}
-                      onChange={(e) => setAiId(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      placeholder="e.g., gpt-4, claude-3, llm-01"
-                    />
-                  </div>
-
-                  {/* Role Selection */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Role
-                    </label>
-                    <select
-                      value={aiRole}
-                      onChange={(e) => setAiRole(e.target.value as any)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    >
-                      <option value="translator">Translator</option>
-                      <option value="reviser">Reviser</option>
-                      <option value="author">Author</option>
-                      <option value="scholar">Scholar</option>
-                    </select>
-                  </div>
-                </>
-              )}
 
               {errors.contributor && (
                 <p className="text-sm text-red-600">{errors.contributor}</p>
@@ -804,14 +667,45 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
             >
               BDRC ID
             </label>
-            <input
-              id="bdrc"
-              type="text"
-              value={bdrc}
-              onChange={(e) => setBdrc(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="e.g., W123456"
-            />
+            <div className="relative">
+              <input
+                id="bdrc"
+                type="text"
+                value={bdrc}
+                onChange={(e) => setBdrc(e.target.value)}
+                onBlur={() => {
+                  // Clear the field if invalid when user leaves the input
+                  if (bdrcValidationStatus === "invalid") {
+                    setBdrc("");
+                    resetBdrcValidation();
+                  }
+                }}
+                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="e.g., W123456"
+              />
+              {/* Validation Icons */}
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+                {bdrcValidationStatus === "validating" && (
+                  <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+                )}
+                {bdrcValidationStatus === "valid" && (
+                  <Check className="w-5 h-5 text-green-600" />
+                )}
+                {bdrcValidationStatus === "invalid" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBdrc("");
+                      resetBdrcValidation();
+                    }}
+                    className="hover:opacity-70 transition-opacity"
+                    title="Clear BDRC ID"
+                  >
+                    <XCircle className="w-5 h-5 text-red-600" />
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
 
           <div>
