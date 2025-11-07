@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { FileText, Code, AlertCircle, CheckCircle, X } from "lucide-react";
+import { FileText, Code, AlertCircle, X } from "lucide-react";
 import FileUploadZone from "./FileUploadZone";
 import TextEditorView from "./TextEditorView";
 import TextCreationForm from "@/components/TextCreationForm";
@@ -9,15 +9,45 @@ import type { TextCreationFormRef } from "@/components/TextCreationForm";
 import InstanceCreationForm from "@/components/InstanceCreationForm";
 import type { InstanceCreationFormRef } from "@/components/InstanceCreationForm";
 import { useTexts, useCreateText, useCreateTextInstance } from "@/hooks/useTexts";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { detectLanguage } from "@/utils/languageDetection";
 import type { OpenPechaText } from "@/types/text";
+import TextCreationSuccessModal from "./TextCreationSuccessModal";
 
 const EnhancedTextCreationForm = () => {
-  const navigate = useNavigate();
   const textFormRef = useRef<TextCreationFormRef>(null);
   const instanceFormRef = useRef<InstanceCreationFormRef>(null);
   const hasAddedFilenameRef = useRef<boolean>(false);
+
+  // Helper function to parse error messages
+  const parseErrorMessage = (error: any): string => {
+    // If error is a string, try to parse it as JSON
+    if (typeof error === "string") {
+      try {
+        const parsed = JSON.parse(error);
+        return parsed.error || parsed.message || error;
+      } catch {
+        return error;
+      }
+    }
+    
+    // If error has a message property
+    if (error?.message) {
+      try {
+        const parsed = JSON.parse(error.message);
+        return parsed.error || parsed.message || error.message;
+      } catch {
+        return error.message;
+      }
+    }
+    
+    // If error is an object with error property
+    if (error?.error) {
+      return error.error;
+    }
+    
+    return "Failed to create";
+  };
 
   // Workflow state
   const [currentStep, setCurrentStep] = useState<"select" | "upload" | "form">("select");
@@ -130,7 +160,21 @@ const EnhancedTextCreationForm = () => {
 
   // Handle file upload
   const handleFileUpload = (content: string, filename: string) => {
-    setEditedContent(content);
+    // Clean content immediately: remove empty lines and trailing empty lines
+    let lines = content.split('\n');
+    
+    // Remove trailing empty lines
+    while (lines.length > 0 && lines[lines.length - 1].length === 0) {
+      lines.pop();
+    }
+    
+    // Filter out empty lines (but keep lines with spaces)
+    lines = lines.filter(line => line.length > 0);
+    
+    // Rejoin with newlines
+    const cleanedContent = lines.join('\n');
+    
+    setEditedContent(cleanedContent);
     setUploadedFilename(filename);
     hasAddedFilenameRef.current = false; // Reset flag for new upload
     setCurrentStep("form");
@@ -187,16 +231,26 @@ const EnhancedTextCreationForm = () => {
           ? "Text and instance created successfully!"
           : "Instance created successfully!"
       );
-
-      // Redirect to text list after a short delay
-      setTimeout(() => {
-        navigate("/texts");
-      }, 1500);
     } catch (err: any) {
-      setError(err.message || "Failed to create");
+      setError(parseErrorMessage(err));
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Reset everything and go back to step 1
+  const handleCloseSuccessModal = () => {
+    setSuccess(null);
+    setError(null);
+    setCurrentStep("select");
+    setIsCreatingNewText(false);
+    setSelectedText(null);
+    setTextSearch("");
+    setEditedContent("");
+    setUploadedFilename("");
+    setIsSubmitting(false);
+    setActivePanel("form");
+    hasAddedFilenameRef.current = false;
   };
 
   // Go back to upload
@@ -238,6 +292,14 @@ const EnhancedTextCreationForm = () => {
 
   return (
     <>
+      {/* Success Modal - Full screen overlay */}
+      {success && (
+        <TextCreationSuccessModal
+          message={success}
+          onClose={handleCloseSuccessModal}
+        />
+      )}
+
       {/* Loading Screen - Show while auto-selecting text from URL */}
       {isAutoSelecting && (
         <Card className="p-8">
@@ -390,31 +452,6 @@ const EnhancedTextCreationForm = () => {
                     <div className="mt-4 flex justify-end">
                       <Button
                         onClick={() => setError(null)}
-                        size="sm"
-                        className="text-sm px-4"
-                      >
-                        OK
-                      </Button>
-                    </div>
-                  </div>
-                )}
-                {success && (
-                  <div className="p-4">
-                    <div className="flex items-start gap-3">
-                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-800">{success}</p>
-                      </div>
-                      <button
-                        onClick={() => setSuccess(null)}
-                        className="flex-shrink-0 text-gray-400 hover:text-gray-600"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                    <div className="mt-4 flex justify-end">
-                      <Button
-                        onClick={() => setSuccess(null)}
                         size="sm"
                         className="text-sm px-4"
                       >

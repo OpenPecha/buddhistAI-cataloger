@@ -20,7 +20,7 @@ export interface OpenPechaText {
   date: string | null;
   id: string;
   language: string;
-  parent: string | null;
+  target: string | null;
   title: Title;
   type: string;
   wiki: string | null;

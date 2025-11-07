@@ -60,8 +60,24 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
           (option) => option.code === language
         );
         
-        // Only set the language if it's found in the options, otherwise leave it empty
-        setTitles((prevTitles) => [...prevTitles, { language: isValidLanguage ? language : "", value: text }]);
+        const finalLanguage = isValidLanguage ? language : "";
+        
+        setTitles((prevTitles) => {
+          // Check if this language already exists
+          const existingIndex = prevTitles.findIndex(
+            (t) => t.language === finalLanguage && finalLanguage !== ""
+          );
+          
+          if (existingIndex !== -1) {
+            // Update the existing entry instead of adding a new one
+            const updatedTitles = [...prevTitles];
+            updatedTitles[existingIndex].value = text;
+            return updatedTitles;
+          } else {
+            // Add new entry
+            return [...prevTitles, { language: finalLanguage, value: text }];
+          }
+        });
       },
       setPersonSearch: (text: string) => {
         // Set the person search field and show the dropdown
@@ -80,10 +96,25 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         const detectedLanguage = detectLanguage(nameWithoutExtension);
         
         // Add as a title using functional update to avoid stale state
-        setTitles((prevTitles) => [...prevTitles, { 
-          language: detectedLanguage, 
-          value: nameWithoutExtension 
-        }]);
+        setTitles((prevTitles) => {
+          // Check if this language already exists
+          const existingIndex = prevTitles.findIndex(
+            (t) => t.language === detectedLanguage && detectedLanguage !== ""
+          );
+          
+          if (existingIndex !== -1) {
+            // Update the existing entry instead of adding a new one
+            const updatedTitles = [...prevTitles];
+            updatedTitles[existingIndex].value = nameWithoutExtension;
+            return updatedTitles;
+          } else {
+            // Add new entry
+            return [...prevTitles, { 
+              language: detectedLanguage, 
+              value: nameWithoutExtension 
+            }];
+          }
+        });
       },
     }));
 
@@ -92,10 +123,9 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     >("");
     const [titles, setTitles] = useState<TitleEntry[]>([]);
     const [language, setLanguage] = useState("");
-    const [parent, setParent] = useState("");
+    const [target, setTarget] = useState("");
     const [date, setDate] = useState("");
     const [bdrc, setBdrc] = useState("");
-    const [wiki, setWiki] = useState("");
 
     // Contributor management
     const [contributors, setContributors] = useState<Contributor[]>([]);
@@ -218,7 +248,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         throw new Error("Language is required");
       }
 
-      // Build title object from titles array
+      // Build title object from titles array (last value wins for duplicate languages)
       const title: Record<string, string> = {};
       titles.forEach((titleEntry) => {
         if (titleEntry.language && titleEntry.value.trim()) {
@@ -247,30 +277,28 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         type: selectedType,
         title,
         language: language.trim(),
-        contributions:
-          contributionsArray.length > 0 ? contributionsArray : undefined,
+        contributions: contributionsArray,
+        alt_titles: [], // Empty for now, will be populated when user adds alt titles
       };
 
-      // Add parent for commentary/translation
-      if (selectedType === "commentary" || selectedType === "translation") {
-        textData.parent = parent.trim() || "N/A";
+      // Add target field for translation and commentary types
+      if (selectedType === "translation" || selectedType === "commentary") {
+        textData.target = target.trim() || "N/A";
       }
 
       // Add optional fields
       if (date.trim()) textData.date = date.trim();
       if (bdrc.trim()) textData.bdrc = bdrc.trim();
-      if (wiki.trim()) textData.wiki = wiki.trim();
 
       return textData;
     }, [
       selectedType,
       titles,
       language,
-      parent,
+      target,
       contributors,
       date,
       bdrc,
-      wiki,
     ]);
 
     // Expose buildFormData to parent via window object
@@ -294,11 +322,10 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       selectedType,
       titles,
       language,
-      parent,
+      target,
       contributors,
       date,
       bdrc,
-      wiki,
       onDataChange,
       buildFormData,
     ]);
@@ -356,26 +383,26 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
           </div>
         </div>
 
-        {/* Parent field - only for commentary/translation */}
+        {/* Target field - only for commentary/translation */}
         {(selectedType === "commentary" || selectedType === "translation") && (
           <div>
             <label
-              htmlFor="parent"
+              htmlFor="target"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Parent Text ID
+              Target Text ID
             </label>
             <input
-              id="parent"
+              id="target"
               type="text"
-              value={parent}
-              onChange={(e) => setParent(e.target.value)}
+              value={target}
+              onChange={(e) => setTarget(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Leave empty for N/A"
             />
 
-            {errors.parent && (
-              <p className="mt-1 text-sm text-red-600">{errors.parent}</p>
+            {errors.target && (
+              <p className="mt-1 text-sm text-red-600">{errors.target}</p>
             )}
           </div>
         )}
@@ -412,9 +439,24 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                   <select
                     value={title.language}
                     onChange={(e) => {
-                      const newTitles = [...titles];
-                      newTitles[index].language = e.target.value;
-                      setTitles(newTitles);
+                      const selectedLang = e.target.value;
+                      
+                      // Check if this language already exists in another title entry
+                      const existingIndex = titles.findIndex(
+                        (t, i) => i !== index && t.language === selectedLang
+                      );
+                      
+                      if (existingIndex !== -1 && selectedLang) {
+                        // Language exists in another entry - merge/overwrite
+                        const updatedTitles = titles.filter((_, i) => i !== existingIndex);
+                        updatedTitles[index === existingIndex ? index : (index > existingIndex ? index - 1 : index)].language = selectedLang;
+                        setTitles(updatedTitles);
+                      } else {
+                        // No conflict, just update normally
+                        const newTitles = [...titles];
+                        newTitles[index].language = selectedLang;
+                        setTitles(newTitles);
+                      }
                     }}
                     className="w-20 sm:w-32 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   >
@@ -436,7 +478,21 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                       if (!newTitles[index].language && e.target.value.trim()) {
                         const detectedLang = detectLanguage(e.target.value);
                         if (detectedLang) {
-                          newTitles[index].language = detectedLang;
+                          // Check if this detected language already exists in another title entry
+                          const existingIndex = titles.findIndex(
+                            (t, i) => i !== index && t.language === detectedLang
+                          );
+                          
+                          if (existingIndex !== -1) {
+                            // Language exists in another entry - remove the other one
+                            const updatedTitles = newTitles.filter((_, i) => i !== existingIndex);
+                            const adjustedIndex = index > existingIndex ? index - 1 : index;
+                            updatedTitles[adjustedIndex].language = detectedLang;
+                            setTitles(updatedTitles);
+                            return;
+                          } else {
+                            newTitles[index].language = detectedLang;
+                          }
                         }
                       }
                       
@@ -706,23 +762,6 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                 )}
               </div>
             </div>
-          </div>
-
-          <div>
-            <label
-              htmlFor="wiki"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Wiki
-            </label>
-            <input
-              id="wiki"
-              type="text"
-              value={wiki}
-              onChange={(e) => setWiki(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Wiki reference"
-            />
           </div>
         </div>
 

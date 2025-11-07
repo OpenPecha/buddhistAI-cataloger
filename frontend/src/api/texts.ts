@@ -85,15 +85,7 @@ export const fetchText = async (id: string): Promise<OpenPechaText> => {
 };
 
 // Real API function for creating texts
-export const createText = async (textData: {
-  type: string;
-  title: { [key: string]: string };
-  language: string;
-  contributions?: Array<{ person_id: string; role: string }>;
-  date?: string;
-  bdrc?: string;
-  alt_titles?: Array<{ [key: string]: string }>;
-}): Promise<OpenPechaText> => {
+export const createText = async (textData: any): Promise<OpenPechaText> => {
   try {
     const response = await fetch(`${API_URL}/text`, {
       method: 'POST',
@@ -162,5 +154,19 @@ export const createTextInstance = async (textId: string, instanceData: any): Pro
       throw error;
     }
     throw new Error('Unable to create text instance. Please check your connection and try again.');
+  }
+};
+
+export const fetchAnnotation = async (id: string): Promise<OpenPechaTextInstance> => {
+  try {
+    const response = await fetch(`${API_URL}/v2/annotations/${id}`);
+    return await handleApiResponse(response, {
+      404: 'Annotation not found. It may have been deleted or the link is incorrect.'
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unable to load annotation details. Please check your connection and try again.');
   }
 };

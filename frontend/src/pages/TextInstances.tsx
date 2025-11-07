@@ -27,7 +27,7 @@ function TextInstanceCRUD() {
     error,
     refetch,
   } = useTextInstance(text_id || "");
-  const { data: text = [] } = useText(text_id || "");
+  const { data: text } = useText(text_id || "");
   const createInstanceMutation = useCreateTextInstance();
 
   const handleInstanceSubmit = async (instanceData: any) => {
@@ -146,7 +146,7 @@ function TextInstanceCRUD() {
     );
   }
 
-  const title = text.title.bo || text.title.en || text.title.sa || "Untitled";
+  const title = text?.title?.bo || text?.title?.en || text?.title?.sa || "Untitled";
 
   return (
     <div className="space-y-6">

@@ -21,7 +21,7 @@ class Text(BaseModel):
     type: str
     title: Dict[str, str]
     language: str
-    parent: Optional[str] = None
+    target: Optional[str] = None
     contributions: List[Contribution]
     date: Optional[str] = None
     bdrc: Optional[str] = None
@@ -33,11 +33,16 @@ class TextResponse(BaseModel):
     results: List[Text]
     count: int
 
+class CreateTextResponse(BaseModel):
+    message: str
+    id: str
+
 class CreateText(BaseModel):
     type: str
     title: Dict[str, str]
     language: str
     contributions: List[Contribution]
+    target: Optional[str] = None
     date: Optional[str] = None
     bdrc: Optional[str] = None
     alt_titles: List[Dict[str, str]] = []
@@ -54,7 +59,7 @@ class InstanceMetadata(BaseModel):
     bdrc: Optional[str] = None
     wiki: Optional[str] = None
     colophon: Optional[str] = None
-    incipit_title: Dict[str, str]
+    incipit_title: Optional[Dict[str, str]] = None
     alt_incipit_titles: Optional[List[Dict[str, str]]] = None
 
 class Instance(BaseModel):
@@ -69,13 +74,17 @@ class InstanceListItem(BaseModel):
     type: str
     copyright: str
     colophon: Optional[str] = None
-    incipit_title: Dict[str, str]
+    incipit_title: Optional[Dict[str, str]] = None
     alt_incipit_titles: Optional[List[Dict[str, str]]] = None
 
 class CreateInstance(BaseModel):
     metadata: Dict[str, Any]
     annotation: List[Dict[str, Any]]
     content: str
+
+class CreateInstanceResponse(BaseModel):
+    message: str
+    id: str
 
 
 @router.get("", response_model=List[Text])
@@ -97,9 +106,12 @@ async def get_texts(
         raise HTTPException(status_code=response.status_code, detail=response.text)
     return response.json()
 
-@router.post("", response_model=Text, status_code=201)
+@router.post("", response_model=CreateTextResponse, status_code=201)
 async def create_text(text: CreateText):
-    response = requests.post(f"{API_ENDPOINT}/texts", json=text.dict())
+    # Convert to dict, excluding None values
+    payload = text.model_dump(exclude_none=True)
+    response = requests.post(f"{API_ENDPOINT}/texts", json=payload)
+    
     if response.status_code != 201:
         raise HTTPException(status_code=response.status_code, detail=response.text)
     return response.json()
@@ -113,14 +125,31 @@ async def get_text(id: str):
 
 @router.get("/{id}/instances", response_model=List[InstanceListItem])
 async def get_instances(id: str):
-    response = requests.get(f"{API_ENDPOINT}/texts/{id}/instances")
-    if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.text)
-    return response.json()
+    if not API_ENDPOINT:
+        raise HTTPException(
+            status_code=500, 
+            detail="OPENPECHA_ENDPOINT environment variable is not set"
+        )
+    
+    try:
+        url = f"{API_ENDPOINT}/texts/{id}/instances"
+        response = requests.get(url, timeout=30)
+        
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error connecting to OpenPecha API: {str(e)}"
+        )
 
-@router.post("/{id}/instances", status_code=201)
+@router.post("/{id}/instances", response_model=CreateInstanceResponse, status_code=201)
 async def create_instance(id: str, instance: CreateInstance):
-    response = requests.post(f"{API_ENDPOINT}/texts/{id}/instances", json=instance.dict())
+    # Convert to dict, excluding None values
+    payload = instance.model_dump(exclude_none=True)
+    response = requests.post(f"{API_ENDPOINT}/texts/{id}/instances", json=payload)
+    
     if response.status_code != 201:
         raise HTTPException(status_code=response.status_code, detail=response.text)
     return response.json()

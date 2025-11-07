@@ -60,6 +60,7 @@ const InstanceCreationForm = forwardRef<
   
   // Preview modal state
   const [showPreview, setShowPreview] = useState(false);
+  const [showContentPreview, setShowContentPreview] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
 
   // BDRC validation hook
@@ -218,7 +219,17 @@ const InstanceCreationForm = forwardRef<
     if (content) {
       const { annotations, cleanedContent } = calculateAnnotations(content);
       cleaned.content = cleanedContent; // Content without newlines
-      cleaned.annotation = annotations;
+      
+      // Add reference field for diplomatic type only
+      if (type === "diplomatic") {
+        cleaned.annotation = annotations.map(ann => ({
+          ...ann,
+          reference: "temp"
+        }));
+      } else {
+        // Critical type - no reference field
+        cleaned.annotation = annotations;
+      }
     }
 
     return cleaned;
@@ -624,6 +635,15 @@ const InstanceCreationForm = forwardRef<
         <Button 
           type="button" 
           variant="outline" 
+          onClick={() => setShowContentPreview(true)}
+          className="flex items-center gap-2"
+        >
+          <Eye className="h-4 w-4" />
+          Preview Content
+        </Button>
+        <Button 
+          type="button" 
+          variant="outline" 
           onClick={() => setShowPreview(true)}
           className="flex items-center gap-2"
         >
@@ -752,6 +772,103 @@ const InstanceCreationForm = forwardRef<
                   setShowPreview(false);
                   setCopySuccess(false);
                 }}
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Content Preview Modal */}
+      {showContentPreview && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-xl font-semibold text-gray-900">Content Preview</h3>
+              <button
+                onClick={() => setShowContentPreview(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              {(() => {
+                if (!content || content.trim().length === 0) {
+                  return (
+                    <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+                      <p className="text-sm text-yellow-800">
+                        No content available. Please add text in the editor.
+                      </p>
+                    </div>
+                  );
+                }
+
+                // Calculate annotations to get cleaned content and spans
+                const { annotations, cleanedContent } = calculateAnnotations(content);
+
+                return (
+                  <>
+                    {/* Cleaned Content Section */}
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-800 mb-3">
+                        Cleaned Content (sent to backend)
+                      </h4>
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <p className="text-sm text-gray-600 mb-2">
+                          <strong>Character Count:</strong> {cleanedContent.length} characters
+                        </p>
+                        <div className="bg-white border border-gray-300 rounded p-3 max-h-60 overflow-y-auto">
+                          <pre className="text-sm font-mono whitespace-pre-wrap break-words">
+                            {cleanedContent || "(empty)"}
+                          </pre>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Annotations Section */}
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-800 mb-3">
+                        Annotations ({annotations.length} spans)
+                      </h4>
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <p className="text-sm text-gray-600 mb-3">
+                          Each line with content gets a span annotation:
+                        </p>
+                        <div className="bg-white border border-gray-300 rounded p-3 max-h-60 overflow-y-auto">
+                          <pre className="text-sm font-mono">
+                            {JSON.stringify(annotations, null, 2)}
+                          </pre>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Info Box */}
+                    <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                      <h5 className="font-semibold text-blue-900 mb-2 text-sm">Processing Rules:</h5>
+                      <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
+                        <li>Empty lines are removed (no span created)</li>
+                        <li>Lines with spaces are kept (span created)</li>
+                        <li>Trailing empty lines are trimmed</li>
+                        <li>All newline characters are removed from content</li>
+                        <li>Each span references positions in the cleaned content</li>
+                      </ul>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowContentPreview(false)}
               >
                 Close
               </Button>

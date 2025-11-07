@@ -22,11 +22,8 @@ const Index = () => {
 
       {/* Content */}
       <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <p className="text-black-600 mb-6">
-            A comprehensive system for managing Tibetan texts and their
-            Details.
-          </p>
+        <div className="bg-white rounded-lg  p-8">
+        
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
             <div className="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">

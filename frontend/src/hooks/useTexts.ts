@@ -51,6 +51,15 @@ export const useInstance = (id: string) => {
   });
 };
 
+export const useAnnnotation = (id: string) => {
+  return useQuery({
+    queryKey: ["annotation", id],
+    queryFn: () => fetchAnnotation(id),
+    select: (data) => data.results || data || [],
+    enabled: !!id, // Only fetch when id exists
+  });
+};
+
 export const useCreateText = () => {
   const queryClient = useQueryClient();
 
