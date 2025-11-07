@@ -20,13 +20,22 @@ class Span(BaseModel):
 class Annotation(BaseModel):
     id: str
     span: Span
-    reference: Optional[str] = None
 
 
-@router.get("/{annotation_id}", response_model=List[Annotation])
+class AnnotationResponse(BaseModel):
+    annotation: Optional[List[Annotation]]
+    alignment_annotation: Optional[dict]
+    target_annotation: Optional[dict]
+
+
+@router.get("/{annotation_id}", response_model=AnnotationResponse)
 async def get_annotation(annotation_id: str):
     """Get annotation by ID"""
     response = requests.get(f"{API_ENDPOINT}/annotations/{annotation_id}")
-    if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.text)
+    try:
+
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     return response.json()
