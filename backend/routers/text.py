@@ -53,6 +53,10 @@ class Annotation(BaseModel):
     annotation_id: str
     type: str
 
+class BibliographyAnnotation(BaseModel):
+    span: Dict[str, int]  # {"start": int, "end": int}
+    biblography_type: str  # e.g., "citation", "reference", "title", "colophon", "incipit", "person"
+
 class InstanceMetadata(BaseModel):
     id: str
     type: str
@@ -67,6 +71,7 @@ class Instance(BaseModel):
     content: Optional[str] = None
     metadata: Optional[InstanceMetadata] = None
     annotations: Optional[List[Annotation]] = None
+    biblography_annotation: Optional[List[BibliographyAnnotation]] = None
 
 class InstanceListItem(BaseModel):
     id: str
@@ -81,6 +86,7 @@ class InstanceListItem(BaseModel):
 class CreateInstance(BaseModel):
     metadata: Dict[str, Any]
     annotation: List[Dict[str, Any]]
+    biblography_annotation: Optional[List[BibliographyAnnotation]] = []
     content: str
 
 class CreateInstanceResponse(BaseModel):
@@ -210,6 +216,9 @@ async def create_instance(id: str, instance: CreateInstance):
     try:
         # Convert to dict, excluding None values
         payload = instance.model_dump(exclude_none=True)
+        print(f"📥 Received instance data: {payload}")
+        print(f"📚 Bibliography annotations: {payload.get('biblography_annotation', 'Not found')}")
+        
         response = requests.post(f"{API_ENDPOINT}/texts/{id}/instances", json=payload)
         
         if response.status_code != 201:

@@ -1,12 +1,15 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 
+
+export type BibliographyAnnotationType = 'title' | 'colophon' | 'incipit_title' | 'person';
+
 export interface BibliographyAnnotation {
   id: string;
   span: {
     start: number;
     end: number;
   };
-  biblography_type: 'title' | 'colophon' | 'incipit' | 'person' | 'author' | 'translator' | 'custom';
+  biblography_type: BibliographyAnnotationType;
   text: string;
   timestamp: number;
 }

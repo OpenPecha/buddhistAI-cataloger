@@ -13,13 +13,16 @@ export const useBibliographyAPI = () => {
 
   // Convert internal annotations to API format
   const getAPIAnnotations = (): APIBibliographyAnnotation[] => {
-    return annotations.map(annotation => ({
+    console.log('🔄 Converting annotations to API format. Total annotations:', annotations.length);
+    const apiAnnotations = annotations.map(annotation => ({
       span: {
         start: annotation.span.start,
         end: annotation.span.end,
       },
       biblography_type: annotation.biblography_type,
     }));
+    console.log('🔄 API format annotations:', apiAnnotations);
+    return apiAnnotations;
   };
 
   // Check if annotations exist

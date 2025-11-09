@@ -4,7 +4,7 @@ import { X, FileText, BookOpen, User, Scroll } from 'lucide-react';
 const TYPE_ICONS = {
   title: <FileText className="h-4 w-4" />,
   colophon: <Scroll className="h-4 w-4" />,
-  incipit: <BookOpen className="h-4 w-4" />,
+  incipit_title: <BookOpen className="h-4 w-4" />,
   person: <User className="h-4 w-4" />,
   author: <User className="h-4 w-4" />,
   translator: <User className="h-4 w-4" />,
@@ -14,7 +14,7 @@ const TYPE_ICONS = {
 const TYPE_COLORS = {
   title: 'bg-yellow-100 text-yellow-800 border-yellow-200',
   colophon: 'bg-green-100 text-green-800 border-green-200',
-  incipit: 'bg-blue-100 text-blue-800 border-blue-200',
+  incipit_title: 'bg-blue-100 text-blue-800 border-blue-200',
   person: 'bg-orange-100 text-orange-800 border-orange-200',
   author: 'bg-purple-100 text-purple-800 border-purple-200',
   translator: 'bg-pink-100 text-pink-800 border-pink-200',
@@ -24,7 +24,7 @@ const TYPE_COLORS = {
 const TYPE_LABELS = {
   title: 'Title',
   colophon: 'Colophon Text',
-  incipit: 'Incipit Title',
+  incipit_title: 'Incipit Title',
   person: 'Person',
   author: 'Author',
   translator: 'Translator',

@@ -6,7 +6,7 @@ interface SelectionMenuProps {
   selectedText: string;
   textStart: number;
   textEnd: number;
-  onSelect?: (type: "title" | "colophon" | "incipit" | "person") => void;
+  onSelect?: (type: "title" | "colophon" | "incipit_title" | "person") => void;
   onClose: () => void;
 }
 
@@ -59,7 +59,7 @@ const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, o
     }
   }, [position]);
 
-  const handleMenuItemClick = (type: "title" | "colophon" | "incipit" | "person") => {
+  const handleMenuItemClick = (type: "title" | "colophon" | "incipit_title" | "person") => {
     // Add to bibliography annotations
     addAnnotation({
       span: {
@@ -92,7 +92,7 @@ const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, o
       description: "Mark as colophon",
     },
     {
-      type: "incipit" as const,
+      type: "incipit_title" as const,
       label: "Incipit Title",
       color: "bg-blue-50 hover:bg-blue-100 border-blue-200",
       description: "Mark as incipit title",
