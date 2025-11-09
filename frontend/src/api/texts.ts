@@ -1,6 +1,6 @@
 
 const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8000';
-import type { OpenPechaText, OpenPechaTextInstance, OpenPechaTextInstanceListItem } from '@/types/text';
+import type { OpenPechaText, OpenPechaTextInstance, OpenPechaTextInstanceListItem, CreateInstanceResponse } from '@/types/text';
 
 // Helper function to handle API responses with better error messages
 const handleApiResponse = async (response: Response, customMessages?: { 400?: string; 404?: string; 500?: string }) => {
@@ -135,7 +135,7 @@ export const fetchInstance = async (id: string): Promise<OpenPechaTextInstance> 
 };
 
 // Real API function for creating text instances
-export const createTextInstance = async (textId: string, instanceData: any): Promise<OpenPechaTextInstance> => {
+export const createTextInstance = async (textId: string, instanceData: any): Promise<CreateInstanceResponse> => {
   try {
     const response = await fetch(`${API_URL}/text/${textId}/instances`, {
       method: 'POST',

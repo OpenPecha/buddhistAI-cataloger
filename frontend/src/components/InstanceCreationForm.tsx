@@ -338,7 +338,7 @@ const InstanceCreationForm = forwardRef<
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="diplomatic">Diplomatic</option>
+              {/* <option value="diplomatic">Diplomatic</option> */}
               <option value="critical">Critical</option>
             </select>
             {errors.type && (

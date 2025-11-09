@@ -71,6 +71,7 @@ const EnhancedTextCreationForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [createdInstanceId, setCreatedInstanceId] = useState<string | null>(null);
 
   // Mutations and data
   const { data: texts = [], isLoading: isLoadingTexts } = useTexts({ limit: 100, offset: 0 });
@@ -147,11 +148,16 @@ const EnhancedTextCreationForm = () => {
 
   // Helper: Reset to initial clean state
   const resetToInitialState = () => {
+    // Set flag FIRST to prevent auto-select from re-triggering
+    hasAutoSelectedRef.current = true; // Prevent auto-select effect
+    
+    // Clear all state
     setSelectedText(null);
     setTextSearch("");
     setIsCreatingNewText(false);
     clearFileUpload();
-    hasAutoSelectedRef.current = false;
+    
+    // Clear URL params
     clearUrlParams();
   };
 
@@ -163,10 +169,8 @@ const EnhancedTextCreationForm = () => {
     setIsCreatingNewText(false);
     clearFileUpload();
     hasAutoSelectedRef.current = true;
-    // Clear URL if user selected different text
-    if (t_id && t_id !== text.id) {
-      clearUrlParams();
-    }
+    // Update URL with text ID
+    navigate(`/create?t_id=${text.id}`, { replace: true });
   };
 
   const handleCreateNewText = () => {
@@ -241,7 +245,9 @@ const EnhancedTextCreationForm = () => {
       }
 
       // Now create the instance
-      await createInstanceMutation.mutateAsync({ textId, instanceData });
+      const createdInstance = await createInstanceMutation.mutateAsync({ textId, instanceData });
+      // The API returns { message: string, id: string }, so access id directly
+      setCreatedInstanceId(createdInstance?.id || null);
       setSuccess(
         isCreatingNewText
           ? "Text and instance created successfully!"
@@ -259,6 +265,7 @@ const EnhancedTextCreationForm = () => {
     setSuccess(null);
     setError(null);
     setIsSubmitting(false);
+    setCreatedInstanceId(null);
     setActivePanel("form");
     resetToInitialState();
   };
@@ -308,6 +315,7 @@ const EnhancedTextCreationForm = () => {
         <TextCreationSuccessModal
           message={success}
           onClose={handleCloseSuccessModal}
+          instanceId={createdInstanceId}
         />
       )}
 
