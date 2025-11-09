@@ -21,7 +21,7 @@ class Text(BaseModel):
     type: str
     title: Dict[str, str]
     language: str
-    parent: Optional[str] = None
+    target: Optional[str] = None
     contributions: List[Contribution]
     date: Optional[str] = None
     bdrc: Optional[str] = None
@@ -33,11 +33,16 @@ class TextResponse(BaseModel):
     results: List[Text]
     count: int
 
+class CreateTextResponse(BaseModel):
+    message: str
+    id: str
+
 class CreateText(BaseModel):
     type: str
     title: Dict[str, str]
     language: str
     contributions: List[Contribution]
+    target: Optional[str] = None
     date: Optional[str] = None
     bdrc: Optional[str] = None
     alt_titles: List[Dict[str, str]] = []
@@ -77,6 +82,10 @@ class CreateInstance(BaseModel):
     annotation: List[Dict[str, Any]]
     content: str
 
+class CreateInstanceResponse(BaseModel):
+    message: str
+    id: str
+
 
 @router.get("", response_model=List[Text])
 async def get_texts(
@@ -85,50 +94,158 @@ async def get_texts(
     language: Optional[str] = None,
     author: Optional[str] = None,
 ):
-    params = {
-        "limit": limit,
-        "offset": offset,
-        "language": language,
-        "author": author,
-    }
-    params = {k: v for k, v in params.items() if v is not None}
-    response = requests.get(f"{API_ENDPOINT}/texts", params=params)
-    if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.text)
-    return response.json()
+    if not API_ENDPOINT:
+        raise HTTPException(
+            status_code=500, 
+            detail="OPENPECHA_ENDPOINT environment variable is not set"
+        )
+    
+    try:
+        params = {
+            "limit": limit,
+            "offset": offset,
+            "language": language,
+            "author": author,
+        }
+        params = {k: v for k, v in params.items() if v is not None}
+        
+        url = f"{API_ENDPOINT}/texts"
+        response = requests.get(url, params=params, timeout=30)
+        
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out after 30 seconds"
+        )
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error connecting to OpenPecha API: {str(e)}"
+        )
 
-@router.post("", response_model=Text, status_code=201)
+@router.post("", response_model=CreateTextResponse, status_code=201)
 async def create_text(text: CreateText):
-    response = requests.post(f"{API_ENDPOINT}/texts", json=text.dict())
-    if response.status_code != 201:
-        raise HTTPException(status_code=response.status_code, detail=response.text)
-    return response.json()
+    if not API_ENDPOINT:
+        raise HTTPException(
+            status_code=500, 
+            detail="OPENPECHA_ENDPOINT environment variable is not set"
+        )
+    
+    try:
+        # Convert to dict, excluding None values
+        payload = text.model_dump(exclude_none=True)
+        response = requests.post(f"{API_ENDPOINT}/texts", json=payload, timeout=30)
+        
+        if response.status_code != 201:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out after 30 seconds"
+        )
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error connecting to OpenPecha API: {str(e)}"
+        )
 
 @router.get("/{id}", response_model=Text)
 async def get_text(id: str):
-    response = requests.get(f"{API_ENDPOINT}/texts/{id}")
-    if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.text)
-    return response.json()
+    if not API_ENDPOINT:
+        raise HTTPException(
+            status_code=500, 
+            detail="OPENPECHA_ENDPOINT environment variable is not set"
+        )
+    
+    try:
+        response = requests.get(f"{API_ENDPOINT}/texts/{id}", timeout=30)
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out after 30 seconds"
+        )
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error connecting to OpenPecha API: {str(e)}"
+        )
 
 @router.get("/{id}/instances", response_model=List[InstanceListItem])
 async def get_instances(id: str):
-    response = requests.get(f"{API_ENDPOINT}/texts/{id}/instances")
-    if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.text)
-    return response.json()
+    if not API_ENDPOINT:
+        raise HTTPException(
+            status_code=500, 
+            detail="OPENPECHA_ENDPOINT environment variable is not set"
+        )
+    
+    try:
+        url = f"{API_ENDPOINT}/texts/{id}/instances"
+        response = requests.get(url, timeout=30)
+        
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error connecting to OpenPecha API: {str(e)}"
+        )
 
-@router.post("/{id}/instances", status_code=201)
+@router.post("/{id}/instances", response_model=CreateInstanceResponse, status_code=201)
 async def create_instance(id: str, instance: CreateInstance):
-    response = requests.post(f"{API_ENDPOINT}/texts/{id}/instances", json=instance.dict())
-    if response.status_code != 201:
-        raise HTTPException(status_code=response.status_code, detail=response.text)
-    return response.json()
+    if not API_ENDPOINT:
+        raise HTTPException(
+            status_code=500, 
+            detail="OPENPECHA_ENDPOINT environment variable is not set"
+        )
+    
+    try:
+        # Convert to dict, excluding None values
+        payload = instance.model_dump(exclude_none=True)
+        response = requests.post(f"{API_ENDPOINT}/texts/{id}/instances", json=payload, timeout=30)
+        
+        if response.status_code != 201:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out after 30 seconds"
+        )
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error connecting to OpenPecha API: {str(e)}"
+        )
 
 @router.get("/instances/{instance_id}", response_model=Instance)
 async def get_instance(instance_id: str, annotation: bool = True):
-    params = {"annotation": str(annotation).lower()}
-    response = requests.get(f"{API_ENDPOINT}/instances/{instance_id}", params=params)
-    if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.text)
-    return response.json()
+    if not API_ENDPOINT:
+        raise HTTPException(
+            status_code=500, 
+            detail="OPENPECHA_ENDPOINT environment variable is not set"
+        )
+    
+    try:
+        params = {"annotation": str(annotation).lower()}
+        response = requests.get(f"{API_ENDPOINT}/instances/{instance_id}", params=params, timeout=30)
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out after 30 seconds"
+        )
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error connecting to OpenPecha API: {str(e)}"
+        )

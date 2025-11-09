@@ -1,17 +1,19 @@
 import { useState, forwardRef, useImperativeHandle, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, X, Check, XCircle, Loader2 } from "lucide-react";
+import { Plus, X, Loader2 } from "lucide-react";
+import { calculateAnnotations } from "@/utils/annotationCalculator";
+import { useBdrcSearch } from "@/hooks/useBdrcSearch";
 
 interface InstanceCreationFormProps {
   onSubmit: (instanceData: any) => void;
   isSubmitting: boolean;
   onCancel?: () => void;
+  content?: string; // Content from editor for annotation calculation
 }
 
 export interface InstanceCreationFormRef {
   addColophon: (text: string) => void;
   addIncipit: (text: string, language?: string) => void;
-  addContent: (text: string) => void;
 }
 
 interface TitleEntry {
@@ -36,17 +38,20 @@ const LANGUAGE_OPTIONS = [
 const InstanceCreationForm = forwardRef<
   InstanceCreationFormRef,
   InstanceCreationFormProps
->(({ onSubmit, isSubmitting, onCancel }, ref) => {
+>(({ onSubmit, isSubmitting, onCancel, content = "" }, ref) => {
   // State declarations
   const [type, setType] = useState<"diplomatic" | "critical">(
     "diplomatic"
   );
   const [copyright, setCopyright] = useState("public");
   const [bdrc, setBdrc] = useState("");
-  const [bdrcValidationStatus, setBdrcValidationStatus] = useState<"idle" | "validating" | "valid" | "invalid">("idle");
   const [wiki, setWiki] = useState("");
   const [colophon, setColophon] = useState("");
-  const [content, setContent] = useState("");
+
+  // BDRC search state
+  const [bdrcSearch, setBdrcSearch] = useState("");
+  const [showBdrcDropdown, setShowBdrcDropdown] = useState(false);
+  const [selectedBdrc, setSelectedBdrc] = useState<{ id: string; label: string } | null>(null);
 
   // Incipit title management
   const [showIncipitTitle, setShowIncipitTitle] = useState(false);
@@ -57,51 +62,18 @@ const InstanceCreationForm = forwardRef<
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // BDRC search hook
+  const { results: bdrcResults, isLoading: bdrcLoading } = useBdrcSearch(bdrcSearch);
+
   // Clear BDRC ID when switching to critical type
   useEffect(() => {
     if (type === "critical" && bdrc) {
       setBdrc("");
-      setBdrcValidationStatus("idle");
+      setSelectedBdrc(null);
+      setBdrcSearch("");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
-
-  // BDRC ID validation with debounce
-  useEffect(() => {
-    if (!bdrc.trim()) {
-      setBdrcValidationStatus("idle");
-      return;
-    }
-
-    // Set to validating immediately when user types
-    setBdrcValidationStatus("validating");
-
-    // Debounce API call
-    const timer = setTimeout(async () => {
-      try {
-        const response = await fetch("https://autocomplete.bdrc.io/autosuggest", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ query: bdrc.trim() }),
-        });
-
-        const data = await response.json();
-
-        if (Array.isArray(data) && data.length > 0) {
-          setBdrcValidationStatus("valid");
-        } else {
-          setBdrcValidationStatus("invalid");
-        }
-      } catch (error) {
-        console.error("Error validating BDRC ID:", error);
-        setBdrcValidationStatus("invalid");
-      }
-    }, 500); // 500ms debounce
-
-    return () => clearTimeout(timer);
-  }, [bdrc]);
 
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
@@ -121,15 +93,6 @@ const InstanceCreationForm = forwardRef<
         ...incipitTitles,
         { language: isValidLanguage ? language : "", value: text },
       ]);
-    },
-    addContent: (text: string) => {
-      // Append to existing content with a newline separator if content already exists
-      setContent((prevContent) => {
-        if (prevContent.trim().length > 0) {
-          return prevContent + "\n" + text;
-        }
-        return text;
-      });
     },
   }));
 
@@ -203,7 +166,6 @@ const InstanceCreationForm = forwardRef<
       metadata: {
         type: type,
       },
-      content: content.trim(),
     };
 
     // Add optional metadata fields only if non-empty
@@ -253,6 +215,23 @@ const InstanceCreationForm = forwardRef<
       }
     }
 
+    // Add content and calculate annotations
+    if (content) {
+      const { annotations, cleanedContent } = calculateAnnotations(content);
+      cleaned.content = cleanedContent; // Content without newlines
+      
+      // Add reference field for diplomatic type only
+      if (type === "diplomatic") {
+        cleaned.annotation = annotations.map(ann => ({
+          ...ann,
+          reference: "temp"
+        }));
+      } else {
+        // Critical type - no reference field
+        cleaned.annotation = annotations;
+      }
+    }
+
     return cleaned;
   };
 
@@ -266,8 +245,9 @@ const InstanceCreationForm = forwardRef<
       return;
     }
 
-    if (!content.trim()) {
-      setErrors({ content: "Content is required and cannot be empty" });
+    // Validate content is not empty
+    if (!content || content.trim().length === 0) {
+      setErrors({ content: "Content is required. Please upload and edit a text file first." });
       return;
     }
 
@@ -304,7 +284,7 @@ const InstanceCreationForm = forwardRef<
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Metadata Section */}
-      <div className="border rounded-lg p-4">
+      <div>
         <h4 className="font-medium text-gray-900 mb-3">Metadata</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Type */}
@@ -356,47 +336,88 @@ const InstanceCreationForm = forwardRef<
                 htmlFor="bdrc"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                BDRC ID <span className="text-red-500">*</span>
+                BDRC Instance ID <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <input
-                  id="bdrc"
-                  type="text"
-                  value={bdrc}
-                  onChange={(e) => setBdrc(e.target.value)}
-                  onBlur={() => {
-                    // Clear the field if invalid when user leaves the input
-                    if (bdrcValidationStatus === "invalid") {
+                {selectedBdrc ? (
+                  // Display selected BDRC (read-only, click to change)
+                  <div
+                    onClick={() => {
+                      setSelectedBdrc(null);
                       setBdrc("");
-                      setBdrcValidationStatus("idle");
-                    }
-                  }}
-                  required
-                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., MW23703_4010"
-                />
-                {/* Validation Icons */}
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
-                  {bdrcValidationStatus === "validating" && (
-                    <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
-                  )}
-                  {bdrcValidationStatus === "valid" && (
-                    <Check className="w-5 h-5 text-green-600" />
-                  )}
-                  {bdrcValidationStatus === "invalid" && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBdrc("");
-                        setBdrcValidationStatus("idle");
+                      setBdrcSearch("");
+                      setShowBdrcDropdown(true);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between"
+                  >
+                    <span className="text-sm font-medium text-gray-900">{selectedBdrc.id}</span>
+                    <span className="text-xs text-blue-600">Click to change</span>
+                  </div>
+                ) : (
+                  // Search input
+                  <>
+                    <input
+                      id="bdrc"
+                      type="text"
+                      value={bdrcSearch}
+                      onChange={(e) => {
+                        setBdrcSearch(e.target.value);
+                        setShowBdrcDropdown(true);
                       }}
-                      className="hover:opacity-70 transition-opacity"
-                      title="Clear BDRC ID"
-                    >
-                      <XCircle className="w-5 h-5 text-red-600" />
-                    </button>
-                  )}
-                </div>
+                      onFocus={() => setShowBdrcDropdown(true)}
+                      onBlur={() => {
+                        setTimeout(() => {
+                          setShowBdrcDropdown(false);
+                          // Clear search if nothing was actually selected
+                          if (!selectedBdrc) {
+                            setBdrcSearch("");
+                          }
+                        }, 200);
+                      }}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Search BDRC entries..."
+                    />
+                    {/* BDRC Dropdown */}
+                    {showBdrcDropdown && bdrcSearch.trim() && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                        {bdrcLoading ? (
+                          <div className="px-4 py-8 flex flex-col items-center justify-center">
+                            <Loader2 className="w-6 h-6 text-blue-600 animate-spin mb-2" />
+                            <div className="text-sm text-gray-500">Searching...</div>
+                          </div>
+                        ) : bdrcResults.length > 0 ? (
+                          bdrcResults
+                            .filter((result) => result.prefLabel && result.prefLabel !== " - no data - ")
+                            .map((result, index) => (
+                              <button
+                                key={`${result.instanceId}-${index}`}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedBdrc({
+                                    id: result.instanceId,
+                                    label: result.prefLabel,
+                                  });
+                                  setBdrc(result.instanceId);
+                                  setShowBdrcDropdown(false);
+                                }}
+                                className="w-full px-4 py-2 text-left hover:bg-gray-50 border-b border-gray-100"
+                              >
+                                <div className="text-sm font-medium text-gray-900">
+                                  {result.prefLabel}
+                                </div>
+                                <div className="text-xs text-gray-500">{result.instanceId}</div>
+                              </button>
+                            ))
+                        ) : (
+                          <div className="px-4 py-3 text-sm text-gray-500">
+                            No BDRC entries found
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
               {errors.bdrc && (
                 <p className="mt-1 text-sm text-red-600">{errors.bdrc}</p>
@@ -637,27 +658,16 @@ const InstanceCreationForm = forwardRef<
         )}
       </div>
 
-      {/* Content Section */}
-      <div className="border rounded-lg p-4">
-        <h4 className="font-medium text-gray-900 mb-3">
-          Content <span className="text-red-500">*</span>
-        </h4>
-        <textarea
-          id="content"
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          rows={8}
-          required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Enter the text content..."
-        />
-        {errors.content && (
-          <p className="mt-1 text-sm text-red-600">{errors.content}</p>
-        )}
-      </div>
+
+      {/* Content validation error */}
+      {errors.content && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md text-center">
+          <p className="text-sm font-medium">{errors.content}</p>
+        </div>
+      )}
 
       {/* Form Actions */}
-      <div className="flex justify-end space-x-3 pt-4">
+      <div className="flex justify-center space-x-3 pt-4">
         {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel

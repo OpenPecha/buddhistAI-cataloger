@@ -1,6 +1,7 @@
 import {
   createText,
   createTextInstance,
+  fetchAnnotation,
   fetchInstance,
   fetchText,
   fetchTextInstances,
@@ -29,6 +30,7 @@ export const useText = (id: string) => {
     queryKey: ["text", id],
     queryFn: () => fetchText(id),
     select: (data) => data.results || data || [],
+    enabled: !!id, // Only fetch when id exists
   });
 };
 
@@ -37,6 +39,7 @@ export const useTextInstance = (id: string) => {
     queryKey: ["textInstance", id],
     queryFn: () => fetchTextInstances(id),
     select: (data) => data.results || data || [],
+    enabled: !!id, // Only fetch when id exists
   });
 };
 
@@ -45,6 +48,16 @@ export const useInstance = (id: string) => {
     queryKey: ["instance", id],
     queryFn: () => fetchInstance(id),
     select: (data) => data.results || data || [],
+    enabled: !!id, // Only fetch when id exists
+  });
+};
+
+export const useAnnnotation = (id: string) => {
+  return useQuery({
+    queryKey: ["annotation", id],
+    queryFn: () => fetchAnnotation(id),
+    select: (data) => data.results || data || [],
+    enabled: !!id, // Only fetch when id exists
   });
 };
 

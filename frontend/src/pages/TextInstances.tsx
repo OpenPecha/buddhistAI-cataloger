@@ -7,7 +7,7 @@ import { useParams } from "react-router-dom";
 import TextInstanceCard from "@/components/TextInstanceCard";
 import BreadCrumb from "@/components/BreadCrumb";
 import InstanceCreationForm from "@/components/InstanceCreationForm";
-import type { OpenPechaTextInstance } from "@/types/text";
+import type { OpenPechaTextInstanceListItem } from "@/types/text";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle } from "lucide-react";
@@ -27,7 +27,7 @@ function TextInstanceCRUD() {
     error,
     refetch,
   } = useTextInstance(text_id || "");
-  const { data: text = [] } = useText(text_id || "");
+  const { data: text } = useText(text_id || "");
   const createInstanceMutation = useCreateTextInstance();
 
   const handleInstanceSubmit = async (instanceData: any) => {
@@ -146,7 +146,7 @@ function TextInstanceCRUD() {
     );
   }
 
-  const title = text.title.bo || text.title.en || text.title.sa || "Untitled";
+  const title = text?.title?.bo || text?.title?.en || text?.title?.sa || "Untitled";
 
   return (
     <div className="space-y-6">
@@ -181,7 +181,7 @@ function TextInstanceCRUD() {
       </div>
 
       <div className="grid gap-6">
-        {instances.map((instance: OpenPechaTextInstance) => (
+        {instances.map((instance: OpenPechaTextInstanceListItem) => (
           <TextInstanceCard key={instance.id} instance={instance} />
         ))}
       </div>

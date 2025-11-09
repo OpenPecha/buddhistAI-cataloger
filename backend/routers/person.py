@@ -74,7 +74,9 @@ async def get_person(id: str):
 
 @router.post("", response_model=Person, status_code=201)
 async def create_person(person: CreatePerson):
-    response = requests.post(f"{API_ENDPOINT}/persons", json=person.dict())
+    # Convert to dict, excluding None values
+    payload = person.model_dump(exclude_none=True)
+    response = requests.post(f"{API_ENDPOINT}/persons", json=payload)
     if response.status_code != 201:
         raise HTTPException(status_code=response.status_code, detail=response.text)
     return response.json()

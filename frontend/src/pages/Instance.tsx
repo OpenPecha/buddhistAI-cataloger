@@ -61,18 +61,12 @@ function Instance() {
       </div>
     );
   }
-  const title ='Annotation';
+  const title = instance.metadata?.colophon || 'Instance Details';
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
       <BreadCrumb instancename={title}/>
       
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-        </div>
-  
-      </div>
       <InstanceCard instance={instance as OpenPechaTextInstance} />
     </div>
   );

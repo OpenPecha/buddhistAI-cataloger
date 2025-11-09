@@ -10,7 +10,7 @@ const PersonCRUD = () => {
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [pagination, setPagination] = useState({
-    limit: 10,
+    limit: 30,
     offset: 0,
     nationality: '',
     occupation: ''
@@ -77,10 +77,9 @@ const PersonCRUD = () => {
                   onChange={(e) => handlePaginationChange({ limit: parseInt(e.target.value), offset: 0 })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
                   <option value={30}>30</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
                 </select>
               </div>
               <div>

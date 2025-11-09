@@ -20,7 +20,7 @@ export interface OpenPechaText {
   date: string | null;
   id: string;
   language: string;
-  parent: string | null;
+  target: string | null;
   title: Title;
   type: string;
   wiki: string | null;
@@ -41,17 +41,44 @@ export interface Annotations {
   [key: string]: unknown[];
 }
 
-export interface OpenPechaTextInstance {
-  alignment_sources: string[];
-  alignment_targets: string[];
-  alt_incipit_titles: string | null;
-  annotations: Annotations;
-  base: string;
-  bdrc: string | null;
-  colophon: string | null;
-  copyright: string;
-  id: string;
-  incipit_title: string | null;
+export interface AnnotationReference {
+  annotation_id: string;
   type: string;
+}
+
+export interface IncipitTitle {
+  [language: string]: string;
+}
+
+// Instance list item (flat structure from GET /text/{text_id}/instances)
+export interface OpenPechaTextInstanceListItem {
+  id: string;
+  bdrc: string | null;
   wiki: string | null;
+  type: string;
+  copyright: string;
+  colophon: string | null;
+  incipit_title: IncipitTitle | null;
+  alt_incipit_titles: any[] | null;
+}
+
+export interface InstanceMetadata {
+  id: string;
+  type: string;
+  copyright: string;
+  bdrc: string | null;
+  wiki: string | null;
+  colophon: string | null;
+  incipit_title: IncipitTitle | null;
+  alt_incipit_titles: string | null;
+}
+
+// Single instance detail (nested structure from GET /v2/instances/{instance_id})
+export interface OpenPechaTextInstance {
+  content: string;
+  metadata: InstanceMetadata;
+  annotations: Annotations | AnnotationReference[] | null;
+  // Legacy fields for backward compatibility (optional)
+  alignment_sources?: string[];
+  alignment_targets?: string[];
 }

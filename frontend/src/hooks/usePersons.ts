@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Person, CreatePersonData, UpdatePersonData } from '../types/person';
 
-const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8000';
 
 // Helper function to handle API responses with better error messages
 const handleApiResponse = async (response: Response, customMessages?: { 404?: string; 500?: string }) => {
@@ -70,6 +70,20 @@ const fetchPersons = async (params?: { limit?: number; offset?: number; national
   }
 };
 
+const fetchPerson = async (id: string): Promise<Person> => {
+  try {
+    const response = await fetch(`${API_URL}/person/${id}`);
+    return await handleApiResponse(response, {
+      404: 'Person not found. It may have been deleted or the link is incorrect.'
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unable to load person details. Please check your connection and try again.');
+  }
+};
+
 const createPerson = async (data: CreatePersonData): Promise<Person> => {
   try {
     const response = await fetch(`${API_URL}/person`, {
@@ -117,6 +131,16 @@ export const usePersons = (params?: { limit?: number; offset?: number; nationali
   return useQuery({
     queryKey: ['persons', params],
     queryFn: () => fetchPersons(params),
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+};
+
+export const usePerson = (id: string) => {
+  return useQuery({
+    queryKey: ['person', id],
+    queryFn: () => fetchPerson(id),
+    enabled: !!id, // Only fetch when id exists
     staleTime: 5 * 60 * 1000,
     retry: 1,
   });
