@@ -378,7 +378,23 @@ async def bdrc_search(request: BdrcSearchRequest):
             # Return only work details for Instance searches
             return work_details
         
-        # For Person or other types, return original response
+        # For Person searches, return cleaned format
+        elif request.type == "Person":
+            formatted_results = []
+            if "responses" in search_results and len(search_results["responses"]) > 0:
+                hits = search_results["responses"][0].get("hits", {}).get("hits", [])
+                # Limit to maximum 10 results
+                for hit in hits[:10]:
+                    person_data = {
+                        "bdrc_id": hit.get("_id"),
+                        "_index": hit.get("_index"),
+                        "_source": hit.get("_source", {}),
+                        "highlight": hit.get("highlight", {})
+                    }
+                    formatted_results.append(person_data)
+            return formatted_results
+        
+        # For other types, return original response
         return search_results
         
     except requests.exceptions.Timeout:
@@ -592,7 +608,25 @@ async def bdrc_person_search(request: BdrcPersonSearchRequest):
         response = requests.post(BDRC_ENDPOINT, data=payload, headers=headers, timeout=30)
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
-        return response.json()
+        
+        search_results = response.json()
+        
+        # Extract and format person results
+        formatted_results = []
+        if "responses" in search_results and len(search_results["responses"]) > 0:
+            hits = search_results["responses"][0].get("hits", {}).get("hits", [])
+            # Limit to maximum 10 results
+            for hit in hits[:10]:
+                person_data = {
+                    "bdrc_id": hit.get("_id"),
+                    "_index": hit.get("_index"),
+                    "_source": hit.get("_source", {}),
+                    "highlight": hit.get("highlight", {})
+                }
+                formatted_results.append(person_data)
+        
+        return formatted_results
+        
     except requests.exceptions.Timeout:
         raise HTTPException(status_code=504, detail="Request to BDRC API timed out")
     except requests.exceptions.RequestException as e:
