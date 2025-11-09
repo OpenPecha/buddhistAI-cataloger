@@ -6,10 +6,14 @@ import json
 import logging
 from rdflib import Graph, Namespace
 from rdflib.namespace import SKOS
+import os
+from dotenv import load_dotenv
+import pyewts
+load_dotenv(override=True)
 
 router = APIRouter()
-
-BDRC_ENDPOINT = "https://autocomplete.bdrc.io/msearch"
+converter = pyewts.pyewts()
+BDRC_ENDPOINT = os.getenv("BDRC_SEARCH_ENDPOINT")
 
 
 class IndexQuery(BaseModel):
@@ -385,10 +389,22 @@ async def bdrc_search(request: BdrcSearchRequest):
                 hits = search_results["responses"][0].get("hits", {}).get("hits", [])
                 # Limit to maximum 10 results
                 for hit in hits[:10]:
+                    source = hit.get("_source", {}).copy()
+                    
+                    # Convert altLabel_bo_x_ewts from EWTS to Unicode
+                    if "altLabel_bo_x_ewts" in source and source["altLabel_bo_x_ewts"]:
+                        converted_labels = []
+                        for label in source["altLabel_bo_x_ewts"]:
+                            if label:  # Check if label is not empty
+                                converted_labels.append(converter.toUnicode(label))
+                            else:
+                                converted_labels.append(label)
+                        source["altLabel_bo_x_ewts"] = converted_labels
+                    
                     person_data = {
                         "bdrc_id": hit.get("_id"),
                         "_index": hit.get("_index"),
-                        "_source": hit.get("_source", {}),
+                        "_source": source,
                         "highlight": hit.get("highlight", {})
                     }
                     formatted_results.append(person_data)
@@ -499,7 +515,7 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
             work_details.append(WorkDetail(
                 workId=work_id,
                 instanceId=instance_id,
-                prefLabel=pref_label,
+                prefLabel=converter.toUnicode(pref_label),
                 catalogInfo=catalog_info,
                 creator=creator,
                 language=language,
@@ -514,123 +530,4 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
     
     return work_details
 
-
-@router.post("/search/person")
-async def bdrc_person_search(request: BdrcPersonSearchRequest):
-    """Search BDRC database for persons/authors"""
-    
-    # Create the default aggregations
-    default_aggs = {
-        "associatedCentury": {"terms": {"field": "associatedCentury", "size": 1000}},
-        "associatedTradition": {"terms": {"field": "associatedTradition", "size": 1000}},
-        "personGender": {"terms": {"field": "personGender", "size": 1000}},
-        "type": {"terms": {"field": "type", "size": 1000}}
-    }
-    
-    # Create the highlight configuration for person fields
-    highlight_config = {
-        "fields": {
-            "type": {},
-            "associatedTradition": {},
-            "personGender": {},
-            "prefLabel_en": {"fragment_size": 500},
-            "prefLabel_bo_x_ewts": {"fragment_size": 500},
-            "prefLabel_iast": {"fragment_size": 500},
-            "prefLabel_hani": {"fragment_size": 500},
-            "prefLabel_khmr": {"fragment_size": 500},
-            "comment_en": {},
-            "comment_bo_x_ewts": {},
-            "comment_iast": {},
-            "comment_hani": {},
-            "comment_khmr": {},
-            "altLabel_en": {"fragment_size": 500},
-            "altLabel_bo_x_ewts": {"fragment_size": 500},
-            "altLabel_iast": {"fragment_size": 500},
-            "altLabel_hani": {"fragment_size": 500},
-            "altLabel_khmr": {"fragment_size": 500}
-        }
-    }
-    
-    # Build the search payload with Person type filter
-    search_fields = [
-        "prefLabel_bo_x_ewts^1",
-        "prefLabel_en^1",
-        "comment_bo_x_ewts^0.0001",
-        "comment_en^0.0001",
-        "altLabel_bo_x_ewts^0.6",
-        "altLabel_en^0.6"
-    ]
-    
-    payload_lines = [
-        json.dumps({"index": "bdrc_prod"}),
-        json.dumps({
-            "from": request.from_,
-            "size": request.size,
-            "aggs": default_aggs,
-            "highlight": highlight_config,
-            "query": {
-                "function_score": {
-                    "script_score": {
-                        "script": {
-                            "id": "bdrc-score"
-                        }
-                    },
-                    "query": {
-                        "bool": {
-                            "filter": [
-                                {"term": {"type": "Person"}}
-                            ],
-                            "must": [
-                                {
-                                    "multi_match": {
-                                        "type": "phrase",
-                                        "query": request.search_query,
-                                        "fields": search_fields
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        })
-    ]
-    
-    # Join with newlines as required by the multi-search format
-    payload = '\n'.join(payload_lines) + '\n'
-    
-    headers = {
-        'Accept-Encoding': 'gzip, deflate, br, zstd',
-        'Content-Type': 'application/json'
-    }
-    
-    try:
-        response = requests.post(BDRC_ENDPOINT, data=payload, headers=headers, timeout=30)
-        if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail=response.text)
-        
-        search_results = response.json()
-        
-        # Extract and format person results
-        formatted_results = []
-        if "responses" in search_results and len(search_results["responses"]) > 0:
-            hits = search_results["responses"][0].get("hits", {}).get("hits", [])
-            # Limit to maximum 10 results
-            for hit in hits[:10]:
-                person_data = {
-                    "bdrc_id": hit.get("_id"),
-                    "_index": hit.get("_index"),
-                    "_source": hit.get("_source", {}),
-                    "highlight": hit.get("highlight", {})
-                }
-                formatted_results.append(person_data)
-        
-        return formatted_results
-        
-    except requests.exceptions.Timeout:
-        raise HTTPException(status_code=504, detail="Request to BDRC API timed out")
-    except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=502, detail=f"Error connecting to BDRC API: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
