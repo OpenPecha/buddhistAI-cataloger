@@ -276,12 +276,8 @@ const InstanceCreationForm = forwardRef<
     // Add bibliography annotations if they exist
     if (hasAnnotations()) {
       cleaned.biblography_annotation = getAPIAnnotations();
-      console.log('📚 Bibliography annotations added:', cleaned.biblography_annotation);
-    } else {
-      console.log('📚 No bibliography annotations found');
     }
 
-    console.log('📝 Final form data:', cleaned);
     return cleaned;
   };
 

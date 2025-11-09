@@ -29,12 +29,10 @@ export const useBibliographyAPI = () => {
 
   // Convert internal annotations to API format
   const getAPIAnnotations = (): APIBibliographyAnnotation[] => {
-    console.log('🔄 Converting annotations to API format. Total annotations:', annotations.length);
     const apiAnnotations = annotations
       .map(annotation => {
         const mappedType = mapAnnotationType(annotation.type);
         if (!mappedType) {
-          console.warn(`⚠️ Skipping annotation with unsupported type: ${annotation.type}`);
           return null;
         }
         return {
@@ -47,7 +45,6 @@ export const useBibliographyAPI = () => {
       })
       .filter((ann): ann is APIBibliographyAnnotation => ann !== null);
     
-    console.log('✅ Converted annotations:', apiAnnotations);
     return apiAnnotations;
   };
 
