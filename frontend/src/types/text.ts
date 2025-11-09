@@ -82,3 +82,9 @@ export interface OpenPechaTextInstance {
   alignment_sources?: string[];
   alignment_targets?: string[];
 }
+
+// Response when creating a new instance (POST /text/{id}/instances)
+export interface CreateInstanceResponse {
+  message: string;
+  id: string;
+}
