@@ -22,6 +22,7 @@ interface TextCreationFormProps {
 
 export interface TextCreationFormRef {
   addTitle: (text: string, language?: string) => void;
+  addAltTitle: (text: string, language?: string) => void;
   setPersonSearch: (text: string) => void;
   openContributorForm: () => void;
 }
@@ -79,6 +80,20 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
           }
         });
       },
+      addAltTitle: (text: string, language?: string) => {
+        // Check if the detected language is in the LANGUAGE_OPTIONS array
+        const isValidLanguage = language && LANGUAGE_OPTIONS.some(
+          (option) => option.code === language
+        );
+        
+        const finalLanguage = isValidLanguage ? language : "";
+        
+        // Add new alternative title (allow duplicates, no checking)
+        setAltTitles((prevAltTitles) => [
+          ...prevAltTitles, 
+          { language: finalLanguage, value: text }
+        ]);
+      },
       setPersonSearch: (text: string) => {
         // Set the person search field and show the dropdown
         setPersonSearch(text);
@@ -94,6 +109,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       "root" | "commentary" | "translation" | ""
     >("");
     const [titles, setTitles] = useState<TitleEntry[]>([]);
+    const [altTitles, setAltTitles] = useState<TitleEntry[]>([]);
     const [language, setLanguage] = useState("");
     const [target, setTarget] = useState("");
     const [date, setDate] = useState(() => {
@@ -262,13 +278,20 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         };
       });
 
+      // Build alt_titles array - transform from [{ language: "bo", value: "text" }] to [{ "bo": "text" }]
+      const altTitlesArray = altTitles
+        .filter((altTitle) => altTitle.language && altTitle.value.trim())
+        .map((altTitle) => ({
+          [altTitle.language]: altTitle.value.trim(),
+        }));
+
       // Build final payload
       const textData: any = {
         type: selectedType,
         title,
         language: language.trim(),
         contributions: contributionsArray,
-        alt_titles: [], // Empty for now, will be populated when user adds alt titles
+        alt_titles: altTitlesArray,
       };
 
       // Add target field for translation and commentary types
@@ -287,6 +310,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     }, [
       selectedType,
       titles,
+      altTitles,
       language,
       target,
       contributors,
@@ -514,6 +538,87 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
 
           {errors.title && (
             <p className="mt-1 text-sm text-red-600">{errors.title}</p>
+          )}
+        </div>
+
+        {/* Alternative Titles Section */}
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Alternative Titles (optional)
+            </label>
+            <Button
+              type="button"
+              onClick={() =>
+                setAltTitles([...altTitles, { language: "", value: "" }])
+              }
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1"
+            >
+              <Plus className="h-4 w-4" />
+              Add Alternative Title
+            </Button>
+          </div>
+
+          {/* Existing Alternative Titles List */}
+          {altTitles.length > 0 && (
+            <div className="space-y-3 mb-4">
+              {altTitles.map((altTitle, index) => (
+                <div
+                  key={index}
+                  className="flex gap-2 items-start p-3 bg-purple-50 border border-purple-200 rounded-md"
+                >
+                  <select
+                    value={altTitle.language}
+                    onChange={(e) => {
+                      const newAltTitles = [...altTitles];
+                      newAltTitles[index].language = e.target.value;
+                      setAltTitles(newAltTitles);
+                    }}
+                    className="w-20 sm:w-32 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                  >
+                    <option value="">Lang</option>
+                    {LANGUAGE_OPTIONS.map((lang) => (
+                      <option key={lang.code} value={lang.code}>
+                        {lang.name}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="text"
+                    value={altTitle.value}
+                    onChange={(e) => {
+                      const newAltTitles = [...altTitles];
+                      newAltTitles[index].value = e.target.value;
+                      
+                      // Auto-detect language if not already set
+                      if (!newAltTitles[index].language && e.target.value.trim()) {
+                        const detectedLang = detectLanguage(e.target.value);
+                        if (detectedLang) {
+                          newAltTitles[index].language = detectedLang;
+                        }
+                      }
+                      
+                      setAltTitles(newAltTitles);
+                    }}
+                    className="flex-1 min-w-0 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+                    placeholder="Enter alternative title"
+                  />
+                  <Button
+                    type="button"
+                    onClick={() =>
+                      setAltTitles(altTitles.filter((_, i) => i !== index))
+                    }
+                    variant="outline"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700 flex-shrink-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
           )}
         </div>
 

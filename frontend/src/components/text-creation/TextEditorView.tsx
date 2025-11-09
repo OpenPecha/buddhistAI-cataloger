@@ -12,7 +12,7 @@ interface TextEditorViewProps {
   filename?: string;
   onChange?: (value: string) => void;
   editable?: boolean;
-  onTextSelect?: (text: string, type: 'title' | 'colophon' | 'incipit_title' | 'person') => void;
+  onTextSelect?: (text: string, type: 'title' | 'alt_title' | 'colophon' | 'incipit' | 'alt_incipit' | 'person') => void;
 }
 
 const TextEditorView = ({ content, filename, onChange, editable = false, onTextSelect }: TextEditorViewProps) => {
@@ -85,7 +85,7 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
     }
   };
 
-  const handleMenuSelect = (type: 'title' | 'colophon' | 'incipit_title' | 'person') => {
+  const handleMenuSelect = (type: 'title' | 'alt_title' | 'colophon' | 'incipit' | 'alt_incipit' | 'person') => {
     if (selectedText && onTextSelect) {
       onTextSelect(selectedText, type);
     }

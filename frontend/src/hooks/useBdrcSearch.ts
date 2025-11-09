@@ -64,7 +64,6 @@ export function useBdrcSearch(searchQuery: string, debounceMs: number = 500) {
         setResults(Array.isArray(data) ? data : []);
         setError(null);
       } catch (err) {
-        console.error("Error searching BDRC:", err);
         setError(err instanceof Error ? err.message : "Unknown error");
         setResults([]);
       } finally {
