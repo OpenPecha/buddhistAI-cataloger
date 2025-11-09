@@ -36,6 +36,7 @@ interface InstanceCreationFormProps {
 export interface InstanceCreationFormRef {
   addColophon: (text: string) => void;
   addIncipit: (text: string, language?: string) => void;
+  addAltIncipit: (text: string, language?: string) => void;
 }
 
 interface TitleEntry {
@@ -118,6 +119,21 @@ const InstanceCreationForm = forwardRef<
         ...incipitTitles,
         { language: isValidLanguage ? language : "", value: text },
       ]);
+    },
+    addAltIncipit: (text: string, language?: string) => {
+      setShowIncipitTitle(true); // Ensure incipit section is visible
+      
+      // Check if the detected language is in the LANGUAGE_OPTIONS array
+      const isValidLanguage = language && LANGUAGE_OPTIONS.some(
+        (option) => option.code === language
+      );
+      
+      // Add a new alternative incipit title group with the selected text
+      const newAltGroup = [{ 
+        language: isValidLanguage ? language : "", 
+        value: text 
+      }];
+      setAltIncipitTitles([...altIncipitTitles, newAltGroup]);
     },
   }));
 

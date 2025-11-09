@@ -11,16 +11,43 @@ interface APIBibliographyAnnotation {
 export const useBibliographyAPI = () => {
   const { annotations, clearAnnotations } = useBibliography();
 
+  // Map frontend annotation types to backend API types
+  // Backend expects: 'alt_incipit_title', 'alt_title', 'author', 'colophon', 'title'
+  const mapAnnotationType = (frontendType: BibliographyAnnotation['type']): string | null => {
+    const typeMap: Record<string, string> = {
+      'title': 'title',
+      'alt_title': 'alt_title',
+      'colophon': 'colophon',
+      'person': 'author',
+      'alt_incipit': 'alt_incipit_title',
+      // 'incipit' and 'incipit_title' are not valid bibliography annotation types
+      // They are only used for metadata (incipit_title field), so we filter them out
+    };
+    
+    return typeMap[frontendType] || null;
+  };
+
   // Convert internal annotations to API format
   const getAPIAnnotations = (): APIBibliographyAnnotation[] => {
     console.log('🔄 Converting annotations to API format. Total annotations:', annotations.length);
-    const apiAnnotations = annotations.map(annotation => ({
-      span: {
-        start: annotation.span.start,
-        end: annotation.span.end,
-      },
-      type: annotation.type,
-    }));
+    const apiAnnotations = annotations
+      .map(annotation => {
+        const mappedType = mapAnnotationType(annotation.type);
+        if (!mappedType) {
+          console.warn(`⚠️ Skipping annotation with unsupported type: ${annotation.type}`);
+          return null;
+        }
+        return {
+          span: {
+            start: annotation.span.start,
+            end: annotation.span.end,
+          },
+          type: mappedType,
+        };
+      })
+      .filter((ann): ann is APIBibliographyAnnotation => ann !== null);
+    
+    console.log('✅ Converted annotations:', apiAnnotations);
     return apiAnnotations;
   };
 
