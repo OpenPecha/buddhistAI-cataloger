@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
 
 
-export type BibliographyAnnotationType = 'title' | 'colophon' | 'incipit_title' | 'person';
+export type BibliographyAnnotationType = 'title' | 'alt_title' | 'colophon' | 'incipit' | 'incipit_title' | 'alt_incipit' | 'person';
 
 export interface BibliographyAnnotation {
   id: string;

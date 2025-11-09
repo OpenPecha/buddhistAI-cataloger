@@ -28,8 +28,6 @@ const TextCreationSuccessModal = ({ message, onClose, instanceId }: TextCreation
       const baseUrl = import.meta.env.VITE_FORMATTER_URL || 'http://localhost:5000';
       const formatterUrl = `${baseUrl}/formatter?I_id=${instanceId}`;
       window.open(formatterUrl, '_blank', 'noopener,noreferrer');
-    } else {
-      console.error('No instance ID available for formatter');
     }
   };
 

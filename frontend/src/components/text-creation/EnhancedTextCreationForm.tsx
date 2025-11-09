@@ -72,6 +72,9 @@ const EnhancedTextCreationForm = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [createdInstanceId, setCreatedInstanceId] = useState<string | null>(null);
+  
+  // Notification state for text selection actions
+  const [notification, setNotification] = useState<string | null>(null);
 
   // Mutations and data
   const { data: texts = [], isLoading: isLoadingTexts } = useTexts({ limit: 100, offset: 0 });
@@ -280,24 +283,57 @@ const EnhancedTextCreationForm = () => {
   // Handle text selection from editor
   const handleEditorTextSelect = (
     text: string,
-    type: "title" | "colophon" | "incipit" | "person"
+    type: "title" | "alt_title" | "colophon" | "incipit" | "alt_incipit" | "person"
   ) => {
     // Detect language from selected text
     const detectedLanguage = detectLanguage(text);
 
     switch (type) {
       case "title":
+        if (!isCreatingNewText) {
+          setNotification("⚠️ Title can only be added when creating a new text");
+          setTimeout(() => setNotification(null), 3000);
+          return;
+        }
         textFormRef.current?.addTitle(text, detectedLanguage);
+        setNotification("✓ Title added successfully");
+        setTimeout(() => setNotification(null), 2000);
+        break;
+      case "alt_title":
+        if (!isCreatingNewText) {
+          setNotification("⚠️ Alternative titles can only be added when creating a new text");
+          setTimeout(() => setNotification(null), 3000);
+          return;
+        }
+        textFormRef.current?.addAltTitle(text, detectedLanguage);
+        setNotification("✓ Alternative title added successfully");
+        setTimeout(() => setNotification(null), 2000);
         break;
       case "colophon":
         instanceFormRef.current?.addColophon(text);
+        setNotification("✓ Colophon added successfully");
+        setTimeout(() => setNotification(null), 2000);
         break;
       case "incipit":
         instanceFormRef.current?.addIncipit(text, detectedLanguage);
+        setNotification("✓ Incipit added successfully");
+        setTimeout(() => setNotification(null), 2000);
+        break;
+      case "alt_incipit":
+        instanceFormRef.current?.addAltIncipit(text, detectedLanguage);
+        setNotification("✓ Alternative incipit title added successfully");
+        setTimeout(() => setNotification(null), 2000);
         break;
       case "person":
+        if (!isCreatingNewText) {
+          setNotification("⚠️ Contributors can only be added when creating a new text");
+          setTimeout(() => setNotification(null), 3000);
+          return;
+        }
         textFormRef.current?.setPersonSearch(text);
         textFormRef.current?.openContributorForm();
+        setNotification("✓ Person search filled");
+        setTimeout(() => setNotification(null), 2000);
         break;
     }
   };
@@ -317,6 +353,21 @@ const EnhancedTextCreationForm = () => {
           onClose={handleCloseSuccessModal}
           instanceId={createdInstanceId}
         />
+      )}
+
+      {/* Notification Toast - Success/Info Messages */}
+      {notification && (
+        <div className="fixed top-20 right-6 z-50 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="bg-white rounded-lg shadow-lg border border-gray-200 px-4 py-3 flex items-center gap-3 max-w-sm">
+            <span className="text-sm font-medium text-gray-800">{notification}</span>
+            <button
+              onClick={() => setNotification(null)}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Error Message - Clean Modal */}

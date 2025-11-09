@@ -33,7 +33,6 @@ const TextListCard = ({ text }: TextListCardProps) => {
             }
             return { person: null, role: contribution.role, loading: false };
           } catch (error) {
-            console.error(`Error fetching person ${contribution.person_id}:`, error);
             return { person: null, role: contribution.role, loading: false };
           }
         })

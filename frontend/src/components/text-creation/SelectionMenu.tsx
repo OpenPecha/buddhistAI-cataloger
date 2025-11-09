@@ -6,7 +6,7 @@ interface SelectionMenuProps {
   selectedText: string;
   textStart: number;
   textEnd: number;
-  onSelect?: (type: "title" | "colophon" | "incipit_title" | "person") => void;
+  onSelect?: (type: "title" | "alt_title" | "colophon" | "incipit" | "alt_incipit" | "person") => void;
   onClose: () => void;
 }
 
@@ -59,7 +59,7 @@ const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, o
     }
   }, [position]);
 
-  const handleMenuItemClick = (type: "title" | "colophon" | "incipit_title" | "person") => {
+  const handleMenuItemClick = (type: "title" | "alt_title" | "colophon" | "incipit" | "alt_incipit" | "person") => {
     // Add to bibliography annotations
     addAnnotation({
       span: {
@@ -86,16 +86,26 @@ const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, o
       description: "Mark as document title",
     },
     {
+      type: "alt_title" as const,
+      label: "Alternative Title",
+      color: "bg-purple-50 hover:bg-purple-100 border-purple-200",
+    },
+    {
       type: "colophon" as const,
       label: "Colophon Text",
       color: "bg-green-50 hover:bg-green-100 border-green-200",
       description: "Mark as colophon",
     },
     {
-      type: "incipit_title" as const,
+      type: "incipit" as const,
       label: "Incipit Title",
       color: "bg-blue-50 hover:bg-blue-100 border-blue-200",
       description: "Mark as incipit title",
+    },
+    {
+      type: "alt_incipit" as const,
+      label: "Alt Incipit Title",
+      color: "bg-cyan-50 hover:bg-cyan-100 border-cyan-200",
     },
     {
       type: "person" as const,
