@@ -45,6 +45,7 @@ class CreateText(BaseModel):
     target: Optional[str] = None
     date: Optional[str] = None
     bdrc: Optional[str] = None
+    category_id: Optional[str] = None
     alt_titles: List[Dict[str, str]] = []
 
 
@@ -110,7 +111,7 @@ async def get_texts(
         params = {k: v for k, v in params.items() if v is not None}
         
         url = f"{API_ENDPOINT}/texts"
-        response = requests.get(url, params=params, timeout=30)
+        response = requests.get(url, params=params)
         
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
@@ -137,7 +138,7 @@ async def create_text(text: CreateText):
     try:
         # Convert to dict, excluding None values
         payload = text.model_dump(exclude_none=True)
-        response = requests.post(f"{API_ENDPOINT}/texts", json=payload, timeout=30)
+        response = requests.post(f"{API_ENDPOINT}/texts", json=payload)
         
         if response.status_code != 201:
             raise HTTPException(status_code=response.status_code, detail=response.text)
@@ -162,7 +163,7 @@ async def get_text(id: str):
         )
     
     try:
-        response = requests.get(f"{API_ENDPOINT}/texts/{id}", timeout=30)
+        response = requests.get(f"{API_ENDPOINT}/texts/{id}")
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
         return response.json()
@@ -187,7 +188,7 @@ async def get_instances(id: str):
     
     try:
         url = f"{API_ENDPOINT}/texts/{id}/instances"
-        response = requests.get(url, timeout=30)
+        response = requests.get(url)
         
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
@@ -209,7 +210,7 @@ async def create_instance(id: str, instance: CreateInstance):
     try:
         # Convert to dict, excluding None values
         payload = instance.model_dump(exclude_none=True)
-        response = requests.post(f"{API_ENDPOINT}/texts/{id}/instances", json=payload, timeout=30)
+        response = requests.post(f"{API_ENDPOINT}/texts/{id}/instances", json=payload)
         
         if response.status_code != 201:
             raise HTTPException(status_code=response.status_code, detail=response.text)
@@ -235,7 +236,7 @@ async def get_instance(instance_id: str, annotation: bool = True):
     
     try:
         params = {"annotation": str(annotation).lower()}
-        response = requests.get(f"{API_ENDPOINT}/instances/{instance_id}", params=params, timeout=30)
+        response = requests.get(f"{API_ENDPOINT}/instances/{instance_id}", params=params)
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
         return response.json()

@@ -347,7 +347,7 @@ async def bdrc_search(request: BdrcSearchRequest):
     }
     
     try:
-        response = requests.post(BDRC_ENDPOINT, data=payload, headers=headers, timeout=30)
+        response = requests.post(BDRC_ENDPOINT, data=payload, headers=headers)
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
         

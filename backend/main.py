@@ -3,7 +3,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-from routers import person, text, translation, annotation, bdrc
+from routers import person, text, translation, annotation, bdrc, category
 from dotenv import load_dotenv
 # Add project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -40,6 +40,7 @@ app.include_router(text.router, prefix="/text", tags=["text"])
 app.include_router(bdrc.router, prefix="/bdrc", tags=["bdrc"])
 app.include_router(translation.router, prefix="/instances", tags=["translation"])
 app.include_router(annotation.router, prefix="/v2/annotations", tags=["annotation"])
+app.include_router(category.router, prefix="/v2/categories", tags=["category"])
 
 @app.get("/")
 def read_root():

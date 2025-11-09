@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { X, Plus, User, Loader2 } from "lucide-react";
 import { detectLanguage } from "@/utils/languageDetection";
 import PersonFormModal from "@/components/PersonFormModal";
+import { MultilevelCategorySelector } from "@/components/MultilevelCategorySelector";
 
 interface TextCreationFormProps {
   onDataChange?: (textData: any) => void;
@@ -130,6 +131,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       return today.toISOString().split('T')[0];
     });
     const [bdrc, setBdrc] = useState("");
+    const [categoryId, setCategoryId] = useState<string>("");
     
     // BDRC search state
     const [bdrcSearch, setBdrcSearch] = useState("");
@@ -298,6 +300,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       // Add optional fields
       if (date.trim()) textData.date = date.trim();
       if (bdrc.trim()) textData.bdrc = bdrc.trim();
+      if (categoryId.trim()) textData.category_id = categoryId.trim();
 
       return textData;
     }, [
@@ -308,6 +311,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       contributors,
       date,
       bdrc,
+      categoryId,
     ]);
 
     // Expose buildFormData to parent via window object
@@ -335,6 +339,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       contributors,
       date,
       bdrc,
+      categoryId,
       onDataChange,
       buildFormData,
     ]);
@@ -829,6 +834,16 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
               )}
             </div>
           </div>
+        </div>
+
+        {/* Category Selector */}
+        <div>
+          <MultilevelCategorySelector
+            onCategorySelect={(id) => {
+              setCategoryId(id);
+            }}
+            selectedCategoryId={categoryId}
+          />
         </div>
 
         {/* Person Creation Modal */}
