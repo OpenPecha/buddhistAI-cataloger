@@ -17,3 +17,7 @@
     }
   }
   
+
+  .cm-editor div {
+    font-family: var(--font-monlam-2) !important;
+  }

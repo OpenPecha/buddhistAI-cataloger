@@ -203,7 +203,7 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
               foldGutter: true,
             }}
             theme="light"
-            className="text-base h-full"
+            className="text-base h-full font-monlam-2"
           />
         ) : activeTab === 'preview' ? (
           /* Preview - Formatted Text Display */
