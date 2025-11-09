@@ -70,7 +70,7 @@ const FileUploadZone = ({ onFileUpload }: FileUploadZoneProps) => {
       >
         <div className="flex flex-col items-center justify-center space-y-4">
           <svg
-            className="w-16 h-16 text-gray-400"
+            className="w-16 h-16 text-gray-400 animate-bounce"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"

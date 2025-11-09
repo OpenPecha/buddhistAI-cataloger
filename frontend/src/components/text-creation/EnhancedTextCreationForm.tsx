@@ -17,7 +17,6 @@ const EnhancedTextCreationForm = () => {
   const navigate = useNavigate();
   const textFormRef = useRef<TextCreationFormRef>(null);
   const instanceFormRef = useRef<InstanceCreationFormRef>(null);
-  const hasAddedFilenameRef = useRef<boolean>(false);
   const hasAutoSelectedRef = useRef<boolean>(false);
 
   // Helper function to parse error messages
@@ -144,7 +143,6 @@ const EnhancedTextCreationForm = () => {
   const clearFileUpload = () => {
     setEditedContent("");
     setUploadedFilename("");
-    hasAddedFilenameRef.current = false;
   };
 
   // Helper: Reset to initial clean state
@@ -212,25 +210,8 @@ const EnhancedTextCreationForm = () => {
     
     setEditedContent(cleanedContent);
     setUploadedFilename(filename);
-    hasAddedFilenameRef.current = false; // Reset flag for new upload
   };
 
-  // Add filename as title after form is rendered
-  useEffect(() => {
-    if (
-      editedContent && 
-      isCreatingNewText && 
-      uploadedFilename && 
-      textFormRef.current &&
-      !hasAddedFilenameRef.current
-    ) {
-      // Use setTimeout to ensure the ref is fully mounted
-      setTimeout(() => {
-        textFormRef.current?.addFilenameAsTitle(uploadedFilename);
-        hasAddedFilenameRef.current = true; // Mark as added
-      }, 0);
-    }
-  }, [editedContent, isCreatingNewText, uploadedFilename]);
 
   // Handle unified creation: create text then instance
   const handleInstanceCreation = async (instanceData: any) => {
@@ -539,7 +520,7 @@ const EnhancedTextCreationForm = () => {
                   <div className="bg-green-50 border border-green-200 px-4 py-3 rounded-md">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-green-900">
-                        Creating New Text
+                        Creating/Uploading file New Text 
                       </span>
                       <Button
                         type="button"

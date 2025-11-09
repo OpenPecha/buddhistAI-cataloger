@@ -4,6 +4,8 @@ import { markdown } from '@codemirror/lang-markdown';
 import { EditorView } from '@codemirror/view';
 import SelectionMenu from './SelectionMenu';
 import FormattedTextDisplay from '../FormattedTextDisplay';
+import { useBibliography } from '@/contexts/BibliographyContext';
+import { BibliographyAnnotationsList } from '../BibliographyAnnotationsList';
 
 interface TextEditorViewProps {
   content: string;
@@ -17,19 +19,39 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [selectedText, setSelectedText] = useState('');
-  const [activeTab, setActiveTab] = useState<'content' | 'preview'>('content');
+  const [textStart, setTextStart] = useState(0);
+  const [textEnd, setTextEnd] = useState(0);
+  const [activeTab, setActiveTab] = useState<'content' | 'preview' | 'bibliography'>('content');
   const editorRef = useRef<HTMLDivElement>(null);
+  const { annotations } = useBibliography();
 
   const handleMouseUp = (event: React.MouseEvent) => {
     const selection = window.getSelection();
     const text = selection?.toString().trim();
     
     if (text && text.length > 0) {
+      // Calculate text position in content
+      const range = selection?.getRangeAt(0);
+      if (range) {
+        // Get the text content before the selection to calculate start position
+        const preSelectionRange = range.cloneRange();
+        preSelectionRange.selectNodeContents(range.startContainer.parentNode || range.startContainer);
+        preSelectionRange.setEnd(range.startContainer, range.startOffset);
+        
+        // Calculate start position by finding the selected text in the content
+        const selectedTextIndex = content.indexOf(text);
+        const start = selectedTextIndex >= 0 ? selectedTextIndex : 0;
+        const end = start + text.length;
+        
+        setTextStart(start);
+        setTextEnd(end);
+      }
+      
       // Calculate position relative to the editor container
       if (editorRef.current) {
         const rect = editorRef.current.getBoundingClientRect();
-        const menuWidth = 140; // Approximate menu width (compact)
-        const menuHeight = 120; // Approximate menu height (compact)
+        const menuWidth = 180; // Increased for better layout
+        const menuHeight = 160; // Increased for descriptions
         
         // Calculate initial position
         let x = event.clientX - rect.left + 10;
@@ -76,6 +98,9 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
       {showMenu && (
         <SelectionMenu
           position={menuPosition}
+          selectedText={selectedText}
+          textStart={textStart}
+          textEnd={textEnd}
           onSelect={handleMenuSelect}
           onClose={() => setShowMenu(false)}
         />
@@ -107,6 +132,11 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
             {editable && (
               <span className="text-xs text-blue-600 font-medium">Editable</span>
             )}
+            {annotations.length > 0 && (
+              <span className="text-xs text-green-600 font-medium">
+                {annotations.length} annotation{annotations.length !== 1 ? 's' : ''}
+              </span>
+            )}
             <span className="text-xs text-gray-500">
               {content.length} characters
             </span>
@@ -135,6 +165,21 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
           >
             Preview
           </button>
+          <button
+            onClick={() => setActiveTab('bibliography')}
+            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors relative ${
+              activeTab === 'bibliography'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Bibliography
+            {annotations.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                {annotations.length}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
@@ -160,9 +205,14 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
             theme="light"
             className="text-base h-full"
           />
-        ) : (
+        ) : activeTab === 'preview' ? (
           /* Preview - Formatted Text Display */
           <FormattedTextDisplay content={content} />
+        ) : (
+          /* Bibliography - Annotations List */
+          <div className="h-full overflow-y-auto p-6 bg-gray-50">
+            <BibliographyAnnotationsList className="bg-white rounded-lg shadow-sm" />
+          </div>
         )}
       </div>
     </div>

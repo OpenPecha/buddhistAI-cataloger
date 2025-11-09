@@ -1,14 +1,19 @@
 import { useEffect, useRef, useState } from "react";
+import { useBibliography } from "@/contexts/BibliographyContext";
 
 interface SelectionMenuProps {
   position: { x: number; y: number };
-  onSelect: (type: "title" | "colophon" | "incipit" | "person") => void;
+  selectedText: string;
+  textStart: number;
+  textEnd: number;
+  onSelect?: (type: "title" | "colophon" | "incipit" | "person") => void;
   onClose: () => void;
 }
 
-const SelectionMenu = ({ position, onSelect, onClose }: SelectionMenuProps) => {
+const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, onClose }: SelectionMenuProps) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const [adjustedPosition, setAdjustedPosition] = useState(position);
+  const { addAnnotation } = useBibliography();
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -54,26 +59,49 @@ const SelectionMenu = ({ position, onSelect, onClose }: SelectionMenuProps) => {
     }
   }, [position]);
 
+  const handleMenuItemClick = (type: "title" | "colophon" | "incipit" | "person") => {
+    // Add to bibliography annotations
+    addAnnotation({
+      span: {
+        start: textStart,
+        end: textEnd,
+      },
+      biblography_type: type,
+      text: selectedText,
+    });
+
+    // Call optional callback
+    if (onSelect) {
+      onSelect(type);
+    }
+
+    onClose();
+  };
+
   const menuItems = [
     {
       type: "title" as const,
       label: "Title",
       color: "bg-yellow-50 hover:bg-yellow-100 border-yellow-200",
+      description: "Mark as document title",
     },
     {
       type: "colophon" as const,
       label: "Colophon Text",
       color: "bg-green-50 hover:bg-green-100 border-green-200",
+      description: "Mark as colophon",
     },
     {
       type: "incipit" as const,
       label: "Incipit Title",
       color: "bg-blue-50 hover:bg-blue-100 border-blue-200",
+      description: "Mark as incipit title",
     },
     {
       type: "person" as const,
       label: "Person",
       color: "bg-orange-50 hover:bg-orange-100 border-orange-200",
+      description: "Mark as person name",
     },
   ];
 
@@ -89,13 +117,14 @@ const SelectionMenu = ({ position, onSelect, onClose }: SelectionMenuProps) => {
       {menuItems.map((item) => (
         <button
           key={item.type}
-          onClick={() => {
-            onSelect(item.type);
-            onClose();
-          }}
-          className={`w-full text-left px-3 py-1.5 text-xs font-medium transition-colors border-l-2 ${item.color}`}
+          onClick={() => handleMenuItemClick(item.type)}
+          className={`w-full text-left px-3 py-2 text-xs font-medium transition-colors border-l-2 ${item.color} hover:scale-[1.02]`}
+          title={item.description}
         >
-          {item.label}
+          <div className="flex flex-col">
+            <span className="font-semibold">{item.label}</span>
+            <span className="text-xs opacity-70 mt-0.5">{selectedText.length > 20 ? selectedText.substring(0, 20) + '...' : selectedText}</span>
+          </div>
         </button>
       ))}
     </div>

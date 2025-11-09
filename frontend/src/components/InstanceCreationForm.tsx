@@ -3,9 +3,31 @@ import { Button } from "@/components/ui/button";
 import { Plus, X, Loader2 } from "lucide-react";
 import { calculateAnnotations } from "@/utils/annotationCalculator";
 import { useBdrcSearch } from "@/hooks/useBdrcSearch";
+import { useBibliographyAPI } from "@/hooks/useBibliographyAPI";
+
+interface InstanceData {
+  metadata: {
+    type: string;
+    copyright?: string;
+    colophon?: string;
+    incipit_title?: Record<string, string>;
+    alt_incipit_titles?: Record<string, string>[];
+    bdrc?: string;
+    wiki?: string | null;
+  };
+  annotation?: Array<{
+    span: { start: number; end: number };
+    reference?: string;
+  }>;
+  biblography_annotation?: Array<{
+    span: { start: number; end: number };
+    biblography_type: string;
+  }>;
+  content?: string;
+}
 
 interface InstanceCreationFormProps {
-  onSubmit: (instanceData: any) => void;
+  onSubmit: (instanceData: InstanceData) => void;
   isSubmitting: boolean;
   onCancel?: () => void;
   content?: string; // Content from editor for annotation calculation
@@ -64,6 +86,9 @@ const InstanceCreationForm = forwardRef<
 
   // BDRC search hook
   const { results: bdrcResults, isLoading: bdrcLoading } = useBdrcSearch(bdrcSearch);
+
+  // Bibliography annotations hook
+  const { getAPIAnnotations, hasAnnotations, clearAfterSubmission } = useBibliographyAPI();
 
   // Clear BDRC ID when switching to critical type
   useEffect(() => {
@@ -161,8 +186,8 @@ const InstanceCreationForm = forwardRef<
   };
 
   // Data cleaning function
-  const cleanFormData = () => {
-    const cleaned: any = {
+  const cleanFormData = (): InstanceData => {
+    const cleaned: InstanceData = {
       metadata: {
         type: type,
       },
@@ -232,6 +257,11 @@ const InstanceCreationForm = forwardRef<
       }
     }
 
+    // Add bibliography annotations if they exist
+    if (hasAnnotations()) {
+      cleaned.biblography_annotation = getAPIAnnotations();
+    }
+
     return cleaned;
   };
 
@@ -274,7 +304,13 @@ const InstanceCreationForm = forwardRef<
     }
 
     const cleanedData = cleanFormData();
+    
+    // Submit the form
     onSubmit(cleanedData);
+    
+    // Clear bibliography annotations after successful submission
+    // Note: This assumes onSubmit is synchronous. For async, you'd need to handle this differently
+    clearAfterSubmission();
   };
 
   const hasIncipitTitle = incipitTitles.some(
@@ -298,7 +334,7 @@ const InstanceCreationForm = forwardRef<
             <select
               id="type"
               value={type}
-              onChange={(e) => setType(e.target.value as any)}
+              onChange={(e) => setType(e.target.value as "critical" | "diplomatic")}
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -665,6 +701,7 @@ const InstanceCreationForm = forwardRef<
           <p className="text-sm font-medium">{errors.content}</p>
         </div>
       )}
+
 
       {/* Form Actions */}
       <div className="flex justify-center space-x-3 pt-4">

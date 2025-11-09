@@ -24,7 +24,6 @@ export interface TextCreationFormRef {
   addTitle: (text: string, language?: string) => void;
   setPersonSearch: (text: string) => void;
   openContributorForm: () => void;
-  addFilenameAsTitle: (filename: string) => void;
 }
 
 interface Contributor {
@@ -89,34 +88,6 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         // Open the Add Contributor form
         setShowAddContributor(true);
       },
-      addFilenameAsTitle: (filename: string) => {
-        // Remove file extension from filename
-        const nameWithoutExtension = filename.replace(/\.[^/.]+$/, "");
-        
-        // Detect language from filename
-        const detectedLanguage = detectLanguage(nameWithoutExtension);
-        
-        // Add as a title using functional update to avoid stale state
-        setTitles((prevTitles) => {
-          // Check if this language already exists
-          const existingIndex = prevTitles.findIndex(
-            (t) => t.language === detectedLanguage && detectedLanguage !== ""
-          );
-          
-          if (existingIndex !== -1) {
-            // Update the existing entry instead of adding a new one
-            const updatedTitles = [...prevTitles];
-            updatedTitles[existingIndex].value = nameWithoutExtension;
-            return updatedTitles;
-          } else {
-            // Add new entry
-            return [...prevTitles, { 
-              language: detectedLanguage, 
-              value: nameWithoutExtension 
-            }];
-          }
-        });
-      },
     }));
 
     const [selectedType, setSelectedType] = useState<
@@ -132,6 +103,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     });
     const [bdrc, setBdrc] = useState("");
     const [categoryId, setCategoryId] = useState<string>("");
+    const [categoryError, setCategoryError] = useState<boolean>(false);
     
     // BDRC search state
     const [bdrcSearch, setBdrcSearch] = useState("");
@@ -275,6 +247,13 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         throw new Error("At least one contributor is required");
       }
 
+      if (!categoryId.trim()) {
+        setCategoryError(true);
+        throw new Error("Category is required");
+      } else {
+        setCategoryError(false);
+      }
+
       // Build contributions array
       const contributionsArray = contributors.map((contributor) => {
         return {
@@ -300,7 +279,9 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       // Add optional fields
       if (date.trim()) textData.date = date.trim();
       if (bdrc.trim()) textData.bdrc = bdrc.trim();
-      if (categoryId.trim()) textData.category_id = categoryId.trim();
+      
+      // Add required category
+      textData.category_id = categoryId.trim();
 
       return textData;
     }, [
@@ -841,9 +822,18 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
           <MultilevelCategorySelector
             onCategorySelect={(id) => {
               setCategoryId(id);
+              if (id.trim()) {
+                setCategoryError(false);
+              }
             }}
             selectedCategoryId={categoryId}
+            error={categoryError}
           />
+          {categoryError && (
+            <p className="mt-1 text-sm text-red-600">
+              Please select a category
+            </p>
+          )}
         </div>
 
         {/* Person Creation Modal */}
