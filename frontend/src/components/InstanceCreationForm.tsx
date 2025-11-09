@@ -1,15 +1,14 @@
 import { useState, forwardRef, useImperativeHandle, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, X, Check, XCircle, Loader2, Eye, Copy } from "lucide-react";
+import { Plus, X, Loader2 } from "lucide-react";
 import { calculateAnnotations } from "@/utils/annotationCalculator";
-import { useBdrcValidation } from "@/hooks/useBdrcValidation";
+import { useBdrcSearch } from "@/hooks/useBdrcSearch";
 
 interface InstanceCreationFormProps {
   onSubmit: (instanceData: any) => void;
   isSubmitting: boolean;
   onCancel?: () => void;
   content?: string; // Content from editor for annotation calculation
-  isCreatingNewText?: boolean; // Whether we're creating a new text or adding instance to existing text
 }
 
 export interface InstanceCreationFormRef {
@@ -39,7 +38,7 @@ const LANGUAGE_OPTIONS = [
 const InstanceCreationForm = forwardRef<
   InstanceCreationFormRef,
   InstanceCreationFormProps
->(({ onSubmit, isSubmitting, onCancel, content = "", isCreatingNewText = false }, ref) => {
+>(({ onSubmit, isSubmitting, onCancel, content = "" }, ref) => {
   // State declarations
   const [type, setType] = useState<"diplomatic" | "critical">(
     "diplomatic"
@@ -49,6 +48,11 @@ const InstanceCreationForm = forwardRef<
   const [wiki, setWiki] = useState("");
   const [colophon, setColophon] = useState("");
 
+  // BDRC search state
+  const [bdrcSearch, setBdrcSearch] = useState("");
+  const [showBdrcDropdown, setShowBdrcDropdown] = useState(false);
+  const [selectedBdrc, setSelectedBdrc] = useState<{ id: string; label: string } | null>(null);
+
   // Incipit title management
   const [showIncipitTitle, setShowIncipitTitle] = useState(false);
   const [incipitTitles, setIncipitTitles] = useState<TitleEntry[]>([]);
@@ -57,20 +61,16 @@ const InstanceCreationForm = forwardRef<
   const [altIncipitTitles, setAltIncipitTitles] = useState<TitleEntry[][]>([]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
-  
-  // Preview modal state
-  const [showPreview, setShowPreview] = useState(false);
-  const [showContentPreview, setShowContentPreview] = useState(false);
-  const [copySuccess, setCopySuccess] = useState(false);
 
-  // BDRC validation hook
-  const { validationStatus: bdrcValidationStatus, resetValidation: resetBdrcValidation } = useBdrcValidation(bdrc);
+  // BDRC search hook
+  const { results: bdrcResults, isLoading: bdrcLoading } = useBdrcSearch(bdrcSearch);
 
   // Clear BDRC ID when switching to critical type
   useEffect(() => {
     if (type === "critical" && bdrc) {
       setBdrc("");
-      resetBdrcValidation();
+      setSelectedBdrc(null);
+      setBdrcSearch("");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
@@ -284,7 +284,7 @@ const InstanceCreationForm = forwardRef<
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Metadata Section */}
-      <div className="border rounded-lg p-4">
+      <div>
         <h4 className="font-medium text-gray-900 mb-3">Metadata</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Type */}
@@ -336,47 +336,88 @@ const InstanceCreationForm = forwardRef<
                 htmlFor="bdrc"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                BDRC ID <span className="text-red-500">*</span>
+                BDRC Instance ID <span className="text-red-500">*</span>
               </label>
               <div className="relative">
-                <input
-                  id="bdrc"
-                  type="text"
-                  value={bdrc}
-                  onChange={(e) => setBdrc(e.target.value)}
-                  onBlur={() => {
-                    // Clear the field if invalid when user leaves the input
-                    if (bdrcValidationStatus === "invalid") {
+                {selectedBdrc ? (
+                  // Display selected BDRC (read-only, click to change)
+                  <div
+                    onClick={() => {
+                      setSelectedBdrc(null);
                       setBdrc("");
-                      resetBdrcValidation();
-                    }
-                  }}
-                  required
-                  className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="e.g., MW23703_4010"
-                />
-                {/* Validation Icons */}
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
-                  {bdrcValidationStatus === "validating" && (
-                    <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
-                  )}
-                  {bdrcValidationStatus === "valid" && (
-                    <Check className="w-5 h-5 text-green-600" />
-                  )}
-                  {bdrcValidationStatus === "invalid" && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBdrc("");
-                        resetBdrcValidation();
+                      setBdrcSearch("");
+                      setShowBdrcDropdown(true);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between"
+                  >
+                    <span className="text-sm font-medium text-gray-900">{selectedBdrc.id}</span>
+                    <span className="text-xs text-blue-600">Click to change</span>
+                  </div>
+                ) : (
+                  // Search input
+                  <>
+                    <input
+                      id="bdrc"
+                      type="text"
+                      value={bdrcSearch}
+                      onChange={(e) => {
+                        setBdrcSearch(e.target.value);
+                        setShowBdrcDropdown(true);
                       }}
-                      className="hover:opacity-70 transition-opacity"
-                      title="Clear BDRC ID"
-                    >
-                      <XCircle className="w-5 h-5 text-red-600" />
-                    </button>
-                  )}
-                </div>
+                      onFocus={() => setShowBdrcDropdown(true)}
+                      onBlur={() => {
+                        setTimeout(() => {
+                          setShowBdrcDropdown(false);
+                          // Clear search if nothing was actually selected
+                          if (!selectedBdrc) {
+                            setBdrcSearch("");
+                          }
+                        }, 200);
+                      }}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Search BDRC entries..."
+                    />
+                    {/* BDRC Dropdown */}
+                    {showBdrcDropdown && bdrcSearch.trim() && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                        {bdrcLoading ? (
+                          <div className="px-4 py-8 flex flex-col items-center justify-center">
+                            <Loader2 className="w-6 h-6 text-blue-600 animate-spin mb-2" />
+                            <div className="text-sm text-gray-500">Searching...</div>
+                          </div>
+                        ) : bdrcResults.length > 0 ? (
+                          bdrcResults
+                            .filter((result) => result.prefLabel && result.prefLabel !== " - no data - ")
+                            .map((result, index) => (
+                              <button
+                                key={`${result.instanceId}-${index}`}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedBdrc({
+                                    id: result.instanceId,
+                                    label: result.prefLabel,
+                                  });
+                                  setBdrc(result.instanceId);
+                                  setShowBdrcDropdown(false);
+                                }}
+                                className="w-full px-4 py-2 text-left hover:bg-gray-50 border-b border-gray-100"
+                              >
+                                <div className="text-sm font-medium text-gray-900">
+                                  {result.prefLabel}
+                                </div>
+                                <div className="text-xs text-gray-500">{result.instanceId}</div>
+                              </button>
+                            ))
+                        ) : (
+                          <div className="px-4 py-3 text-sm text-gray-500">
+                            No BDRC entries found
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
               {errors.bdrc && (
                 <p className="mt-1 text-sm text-red-600">{errors.bdrc}</p>
@@ -632,24 +673,6 @@ const InstanceCreationForm = forwardRef<
             Cancel
           </Button>
         )}
-        <Button 
-          type="button" 
-          variant="outline" 
-          onClick={() => setShowContentPreview(true)}
-          className="flex items-center gap-2"
-        >
-          <Eye className="h-4 w-4" />
-          Preview Content
-        </Button>
-        <Button 
-          type="button" 
-          variant="outline" 
-          onClick={() => setShowPreview(true)}
-          className="flex items-center gap-2"
-        >
-          <Eye className="h-4 w-4" />
-          Preview JSON
-        </Button>
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
@@ -661,221 +684,6 @@ const InstanceCreationForm = forwardRef<
           )}
         </Button>
       </div>
-
-      {/* JSON Preview Modal */}
-      {showPreview && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-xl font-semibold text-gray-900">Request Preview</h3>
-              <button
-                onClick={() => {
-                  setShowPreview(false);
-                  setCopySuccess(false);
-                }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-
-            {/* Modal Body - Scrollable JSON */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {isCreatingNewText && (
-                <>
-                  <div>
-                    <h4 className="text-lg font-semibold text-gray-800 mb-3">1. Text Metadata (POST /text)</h4>
-                    {(() => {
-                      try {
-                        const textData = (window as any).__getTextFormData?.();
-                        return (
-                          <pre className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm font-mono">
-                            {JSON.stringify(textData || {}, null, 2)}
-                          </pre>
-                        );
-                      } catch (error: any) {
-                        return (
-                          <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
-                            <p className="text-sm text-yellow-800">
-                              <strong>Form incomplete:</strong> {error.message}
-                            </p>
-                            <p className="text-xs text-yellow-600 mt-2">
-                              Please fill out all required fields in the Text Information form above.
-                            </p>
-                          </div>
-                        );
-                      }
-                    })()}
-                  </div>
-                  <div className="border-t border-gray-300 pt-6">
-                    <h4 className="text-lg font-semibold text-gray-800 mb-3">2. Instance Data (POST /text/{"{text_id}"}/instances)</h4>
-                    <pre className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm font-mono">
-                      {JSON.stringify(cleanFormData(), null, 2)}
-                    </pre>
-                  </div>
-                </>
-              )}
-              {!isCreatingNewText && (
-                <div>
-                  <h4 className="text-lg font-semibold text-gray-800 mb-3">Instance Data (POST /text/{"{text_id}"}/instances)</h4>
-                  <pre className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm font-mono">
-                    {JSON.stringify(cleanFormData(), null, 2)}
-                  </pre>
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
-              {copySuccess && (
-                <span className="text-sm text-green-600 flex items-center gap-1">
-                  <Check className="h-4 w-4" />
-                  Copied!
-                </span>
-              )}
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  try {
-                    let dataToCopy;
-                    if (isCreatingNewText) {
-                      const textData = (window as any).__getTextFormData?.() || {};
-                      const instanceData = cleanFormData();
-                      dataToCopy = JSON.stringify({
-                        textData,
-                        instanceData
-                      }, null, 2);
-                    } else {
-                      dataToCopy = JSON.stringify(cleanFormData(), null, 2);
-                    }
-                    navigator.clipboard.writeText(dataToCopy);
-                    setCopySuccess(true);
-                    setTimeout(() => setCopySuccess(false), 2000);
-                  } catch (error) {
-                    // If text form is incomplete, copy only the instance data
-                    const dataToCopy = JSON.stringify(cleanFormData(), null, 2);
-                    navigator.clipboard.writeText(dataToCopy);
-                    setCopySuccess(true);
-                    setTimeout(() => setCopySuccess(false), 2000);
-                  }
-                }}
-                className="flex items-center gap-2"
-              >
-                <Copy className="h-4 w-4" />
-                Copy JSON
-              </Button>
-              <Button
-                type="button"
-                onClick={() => {
-                  setShowPreview(false);
-                  setCopySuccess(false);
-                }}
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Content Preview Modal */}
-      {showContentPreview && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <h3 className="text-xl font-semibold text-gray-900">Content Preview</h3>
-              <button
-                onClick={() => setShowContentPreview(false)}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {(() => {
-                if (!content || content.trim().length === 0) {
-                  return (
-                    <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
-                      <p className="text-sm text-yellow-800">
-                        No content available. Please add text in the editor.
-                      </p>
-                    </div>
-                  );
-                }
-
-                // Calculate annotations to get cleaned content and spans
-                const { annotations, cleanedContent } = calculateAnnotations(content);
-
-                return (
-                  <>
-                    {/* Cleaned Content Section */}
-                    <div>
-                      <h4 className="text-lg font-semibold text-gray-800 mb-3">
-                        Cleaned Content (sent to backend)
-                      </h4>
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                        <p className="text-sm text-gray-600 mb-2">
-                          <strong>Character Count:</strong> {cleanedContent.length} characters
-                        </p>
-                        <div className="bg-white border border-gray-300 rounded p-3 max-h-60 overflow-y-auto">
-                          <pre className="text-sm font-mono whitespace-pre-wrap break-words">
-                            {cleanedContent || "(empty)"}
-                          </pre>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Annotations Section */}
-                    <div>
-                      <h4 className="text-lg font-semibold text-gray-800 mb-3">
-                        Annotations ({annotations.length} spans)
-                      </h4>
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                        <p className="text-sm text-gray-600 mb-3">
-                          Each line with content gets a span annotation:
-                        </p>
-                        <div className="bg-white border border-gray-300 rounded p-3 max-h-60 overflow-y-auto">
-                          <pre className="text-sm font-mono">
-                            {JSON.stringify(annotations, null, 2)}
-                          </pre>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Info Box */}
-                    <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
-                      <h5 className="font-semibold text-blue-900 mb-2 text-sm">Processing Rules:</h5>
-                      <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                        <li>Empty lines are removed (no span created)</li>
-                        <li>Lines with spaces are kept (span created)</li>
-                        <li>Trailing empty lines are trimmed</li>
-                        <li>All newline characters are removed from content</li>
-                        <li>Each span references positions in the cleaned content</li>
-                      </ul>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowContentPreview(false)}
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </form>
   );
 });

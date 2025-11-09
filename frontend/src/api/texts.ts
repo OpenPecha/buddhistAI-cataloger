@@ -1,5 +1,5 @@
 
-const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8000';
 import type { OpenPechaText, OpenPechaTextInstance, OpenPechaTextInstanceListItem } from '@/types/text';
 
 // Helper function to handle API responses with better error messages

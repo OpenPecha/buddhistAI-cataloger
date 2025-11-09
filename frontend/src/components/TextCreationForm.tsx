@@ -7,10 +7,10 @@ import {
   useImperativeHandle,
 } from "react";
 import { usePersons } from "@/hooks/usePersons";
-import { useBdrcValidation } from "@/hooks/useBdrcValidation";
+import { useBdrcSearch } from "@/hooks/useBdrcSearch";
 import type { Person } from "@/types/person";
 import { Button } from "@/components/ui/button";
-import { X, Plus, User, Loader2, Check, XCircle } from "lucide-react";
+import { X, Plus, User, Loader2 } from "lucide-react";
 import { detectLanguage } from "@/utils/languageDetection";
 import PersonFormModal from "@/components/PersonFormModal";
 
@@ -124,8 +124,17 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     const [titles, setTitles] = useState<TitleEntry[]>([]);
     const [language, setLanguage] = useState("");
     const [target, setTarget] = useState("");
-    const [date, setDate] = useState("");
+    const [date, setDate] = useState(() => {
+      // Initialize with today's date in YYYY-MM-DD format
+      const today = new Date();
+      return today.toISOString().split('T')[0];
+    });
     const [bdrc, setBdrc] = useState("");
+    
+    // BDRC search state
+    const [bdrcSearch, setBdrcSearch] = useState("");
+    const [showBdrcDropdown, setShowBdrcDropdown] = useState(false);
+    const [selectedBdrc, setSelectedBdrc] = useState<{ id: string; label: string } | null>(null);
 
     // Contributor management
     const [contributors, setContributors] = useState<Contributor[]>([]);
@@ -146,8 +155,8 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     // Person creation modal
     const [showPersonFormModal, setShowPersonFormModal] = useState(false);
 
-    // BDRC validation hook
-    const { validationStatus: bdrcValidationStatus, resetValidation: resetBdrcValidation } = useBdrcValidation(bdrc);
+    // BDRC search hook
+    const { results: bdrcResults, isLoading: bdrcLoading } = useBdrcSearch(bdrcSearch);
 
     useEffect(() => {
       const timer = setTimeout(() => {
@@ -715,7 +724,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         </div>
 
         {/* Optional Fields */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label
               htmlFor="date"
@@ -737,46 +746,87 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
               htmlFor="bdrc"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              BDRC ID
+              BDRC Work ID
             </label>
             <div className="relative">
-              <input
-                id="bdrc"
-                type="text"
-                value={bdrc}
-                onChange={(e) => setBdrc(e.target.value)}
-                onBlur={() => {
-                  // Clear the field if invalid when user leaves the input
-                  if (bdrcValidationStatus === "invalid") {
+              {selectedBdrc ? (
+                // Display selected BDRC (read-only, click to change)
+                <div
+                  onClick={() => {
+                    setSelectedBdrc(null);
                     setBdrc("");
-                    resetBdrcValidation();
-                  }
-                }}
-                className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g., W123456"
-              />
-              {/* Validation Icons */}
-              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
-                {bdrcValidationStatus === "validating" && (
-                  <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
-                )}
-                {bdrcValidationStatus === "valid" && (
-                  <Check className="w-5 h-5 text-green-600" />
-                )}
-                {bdrcValidationStatus === "invalid" && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setBdrc("");
-                      resetBdrcValidation();
+                    setBdrcSearch("");
+                    setShowBdrcDropdown(true);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between"
+                >
+                  <span className="text-sm font-medium text-gray-900">{selectedBdrc.id}</span>
+                  <span className="text-xs text-blue-600">Click to change</span>
+                </div>
+              ) : (
+                // Search input
+                <>
+                  <input
+                    id="bdrc"
+                    type="text"
+                    value={bdrcSearch}
+                    onChange={(e) => {
+                      setBdrcSearch(e.target.value);
+                      setShowBdrcDropdown(true);
                     }}
-                    className="hover:opacity-70 transition-opacity"
-                    title="Clear BDRC ID"
-                  >
-                    <XCircle className="w-5 h-5 text-red-600" />
-                  </button>
-                )}
-              </div>
+                    onFocus={() => setShowBdrcDropdown(true)}
+                    onBlur={() => {
+                      setTimeout(() => {
+                        setShowBdrcDropdown(false);
+                        // Clear search if nothing was actually selected
+                        if (!selectedBdrc) {
+                          setBdrcSearch("");
+                        }
+                      }, 200);
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Search BDRC entries..."
+                  />
+                  {/* BDRC Dropdown */}
+                  {showBdrcDropdown && bdrcSearch.trim() && (
+                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      {bdrcLoading ? (
+                        <div className="px-4 py-8 flex flex-col items-center justify-center">
+                          <Loader2 className="w-6 h-6 text-blue-600 animate-spin mb-2" />
+                          <div className="text-sm text-gray-500">Searching...</div>
+                        </div>
+                      ) : bdrcResults.length > 0 ? (
+                        bdrcResults
+                          .filter((result) => result.prefLabel && result.prefLabel !== " - no data - ")
+                          .map((result, index) => (
+                            <button
+                              key={`${result.workId}-${index}`}
+                              type="button"
+                              onClick={() => {
+                                setSelectedBdrc({
+                                  id: result.workId,
+                                  label: result.prefLabel,
+                                });
+                                setBdrc(result.workId);
+                                setShowBdrcDropdown(false);
+                              }}
+                              className="w-full px-4 py-2 text-left hover:bg-gray-50 border-b border-gray-100"
+                            >
+                              <div className="text-sm font-medium text-gray-900">
+                                {result.prefLabel}
+                              </div>
+                              <div className="text-xs text-gray-500">{result.workId}</div>
+                            </button>
+                          ))
+                      ) : (
+                        <div className="px-4 py-3 text-sm text-gray-500">
+                          No BDRC entries found
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>

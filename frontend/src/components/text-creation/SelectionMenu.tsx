@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 interface SelectionMenuProps {
   position: { x: number; y: number };
-  onSelect: (type: "title" | "colophon" | "incipit" | "content" | "person") => void;
+  onSelect: (type: "title" | "colophon" | "incipit" | "person") => void;
   onClose: () => void;
 }
 
@@ -69,11 +69,6 @@ const SelectionMenu = ({ position, onSelect, onClose }: SelectionMenuProps) => {
       type: "incipit" as const,
       label: "Incipit Title",
       color: "bg-blue-50 hover:bg-blue-100 border-blue-200",
-    },
-    {
-      type: "content" as const,
-      label: "Content",
-      color: "bg-purple-50 hover:bg-purple-100 border-purple-200",
     },
     {
       type: "person" as const,

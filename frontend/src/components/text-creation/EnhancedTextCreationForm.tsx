@@ -292,7 +292,7 @@ const EnhancedTextCreationForm = () => {
   // Handle text selection from editor
   const handleEditorTextSelect = (
     text: string,
-    type: "title" | "colophon" | "incipit" | "content" | "person"
+    type: "title" | "colophon" | "incipit" | "person"
   ) => {
     // Detect language from selected text
     const detectedLanguage = detectLanguage(text);
@@ -560,7 +560,7 @@ const EnhancedTextCreationForm = () => {
               <div className="space-y-6">
                 {/* Text Creation Form - Only show when creating new text */}
                 {isCreatingNewText && (
-                  <div>
+                  <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mb-6">
                     <h3 className="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">
                       Text Information
                     </h3>
@@ -571,7 +571,7 @@ const EnhancedTextCreationForm = () => {
                 )}
 
                 {/* Instance Creation Form */}
-                <div className={isCreatingNewText ? "border-t border-gray-200 pt-6" : ""}>
+                <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                   <h3 className="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">
                     Instance Details
                   </h3>
@@ -581,7 +581,6 @@ const EnhancedTextCreationForm = () => {
                     isSubmitting={isSubmitting}
                     onCancel={handleCancel}
                     content={editedContent}
-                    isCreatingNewText={isCreatingNewText}
                   />
                 </div>
               </div>

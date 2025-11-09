@@ -10,7 +10,7 @@ interface TextEditorViewProps {
   filename?: string;
   onChange?: (value: string) => void;
   editable?: boolean;
-  onTextSelect?: (text: string, type: 'title' | 'colophon' | 'incipit' | 'content' | 'person') => void;
+  onTextSelect?: (text: string, type: 'title' | 'colophon' | 'incipit' | 'person') => void;
 }
 
 const TextEditorView = ({ content, filename, onChange, editable = false, onTextSelect }: TextEditorViewProps) => {
@@ -63,7 +63,7 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
     }
   };
 
-  const handleMenuSelect = (type: 'title' | 'colophon' | 'incipit' | 'content' | 'person') => {
+  const handleMenuSelect = (type: 'title' | 'colophon' | 'incipit' | 'person') => {
     if (selectedText && onTextSelect) {
       onTextSelect(selectedText, type);
     }
