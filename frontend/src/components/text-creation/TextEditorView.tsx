@@ -3,6 +3,7 @@ import CodeMirror from '@uiw/react-codemirror';
 import { markdown } from '@codemirror/lang-markdown';
 import { EditorView } from '@codemirror/view';
 import SelectionMenu from './SelectionMenu';
+import FormattedTextDisplay from '../FormattedTextDisplay';
 
 interface TextEditorViewProps {
   content: string;
@@ -16,6 +17,7 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [selectedText, setSelectedText] = useState('');
+  const [activeTab, setActiveTab] = useState<'content' | 'preview'>('content');
   const editorRef = useRef<HTMLDivElement>(null);
 
   const handleMouseUp = (event: React.MouseEvent) => {
@@ -80,55 +82,88 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
       )}
       
       {/* Header */}
-      <div className="bg-gray-100 border-b border-gray-300 px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <svg
-            className="w-5 h-5 text-gray-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
-          <span className="text-sm font-medium text-gray-700">
-            {filename || 'Document Text'}
-          </span>
+      <div className="bg-gray-100 border-b border-gray-300">
+        {/* Top Bar - Filename and Info */}
+        <div className="px-4 py-2 flex items-center justify-between border-b border-gray-300">
+          <div className="flex items-center space-x-2">
+            <svg
+              className="w-5 h-5 text-gray-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+            <span className="text-sm font-medium text-gray-700">
+              {filename || 'Document Text'}
+            </span>
+          </div>
+          <div className="flex items-center space-x-3">
+            {editable && (
+              <span className="text-xs text-blue-600 font-medium">Editable</span>
+            )}
+            <span className="text-xs text-gray-500">
+              {content.length} characters
+            </span>
+          </div>
         </div>
-        <div className="flex items-center space-x-3">
-          {editable && (
-            <span className="text-xs text-blue-600 font-medium">Editable</span>
-          )}
-          <span className="text-xs text-gray-500">
-            {content.length} characters
-          </span>
+
+        {/* Tabs */}
+        <div className="flex items-center px-4">
+          <button
+            onClick={() => setActiveTab('content')}
+            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'content'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Content
+          </button>
+          <button
+            onClick={() => setActiveTab('preview')}
+            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === 'preview'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            Preview
+          </button>
         </div>
       </div>
 
-      {/* CodeMirror Editor */}
+      {/* Content Area - Conditional Rendering */}
       <div className="flex-1 overflow-hidden">
-        <CodeMirror
-          value={content}
-          height="100%"
-          extensions={[
-            markdown(),
-            EditorView.lineWrapping,
-          ]}
-          editable={editable}
-          onChange={onChange}
-          basicSetup={{
-            lineNumbers: true,
-            highlightActiveLineGutter: editable,
-            highlightActiveLine: editable,
-            foldGutter: true,
-          }}
-          theme="light"
-          className="text-base h-full"
-        />
+        {activeTab === 'content' ? (
+          /* CodeMirror Editor */
+          <CodeMirror
+            value={content}
+            height="100%"
+            extensions={[
+              markdown(),
+              EditorView.lineWrapping,
+            ]}
+            editable={editable}
+            onChange={onChange}
+            basicSetup={{
+              lineNumbers: true,
+              highlightActiveLineGutter: editable,
+              highlightActiveLine: editable,
+              foldGutter: true,
+            }}
+            theme="light"
+            className="text-base h-full"
+          />
+        ) : (
+          /* Preview - Formatted Text Display */
+          <FormattedTextDisplay content={content} />
+        )}
       </div>
     </div>
   );

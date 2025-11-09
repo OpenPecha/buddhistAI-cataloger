@@ -160,9 +160,7 @@ export const createTextInstance = async (textId: string, instanceData: any): Pro
 export const fetchAnnotation = async (id: string): Promise<OpenPechaTextInstance> => {
   try {
     const response = await fetch(`${API_URL}/v2/annotations/${id}`);
-    return await handleApiResponse(response, {
-      404: 'Annotation not found. It may have been deleted or the link is incorrect.'
-    });
+    return await response.json();
   } catch (error) {
     if (error instanceof Error) {
       throw error;

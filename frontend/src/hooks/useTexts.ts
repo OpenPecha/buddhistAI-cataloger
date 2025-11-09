@@ -1,6 +1,7 @@
 import {
   createText,
   createTextInstance,
+  fetchAnnotation,
   fetchInstance,
   fetchText,
   fetchTextInstances,

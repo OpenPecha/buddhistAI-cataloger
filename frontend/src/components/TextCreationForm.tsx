@@ -629,9 +629,25 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                                 <div className="font-medium">
                                   {getPersonDisplayName(person)}
                                 </div>
-                                <div className="text-sm text-gray-500">
-                                  {person.id}
-                                </div>
+                                {person.alt_names && person.alt_names.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 mt-1">
+                                    {person.alt_names.slice(0, 3).map((altName, idx) => (
+                                      altName.bo && (
+                                        <span
+                                          key={idx}
+                                          className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700"
+                                        >
+                                          {altName.bo}
+                                        </span>
+                                      )
+                                    ))}
+                                    {person.alt_names.length > 3 && (
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700 font-medium">
+                                        +{person.alt_names.length - 3}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
                               </button>
                             ))}
                           </>

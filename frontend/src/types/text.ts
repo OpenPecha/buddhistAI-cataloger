@@ -41,6 +41,11 @@ export interface Annotations {
   [key: string]: unknown[];
 }
 
+export interface AnnotationReference {
+  annotation_id: string;
+  type: string;
+}
+
 export interface IncipitTitle {
   [language: string]: string;
 }
@@ -72,7 +77,7 @@ export interface InstanceMetadata {
 export interface OpenPechaTextInstance {
   content: string;
   metadata: InstanceMetadata;
-  annotations: Annotations | null;
+  annotations: Annotations | AnnotationReference[] | null;
   // Legacy fields for backward compatibility (optional)
   alignment_sources?: string[];
   alignment_targets?: string[];

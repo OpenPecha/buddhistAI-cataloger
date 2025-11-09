@@ -6,7 +6,7 @@ import TextListCard from "@/components/TextListCard";
 
 const TextCRUD = () => {
   const [pagination, setPagination] = useState({
-    limit: 10,
+    limit: 50,
     offset: 0,
     language: "",
     author: "",
@@ -61,10 +61,8 @@ const TextCRUD = () => {
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="5">5</option>
-                <option value="10">10</option>
-                <option value="20">20</option>
                 <option value="50">50</option>
+                <option value="100">100</option>
               </select>
             </div>
 
