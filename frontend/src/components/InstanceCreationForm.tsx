@@ -21,7 +21,7 @@ interface InstanceData {
   }>;
   biblography_annotation?: Array<{
     span: { start: number; end: number };
-    biblography_type: string;
+    type: string;
   }>;
   content?: string;
 }

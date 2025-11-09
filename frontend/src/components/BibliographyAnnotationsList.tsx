@@ -76,18 +76,18 @@ export const BibliographyAnnotationsList: React.FC<BibliographyAnnotationsListPr
             key={annotation.id}
             className={`
               flex items-start gap-3 p-3 rounded-lg border
-              ${TYPE_COLORS[annotation.biblography_type]}
+              ${TYPE_COLORS[annotation.type]}
               hover:shadow-md transition-shadow
             `}
           >
             <div className="flex-shrink-0 mt-0.5">
-              {TYPE_ICONS[annotation.biblography_type]}
+              {TYPE_ICONS[annotation.type]}
             </div>
             
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-sm font-semibold">
-                  {TYPE_LABELS[annotation.biblography_type]}
+                  {TYPE_LABELS[annotation.type]}
                 </span>
                 <span className="text-xs opacity-70">
                   [{annotation.span.start}-{annotation.span.end}]

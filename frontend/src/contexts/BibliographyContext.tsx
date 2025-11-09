@@ -9,7 +9,7 @@ export interface BibliographyAnnotation {
     start: number;
     end: number;
   };
-  biblography_type: BibliographyAnnotationType;
+  type: BibliographyAnnotationType;
   text: string;
   timestamp: number;
 }
@@ -19,7 +19,7 @@ interface BibliographyContextType {
   addAnnotation: (annotation: Omit<BibliographyAnnotation, 'id' | 'timestamp'>) => void;
   removeAnnotation: (id: string) => void;
   clearAnnotations: () => void;
-  getAnnotationsByType: (type: BibliographyAnnotation['biblography_type']) => BibliographyAnnotation[];
+  getAnnotationsByType: (type: BibliographyAnnotation['type']) => BibliographyAnnotation[];
   updateAnnotation: (id: string, updates: Partial<BibliographyAnnotation>) => void;
 }
 
@@ -45,8 +45,8 @@ export const BibliographyProvider: React.FC<{ children: ReactNode }> = ({ childr
     setAnnotations([]);
   };
 
-  const getAnnotationsByType = (type: BibliographyAnnotation['biblography_type']) => {
-    return annotations.filter(ann => ann.biblography_type === type);
+  const getAnnotationsByType = (type: BibliographyAnnotation['type']) => {
+    return annotations.filter(ann => ann.type === type);
   };
 
   const updateAnnotation = (id: string, updates: Partial<BibliographyAnnotation>) => {

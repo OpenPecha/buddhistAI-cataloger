@@ -64,6 +64,28 @@ class InstanceListItem(BaseModel):
     alt_incipit_titles: List[Dict[str, str]] = []
 
 
+class Contribution(BaseModel):
+    person_id: str
+    role: str
+
+
+class RelatedInstanceMetadata(BaseModel):
+    instance_type: str
+    copyright: str
+    text_id: str
+    title: Dict[str, str]
+    alt_titles: List[Dict[str, str]] = []
+    language: str
+    contributions: List[Contribution] = []
+
+
+class RelatedInstance(BaseModel):
+    instance_id: str
+    metadata: RelatedInstanceMetadata
+    annotation: str
+    relationship: str
+
+
 @router.get("/{text_id}/instances", response_model=List[InstanceListItem])
 async def get_text_instances(text_id: str):
     """Get all instances for a specific text"""
@@ -83,3 +105,14 @@ async def create_translation(instance_id: str, translation: CreateTranslation):
     if response.status_code != 201:
         raise HTTPException(status_code=response.status_code, detail=response.text)
     return response.json()
+
+
+@router.get("/{instance_id}/relatedto", response_model=List[RelatedInstance])
+async def get_related_instances(instance_id: str):
+    """Get all instances related to a specific instance"""
+    response = requests.get(f"{API_ENDPOINT}/instances/{instance_id}/relatedto")
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+    return response.json()
+
+

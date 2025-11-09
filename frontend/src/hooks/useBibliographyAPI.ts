@@ -5,7 +5,7 @@ interface APIBibliographyAnnotation {
     start: number;
     end: number;
   };
-  biblography_type: string;
+  type: string;
 }
 
 export const useBibliographyAPI = () => {
@@ -19,9 +19,8 @@ export const useBibliographyAPI = () => {
         start: annotation.span.start,
         end: annotation.span.end,
       },
-      biblography_type: annotation.biblography_type,
+      type: annotation.type,
     }));
-    console.log('🔄 API format annotations:', apiAnnotations);
     return apiAnnotations;
   };
 
@@ -36,8 +35,8 @@ export const useBibliographyAPI = () => {
   };
 
   // Get annotations by type
-  const getAnnotationsByType = (type: BibliographyAnnotation['biblography_type']) => {
-    return annotations.filter(ann => ann.biblography_type === type);
+  const getAnnotationsByType = (type: BibliographyAnnotation['type']) => {
+    return annotations.filter(ann => ann.type === type);
   };
 
   // Clear annotations after successful submission

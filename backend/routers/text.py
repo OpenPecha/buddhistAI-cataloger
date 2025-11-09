@@ -55,7 +55,7 @@ class Annotation(BaseModel):
 
 class BibliographyAnnotation(BaseModel):
     span: Dict[str, int]  # {"start": int, "end": int}
-    biblography_type: str  # e.g., "citation", "reference", "title", "colophon", "incipit", "person"
+    type: str  # e.g., "citation", "reference", "title", "colophon", "incipit", "person"
 
 class InstanceMetadata(BaseModel):
     id: str

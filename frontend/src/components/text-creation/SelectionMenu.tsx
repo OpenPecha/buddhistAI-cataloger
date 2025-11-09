@@ -66,7 +66,7 @@ const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, o
         start: textStart,
         end: textEnd,
       },
-      biblography_type: type,
+      type: type,
       text: selectedText,
     });
 
