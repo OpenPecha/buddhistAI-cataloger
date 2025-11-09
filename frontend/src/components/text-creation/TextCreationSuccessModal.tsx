@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 interface TextCreationSuccessModalProps {
   message: string;
   onClose: () => void;
+  instanceId?: string | null;
 }
 
 // Utility: join class names
@@ -12,13 +13,25 @@ function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-const TextCreationSuccessModal = ({ message, onClose }: TextCreationSuccessModalProps) => {
+const TextCreationSuccessModal = ({ message, onClose, instanceId }: TextCreationSuccessModalProps) => {
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
 
   // Focus close button on mount (basic a11y)
   useEffect(() => {
     closeBtnRef.current?.focus();
   }, []);
+
+  // Handler for Formatter card click
+  const handleFormatterClick = () => {
+    if (instanceId) {
+      // Use environment variable if set, otherwise use default localhost
+      const baseUrl = import.meta.env.VITE_FORMATTER_URL || 'http://localhost:5000';
+      const formatterUrl = `${baseUrl}/formatter?I_id=${instanceId}`;
+      window.open(formatterUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      console.error('No instance ID available for formatter');
+    }
+  };
 
   // Close on ESC
   useEffect(() => {
@@ -154,7 +167,7 @@ const TextCreationSuccessModal = ({ message, onClose }: TextCreationSuccessModal
                       </svg>
                     </div>
                   }
-                  onClick={() => {/* attach handler here */}}
+                  onClick={handleFormatterClick}
                 />
               </div>
             </div>
