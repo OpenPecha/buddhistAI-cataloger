@@ -23,7 +23,7 @@ class AltNames(BaseModel):
 class Person(BaseModel):
     id: str
     name: PersonName
-    alt_names: List[AltNames] = []
+    alt_names: Optional[List[AltNames]] = []
     bdrc: Optional[str] = None
     wiki: Optional[str] = None
     created_at: Optional[str] = None
@@ -51,7 +51,7 @@ class CreatePersonResponse(BaseModel):
 
 @router.get("", response_model=List[Person])
 async def get_persons(
-    limit: int = 30,
+    limit: int = 100,
     offset: int = 0,
     nationality: Optional[str] = None,
     occupation: Optional[str] = None,

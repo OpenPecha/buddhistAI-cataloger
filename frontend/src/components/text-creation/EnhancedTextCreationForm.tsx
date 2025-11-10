@@ -10,6 +10,7 @@ import type { InstanceCreationFormRef } from "@/components/InstanceCreationForm"
 import { useTexts, useCreateText, useCreateTextInstance } from "@/hooks/useTexts";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { detectLanguage } from "@/utils/languageDetection";
+import { useBibliographyAPI } from "@/hooks/useBibliographyAPI";
 import type { OpenPechaText } from "@/types/text";
 import TextCreationSuccessModal from "./TextCreationSuccessModal";
 
@@ -18,6 +19,7 @@ const EnhancedTextCreationForm = () => {
   const textFormRef = useRef<TextCreationFormRef>(null);
   const instanceFormRef = useRef<InstanceCreationFormRef>(null);
   const hasAutoSelectedRef = useRef<boolean>(false);
+  const { clearAfterSubmission } = useBibliographyAPI();
 
   // Helper function to parse error messages
   const parseErrorMessage = (error: any): string => {
@@ -271,6 +273,10 @@ const EnhancedTextCreationForm = () => {
       const createdInstance = await createInstanceMutation.mutateAsync({ textId, instanceData });
       // The API returns { message: string, id: string }, so access id directly
       setCreatedInstanceId(createdInstance?.id || null);
+      
+      // Clear bibliography annotations only after successful instance creation
+      clearAfterSubmission();
+      
       setSuccess(
         isCreatingNewText
           ? "Text and instance created successfully!"

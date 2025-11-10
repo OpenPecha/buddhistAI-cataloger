@@ -10,7 +10,7 @@ export interface PersonName {
 export interface Person {
   id: string;
   name: PersonName;
-  alt_names: AltName[];
+  alt_names: AltName[] | null;
   bdrc: string;
   wiki: string | null;
 }

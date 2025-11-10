@@ -162,12 +162,12 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     }, [personSearch]);
 
     const { data: persons = [], isLoading: personsLoading } = usePersons({
-      limit: 50,
+      limit: 100,
       offset: 0,
     });
 
     const filteredPersons = useMemo(() => {
-      if (!debouncedPersonSearch.trim()) return persons.slice(0, 10);
+      if (!debouncedPersonSearch.trim()) return persons;
 
       return persons
         .filter((person) => {
@@ -189,7 +189,6 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
             person.id.toLowerCase().includes(searchLower)
           );
         })
-        .slice(0, 10);
     }, [persons, debouncedPersonSearch]);
 
     const getPersonDisplayName = (person: Person): string => {

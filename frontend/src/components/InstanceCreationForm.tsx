@@ -90,7 +90,7 @@ const InstanceCreationForm = forwardRef<
   const { results: bdrcResults, isLoading: bdrcLoading } = useBdrcSearch(bdrcSearch);
 
   // Bibliography annotations hook
-  const { getAPIAnnotations, hasAnnotations, clearAfterSubmission } = useBibliographyAPI();
+  const { getAPIAnnotations, hasAnnotations } = useBibliographyAPI();
 
   // Clear BDRC ID when switching to critical type
   useEffect(() => {
@@ -387,10 +387,6 @@ const InstanceCreationForm = forwardRef<
     
     // Submit the form
     onSubmit(cleanedData);
-    
-    // Clear bibliography annotations after successful submission
-    // Note: This assumes onSubmit is synchronous. For async, you'd need to handle this differently
-    clearAfterSubmission();
   };
 
   const hasIncipitTitle = incipitTitles.some(

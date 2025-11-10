@@ -18,7 +18,7 @@ const PersonCard = ({ person, onEdit }: PersonCardProps) => {
 
   // Helper function to get alternative names
   const getAltNames = (person: Person): string[] => {
-    return person.alt_names.map(altName => Object.values(altName)[0]).slice(0, 3);
+    return person.alt_names?.map(altName => Object.values(altName)[0]).slice(0, 3) || [];
   };
 
   return (
