@@ -762,10 +762,17 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
           {showAddContributor && (
             <div className="p-4 border border-gray-300 rounded-md bg-gray-50 space-y-4">
                   {/* Person Search */}
-                  <div className="relative">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Search Person
-                    </label>
+                  <div className="relative flex gap-2" >
+                  <select
+                      value={role}
+                      onChange={(e) => setRole(e.target.value as any)}
+                      className="w-fit px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="author">Author</option>
+                      <option value="translator">Translator</option>
+                      <option value="reviser">Reviser</option>
+                      <option value="scholar">Scholar</option>
+                    </select>
                     <input
                       type="text"
                       value={personSearch}
@@ -785,19 +792,9 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                     )}
 
                     {showPersonDropdown && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                      <div className="absolute z-10 top-full w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
                         {/* Create Person Button - Always at top */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowPersonFormModal(true);
-                            setShowPersonDropdown(false);
-                          }}
-                          className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b-2 border-blue-200 bg-blue-50/50 flex items-center gap-2 text-blue-600 font-medium"
-                        >
-                          <Plus className="w-4 h-4" />
-                          Create New Person
-                        </button>
+                    
 
                         {filteredPersons.length > 0 ? (
                           <>
@@ -850,22 +847,8 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                     )}
                   </div>
 
-                  {/* Role Selection */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Role
-                    </label>
-                    <select
-                      value={role}
-                      onChange={(e) => setRole(e.target.value as any)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="author">Author</option>
-                      <option value="translator">Translator</option>
-                      <option value="reviser">Reviser</option>
-                      <option value="scholar">Scholar</option>
-                    </select>
-                  </div>
+                
+                
 
               {errors.contributor && (
                 <p className="text-sm text-red-600">{errors.contributor}</p>
@@ -897,8 +880,8 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         </div>
 
         {/* Optional Fields */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 " >
+          <div className="hidden">
             <label
               htmlFor="date"
               className="block text-sm font-medium text-gray-700 mb-1"
@@ -983,7 +966,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                                 setBdrc(result.workId);
                                 setShowBdrcDropdown(false);
                               }}
-                              className="w-full px-4 py-2 text-left hover:bg-gray-50 border-b border-gray-100"
+                              className="w-full px-4 py-2 text-left hover:bg-gray-100 border-b border-gray-100"
                             >
                               <div className="text-sm font-medium text-gray-900">
                                 {result.prefLabel}

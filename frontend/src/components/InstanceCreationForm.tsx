@@ -511,7 +511,7 @@ const InstanceCreationForm = forwardRef<
                                   setBdrc(result.instanceId);
                                   setShowBdrcDropdown(false);
                                 }}
-                                className="w-full px-4 py-2 text-left hover:bg-gray-50 border-b border-gray-100"
+                                className="w-full px-4 py-2 text-left hover:bg-gray-200 border-b border-gray-100"
                               >
                                 <div className="text-sm font-medium text-gray-900">
                                   {result.prefLabel}
@@ -536,7 +536,7 @@ const InstanceCreationForm = forwardRef<
           )}
 
           {/* Wiki */}
-          <div>
+          {/* <div>
             <label
               htmlFor="wiki"
               className="block text-sm font-medium text-gray-700 mb-1"
@@ -551,7 +551,7 @@ const InstanceCreationForm = forwardRef<
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Wiki reference"
             />
-          </div>
+          </div> */}
 
           {/* Colophon */}
           <div className="md:col-span-2">
