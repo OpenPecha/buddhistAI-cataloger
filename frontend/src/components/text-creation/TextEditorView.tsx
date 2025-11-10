@@ -30,15 +30,22 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
   const cmRef = useRef<ReactCodeMirrorRef>(null);
   const { annotations } = useBibliography();
 
-  // Update CodeMirror decorations when annotations change
+  // Update CodeMirror decorations when annotations change or when switching back to content tab
   useEffect(() => {
-    if (cmRef.current?.view) {
-      const view = cmRef.current.view;
-      view.dispatch({
-        effects: updateAnnotationsEffect.of(annotations)
-      });
+    if (activeTab === 'content') {
+      // Small delay to ensure the editor is fully rendered
+      const timeoutId = setTimeout(() => {
+        if (cmRef.current?.view) {
+          const view = cmRef.current.view;
+          view.dispatch({
+            effects: updateAnnotationsEffect.of(annotations)
+          });
+        }
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [annotations]);
+  }, [annotations, activeTab]);
 
   const handleMouseUp = (event: React.MouseEvent) => {
     // Only show selection menu when in the content (CodeMirror) tab

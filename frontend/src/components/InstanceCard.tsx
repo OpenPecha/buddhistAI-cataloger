@@ -40,7 +40,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
     const segmentationAnnotations = (segmentationData as any)?.data;
     if (!segmentationAnnotations || !Array.isArray(segmentationAnnotations) || segmentationAnnotations.length === 0) {
       // No segmentation, return content as-is
-      console.log('no segmentation annotations',instance);
+      console.warn('no segmentation annotations',instance);
       return instance.content;
     }
 
