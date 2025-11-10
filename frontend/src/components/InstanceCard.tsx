@@ -37,9 +37,10 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
     if (!instance.content) return '';
     
     // Check if we have fetched segmentation annotations
-    const segmentationAnnotations = (segmentationData as any)?.annotation;
+    const segmentationAnnotations = (segmentationData as any)?.data;
     if (!segmentationAnnotations || !Array.isArray(segmentationAnnotations) || segmentationAnnotations.length === 0) {
       // No segmentation, return content as-is
+      console.log('no segmentation annotations',instance);
       return instance.content;
     }
 

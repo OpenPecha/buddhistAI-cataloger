@@ -244,7 +244,7 @@ async def get_instance(instance_id: str, annotation: bool = True):
         )
     
     try:
-        params = {"annotation": str(annotation).lower()}
+        params = {"annotation": str(annotation).lower(),"content": True}
         response = requests.get(f"{API_ENDPOINT}/instances/{instance_id}", params=params)
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
