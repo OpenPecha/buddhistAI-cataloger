@@ -32,7 +32,6 @@ function TextInstanceCRUD() {
 
   const handleInstanceSubmit = async (instanceData: any) => {
     setIsSubmitting(true);
-
     createInstanceMutation.mutate(
       {
         textId: text_id || "",

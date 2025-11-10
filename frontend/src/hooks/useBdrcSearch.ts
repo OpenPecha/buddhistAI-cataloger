@@ -3,25 +3,30 @@ import { useState, useEffect } from "react";
 const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8000';
 
 export interface BdrcSearchResult {
-  workId: string;
-  instanceId: string;
-  prefLabel: string;
-  catalogInfo: string | null;
-  creator: string | null;
-  language: string | null;
-  workGenre: string | null;
-  workHasInstance: string[];
-  entityScore: number | null;
+  workId?: string;
+  instanceId?: string;
+  prefLabel?: string;
+  catalogInfo?: string | null;
+  creator?: string | null;
+  language?: string | null;
+  workGenre?: string | null;
+  workHasInstance?: string[];
+  entityScore?: number | null;
+  // Person-specific fields
+  bdrc_id?: string;
+  name?: string;
 }
 
 /**
  * Custom hook for searching BDRC entries
  * 
  * @param searchQuery - The search query string
+ * @param type - The type to search for (Instance, Text, Person, etc.)
  * @param debounceMs - Debounce delay in milliseconds (default: 500ms)
  * @returns search results and loading state
  */
-export function useBdrcSearch(searchQuery: string, debounceMs: number = 500) {
+
+export function useBdrcSearch(searchQuery: string, type: string = "Instance", debounceMs: number = 1000) {
   const [results, setResults] = useState<BdrcSearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +57,7 @@ export function useBdrcSearch(searchQuery: string, debounceMs: number = 500) {
             from: 0,
             size: 20,
             filter: [],
-            type: "Instance",
+            type: type,
           }),
         });
 
@@ -72,7 +77,7 @@ export function useBdrcSearch(searchQuery: string, debounceMs: number = 500) {
     }, debounceMs);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, debounceMs]);
+  }, [searchQuery, type, debounceMs]);
 
   return {
     results,

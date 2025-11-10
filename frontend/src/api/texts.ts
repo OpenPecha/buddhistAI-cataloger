@@ -168,3 +168,13 @@ export const fetchAnnotation = async (id: string): Promise<OpenPechaTextInstance
     throw new Error('Unable to load annotation details. Please check your connection and try again.');
   }
 };
+
+export const fetchTextByBdrcId = async (bdrcId: string): Promise<OpenPechaText | null> => {
+  try {
+    const response = await fetch(`${API_URL}/text/${bdrcId}`);
+    return await handleApiResponse(response);
+  } catch {
+    // Return null if not found (404) or any other error
+    return null;
+  }
+};

@@ -26,6 +26,7 @@ export interface TextCreationFormRef {
   setPersonSearch: (text: string) => void;
   openContributorForm: () => void;
   hasTitle: () => boolean;
+  setBdrcId: (bdrcId: string, label: string) => void;
 }
 
 interface Contributor {
@@ -109,6 +110,12 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         // Check if there's at least one title with a value
         return titles.length > 0 && titles.some(t => t.value.trim() !== "");
       },
+      setBdrcId: (bdrcId: string, label: string) => {
+        setBdrc(bdrcId);
+        setBdrcSearch(label);
+        setSelectedBdrc({ id: bdrcId, label: label });
+        setShowBdrcDropdown(false);
+      },
     }));
 
     const [selectedType, setSelectedType] = useState<
@@ -151,8 +158,11 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     // Person creation modal
     const [showPersonFormModal, setShowPersonFormModal] = useState(false);
 
-    // BDRC search hook
+    // BDRC search hook for instances
     const { results: bdrcResults, isLoading: bdrcLoading } = useBdrcSearch(bdrcSearch);
+    
+    // BDRC search hook for persons
+    const { results: bdrcPersonResults, isLoading: bdrcPersonLoading } = useBdrcSearch(debouncedPersonSearch, "Person", 1000);
 
     useEffect(() => {
       const timer = setTimeout(() => {
@@ -284,7 +294,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       // Build contributions array
       const contributionsArray = contributors.map((contributor) => {
         return {
-          person_id: contributor.person!.id,
+          person_bdrc_id: contributor.person!.id,
           role: contributor.role,
         };
       });
@@ -792,59 +802,66 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                     )}
 
                     {showPersonDropdown && (
-                      <div className="absolute z-10 top-full w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                        {/* Create Person Button - Always at top */}
-                    
-
-                        {filteredPersons.length > 0 ? (
+                      <div className="absolute z-10 top-full w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-96 overflow-y-auto">
+                        {/* BDRC Person Results Section */}
+                        {debouncedPersonSearch.trim() && (
                           <>
-                            {filteredPersons.map((person) => (
-                              <button
-                                key={person.id}
-                                type="button"
-                                onClick={() => handlePersonSelect(person)}
-                                className="w-full px-4 py-2 text-left hover:bg-gray-50 border-b border-gray-100"
-                              >
-                                <div className="font-medium">
-                                  {getPersonDisplayName(person)}
-                                </div>
-                                {person.alt_names && person.alt_names.length > 0 && (
-                                  <div className="flex flex-wrap gap-1 mt-1">
-                                    {person.alt_names.slice(0, 3).map((altName, idx) => (
-                                      altName.bo && (
-                                        <span
-                                          key={idx}
-                                          className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700"
-                                        >
-                                          {altName.bo}
-                                        </span>
-                                      )
-                                    ))}
-                                    {person.alt_names.length > 3 && (
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-blue-100 text-blue-700 font-medium">
-                                        +{person.alt_names.length - 3}
-                                      </span>
-                                    )}
+                            <div className="px-4 py-2 bg-gray-100 border-b border-gray-200">
+                              <span className="text-xs font-semibold text-gray-700 uppercase">
+                                BDRC Catalog
+                              </span>
+                            </div>
+                            {bdrcPersonLoading ? (
+                              <div className="px-4 py-4 flex items-center gap-2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                                <div className="text-sm text-gray-500">Searching BDRC...</div>
+                              </div>
+                            ) : bdrcPersonResults.length > 0 ? (
+                              bdrcPersonResults.map((result) => (
+                                <button
+                                  key={result.bdrc_id}
+                                  type="button"
+                                  onClick={() => {
+                                    // Create a temporary Person object from BDRC data
+                                    const bdrcPerson: Person = {
+                                      id: result.bdrc_id || '',
+                                      name: { bo: result.name || '' },
+                                      alt_names: [],
+                                      bdrc: result.bdrc_id || '',
+                                      wiki: null
+                                    };
+                                    handlePersonSelect(bdrcPerson);
+                                  }}
+                                  className="w-full px-4 py-2 text-left hover:bg-purple-50 border-b border-gray-100"
+                                >
+                                  <div className="flex items-start gap-2">
+                                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">
+                                      BDRC
+                                    </span>
+                                    <div className="flex-1">
+                                      <div className="font-medium text-sm">
+                                        {result.name || "Untitled"}
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1">
+                                        {result.bdrc_id}
+                                      </div>
+                                    </div>
                                   </div>
-                                )}
-                              </button>
-                            ))}
+                                </button>
+                              ))
+                            ) : debouncedPersonSearch.trim() ? (
+                              <div className="px-4 py-2 text-gray-500 text-sm">
+                                No BDRC persons found
+                              </div>
+                            ) : null}
                           </>
-                        ) : (
-                          <div className="px-4 py-2 text-gray-500 text-sm">
-                            No persons found
-                          </div>
                         )}
+
+                       
                       </div>
                     )}
 
-                    {selectedPerson && (
-                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
-                        <div className="text-blue-600 font-medium">
-                          Selected: {getPersonDisplayName(selectedPerson)}
-                        </div>
-                      </div>
-                    )}
+                
                   </div>
 
                 
@@ -960,10 +977,10 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                               type="button"
                               onClick={() => {
                                 setSelectedBdrc({
-                                  id: result.workId,
-                                  label: result.prefLabel,
+                                  id: result.workId || '',
+                                  label: result.prefLabel || '',
                                 });
-                                setBdrc(result.workId);
+                                setBdrc(result.workId || '');
                                 setShowBdrcDropdown(false);
                               }}
                               className="w-full px-4 py-2 text-left hover:bg-gray-100 border-b border-gray-100"

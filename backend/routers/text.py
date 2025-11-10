@@ -13,6 +13,7 @@ API_ENDPOINT = os.getenv("OPENPECHA_ENDPOINT")
 
 class Contribution(BaseModel):
     person_id: Optional[str] = None
+    person_bdrc_id: Optional[str] = None
     ai_id: Optional[str] = None
     role: str
 
@@ -144,6 +145,7 @@ async def create_text(text: CreateText):
     try:
         # Convert to dict, excluding None values
         payload = text.model_dump(exclude_none=True)
+        print(payload)
         response = requests.post(f"{API_ENDPOINT}/texts", json=payload)
         
         if response.status_code != 201:

@@ -1,7 +1,6 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, X, Upload, FileText, Code } from "lucide-react";
-import FileUploadZone from "./FileUploadZone";
 import TextEditorView from "./TextEditorView";
 import TextCreationForm from "@/components/TextCreationForm";
 import type { TextCreationFormRef } from "@/components/TextCreationForm";
@@ -13,12 +12,15 @@ import { detectLanguage } from "@/utils/languageDetection";
 import { useBibliographyAPI } from "@/hooks/useBibliographyAPI";
 import type { OpenPechaText } from "@/types/text";
 import TextCreationSuccessModal from "./TextCreationSuccessModal";
+import { useBdrcSearch, type BdrcSearchResult } from "@/hooks/useBdrcSearch";
+import { fetchTextByBdrcId } from "@/api/texts";
 
 const EnhancedTextCreationForm = () => {
   const navigate = useNavigate();
   const textFormRef = useRef<TextCreationFormRef>(null);
   const instanceFormRef = useRef<InstanceCreationFormRef>(null);
   const hasAutoSelectedRef = useRef<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { clearAfterSubmission } = useBibliographyAPI();
 
   // Helper function to parse error messages
@@ -67,7 +69,7 @@ const EnhancedTextCreationForm = () => {
 
   // File upload state
   const [uploadedFilename, setUploadedFilename] = useState<string>("");
-  const [editedContent, setEditedContent] = useState<string>("");
+  const [editedContent, setEditedContent] = useState<string>(" ");
 
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -77,6 +79,9 @@ const EnhancedTextCreationForm = () => {
   
   // Notification state for text selection actions
   const [notification, setNotification] = useState<string | null>(null);
+  
+  // Loading state for checking BDRC text
+  const [isCheckingBdrc, setIsCheckingBdrc] = useState(false);
 
   // Track if incipit exists (for enabling/disabling alt incipit)
   const [hasIncipitTitle, setHasIncipitTitle] = useState(false);
@@ -88,6 +93,9 @@ const EnhancedTextCreationForm = () => {
   const { data: texts = [], isLoading: isLoadingTexts } = useTexts({ limit: 100, offset: 0 });
   const createTextMutation = useCreateText();
   const createInstanceMutation = useCreateTextInstance();
+  
+  // BDRC search for texts
+  const { results: bdrcResults, isLoading: isLoadingBdrc } = useBdrcSearch(debouncedTextSearch, "Instance",  1000);
 
   // Debounce text search
   useEffect(() => {
@@ -132,22 +140,6 @@ const EnhancedTextCreationForm = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Filter texts based on search
-  const filteredTexts = useMemo(() => {
-    if (!debouncedTextSearch.trim()) return texts.slice(0, 50);
-
-    return texts
-      .filter((text: OpenPechaText) => {
-        const searchLower = debouncedTextSearch.toLowerCase();
-        const titleMatches = Object.values(text.title).some((title) =>
-          title.toLowerCase().includes(searchLower)
-        );
-        const idMatches = text.id.toLowerCase().includes(searchLower);
-        return titleMatches || idMatches;
-      })
-      .slice(0, 50);
-  }, [texts, debouncedTextSearch]);
-
   // Helper function to get text display name
   const getTextDisplayName = (text: OpenPechaText): string => {
     return (
@@ -167,7 +159,7 @@ const EnhancedTextCreationForm = () => {
 
   // Helper: Clear file upload state
   const clearFileUpload = () => {
-    setEditedContent("");
+    setEditedContent(" ");
     setUploadedFilename("");
   };
 
@@ -186,28 +178,6 @@ const EnhancedTextCreationForm = () => {
     clearUrlParams();
   };
 
-  // Handle text selection
-  const handleTextSelect = (text: OpenPechaText) => {
-    setSelectedText(text);
-    setTextSearch(getTextDisplayName(text));
-    setShowTextDropdown(false);
-    setIsCreatingNewText(false);
-    clearFileUpload();
-    hasAutoSelectedRef.current = true;
-    // Update URL with text ID
-    navigate(`/create?t_id=${text.id}`, { replace: true });
-  };
-
-  const handleCreateNewText = () => {
-    setSelectedText(null);
-    setTextSearch("");
-    setShowTextDropdown(false);
-    setIsCreatingNewText(true);
-    clearFileUpload();
-    hasAutoSelectedRef.current = true;
-    clearUrlParams();
-  };
-
   const handleTextSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setTextSearch(value);
@@ -219,6 +189,52 @@ const EnhancedTextCreationForm = () => {
       setSelectedText(null);
       clearUrlParams(); // Clear URL to prevent loading state
     }
+  };
+
+  // Handle BDRC text selection
+  const handleBdrcTextSelect = async (result: BdrcSearchResult) => {
+    const workId = result.workId;
+    if (!workId) return;
+    
+    setShowTextDropdown(false);
+    setIsCheckingBdrc(true);
+    
+    try {
+      // Try to fetch text by BDRC ID
+      const existingText = await fetchTextByBdrcId(workId);
+      
+      if (existingText) {
+        // Case 1: Text exists - select it
+        setSelectedText(existingText);
+        setTextSearch(getTextDisplayName(existingText));
+        setIsCreatingNewText(false);
+        clearFileUpload();
+        hasAutoSelectedRef.current = true;
+        navigate(`/create?t_id=${existingText.id}`, { replace: true });
+        setNotification(`✓ Text found: ${getTextDisplayName(existingText)}`);
+      } else {
+        // Case 2: Text doesn't exist - create new with BDRC prefilled
+        setSelectedText(null);
+        setTextSearch("");
+        setIsCreatingNewText(true);
+        clearFileUpload();
+        hasAutoSelectedRef.current = true;
+        clearUrlParams();
+        
+        // Prefill BDRC field in TextCreationForm
+        setTimeout(() => {
+          textFormRef.current?.setBdrcId(workId, result.prefLabel || '');
+        }, 100);
+        
+        setNotification(`Creating new text for BDRC: ${workId}`);
+      }
+    } catch {
+      setError('Failed to check BDRC text. Please try again.');
+    } finally {
+      setIsCheckingBdrc(false);
+    }
+    
+    setTimeout(() => setNotification(null), 3000);
   };
 
   // Handle file upload
@@ -254,7 +270,6 @@ const EnhancedTextCreationForm = () => {
       if (isCreatingNewText) {
         // Creating new text - get form data from the global function
         const textFormData = (window as any).__getTextFormData?.();
-
         if (!textFormData) {
           throw new Error("Text form data not available");
         }
@@ -316,11 +331,7 @@ const EnhancedTextCreationForm = () => {
 
     switch (type) {
       case "title":
-        if (!isCreatingNewText) {
-          setNotification("⚠️ Title can only be added when creating a new text");
-          setTimeout(() => setNotification(null), 3000);
-          return;
-        }
+     
         textFormRef.current?.addTitle(text, detectedLanguage);
         setNotification("✓ Title added successfully");
         setTimeout(() => setNotification(null), 2000);
@@ -330,11 +341,7 @@ const EnhancedTextCreationForm = () => {
         }, 100);
         break;
       case "alt_title":
-        if (!isCreatingNewText) {
-          setNotification("⚠️ Alternative titles can only be added when creating a new text");
-          setTimeout(() => setNotification(null), 3000);
-          return;
-        }
+      
         textFormRef.current?.addAltTitle(text, detectedLanguage);
         setNotification("✓ Alternative title added successfully");
         setTimeout(() => setNotification(null), 2000);
@@ -359,11 +366,7 @@ const EnhancedTextCreationForm = () => {
         setTimeout(() => setNotification(null), 2000);
         break;
       case "person":
-        if (!isCreatingNewText) {
-          setNotification("⚠️ Contributors can only be added when creating a new text");
-          setTimeout(() => setNotification(null), 3000);
-          return;
-        }
+    
         textFormRef.current?.setPersonSearch(text);
         textFormRef.current?.openContributorForm();
         setNotification("✓ Person search filled");
@@ -472,6 +475,43 @@ const EnhancedTextCreationForm = () => {
         </div>
       )}
 
+      {/* Loading Screen - Show while checking BDRC text */}
+      {isCheckingBdrc && (
+        <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gradient-to-br from-purple-50 via-indigo-50 to-blue-50 flex items-center justify-center z-40">
+          <div className="text-center max-w-md mx-auto px-6">
+            {/* Animated Logo/Icon */}
+            <div className="relative mb-8">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-32 h-32 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full opacity-20 animate-ping"></div>
+              </div>
+              <div className="relative flex items-center justify-center">
+                <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl shadow-2xl flex items-center justify-center transform hover:scale-105 transition-transform">
+                  <FileText className="w-12 h-12 text-white" />
+                </div>
+              </div>
+            </div>
+
+            {/* Loading Text */}
+            <h2 className="text-3xl font-bold text-gray-800 mb-3 animate-pulse">
+              Checking BDRC...
+            </h2>
+            <p className="text-lg text-gray-600 mb-6">
+              Looking for existing text
+            </p>
+
+            {/* Progress Indicator */}
+            <div className="relative w-64 h-2 bg-gray-200 rounded-full overflow-hidden mx-auto">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-500 rounded-full animate-[loading_1.5s_ease-in-out_infinite]"></div>
+            </div>
+
+            {/* Additional Info */}
+            <p className="text-sm text-gray-500 mt-6">
+              Checking if text exists in local catalog...
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Two-Panel Layout */}
       <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gray-50 flex">
         {/* Mobile Toggle Button */}
@@ -532,47 +572,60 @@ const EnhancedTextCreationForm = () => {
                       onFocus={() => setShowTextDropdown(true)}
                       onBlur={() => setTimeout(() => setShowTextDropdown(false), 200)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Search by title or ID..."
+                      placeholder="Search by title or BDRC ID..."
                     />
 
                     {/* Text Dropdown */}
                     {showTextDropdown && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-                        <button
-                          type="button"
-                          onClick={handleCreateNewText}
-                          className="w-full px-4 py-3 text-left hover:bg-blue-50 border-b border-gray-200 font-medium text-blue-600 flex items-center gap-2"
-                        >
-                          <span className="text-xl">+</span>
-                          <span>Create New Text</span>
-                        </button>
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-96 overflow-y-auto">
+                        
 
-                        {isLoadingTexts ? (
-                          <div className="px-4 py-8 flex flex-col items-center justify-center">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-                            <div className="text-sm text-gray-500">Loading texts...</div>
-                          </div>
-                        ) : filteredTexts.length > 0 ? (
-                          filteredTexts.map((text: OpenPechaText) => (
-                            <button
-                              key={text.id}
-                              type="button"
-                              onClick={() => handleTextSelect(text)}
-                              className="w-full px-4 py-2 text-left hover:bg-gray-50 border-b border-gray-100"
-                            >
-                              <div className="font-medium">
-                                {getTextDisplayName(text)}
+                        {/* BDRC Results Section */}
+                        {debouncedTextSearch.trim() && (
+                          <>
+                            <div className="px-4 py-2 bg-gray-100 border-b border-gray-200">
+                              <span className="text-xs font-semibold text-gray-700 uppercase">
+                                BDRC Catalog
+                              </span>
+                            </div>
+                            {isLoadingBdrc ? (
+                              <div className="px-4 py-4 flex items-center gap-2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
+                                <div className="text-sm text-gray-500">Searching BDRC...</div>
                               </div>
-                              <div className="text-sm text-gray-500">
-                                {text.type} • {text.language}
+                            ) : bdrcResults.length > 0 ? (
+                              bdrcResults.map((result) => (
+                                <button
+                                  key={result.workId}
+                                  type="button"
+                                  onClick={() => handleBdrcTextSelect(result)}
+                                  className="w-full px-4 py-2 text-left hover:bg-purple-50 border-b border-gray-100"
+                                >
+                                  <div className="flex items-start gap-2">
+                                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">
+                                      BDRC
+                                    </span>
+                                    <div className="flex-1">
+                                      <div className="font-medium text-sm">
+                                        {result.prefLabel || "Untitled"}
+                                      </div>
+                                      <div className="text-xs text-gray-500 mt-1">
+                                        {result.workId}
+                                        {result.language && ` • ${result.language}`}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </button>
+                              ))
+                            ) : debouncedTextSearch.trim() ? (
+                              <div className="px-4 py-2 text-gray-500 text-sm">
+                                No BDRC results found
                               </div>
-                            </button>
-                          ))
-                        ) : (
-                          <div className="px-4 py-2 text-gray-500 text-sm">
-                            No texts found
-                          </div>
+                            ) : null}
+                          </>
                         )}
+
+                     
                       </div>
                     )}
                   </div>
@@ -641,7 +694,8 @@ const EnhancedTextCreationForm = () => {
                 )}
 
                 {/* Instance Creation Form */}
-                <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                
+                {canUpload &&<div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                   
                   <InstanceCreationForm
                     ref={instanceFormRef}
@@ -651,12 +705,13 @@ const EnhancedTextCreationForm = () => {
                     content={editedContent}
                   />
                 </div>
+}
               </div>
             )}
           </div>
         </div>
 
-        {/* RIGHT PANEL: File Upload / Editor */}
+        {/* RIGHT PANEL: Editor with Optional File Upload */}
         <div
           className={`
             w-full md:w-1/2 h-full overflow-hidden bg-gray-50
@@ -669,44 +724,102 @@ const EnhancedTextCreationForm = () => {
             }
           `}
         >
-          {!editedContent ? (
-            /* Upload Zone */
+          {!canUpload ? (
+            /* Disabled State - No text selected */
             <div className="h-full flex flex-col items-center justify-center p-8">
-              {!canUpload ? (
-                /* Disabled State - No text selected */
-                <div className="text-center max-w-md">
-                  <div className="mb-6 opacity-50">
-                    <Upload className="w-20 h-20 mx-auto text-gray-400" />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-600 mb-2">
-                    Upload Disabled
-                  </h3>
-                  <p className="text-gray-500">
-                    Please select an existing text or choose to create a new text before uploading a file.
-                  </p>
+              <div className="text-center max-w-md">
+                <div className="mb-6 opacity-50">
+                  <Upload className="w-20 h-20 mx-auto text-gray-400" />
                 </div>
-              ) : (
-                /* Active Upload Zone */
-                <div className="w-full max-w-2xl">
-                  <h3 className="text-xl font-semibold mb-6 text-gray-800 text-center">
-                    Upload Text File
-                  </h3>
-                  <FileUploadZone onFileUpload={handleFileUpload} />
-                </div>
-              )}
+                <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                  Editor Disabled
+                </h3>
+                <p className="text-gray-500">
+                  Please select an existing text or choose to create a new text to begin editing.
+                </p>
+              </div>
             </div>
           ) : (
             /* Editor View */
-            <TextEditorView
-              content={editedContent}
-              filename={uploadedFilename}
-              editable={true}
-              onChange={(value) => setEditedContent(value)}
-              onTextSelect={handleEditorTextSelect}
-              isCreatingNewText={isCreatingNewText}
-              hasIncipit={hasIncipitTitle}
-              hasTitle={hasTitle}
-            />
+            <div className="h-full flex flex-col">
+              {/* Upload Button in Header */}
+              <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
+                <div className="flex items-center justify-between">
+                  {!editedContent || editedContent?.trim() === "" ? (
+                    <>
+                      <p className="text-sm text-gray-600">
+                        Start typing below or upload a text file
+                      </p>
+                      <div>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".txt"
+                          onChange={(e) => {
+                            const files = e.target.files;
+                            if (files && files.length > 0) {
+                              const file = files[0];
+                              
+                              // Validate file size
+                              if (file.size < 1024) {
+                                alert('File is too small (minimum 1KB required)');
+                                e.target.value = '';
+                                return;
+                              }
+                              
+                              // Validate file type
+                              if (!file.name.endsWith('.txt')) {
+                                alert('Please upload a .txt file only');
+                                e.target.value = '';
+                                return;
+                              }
+                              
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                const content = event.target?.result as string;
+                                handleFileUpload(content, file.name);
+                              };
+                              reader.readAsText(file);
+                            }
+                            e.target.value = ''; // Reset input
+                          }}
+                          className="hidden"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => {
+                            fileInputRef.current?.click();
+                          }}
+                          className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                        >
+                          <Upload className="w-4 h-4" />
+                          Upload File
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <span className="text-xs text-gray-500">
+                      {editedContent?.length} characters
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              {/* Editor */}
+              <div className="flex-1 overflow-hidden">
+                <TextEditorView
+                  content={editedContent || ""}
+                  filename={editedContent ? uploadedFilename : "New Document"}
+                  editable={true}
+                  onChange={(value) => setEditedContent(value)}
+                  onTextSelect={handleEditorTextSelect}
+                  isCreatingNewText={isCreatingNewText}
+                  hasIncipit={hasIncipitTitle}
+                  hasTitle={hasTitle}
+                />
+              </div>
+            </div>
           )}
         </div>
       </div>

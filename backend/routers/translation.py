@@ -66,6 +66,7 @@ class InstanceListItem(BaseModel):
 
 class Contribution(BaseModel):
     person_id: str
+    person_name: Optional[str] = None
     role: str
 
 

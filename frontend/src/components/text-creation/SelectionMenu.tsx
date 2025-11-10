@@ -148,9 +148,7 @@ const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, o
 
   // Filter menu items based on whether we're creating new text or working with existing text
   // For existing text, hide Title, Alternative Title, and Person options
-  const menuItems = isCreatingNewText 
-    ? allMenuItems 
-    : allMenuItems.filter(item => !['title', 'alt_title', 'person'].includes(item.type));
+   
 
   return (
     <div
@@ -164,7 +162,7 @@ const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, o
       }}
     >
       <div className="space-y-1">
-        {menuItems.map((item, index) => {
+        {allMenuItems.map((item, index) => {
           // Disable alt_incipit if there's no incipit title
           // Disable alt_title if there's no main title
           const isDisabled = 
