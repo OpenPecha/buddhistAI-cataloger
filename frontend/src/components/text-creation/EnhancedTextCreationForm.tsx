@@ -76,6 +76,12 @@ const EnhancedTextCreationForm = () => {
   // Notification state for text selection actions
   const [notification, setNotification] = useState<string | null>(null);
 
+  // Track if incipit exists (for enabling/disabling alt incipit)
+  const [hasIncipitTitle, setHasIncipitTitle] = useState(false);
+
+  // Track if title exists (for enabling/disabling alt title)
+  const [hasTitle, setHasTitle] = useState(false);
+
   // Mutations and data
   const { data: texts = [], isLoading: isLoadingTexts } = useTexts({ limit: 100, offset: 0 });
   const createTextMutation = useCreateText();
@@ -109,6 +115,20 @@ const EnhancedTextCreationForm = () => {
       hasAutoSelectedRef.current = false;
     }
   }, [t_id, texts, selectedText]);
+
+  // Periodically check if incipit and title exist to keep the state up to date
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (instanceFormRef.current) {
+        setHasIncipitTitle(instanceFormRef.current.hasIncipit());
+      }
+      if (textFormRef.current) {
+        setHasTitle(textFormRef.current.hasTitle());
+      }
+    }, 500); // Check every 500ms
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Filter texts based on search
   const filteredTexts = useMemo(() => {
@@ -298,6 +318,10 @@ const EnhancedTextCreationForm = () => {
         textFormRef.current?.addTitle(text, detectedLanguage);
         setNotification("✓ Title added successfully");
         setTimeout(() => setNotification(null), 2000);
+        // Update hasTitle state
+        setTimeout(() => {
+          setHasTitle(textFormRef.current?.hasTitle() || false);
+        }, 100);
         break;
       case "alt_title":
         if (!isCreatingNewText) {
@@ -318,6 +342,10 @@ const EnhancedTextCreationForm = () => {
         instanceFormRef.current?.addIncipit(text, detectedLanguage);
         setNotification("✓ Incipit added successfully");
         setTimeout(() => setNotification(null), 2000);
+        // Update hasIncipit state
+        setTimeout(() => {
+          setHasIncipitTitle(instanceFormRef.current?.hasIncipit() || false);
+        }, 100);
         break;
       case "alt_incipit":
         instanceFormRef.current?.addAltIncipit(text, detectedLanguage);
@@ -675,6 +703,9 @@ const EnhancedTextCreationForm = () => {
               editable={true}
               onChange={(value) => setEditedContent(value)}
               onTextSelect={handleEditorTextSelect}
+              isCreatingNewText={isCreatingNewText}
+              hasIncipit={hasIncipitTitle}
+              hasTitle={hasTitle}
             />
           )}
         </div>
