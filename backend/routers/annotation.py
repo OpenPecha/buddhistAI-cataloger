@@ -22,10 +22,23 @@ class Annotation(BaseModel):
     span: Span
 
 
+class AlignmentAnnotation(BaseModel):
+    id: str
+    span: Span
+    index: int
+    alignment_index: List[int]
+
+
+class TargetAnnotation(BaseModel):
+    id: str
+    span: Span
+    index: int
+
+
 class AnnotationResponse(BaseModel):
     annotation: Optional[List[Annotation]]
-    alignment_annotation: Optional[dict]
-    target_annotation: Optional[dict]
+    alignment_annotation: Optional[List[AlignmentAnnotation]]
+    target_annotation: Optional[List[TargetAnnotation]]
 
 
 @router.get("/{annotation_id}", response_model=AnnotationResponse)
