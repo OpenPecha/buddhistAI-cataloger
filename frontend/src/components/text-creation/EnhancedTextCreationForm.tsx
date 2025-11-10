@@ -89,6 +89,9 @@ const EnhancedTextCreationForm = () => {
   // Track if title exists (for enabling/disabling alt title)
   const [hasTitle, setHasTitle] = useState(false);
 
+  // Track search attempts for "Create" button activation
+  const [searchAttempts, setSearchAttempts] = useState(0);
+
   // Mutations and data
   const { data: texts = [], isLoading: isLoadingTexts } = useTexts({ limit: 100, offset: 0 });
   const createTextMutation = useCreateText();
@@ -97,10 +100,14 @@ const EnhancedTextCreationForm = () => {
   // BDRC search for texts
   const { results: bdrcResults, isLoading: isLoadingBdrc } = useBdrcSearch(debouncedTextSearch, "Instance",  1000);
 
-  // Debounce text search
+  // Debounce text search and track attempts
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedTextSearch(textSearch);
+      // Increment search attempts only if there's actual search text
+      if (textSearch.trim()) {
+        setSearchAttempts(prev => prev + 1);
+      }
     }, 300);
     return () => clearTimeout(timer);
   }, [textSearch]);
@@ -188,7 +195,37 @@ const EnhancedTextCreationForm = () => {
     if (!value) {
       setSelectedText(null);
       clearUrlParams(); // Clear URL to prevent loading state
+      setSearchAttempts(0); // Reset search attempts when clearing
     }
+  };
+
+  // Handle creating new text from BDRC search
+  const handleCreateNewFromSearch = () => {
+    setSelectedText(null);
+    setIsCreatingNewText(true);
+    // Don't clear file upload - keep editor open with placeholder content
+    if (!editedContent || editedContent.trim() === "") {
+      setEditedContent(" "); // Set placeholder to show the editor
+    }
+    hasAutoSelectedRef.current = true;
+    clearUrlParams();
+    setShowTextDropdown(false);
+    setTextSearch("");
+    setSearchAttempts(0); // Reset attempts
+    setNotification("✓ Ready to create new text - upload a file or start typing");
+    setTimeout(() => setNotification(null), 3000);
+  };
+
+  // Handle when existing text is found from TextCreationForm BDRC selection
+  const handleExistingTextFoundFromForm = (text: OpenPechaText) => {
+    // Switch from creating new text to using existing text
+    setSelectedText(text);
+    setTextSearch(getTextDisplayName(text));
+    setIsCreatingNewText(false);
+    hasAutoSelectedRef.current = true;
+    navigate(`/create?t_id=${text.id}`, { replace: true });
+    setNotification(`✓ Using existing text: ${getTextDisplayName(text)}`);
+    setTimeout(() => setNotification(null), 3000);
   };
 
   // Handle BDRC text selection
@@ -583,11 +620,45 @@ const EnhancedTextCreationForm = () => {
                         {/* BDRC Results Section */}
                         {debouncedTextSearch.trim() && (
                           <>
-                            <div className="px-4 py-2 bg-gray-100 border-b border-gray-200">
+                            <div className="px-4 py-2 bg-gray-100 border-b border-gray-200 flex items-center justify-between">
                               <span className="text-xs font-semibold text-gray-700 uppercase">
                                 BDRC Catalog
                               </span>
+                              {searchAttempts >= 3 && (
+                                <span className="text-xs text-gray-500">
+                                  {searchAttempts} searches
+                                </span>
+                              )}
                             </div>
+                            
+                            {/* Create New Text Button - Enabled after 3 attempts */}
+                            {searchAttempts >= 3 && (
+                              <button
+                                type="button"
+                                onMouseDown={(e) => {
+                                  e.preventDefault(); // Prevent input blur
+                                  handleCreateNewFromSearch();
+                                }}
+                                className="w-full px-4 py-3 text-left bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 border-b-2 border-green-300 transition-all duration-200"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <div className="flex-shrink-0 w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                    </svg>
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="font-semibold text-sm text-green-900">
+                                      Create New Text
+                                    </div>
+                                    <div className="text-xs text-green-700 mt-0.5">
+                                      Can't find what you're looking for? Create a new text entry
+                                    </div>
+                                  </div>
+                                </div>
+                              </button>
+                            )}
+                            
                             {isLoadingBdrc ? (
                               <div className="px-4 py-4 flex items-center gap-2">
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
@@ -598,7 +669,10 @@ const EnhancedTextCreationForm = () => {
                                 <button
                                   key={result.workId}
                                   type="button"
-                                  onClick={() => handleBdrcTextSelect(result)}
+                                  onMouseDown={(e) => {
+                                    e.preventDefault(); // Prevent input blur
+                                    handleBdrcTextSelect(result);
+                                  }}
                                   className="w-full px-4 py-2 text-left hover:bg-purple-50 border-b border-gray-100"
                                 >
                                   <div className="flex items-start gap-2">
@@ -682,30 +756,32 @@ const EnhancedTextCreationForm = () => {
               </div>
             </div>
 
-            {/* Forms Section - Only show if file is uploaded */}
-            {editedContent && (
+            {/* Forms Section - Show if in creation mode OR if text is selected */}
+            {canUpload && (
               <div className="space-y-6">
                 {/* Text Creation Form - Only show when creating new text */}
-                {isCreatingNewText && (
-                  <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mb-6">
-                 
-                      <TextCreationForm ref={textFormRef} />
+                 {isCreatingNewText && (
+                   <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mb-6">
+                  
+                       <TextCreationForm 
+                         ref={textFormRef}
+                         onExistingTextFound={handleExistingTextFoundFromForm}
+                       />
+                   </div>
+                 )}
+
+                {/* Instance Creation Form - Show when text is selected or creating new with content */}
+                {(selectedText || (isCreatingNewText && editedContent && editedContent.trim() !== "")) && (
+                  <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                    <InstanceCreationForm
+                      ref={instanceFormRef}
+                      onSubmit={handleInstanceCreation}
+                      isSubmitting={isSubmitting}
+                      onCancel={handleCancel}
+                      content={editedContent}
+                    />
                   </div>
                 )}
-
-                {/* Instance Creation Form */}
-                
-                {canUpload &&<div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                  
-                  <InstanceCreationForm
-                    ref={instanceFormRef}
-                    onSubmit={handleInstanceCreation}
-                    isSubmitting={isSubmitting}
-                    onCancel={handleCancel}
-                    content={editedContent}
-                  />
-                </div>
-}
               </div>
             )}
           </div>

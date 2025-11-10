@@ -9,15 +9,18 @@ import {
 import { usePersons } from "@/hooks/usePersons";
 import { useBdrcSearch } from "@/hooks/useBdrcSearch";
 import type { Person } from "@/types/person";
+import type { OpenPechaText } from "@/types/text";
 import { Button } from "@/components/ui/button";
-import { X, Plus, User, Loader2 } from "lucide-react";
+import { X, Plus, User, Loader2, AlertTriangle } from "lucide-react";
 import { detectLanguage } from "@/utils/languageDetection";
 import PersonFormModal from "@/components/PersonFormModal";
 import { MultilevelCategorySelector } from "@/components/MultilevelCategorySelector";
+import { fetchTextByBdrcId } from "@/api/texts";
 
 interface TextCreationFormProps {
   onDataChange?: (textData: any) => void;
   getFormData?: () => any;
+  onExistingTextFound?: (text: OpenPechaText) => void;
 }
 
 export interface TextCreationFormRef {
@@ -54,7 +57,7 @@ const LANGUAGE_OPTIONS = [
 ];
 
 const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
-  ({ onDataChange }, ref) => {
+  ({ onDataChange, onExistingTextFound }, ref) => {
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
       addTitle: (text: string, language?: string) => {
@@ -157,6 +160,12 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
 
     // Person creation modal
     const [showPersonFormModal, setShowPersonFormModal] = useState(false);
+
+    // BDRC conflict state
+    const [showBdrcConflictDialog, setShowBdrcConflictDialog] = useState(false);
+    const [conflictingText, setConflictingText] = useState<OpenPechaText | null>(null);
+    const [pendingBdrcSelection, setPendingBdrcSelection] = useState<{ id: string; label: string } | null>(null);
+    const [isCheckingBdrcId, setIsCheckingBdrcId] = useState(false);
 
     // BDRC search hook for instances
     const { results: bdrcResults, isLoading: bdrcLoading } = useBdrcSearch(bdrcSearch);
@@ -914,7 +923,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
             />
           </div>
 
-          <div>
+          <div >
             <label
               htmlFor="bdrc"
               className="block text-sm font-medium text-gray-700 mb-1"
@@ -975,13 +984,42 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                             <button
                               key={`${result.workId}-${index}`}
                               type="button"
-                              onClick={() => {
-                                setSelectedBdrc({
-                                  id: result.workId || '',
-                                  label: result.prefLabel || '',
-                                });
-                                setBdrc(result.workId || '');
+                              onClick={async () => {
+                                const workId = result.workId || '';
+                                const label = result.prefLabel || '';
+                                
+                                // Show loading state
+                                setIsCheckingBdrcId(true);
                                 setShowBdrcDropdown(false);
+                                
+                                // Check if this BDRC ID already exists
+                                try {
+                                  const existingText = await fetchTextByBdrcId(workId);
+                                  
+                                  if (existingText) {
+                                    // Text already exists - show confirmation dialog
+                                    setConflictingText(existingText);
+                                    setPendingBdrcSelection({ id: workId, label });
+                                    setShowBdrcConflictDialog(true);
+                                  } else {
+                                    // No conflict - proceed normally
+                                    setSelectedBdrc({
+                                      id: workId,
+                                      label: label,
+                                    });
+                                    setBdrc(workId);
+                                  }
+                                } catch (error) {
+                                  // Error checking - proceed with selection
+                                  console.error('Error checking BDRC ID:', error);
+                                  setSelectedBdrc({
+                                    id: workId,
+                                    label: label,
+                                  });
+                                  setBdrc(workId);
+                                } finally {
+                                  setIsCheckingBdrcId(false);
+                                }
                               }}
                               className="w-full px-4 py-2 text-left hover:bg-gray-100 border-b border-gray-100"
                             >
@@ -1033,6 +1071,128 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
             setPersonSearch(getPersonDisplayName(createdPerson));
           }}
         />
+
+        {/* BDRC Checking Loading Overlay */}
+        {isCheckingBdrcId && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-8 animate-in fade-in zoom-in-95 duration-200">
+              <div className="text-center">
+                {/* Animated Icon */}
+                <div className="relative mb-6">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full opacity-20 animate-ping"></div>
+                  </div>
+                  <div className="relative flex items-center justify-center">
+                    <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-600 rounded-2xl shadow-2xl flex items-center justify-center">
+                      <Loader2 className="w-8 h-8 text-white animate-spin" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Loading Text */}
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  Checking BDRC ID...
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Verifying if this text already exists in the catalog
+                </p>
+
+                {/* Progress Bar */}
+                <div className="relative w-full h-1.5 bg-gray-200 rounded-full overflow-hidden mt-6">
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-500 via-blue-500 to-indigo-500 rounded-full animate-[loading_1.5s_ease-in-out_infinite]"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* BDRC Conflict Dialog */}
+        {showBdrcConflictDialog && conflictingText && pendingBdrcSelection && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-200">
+              {/* Header */}
+              <div className="flex items-start gap-4 mb-4">
+                <div className="flex-shrink-0 w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="w-6 h-6 text-yellow-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                    Text Already Exists
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    This BDRC ID is already associated with an existing text in the catalog.
+                  </p>
+                </div>
+              </div>
+
+              {/* Existing Text Info */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <div className="text-sm font-medium text-blue-900 mb-2">
+                  Existing Text:
+                </div>
+                <div className="space-y-1 text-sm text-gray-700">
+                  <div>
+                    <strong>BDRC ID:</strong> {pendingBdrcSelection.id}
+                  </div>
+                  <div>
+                    <strong>Title:</strong>{" "}
+                    {conflictingText.title.bo ||
+                      conflictingText.title.en ||
+                      Object.values(conflictingText.title)[0] ||
+                      "Untitled"}
+                  </div>
+                  <div>
+                    <strong>Type:</strong> {conflictingText.type}
+                  </div>
+                  <div>
+                    <strong>Language:</strong> {conflictingText.language}
+                  </div>
+                </div>
+              </div>
+
+              {/* Question */}
+              <p className="text-sm text-gray-700 mb-6">
+                Would you like to use this existing text, or choose a different BDRC ID?
+              </p>
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    // User wants to choose another - clear the selection
+                    setBdrcSearch("");
+                    setSelectedBdrc(null);
+                    setBdrc("");
+                    setShowBdrcConflictDialog(false);
+                    setConflictingText(null);
+                    setPendingBdrcSelection(null);
+                    setShowBdrcDropdown(true);
+                  }}
+                >
+                  Choose Another
+                </Button>
+                <Button
+                  type="button"
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  onClick={() => {
+                    // User wants to use existing text
+                    if (onExistingTextFound && conflictingText) {
+                      onExistingTextFound(conflictingText);
+                    }
+                    setShowBdrcConflictDialog(false);
+                    setConflictingText(null);
+                    setPendingBdrcSelection(null);
+                  }}
+                >
+                  Use Existing Text
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
