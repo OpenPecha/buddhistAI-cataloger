@@ -635,20 +635,14 @@ const EnhancedTextCreationForm = () => {
                 {/* Text Creation Form - Only show when creating new text */}
                 {isCreatingNewText && (
                   <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mb-6">
-                    <h3 className="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">
-                      Text Information
-                    </h3>
-                    <div className="space-y-4">
+                 
                       <TextCreationForm ref={textFormRef} />
-                    </div>
                   </div>
                 )}
 
                 {/* Instance Creation Form */}
                 <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                  <h3 className="text-lg font-semibold mb-4 text-gray-700 border-b pb-2">
-                    Instance Details
-                  </h3>
+                  
                   <InstanceCreationForm
                     ref={instanceFormRef}
                     onSubmit={handleInstanceCreation}

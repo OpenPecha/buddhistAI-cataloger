@@ -80,18 +80,11 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
           Category <span className="text-red-500">*</span>
         </label>
         
-        {/* Selection Status */}
-        {!selectedCategoryId && (
-          <div className={`text-sm px-3 py-2 rounded-md ${
-            error ? 'bg-red-100 text-red-700 border border-red-300' : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-          }`}>
-            {error ? '⚠️ Category selection is required' : '📂 Please select a category'}
-          </div>
-        )}
+      
 
         {/* Breadcrumb Navigation */}
         {navigationPath.length > 0 && (
-          <div className="flex items-center gap-1 text-xs flex-wrap bg-gray-50 px-3 py-2 rounded-md border border-gray-200">
+          <div className="flex items-center gap-1 text-xs flex-wrap  px-3 py-2 rounded-md ">
             <button
               onClick={() => handleBreadcrumbClick(-1)}
               className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-200 transition-colors text-gray-600 hover:text-gray-900"

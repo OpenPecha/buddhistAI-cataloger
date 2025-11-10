@@ -30,14 +30,25 @@ const FileUploadZone = ({ onFileUpload }: FileUploadZoneProps) => {
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
+    
     if (files && files.length > 0) {
       handleFile(files[0]);
+    }
+    
+    // Reset the input value so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
   const handleFile = (file: File) => {
     // Check if it's a .txt file
+    if(file.size <1024) {
+      alert('File is too small');
+      return;
+    }
     if (!file.name.endsWith('.txt')) {
+      
       alert('Please upload a .txt file only');
       return;
     }

@@ -382,30 +382,28 @@ async def bdrc_search(request: BdrcSearchRequest):
             # Return only work details for Instance searches
             return work_details
         
-        # For Person searches, return cleaned format
+        # For Person searches, return simplified format with Unicode conversion
         elif request.type == "Person":
             formatted_results = []
             if "responses" in search_results and len(search_results["responses"]) > 0:
                 hits = search_results["responses"][0].get("hits", {}).get("hits", [])
                 # Limit to maximum 10 results
                 for hit in hits[:10]:
-                    source = hit.get("_source", {}).copy()
+                    source = hit.get("_source", {})
                     
-                    # Convert altLabel_bo_x_ewts from EWTS to Unicode
-                    if "altLabel_bo_x_ewts" in source and source["altLabel_bo_x_ewts"]:
-                        converted_labels = []
-                        for label in source["altLabel_bo_x_ewts"]:
-                            if label:  # Check if label is not empty
-                                converted_labels.append(converter.toUnicode(label))
-                            else:
-                                converted_labels.append(label)
-                        source["altLabel_bo_x_ewts"] = converted_labels
+                    # Get prefLabel_bo_x_ewts and convert to Unicode
+                    pref_label_ewts = source.get("prefLabel_bo_x_ewts", [])
+                    name = ""
+                    
+                    if pref_label_ewts:
+                        # Get the first label if it's a list
+                        label = pref_label_ewts[0] if isinstance(pref_label_ewts, list) else pref_label_ewts
+                        if label:
+                            name = converter.toUnicode(label)
                     
                     person_data = {
                         "bdrc_id": hit.get("_id"),
-                        "_index": hit.get("_index"),
-                        "_source": source,
-                        "highlight": hit.get("highlight", {})
+                        "name": name
                     }
                     formatted_results.append(person_data)
             return formatted_results
