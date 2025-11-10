@@ -386,7 +386,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
               <option value="">Select type</option>
               <option value="root">Root</option>
               <option value="translation">Translation</option>
-              <option value="commentary">Commentary</option>
+              {/* <option value="commentary">Commentary</option> */}
             </select>
             {errors.type && (
               <p className="mt-1 text-sm text-red-600">{errors.type}</p>
