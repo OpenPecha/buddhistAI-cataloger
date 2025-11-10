@@ -25,6 +25,7 @@ export interface TextCreationFormRef {
   addAltTitle: (text: string, language?: string) => void;
   setPersonSearch: (text: string) => void;
   openContributorForm: () => void;
+  hasTitle: () => boolean;
 }
 
 interface Contributor {
@@ -88,10 +89,11 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         
         const finalLanguage = isValidLanguage ? language : "";
         
-        // Add new alternative title (allow duplicates, no checking)
+        // Add new alternative title group (array of arrays structure)
+        const newAltGroup = [{ language: finalLanguage, value: text }];
         setAltTitles((prevAltTitles) => [
           ...prevAltTitles, 
-          { language: finalLanguage, value: text }
+          newAltGroup
         ]);
       },
       setPersonSearch: (text: string) => {
@@ -103,13 +105,17 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         // Open the Add Contributor form
         setShowAddContributor(true);
       },
+      hasTitle: () => {
+        // Check if there's at least one title with a value
+        return titles.length > 0 && titles.some(t => t.value.trim() !== "");
+      },
     }));
 
     const [selectedType, setSelectedType] = useState<
       "root" | "commentary" | "translation" | ""
     >("");
     const [titles, setTitles] = useState<TitleEntry[]>([]);
-    const [altTitles, setAltTitles] = useState<TitleEntry[]>([]);
+    const [altTitles, setAltTitles] = useState<TitleEntry[][]>([]);
     const [language, setLanguage] = useState("");
     const [target, setTarget] = useState("");
     const [date, setDate] = useState(() => {
@@ -165,14 +171,16 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
 
       return persons
         .filter((person) => {
-          const mainName =
-            person.name.bo ||
-            person.name.en ||
-            Object.values(person.name)[0] ||
-            "";
+          // Safety check in case name is undefined
+          const mainName = person.name
+            ? (person.name.bo ||
+               person.name.en ||
+               Object.values(person.name)[0] ||
+               "")
+            : person.id || "";
           const altNames = person.alt_names
-            .map((alt) => Object.values(alt)[0])
-            .join(" ");
+            ? person.alt_names.map((alt) => Object.values(alt)[0]).join(" ")
+            : "";
           const searchLower = debouncedPersonSearch.toLowerCase();
 
           return (
@@ -185,6 +193,10 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     }, [persons, debouncedPersonSearch]);
 
     const getPersonDisplayName = (person: Person): string => {
+      // Safety check in case name is undefined
+      if (!person.name) {
+        return person.id || "Unknown";
+      }
       return (
         person.name.bo ||
         person.name.en ||
@@ -278,12 +290,18 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         };
       });
 
-      // Build alt_titles array - transform from [{ language: "bo", value: "text" }] to [{ "bo": "text" }]
+      // Build alt_titles array - transform from grouped structure to array of dictionaries
       const altTitlesArray = altTitles
-        .filter((altTitle) => altTitle.language && altTitle.value.trim())
-        .map((altTitle) => ({
-          [altTitle.language]: altTitle.value.trim(),
-        }));
+        .map((titleGroup) => {
+          const alt: Record<string, string> = {};
+          titleGroup.forEach(({ language, value }) => {
+            if (language && value.trim()) {
+              alt[language] = value.trim();
+            }
+          });
+          return alt;
+        })
+        .filter((alt) => Object.keys(alt).length > 0);
 
       // Build final payload
       const textData: any = {
@@ -516,15 +534,32 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                       }
                       
                       setTitles(newTitles);
+                      
+                      // Check if any titles remain with values
+                      const hasRemainingTitle = newTitles.some(t => t.value.trim() !== "");
+                      
+                      // If no valid title remains, clear alternative titles
+                      if (!hasRemainingTitle) {
+                        setAltTitles([]);
+                      }
                     }}
                     className="flex-1 min-w-0 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     placeholder="Enter title"
                   />
                   <Button
                     type="button"
-                    onClick={() =>
-                      setTitles(titles.filter((_, i) => i !== index))
-                    }
+                    onClick={() => {
+                      const updatedTitles = titles.filter((_, i) => i !== index);
+                      setTitles(updatedTitles);
+                      
+                      // Check if there are any remaining titles with values
+                      const hasRemainingTitle = updatedTitles.some(t => t.value.trim() !== "");
+                      
+                      // If no valid title remains, clear alternative titles
+                      if (!hasRemainingTitle) {
+                        setAltTitles([]);
+                      }
+                    }}
                     variant="outline"
                     size="sm"
                     className="text-red-600 hover:text-red-700 flex-shrink-0"
@@ -549,32 +584,61 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
             </label>
             <Button
               type="button"
-              onClick={() =>
-                setAltTitles([...altTitles, { language: "", value: "" }])
-              }
+              onClick={() => setAltTitles([...altTitles, [{ language: "", value: "" }]])}
               variant="outline"
               size="sm"
               className="flex items-center gap-1"
             >
               <Plus className="h-4 w-4" />
-              Add Alternative Title
+              Add
             </Button>
           </div>
 
-          {/* Existing Alternative Titles List */}
-          {altTitles.length > 0 && (
-            <div className="space-y-3 mb-4">
-              {altTitles.map((altTitle, index) => (
-                <div
-                  key={index}
-                  className="flex gap-2 items-start p-3 bg-purple-50 border border-purple-200 rounded-md"
+          {altTitles.map((titleGroup, groupIndex) => (
+            <div
+              key={groupIndex}
+              className="border rounded-lg p-4 bg-purple-50 mb-3"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">
+                  Alternative {groupIndex + 1}
+                </span>
+                <Button
+                  type="button"
+                  onClick={() => setAltTitles(altTitles.filter((_, i) => i !== groupIndex))}
+                  variant="outline"
+                  size="sm"
+                  className="text-red-600"
                 >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {titleGroup.map((title, langIndex) => (
+                <div key={langIndex} className="flex gap-2 items-start mb-2">
                   <select
-                    value={altTitle.language}
+                    value={title.language}
                     onChange={(e) => {
-                      const newAltTitles = [...altTitles];
-                      newAltTitles[index].language = e.target.value;
-                      setAltTitles(newAltTitles);
+                      const selectedLang = e.target.value;
+                      
+                      // Check if this language already exists in another entry within the same group
+                      const existingIndex = altTitles[groupIndex].findIndex(
+                        (t, i) => i !== langIndex && t.language === selectedLang
+                      );
+                      
+                      if (existingIndex !== -1 && selectedLang) {
+                        // Language exists in another entry within the group - merge/overwrite
+                        const updated = [...altTitles];
+                        updated[groupIndex] = updated[groupIndex].filter((_, i) => i !== existingIndex);
+                        const adjustedLangIndex = langIndex > existingIndex ? langIndex - 1 : langIndex;
+                        updated[groupIndex][adjustedLangIndex].language = selectedLang;
+                        setAltTitles(updated);
+                      } else {
+                        // No conflict, just update normally
+                        const updated = [...altTitles];
+                        updated[groupIndex][langIndex].language = selectedLang;
+                        setAltTitles(updated);
+                      }
                     }}
                     className="w-20 sm:w-32 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                   >
@@ -587,39 +651,58 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                   </select>
                   <input
                     type="text"
-                    value={altTitle.value}
+                    value={title.value}
                     onChange={(e) => {
-                      const newAltTitles = [...altTitles];
-                      newAltTitles[index].value = e.target.value;
+                      const updated = [...altTitles];
+                      updated[groupIndex][langIndex].value = e.target.value;
                       
                       // Auto-detect language if not already set
-                      if (!newAltTitles[index].language && e.target.value.trim()) {
+                      if (!updated[groupIndex][langIndex].language && e.target.value.trim()) {
                         const detectedLang = detectLanguage(e.target.value);
                         if (detectedLang) {
-                          newAltTitles[index].language = detectedLang;
+                          updated[groupIndex][langIndex].language = detectedLang;
                         }
                       }
                       
-                      setAltTitles(newAltTitles);
+                      setAltTitles(updated);
                     }}
                     className="flex-1 min-w-0 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                     placeholder="Enter alternative title"
                   />
-                  <Button
-                    type="button"
-                    onClick={() =>
-                      setAltTitles(altTitles.filter((_, i) => i !== index))
-                    }
-                    variant="outline"
-                    size="sm"
-                    className="text-red-600 hover:text-red-700 flex-shrink-0"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  {titleGroup.length > 1 && (
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        const updated = [...altTitles];
+                        updated[groupIndex] = updated[groupIndex].filter((_, i) => i !== langIndex);
+                        setAltTitles(updated);
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 flex-shrink-0"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               ))}
+
+              <Button
+                type="button"
+                onClick={() => {
+                  const updated = [...altTitles];
+                  updated[groupIndex].push({ language: "", value: "" });
+                  setAltTitles(updated);
+                }}
+                variant="outline"
+                size="sm"
+                className="mt-2 flex items-center gap-1 text-xs"
+              >
+                <Plus className="h-3 w-3" />
+                Add Language
+              </Button>
             </div>
-          )}
+          ))}
         </div>
 
         {/* Contributors Section */}

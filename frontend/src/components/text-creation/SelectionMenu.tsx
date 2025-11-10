@@ -8,12 +8,21 @@ interface SelectionMenuProps {
   textEnd: number;
   onSelect?: (type: "title" | "alt_title" | "colophon" | "incipit" | "alt_incipit" | "person") => void;
   onClose: () => void;
+  isCreatingNewText?: boolean;
+  hasIncipit?: boolean;
+  hasTitle?: boolean;
 }
 
-const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, onClose }: SelectionMenuProps) => {
+const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, onClose, isCreatingNewText = true, hasIncipit = false, hasTitle = false }: SelectionMenuProps) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const [adjustedPosition, setAdjustedPosition] = useState(position);
+  const [isVisible, setIsVisible] = useState(false);
   const { addAnnotation } = useBibliography();
+
+  // Trigger fade-in animation
+  useEffect(() => {
+    setIsVisible(true);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -32,27 +41,35 @@ const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, o
       const menuRect = menuRef.current.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
+      const margin = 8;
 
-      let { x, y } = position;
+      let x = position.x;
+      let y = position.y;
 
-      // Check if menu goes off the right edge
-      if (x + menuRect.width > viewportWidth) {
-        x = position.x - menuRect.width - 20; // Position to the left of selection
+      // 1. Prefer showing slightly below the cursor
+      y = position.y + 12;
+
+      // If it overflows bottom, flip above the cursor
+      if (y + menuRect.height + margin > viewportHeight) {
+        y = position.y - menuRect.height - 12;
       }
 
-      // Check if menu goes off the bottom edge
-      if (y + menuRect.height > viewportHeight) {
-        y = viewportHeight - menuRect.height - 10;
+      // 2. Prefer showing aligned to the cursor on X
+      x = position.x + 4;
+
+      // If it overflows right, show to the left of the cursor
+      if (x + menuRect.width + margin > viewportWidth) {
+        x = position.x - menuRect.width - 4;
       }
 
-      // Check if menu goes off the top edge
-      if (y < 10) {
-        y = 10;
+      // 3. Final clamping so it's always fully inside viewport
+      if (x < margin) x = margin;
+      if (y < margin) y = margin;
+      if (x + menuRect.width + margin > viewportWidth) {
+        x = viewportWidth - menuRect.width - margin;
       }
-
-      // Check if menu goes off the left edge
-      if (x < 10) {
-        x = 10;
+      if (y + menuRect.height + margin > viewportHeight) {
+        y = viewportHeight - menuRect.height - margin;
       }
 
       setAdjustedPosition({ x, y });
@@ -78,65 +95,132 @@ const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, o
     onClose();
   };
 
-  const menuItems = [
+  const allMenuItems = [
     {
       type: "title" as const,
       label: "Title",
-      color: "bg-yellow-50 hover:bg-yellow-100 border-yellow-200",
+      icon: "📄",
+      color: "from-yellow-50 to-yellow-100/50 hover:from-yellow-100 hover:to-yellow-200/50 border-yellow-300",
+      textColor: "text-yellow-800",
       description: "Mark as document title",
     },
     {
       type: "alt_title" as const,
       label: "Alternative Title",
-      color: "bg-purple-50 hover:bg-purple-100 border-purple-200",
+      icon: "📑",
+      color: "from-purple-50 to-purple-100/50 hover:from-purple-100 hover:to-purple-200/50 border-purple-300",
+      textColor: "text-purple-800",
+      description: "Alternative title variant",
     },
     {
       type: "colophon" as const,
-      label: "Colophon Text",
-      color: "bg-green-50 hover:bg-green-100 border-green-200",
+      label: "Colophon",
+      icon: "✍️",
+      color: "from-green-50 to-green-100/50 hover:from-green-100 hover:to-green-200/50 border-green-300",
+      textColor: "text-green-800",
       description: "Mark as colophon",
     },
     {
       type: "incipit" as const,
-      label: "Incipit Title",
-      color: "bg-blue-50 hover:bg-blue-100 border-blue-200",
+      label: "Incipit",
+      icon: "🔖",
+      color: "from-blue-50 to-blue-100/50 hover:from-blue-100 hover:to-blue-200/50 border-blue-300",
+      textColor: "text-blue-800",
       description: "Mark as incipit title",
     },
     {
       type: "alt_incipit" as const,
-      label: "Alt Incipit Title",
-      color: "bg-cyan-50 hover:bg-cyan-100 border-cyan-200",
+      label: "Alt Incipit",
+      icon: "🏷️",
+      color: "from-cyan-50 to-cyan-100/50 hover:from-cyan-100 hover:to-cyan-200/50 border-cyan-300",
+      textColor: "text-cyan-800",
+      description: "Alternative incipit",
     },
     {
       type: "person" as const,
       label: "Person",
-      color: "bg-orange-50 hover:bg-orange-100 border-orange-200",
+      icon: "👤",
+      color: "from-orange-50 to-orange-100/50 hover:from-orange-100 hover:to-orange-200/50 border-orange-300",
+      textColor: "text-orange-800",
       description: "Mark as person name",
     },
   ];
 
+  // Filter menu items based on whether we're creating new text or working with existing text
+  // For existing text, hide Title, Alternative Title, and Person options
+  const menuItems = isCreatingNewText 
+    ? allMenuItems 
+    : allMenuItems.filter(item => !['title', 'alt_title', 'person'].includes(item.type));
+
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 bg-white rounded-md shadow-lg border border-gray-200 py-0.5 w-fit min-w-[120px]"
+      className={`fixed z-50 rounded-xl shadow-2xl border border-gray-200/60 backdrop-blur-sm bg-white/95 p-1.5 min-w-[200px] transition-all duration-200 ${
+        isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95"
+      }`}
       style={{
         left: `${adjustedPosition.x}px`,
         top: `${adjustedPosition.y}px`,
       }}
     >
-      {menuItems.map((item) => (
-        <button
-          key={item.type}
-          onClick={() => handleMenuItemClick(item.type)}
-          className={`w-full text-left px-3 py-2 text-xs font-medium transition-colors border-l-2 ${item.color} hover:scale-[1.02]`}
-          title={item.description}
-        >
-          <div className="flex flex-col">
-            <span className="font-semibold">{item.label}</span>
-            <span className="text-xs opacity-70 mt-0.5">{selectedText.length > 20 ? selectedText.substring(0, 20) + '...' : selectedText}</span>
-          </div>
-        </button>
-      ))}
+      <div className="space-y-1">
+        {menuItems.map((item, index) => {
+          // Disable alt_incipit if there's no incipit title
+          // Disable alt_title if there's no main title
+          const isDisabled = 
+            (item.type === "alt_incipit" && !hasIncipit) ||
+            (item.type === "alt_title" && !hasTitle);
+          
+          const disabledMessage = 
+            item.type === "alt_incipit" ? "Please add an Incipit title first" :
+            item.type === "alt_title" ? "Please add a Title first" :
+            item.description;
+          
+          return (
+            <button
+              key={item.type}
+              onClick={() => !isDisabled && handleMenuItemClick(item.type)}
+              disabled={isDisabled}
+              className={`group w-full text-left px-3 py-2.5 text-sm font-medium transition-all duration-200 rounded-lg border-l-3 bg-gradient-to-r ${item.color} shadow-sm flex items-center gap-2.5 ${
+                isDisabled
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:shadow-md hover:translate-x-0.5 active:scale-98"
+              }`}
+              title={isDisabled ? disabledMessage : item.description}
+              style={{
+                animationDelay: `${index * 30}ms`,
+              }}
+            >
+              <span className={`text-base flex-shrink-0 transition-transform duration-200 ${!isDisabled && "group-hover:scale-110"}`}>
+                {item.icon}
+              </span>
+              <span className={`${item.textColor} font-semibold flex-1`}>
+                {item.label}
+              </span>
+              {!isDisabled && (
+                <svg
+                  className={`w-3.5 h-3.5 ${item.textColor} opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                </svg>
+              )}
+              {isDisabled && (
+                <svg
+                  className={`w-3.5 h-3.5 ${item.textColor} opacity-30`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 };

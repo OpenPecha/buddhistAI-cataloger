@@ -37,6 +37,7 @@ export interface InstanceCreationFormRef {
   addColophon: (text: string) => void;
   addIncipit: (text: string, language?: string) => void;
   addAltIncipit: (text: string, language?: string) => void;
+  hasIncipit: () => boolean;
 }
 
 interface TitleEntry {
@@ -114,11 +115,25 @@ const InstanceCreationForm = forwardRef<
         (option) => option.code === language
       );
       
-      // Only set the language if it's found in the options, otherwise leave it empty
-      setIncipitTitles([
-        ...incipitTitles,
-        { language: isValidLanguage ? language : "", value: text },
-      ]);
+      const detectedLang = isValidLanguage ? language : "";
+      
+      // Check if this language already exists in incipitTitles
+      const existingIndex = incipitTitles.findIndex(
+        (t) => t.language === detectedLang && detectedLang !== ""
+      );
+      
+      if (existingIndex !== -1 && detectedLang) {
+        // Language exists - update the existing entry
+        const updated = [...incipitTitles];
+        updated[existingIndex].value = text;
+        setIncipitTitles(updated);
+      } else {
+        // Language doesn't exist or is empty - add new entry
+        setIncipitTitles([
+          ...incipitTitles,
+          { language: detectedLang, value: text },
+        ]);
+      }
     },
     addAltIncipit: (text: string, language?: string) => {
       setShowIncipitTitle(true); // Ensure incipit section is visible
@@ -128,12 +143,42 @@ const InstanceCreationForm = forwardRef<
         (option) => option.code === language
       );
       
-      // Add a new alternative incipit title group with the selected text
-      const newAltGroup = [{ 
-        language: isValidLanguage ? language : "", 
-        value: text 
-      }];
-      setAltIncipitTitles([...altIncipitTitles, newAltGroup]);
+      const detectedLang = isValidLanguage ? language : "";
+      
+      // Check if this language already exists in any alternative incipit group
+      let foundInGroup = false;
+      let groupIndex = -1;
+      let langIndex = -1;
+      
+      if (detectedLang) {
+        for (let i = 0; i < altIncipitTitles.length; i++) {
+          const idx = altIncipitTitles[i].findIndex((t) => t.language === detectedLang);
+          if (idx !== -1) {
+            foundInGroup = true;
+            groupIndex = i;
+            langIndex = idx;
+            break;
+          }
+        }
+      }
+      
+      if (foundInGroup && detectedLang) {
+        // Language exists in an alternative group - update that entry
+        const updated = [...altIncipitTitles];
+        updated[groupIndex][langIndex].value = text;
+        setAltIncipitTitles(updated);
+      } else {
+        // Language doesn't exist - add a new alternative incipit title group
+        const newAltGroup = [{ 
+          language: detectedLang, 
+          value: text 
+        }];
+        setAltIncipitTitles([...altIncipitTitles, newAltGroup]);
+      }
+    },
+    hasIncipit: () => {
+      // Check if incipit section is shown and has at least one entry with a value
+      return showIncipitTitle && incipitTitles.length > 0 && incipitTitles.some(t => t.value.trim() !== "");
     },
   }));
 
@@ -163,10 +208,29 @@ const InstanceCreationForm = forwardRef<
     const updated = [...incipitTitles];
     updated[index][field] = value;
     setIncipitTitles(updated);
+    
+    // If value field is being cleared, check if any incipit titles remain
+    if (field === "value") {
+      const hasRemainingIncipit = updated.some(t => t.value.trim() !== "");
+      
+      // If no valid incipit remains, clear alternative incipit titles
+      if (!hasRemainingIncipit) {
+        setAltIncipitTitles([]);
+      }
+    }
   };
 
   const removeIncipitLanguage = (index: number) => {
-    setIncipitTitles(incipitTitles.filter((_, i) => i !== index));
+    const updatedTitles = incipitTitles.filter((_, i) => i !== index);
+    setIncipitTitles(updatedTitles);
+    
+    // Check if there are any remaining incipit titles with values
+    const hasRemainingIncipit = updatedTitles.some(t => t.value.trim() !== "");
+    
+    // If no valid incipit remains, clear alternative incipit titles
+    if (!hasRemainingIncipit) {
+      setAltIncipitTitles([]);
+    }
   };
 
   // Helper functions for alternative incipit titles
@@ -552,10 +616,27 @@ const InstanceCreationForm = forwardRef<
                   >
                     <select
                       value={title.language}
-                      onChange={(e) =>
-                        updateIncipitTitle(index, "language", e.target.value)
-                      }
-                      className="w-20 sm:w-32 px-2 sm:px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      onChange={(e) => {
+                        const selectedLang = e.target.value;
+                        
+                        // Check if this language already exists in another incipit title entry
+                        const existingIndex = incipitTitles.findIndex(
+                          (t, i) => i !== index && t.language === selectedLang
+                        );
+                        
+                        if (existingIndex !== -1 && selectedLang) {
+                          // Language exists in another entry - merge/overwrite
+                          const updatedTitles = incipitTitles.filter((_, i) => i !== existingIndex);
+                          updatedTitles[index === existingIndex ? index : (index > existingIndex ? index - 1 : index)].language = selectedLang;
+                          setIncipitTitles(updatedTitles);
+                        } else {
+                          // No conflict, just update normally
+                          const newTitles = [...incipitTitles];
+                          newTitles[index].language = selectedLang;
+                          setIncipitTitles(newTitles);
+                        }
+                      }}
+                      className="w-20 sm:w-32 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     >
                       <option value="">Lang</option>
                       {LANGUAGE_OPTIONS.map((lang) => (
@@ -570,7 +651,7 @@ const InstanceCreationForm = forwardRef<
                       onChange={(e) =>
                         updateIncipitTitle(index, "value", e.target.value)
                       }
-                      className="flex-1 min-w-0 px-2 sm:px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      className="flex-1 min-w-0 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       placeholder="Enter incipit title"
                     />
                     <Button
@@ -615,7 +696,7 @@ const InstanceCreationForm = forwardRef<
                 className="flex items-center gap-1"
               >
                 <Plus className="h-4 w-4" />
-                Add Alternative Title
+                Add
               </Button>
             </div>
 
@@ -643,15 +724,29 @@ const InstanceCreationForm = forwardRef<
                   <div key={langIndex} className="flex gap-2 items-start mb-2">
                     <select
                       value={title.language}
-                      onChange={(e) =>
-                        updateAltTitle(
-                          groupIndex,
-                          langIndex,
-                          "language",
-                          e.target.value
-                        )
-                      }
-                      className="w-32 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={(e) => {
+                        const selectedLang = e.target.value;
+                        
+                        // Check if this language already exists in another entry within the same group
+                        const existingIndex = altIncipitTitles[groupIndex].findIndex(
+                          (t, i) => i !== langIndex && t.language === selectedLang
+                        );
+                        
+                        if (existingIndex !== -1 && selectedLang) {
+                          // Language exists in another entry within the group - merge/overwrite
+                          const updated = [...altIncipitTitles];
+                          updated[groupIndex] = updated[groupIndex].filter((_, i) => i !== existingIndex);
+                          const adjustedLangIndex = langIndex > existingIndex ? langIndex - 1 : langIndex;
+                          updated[groupIndex][adjustedLangIndex].language = selectedLang;
+                          setAltIncipitTitles(updated);
+                        } else {
+                          // No conflict, just update normally
+                          const updated = [...altIncipitTitles];
+                          updated[groupIndex][langIndex].language = selectedLang;
+                          setAltIncipitTitles(updated);
+                        }
+                      }}
+                      className="w-20 sm:w-32 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     >
                       <option value="">Lang</option>
                       {LANGUAGE_OPTIONS.map((lang) => (
@@ -671,7 +766,7 @@ const InstanceCreationForm = forwardRef<
                           e.target.value
                         )
                       }
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="flex-1 min-w-0 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                       placeholder="Enter alternative title"
                     />
                     {titleGroup.length > 1 && (

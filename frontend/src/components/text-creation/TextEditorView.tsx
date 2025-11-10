@@ -13,9 +13,12 @@ interface TextEditorViewProps {
   onChange?: (value: string) => void;
   editable?: boolean;
   onTextSelect?: (text: string, type: 'title' | 'alt_title' | 'colophon' | 'incipit' | 'alt_incipit' | 'person') => void;
+  isCreatingNewText?: boolean;
+  hasIncipit?: boolean;
+  hasTitle?: boolean;
 }
 
-const TextEditorView = ({ content, filename, onChange, editable = false, onTextSelect }: TextEditorViewProps) => {
+const TextEditorView = ({ content, filename, onChange, editable = false, onTextSelect, isCreatingNewText = true, hasIncipit = false, hasTitle = false }: TextEditorViewProps) => {
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [selectedText, setSelectedText] = useState('');
@@ -103,6 +106,9 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
           textEnd={textEnd}
           onSelect={handleMenuSelect}
           onClose={() => setShowMenu(false)}
+          isCreatingNewText={isCreatingNewText}
+          hasIncipit={hasIncipit}
+          hasTitle={hasTitle}
         />
       )}
       

@@ -41,6 +41,13 @@ class CreatePerson(BaseModel):
     bdrc: Optional[str] = ""
     wiki: Optional[str] = ""
 
+class CreatePersonResponse(BaseModel):
+    message: str
+    id: str = Field(alias="_id")
+    
+    class Config:
+        populate_by_name = True
+
 
 @router.get("", response_model=List[Person])
 async def get_persons(
@@ -72,7 +79,7 @@ async def get_person(id: str):
         raise HTTPException(status_code=response.status_code, detail=response.text)
     return response.json()
 
-@router.post("", response_model=Person, status_code=201)
+@router.post("", response_model=CreatePersonResponse, status_code=201)
 async def create_person(person: CreatePerson):
     # Convert to dict, excluding None values
     payload = person.model_dump(exclude_none=True)
