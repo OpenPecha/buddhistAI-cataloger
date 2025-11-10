@@ -1,11 +1,12 @@
-import { useState, useRef } from 'react';
-import CodeMirror from '@uiw/react-codemirror';
+import { useState, useRef, useEffect } from 'react';
+import CodeMirror, { type ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { markdown } from '@codemirror/lang-markdown';
 import { EditorView } from '@codemirror/view';
 import SelectionMenu from './SelectionMenu';
 import FormattedTextDisplay from '../FormattedTextDisplay';
 import { useBibliography } from '@/contexts/BibliographyContext';
 import { BibliographyAnnotationsList } from '../BibliographyAnnotationsList';
+import { annotationsField, annotationPlugin, annotationTheme, updateAnnotationsEffect } from '@/editor/textAnnotations';
 
 interface TextEditorViewProps {
   content: string;
@@ -26,7 +27,18 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
   const [textEnd, setTextEnd] = useState(0);
   const [activeTab, setActiveTab] = useState<'content' | 'preview' | 'bibliography'>('content');
   const editorRef = useRef<HTMLDivElement>(null);
+  const cmRef = useRef<ReactCodeMirrorRef>(null);
   const { annotations } = useBibliography();
+
+  // Update CodeMirror decorations when annotations change
+  useEffect(() => {
+    if (cmRef.current?.view) {
+      const view = cmRef.current.view;
+      view.dispatch({
+        effects: updateAnnotationsEffect.of(annotations)
+      });
+    }
+  }, [annotations]);
 
   const handleMouseUp = (event: React.MouseEvent) => {
     // Only show selection menu when in the content (CodeMirror) tab
@@ -166,11 +178,15 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
         {activeTab === 'content' ? (
           /* CodeMirror Editor */
           <CodeMirror
+            ref={cmRef}
             value={content}
             height="100%"
             extensions={[
               markdown(),
               EditorView.lineWrapping,
+              annotationsField,
+              annotationPlugin,
+              annotationTheme,
             ]}
             id='editor_div'
             editable={editable}
