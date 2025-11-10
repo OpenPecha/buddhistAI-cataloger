@@ -29,6 +29,11 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
   const { annotations } = useBibliography();
 
   const handleMouseUp = (event: React.MouseEvent) => {
+    // Only show selection menu when in the content (CodeMirror) tab
+    if (activeTab !== 'content') {
+      return;
+    }
+
     const selection = window.getSelection();
     const text = selection?.toString().trim();
     
@@ -96,7 +101,7 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
     setSelectedText('');
   };
   return (
-    <div className="h-full flex flex-col" ref={editorRef} onMouseUp={handleMouseUp}>
+    <div className="h-full flex flex-col">
       {/* Selection Menu */}
       {showMenu && (
         <SelectionMenu
@@ -190,7 +195,7 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
       </div>
 
       {/* Content Area - Conditional Rendering */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden" ref={editorRef} onMouseUp={handleMouseUp}>
         {activeTab === 'content' ? (
           /* CodeMirror Editor */
           <CodeMirror
@@ -200,6 +205,7 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
               markdown(),
               EditorView.lineWrapping,
             ]}
+            id='editor_div'
             editable={editable}
             onChange={onChange}
             basicSetup={{
