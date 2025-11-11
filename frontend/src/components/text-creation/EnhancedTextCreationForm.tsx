@@ -14,9 +14,11 @@ import type { OpenPechaText } from "@/types/text";
 import TextCreationSuccessModal from "./TextCreationSuccessModal";
 import { useBdrcSearch, type BdrcSearchResult } from "@/hooks/useBdrcSearch";
 import { fetchTextByBdrcId } from "@/api/texts";
+import { useTranslation } from "react-i18next";
 
 const EnhancedTextCreationForm = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const textFormRef = useRef<TextCreationFormRef>(null);
   const instanceFormRef = useRef<InstanceCreationFormRef>(null);
   const hasAutoSelectedRef = useRef<boolean>(false);
@@ -50,7 +52,7 @@ const EnhancedTextCreationForm = () => {
       return error.error;
     }
     
-    return "Failed to create";
+    return t("messages.createError");
   };
 
   // Workflow state
@@ -212,7 +214,7 @@ const EnhancedTextCreationForm = () => {
     setShowTextDropdown(false);
     setTextSearch("");
     setSearchAttempts(0); // Reset attempts
-    setNotification("✓ Ready to create new text - upload a file or start typing");
+    setNotification(t("create.readyToCreateNew"));
     setTimeout(() => setNotification(null), 3000);
   };
 
@@ -224,7 +226,7 @@ const EnhancedTextCreationForm = () => {
     setIsCreatingNewText(false);
     hasAutoSelectedRef.current = true;
     navigate(`/create?t_id=${text.id}`, { replace: true });
-    setNotification(`✓ Using existing text: ${getTextDisplayName(text)}`);
+    setNotification(t("create.usingExistingText", { name: getTextDisplayName(text) }));
     setTimeout(() => setNotification(null), 3000);
   };
 
@@ -248,7 +250,7 @@ const EnhancedTextCreationForm = () => {
         clearFileUpload();
         hasAutoSelectedRef.current = true;
         navigate(`/create?t_id=${existingText.id}`, { replace: true });
-        setNotification(`✓ Text found: ${getTextDisplayName(existingText)}`);
+        setNotification(t("create.textFound", { name: getTextDisplayName(existingText) }));
       } else {
         // Case 2: Text doesn't exist - create new with BDRC prefilled
         setSelectedText(null);
@@ -263,10 +265,10 @@ const EnhancedTextCreationForm = () => {
           textFormRef.current?.setBdrcId(workId, result.prefLabel || '');
         }, 100);
         
-        setNotification(`Creating new text for BDRC: ${workId}`);
+        setNotification(t("create.creatingNewForBdrc", { id: workId }));
       }
     } catch {
-      setError('Failed to check BDRC text. Please try again.');
+      setError(t("create.failedToCheckBdrc"));
     } finally {
       setIsCheckingBdrc(false);
     }
@@ -308,7 +310,7 @@ const EnhancedTextCreationForm = () => {
         // Creating new text - get form data from the global function
         const textFormData = (window as any).__getTextFormData?.();
         if (!textFormData) {
-          throw new Error("Text form data not available");
+          throw new Error(t("create.textFormDataNotAvailable"));
         }
 
         // Create text first
@@ -318,7 +320,7 @@ const EnhancedTextCreationForm = () => {
         // Using existing text
         textId = selectedText.id;
       } else {
-        throw new Error("No text selected or created");
+        throw new Error(t("create.noTextSelected"));
       }
 
       // Now create the instance
@@ -331,8 +333,8 @@ const EnhancedTextCreationForm = () => {
       
       setSuccess(
         isCreatingNewText
-          ? "Text and instance created successfully!"
-          : "Instance created successfully!"
+          ? t("create.textAndInstanceCreated")
+          : t("create.instanceCreated")
       );
     } catch (err: any) {
       setError(parseErrorMessage(err));
@@ -370,7 +372,7 @@ const EnhancedTextCreationForm = () => {
       case "title":
      
         textFormRef.current?.addTitle(text, detectedLanguage);
-        setNotification("✓ Title added successfully");
+        setNotification(t("create.titleAddedSuccess"));
         setTimeout(() => setNotification(null), 2000);
         // Update hasTitle state
         setTimeout(() => {
@@ -380,17 +382,17 @@ const EnhancedTextCreationForm = () => {
       case "alt_title":
       
         textFormRef.current?.addAltTitle(text, detectedLanguage);
-        setNotification("✓ Alternative title added successfully");
+        setNotification(t("create.altTitleAddedSuccess"));
         setTimeout(() => setNotification(null), 2000);
         break;
       case "colophon":
         instanceFormRef.current?.addColophon(text);
-        setNotification("✓ Colophon added successfully");
+        setNotification(t("create.colophonAddedSuccess"));
         setTimeout(() => setNotification(null), 2000);
         break;
       case "incipit":
         instanceFormRef.current?.addIncipit(text, detectedLanguage);
-        setNotification("✓ Incipit added successfully");
+        setNotification(t("create.incipitAddedSuccess"));
         setTimeout(() => setNotification(null), 2000);
         // Update hasIncipit state
         setTimeout(() => {
@@ -399,14 +401,14 @@ const EnhancedTextCreationForm = () => {
         break;
       case "alt_incipit":
         instanceFormRef.current?.addAltIncipit(text, detectedLanguage);
-        setNotification("✓ Alternative incipit title added successfully");
+        setNotification(t("create.altIncipitAddedSuccess"));
         setTimeout(() => setNotification(null), 2000);
         break;
       case "person":
     
         textFormRef.current?.setPersonSearch(text);
         textFormRef.current?.openContributorForm();
-        setNotification("✓ Person search filled");
+        setNotification(t("create.personSearchFilled"));
         setTimeout(() => setNotification(null), 2000);
         break;
     }
@@ -493,10 +495,10 @@ const EnhancedTextCreationForm = () => {
 
             {/* Loading Text */}
             <h2 className="text-3xl font-bold text-gray-800 mb-3 animate-pulse">
-              Loading Text...
+              {t("loading.loadingText")}
             </h2>
             <p className="text-lg text-gray-600 mb-6">
-              Preparing your workspace
+              {t("loading.preparingWorkspace")}
             </p>
 
             {/* Progress Indicator */}
@@ -506,7 +508,7 @@ const EnhancedTextCreationForm = () => {
 
             {/* Additional Info */}
             <p className="text-sm text-gray-500 mt-6">
-              Fetching text details from catalog...
+              {t("loading.fetchingDetails")}
             </p>
           </div>
         </div>
@@ -530,10 +532,10 @@ const EnhancedTextCreationForm = () => {
 
             {/* Loading Text */}
             <h2 className="text-3xl font-bold text-gray-800 mb-3 animate-pulse">
-              Checking BDRC...
+              {t("loading.checkingBdrc")}
             </h2>
             <p className="text-lg text-gray-600 mb-6">
-              Looking for existing text
+              {t("loading.lookingForText")}
             </p>
 
             {/* Progress Indicator */}
@@ -543,7 +545,7 @@ const EnhancedTextCreationForm = () => {
 
             {/* Additional Info */}
             <p className="text-sm text-gray-500 mt-6">
-              Checking if text exists in local catalog...
+              {t("loading.checkingLocal")}
             </p>
           </div>
         </div>
@@ -561,12 +563,12 @@ const EnhancedTextCreationForm = () => {
           {activePanel === "form" ? (
             <>
               <Code className="w-5 h-5" />
-              <span className="text-sm font-medium">View Editor</span>
+              <span className="text-sm font-medium">{t("editor.content")}</span>
             </>
           ) : (
             <>
               <FileText className="w-5 h-5" />
-              <span className="text-sm font-medium">View Form</span>
+              <span className="text-sm font-medium">{t("common.create")}</span>
             </>
           )}
         </button>
@@ -588,7 +590,7 @@ const EnhancedTextCreationForm = () => {
             {/* Text Search/Selection Section */}
             <div className="mb-8">
               <h2 className="text-2xl font-bold mb-6 text-gray-800">
-                OpenPecha Text Cataloger
+                {t("create.pageTitle")}
               </h2>
               
               <div className="space-y-4">
@@ -599,7 +601,7 @@ const EnhancedTextCreationForm = () => {
                       htmlFor="text-search"
                       className="block text-sm font-medium text-gray-700 mb-2"
                     >
-                      Search for existing text
+                      {t("create.searchExistingText")}
                     </label>
                     <input
                       id="text-search"
@@ -609,7 +611,7 @@ const EnhancedTextCreationForm = () => {
                       onFocus={() => setShowTextDropdown(true)}
                       onBlur={() => setTimeout(() => setShowTextDropdown(false), 200)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Search by title or BDRC ID..."
+                      placeholder={t("create.searchPlaceholder")}
                     />
 
                     {/* Text Dropdown */}
@@ -622,7 +624,7 @@ const EnhancedTextCreationForm = () => {
                           <>
                             <div className="px-4 py-2 bg-gray-100 border-b border-gray-200 flex items-center justify-between">
                               <span className="text-xs font-semibold text-gray-700 uppercase">
-                                BDRC Catalog
+                                {t("create.bdrcCatalog")}
                               </span>
                               {searchAttempts >= 3 && (
                                 <span className="text-xs text-gray-500">
@@ -649,10 +651,10 @@ const EnhancedTextCreationForm = () => {
                                   </div>
                                   <div className="flex-1">
                                     <div className="font-semibold text-sm text-green-900">
-                                      Create New Text
+                                      {t("create.createNewText")}
                                     </div>
                                     <div className="text-xs text-green-700 mt-0.5">
-                                      Can't find what you're looking for? Create a new text entry
+                                      {t("create.createNewTextDesc")}
                                     </div>
                                   </div>
                                 </div>
@@ -662,7 +664,7 @@ const EnhancedTextCreationForm = () => {
                             {isLoadingBdrc ? (
                               <div className="px-4 py-4 flex items-center gap-2">
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
-                                <div className="text-sm text-gray-500">Searching BDRC...</div>
+                                <div className="text-sm text-gray-500">{t("create.searchingBdrc")}</div>
                               </div>
                             ) : bdrcResults.length > 0 ? (
                               bdrcResults.map((result) => (
@@ -693,7 +695,7 @@ const EnhancedTextCreationForm = () => {
                               ))
                             ) : debouncedTextSearch.trim() ? (
                               <div className="px-4 py-2 text-gray-500 text-sm">
-                                No BDRC results found
+                                {t("create.noBdrcResults")}
                               </div>
                             ) : null}
                           </>
@@ -710,7 +712,7 @@ const EnhancedTextCreationForm = () => {
                   <div className="bg-blue-50 border border-blue-200 px-4 py-3 rounded-md">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-blue-900">
-                        Selected Text:
+                        {t("create.selectedText")}
                       </span>
                       <Button
                         type="button"
@@ -718,18 +720,18 @@ const EnhancedTextCreationForm = () => {
                         size="sm"
                         onClick={resetToInitialState}
                       >
-                        Change
+                        {t("create.change")}
                       </Button>
                     </div>
                     <div className="space-y-1 text-sm">
                       <div>
-                        <strong>Title:</strong> {getTextDisplayName(selectedText)}
+                        <strong>{t("text.textTitle")}:</strong> {getTextDisplayName(selectedText)}
                       </div>
                       <div>
-                        <strong>Type:</strong> {selectedText.type}
+                        <strong>{t("create.type")}:</strong> {selectedText.type}
                       </div>
                       <div>
-                        <strong>Language:</strong> {selectedText.language}
+                        <strong>{t("text.language")}:</strong> {selectedText.language}
                       </div>
                     </div>
                   </div>
@@ -740,7 +742,7 @@ const EnhancedTextCreationForm = () => {
                   <div className="bg-green-50 border border-green-200 px-4 py-3 rounded-md">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-green-900">
-                        Creating/Uploading file New Text 
+                        {t("create.creatingNewText")}
                       </span>
                       <Button
                         type="button"
@@ -748,7 +750,7 @@ const EnhancedTextCreationForm = () => {
                         size="sm"
                         onClick={resetToInitialState}
                       >
-                        Cancel
+                        {t("common.cancel")}
                       </Button>
                     </div>
                   </div>
@@ -808,10 +810,10 @@ const EnhancedTextCreationForm = () => {
                   <Upload className="w-20 h-20 mx-auto text-gray-400" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-600 mb-2">
-                  Editor Disabled
+                  {t("create.editorDisabled")}
                 </h3>
                 <p className="text-gray-500">
-                  Please select an existing text or choose to create a new text to begin editing.
+                  {t("create.editorDisabledDesc")}
                 </p>
               </div>
             </div>
@@ -824,7 +826,7 @@ const EnhancedTextCreationForm = () => {
                   {!editedContent || editedContent?.trim() === "" ? (
                     <>
                       <p className="text-sm text-gray-600">
-                        Start typing below or upload a text file
+                        {t("create.startTyping")}
                       </p>
                       <div>
                         <input
@@ -838,14 +840,14 @@ const EnhancedTextCreationForm = () => {
                               
                               // Validate file size
                               if (file.size < 1024) {
-                                alert('File is too small (minimum 1KB required)');
+                                alert(t("create.fileTooSmall"));
                                 e.target.value = '';
                                 return;
                               }
                               
                               // Validate file type
                               if (!file.name.endsWith('.txt')) {
-                                alert('Please upload a .txt file only');
+                                alert(t("create.uploadTxtOnly"));
                                 e.target.value = '';
                                 return;
                               }
@@ -870,13 +872,13 @@ const EnhancedTextCreationForm = () => {
                           className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
                         >
                           <Upload className="w-4 h-4" />
-                          Upload File
+                          {t("create.uploadFile")}
                         </Button>
                       </div>
                     </>
                   ) : (
                     <span className="text-xs text-gray-500">
-                      {editedContent?.length} characters
+                      {editedContent?.length} {t("create.characters")}
                     </span>
                   )}
                 </div>
@@ -886,7 +888,7 @@ const EnhancedTextCreationForm = () => {
               <div className="flex-1 overflow-hidden">
                 <TextEditorView
                   content={editedContent || ""}
-                  filename={editedContent ? uploadedFilename : "New Document"}
+                  filename={editedContent ? uploadedFilename : t("editor.newDocument")}
                   editable={true}
                   onChange={(value) => setEditedContent(value)}
                   onTextSelect={handleEditorTextSelect}

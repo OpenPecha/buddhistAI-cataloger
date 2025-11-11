@@ -3,8 +3,10 @@ import { useTexts } from "@/hooks/useTexts";
 import type { OpenPechaText } from "@/types/text";
 import { Button } from "@/components/ui/button";
 import TextListCard from "@/components/TextListCard";
+import { useTranslation } from "react-i18next";
 
 const TextCRUD = () => {
+  const { t } = useTranslation();
   const [pagination, setPagination] = useState({
     limit: 50,
     offset: 0,
@@ -35,7 +37,7 @@ const TextCRUD = () => {
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Text Management</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{t('textsPage.title')}</h2>
       </div>
 
       {/* Content */}
@@ -48,7 +50,7 @@ const TextCRUD = () => {
                 htmlFor="limit"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Limit
+                {t('textsPage.limit')}
               </label>
               <select
                 id="limit"
@@ -71,7 +73,7 @@ const TextCRUD = () => {
                 htmlFor="language"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Language
+                {t('textsPage.language')}
               </label>
               <select
                 id="language"
@@ -84,18 +86,18 @@ const TextCRUD = () => {
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">All Languages</option>
-                <option value="bo">Tibetan</option>
-                <option value="en">English</option>
-                <option value="zh">Chinese</option>
-                <option value="sa">Sanskrit</option>
-                <option value="fr">French</option>
-                <option value="mn">Mongolian</option>
-                <option value="pi">Pali</option>
-                <option value="cmg">Classical Mongolian</option>
-                <option value="ja">Japanese</option>
-                <option value="ru">Russian</option>
-                <option value="lzh">Literary Chinese</option>
+                <option value="">{t('textsPage.allLanguages')}</option>
+                <option value="bo">{t('textsPage.tibetan')}</option>
+                <option value="en">{t('textsPage.english')}</option>
+                <option value="zh">{t('textsPage.chinese')}</option>
+                <option value="sa">{t('textsPage.sanskrit')}</option>
+                <option value="fr">{t('textsPage.french')}</option>
+                <option value="mn">{t('textsPage.mongolian')}</option>
+                <option value="pi">{t('textsPage.pali')}</option>
+                <option value="cmg">{t('textsPage.classicalMongolian')}</option>
+                <option value="ja">{t('textsPage.japanese')}</option>
+                <option value="ru">{t('textsPage.russian')}</option>
+                <option value="lzh">{t('textsPage.literaryChinese')}</option>
               </select>
             </div>
 
@@ -104,7 +106,7 @@ const TextCRUD = () => {
                 htmlFor="author"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                Author ID
+                {t('textsPage.authorId')}
               </label>
               <input
                 id="author"
@@ -113,7 +115,7 @@ const TextCRUD = () => {
                 onChange={(e) =>
                   handlePaginationChange({ author: e.target.value, offset: 0 })
                 }
-                placeholder="Enter author ID"
+                placeholder={t('textsPage.enterAuthorId')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -127,11 +129,13 @@ const TextCRUD = () => {
               variant="outline"
               className="w-full sm:w-auto"
             >
-              Previous
+              {t('textsPage.previous')}
             </Button>
             <span className="text-xs sm:text-sm text-gray-600 text-center">
-              Showing {pagination.offset + 1} -{" "}
-              {pagination.offset + texts.length}
+              {t('textsPage.showing', { 
+                start: pagination.offset + 1, 
+                end: pagination.offset + texts.length 
+              })}
             </span>
             <Button
               onClick={handleNextPage}
@@ -139,7 +143,7 @@ const TextCRUD = () => {
               variant="outline"
               className="w-full sm:w-auto"
             >
-              Next
+              {t('textsPage.next')}
             </Button>
           </div>
         </div>
@@ -149,26 +153,26 @@ const TextCRUD = () => {
           <div className="flex justify-center items-center h-64 bg-white rounded-lg shadow-md mx-1 sm:mx-0">
             <div className="text-center px-4">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p className="text-sm sm:text-base text-gray-600">Loading texts...</p>
+              <p className="text-sm sm:text-base text-gray-600">{t('textsPage.loadingTexts')}</p>
             </div>
           </div>
         ) : error ? (
           <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mx-1 sm:mx-0">
             <div className="text-center">
-              <p className="text-sm sm:text-base text-red-500 mb-4">Error loading texts</p>
+              <p className="text-sm sm:text-base text-red-500 mb-4">{t('textsPage.errorLoadingTexts')}</p>
               <button
                 onClick={() => refetch()}
                 className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors text-sm sm:text-base"
               >
-                Retry
+                {t('textsPage.retry')}
               </button>
             </div>
           </div>
         ) : texts.length === 0 ? (
           <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mx-1 sm:mx-0">
             <div className="text-center text-gray-500">
-              <p className="text-base sm:text-lg">No texts found</p>
-              <p className="text-xs sm:text-sm mt-2">Try adjusting your filters</p>
+              <p className="text-base sm:text-lg">{t('textsPage.noTextsFound')}</p>
+              <p className="text-xs sm:text-sm mt-2">{t('textsPage.adjustFilters')}</p>
             </div>
           </div>
         ) : (

@@ -1,24 +1,37 @@
 import { User, ExternalLink } from 'lucide-react';
 import type { Person } from '@/types/person';
 import { Badge } from './ui/badge';
-import { Card, CardHeader, CardTitle, CardContent, CardAction } from './ui/card';
+import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
+import { useTranslation } from 'react-i18next';
 
 interface PersonCardProps {
   person: Person;
-  onEdit?: (person: Person) => void;
 }
 
-const PersonCard = ({ person, onEdit }: PersonCardProps) => {
-  // Helper function to get the main name
+const PersonCard = ({ person }: PersonCardProps) => {
+  const { t, i18n } = useTranslation();
+  
   const getMainName = (person: Person): string => {
     if (person.name.bo) return person.name.bo;
     if (person.name.en) return person.name.en;
-    return Object.values(person.name)[0] || 'Unknown';
+    return Object.values(person.name)[0] || t('personsPage.unknown');
   };
 
-  // Helper function to get alternative names
   const getAltNames = (person: Person): string[] => {
-    return person.alt_names?.map(altName => Object.values(altName)[0]).slice(0, 3) || [];
+    if (!person.alt_names) return [];
+    
+    return person.alt_names
+      .slice(0, 3)
+      .map(altName => {
+        const currentLang = i18n.language as 'en' | 'bo';
+        if (altName[currentLang]) return altName[currentLang];
+        
+        if (altName.bo) return altName.bo;
+        if (altName.en) return altName.en;
+        
+        return Object.values(altName).find(val => val !== null) || '';
+      })
+      .filter(name => name !== '');
   };
 
   return (
@@ -37,7 +50,7 @@ const PersonCard = ({ person, onEdit }: PersonCardProps) => {
         {person.bdrc && (
           <div className="flex flex-wrap gap-2">
             <Badge className="bg-secondary-700 flex items-center gap-2">
-              <span className="font-medium">BDRC ID:</span>
+              <span className="font-medium">{t('personsPage.bdrcId')}</span>
               <span className="font-mono text-xs">{person.bdrc}</span>
             </Badge>
           </div>
@@ -52,7 +65,7 @@ const PersonCard = ({ person, onEdit }: PersonCardProps) => {
               rel="noopener noreferrer" 
               className="text-blue-600 hover:underline text-xs"
             >
-              Wikipedia Link
+              {t('personsPage.wikipediaLink')}
             </a>
           </div>
         )}
@@ -60,19 +73,17 @@ const PersonCard = ({ person, onEdit }: PersonCardProps) => {
         {/* Alternative Names */}
         {person.alt_names && person.alt_names.length > 0 && (
           <div className="pt-3 border-t border-gray-100">
-            <p className="text-gray-800 text-sm font-medium mb-2">Alternative Names:</p>
-            <div className="text-sm text-gray-500">
-              {getAltNames(person).slice(0, 3).map((altName, index, arr) => (
-                <span 
-                  key={`alt-display-${person.id}-${index}`} 
-                  className="truncate"
-                >
-                  {altName}{index < arr.length - 1 ? ', ' : ''}
+            <p className="text-gray-800 text-sm font-medium mb-2">{t('personsPage.alternativeNames')}</p>
+            <div className="text-sm text-gray-500 break-words">
+              {getAltNames(person).map((altName, index, arr) => (
+                <span key={`alt-display-${person.id}-${index}`}>
+                  {altName}
+                  {index < arr.length - 1 && ', '}
                 </span>
               ))}
               {person.alt_names.length > 3 && (
-                <span className="text-gray-400 italic">
-                  +{person.alt_names.length - 3} more...
+                <span className="text-gray-400 italic ml-1">
+                  {t('personsPage.more', { count: person.alt_names.length - 3 })}
                 </span>
               )}
             </div>
