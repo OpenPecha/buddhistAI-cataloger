@@ -17,16 +17,28 @@ class Span(BaseModel):
     end: int
 
 
-class AnnotationData(BaseModel):
+class AlignmentAnnotationItem(BaseModel):
     id: str
     span: Span
-    reference: Optional[str] = None
+    index: int
+    alignment_index: List[int]
+
+
+class TargetAnnotationItem(BaseModel):
+    id: str
+    span: Span
+    index: int
+
+
+class AnnotationData(BaseModel):
+    alignment_annotation: List[AlignmentAnnotationItem]
+    target_annotation: List[TargetAnnotationItem]
 
 
 class AnnotationResponse(BaseModel):
     id: str
     type: str
-    data: List[AnnotationData]
+    data: AnnotationData
 
 
 @router.get("/{annotation_id}", response_model=AnnotationResponse)
