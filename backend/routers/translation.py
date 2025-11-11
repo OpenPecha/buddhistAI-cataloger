@@ -18,7 +18,8 @@ class Span(BaseModel):
 
 
 class Author(BaseModel):
-    person_id: str
+    person_id: Optional[str] = None
+    person_bdrc_id: Optional[str] = None
 
 
 class Segmentation(BaseModel):
@@ -42,15 +43,29 @@ class CreateTranslation(BaseModel):
     title: str
     author: Author
     segmentation: List[Segmentation]
-    target_annotation: List[TargetAnnotation]
-    alignment_annotation: List[AlignmentAnnotation]
+    target_annotation: Optional[List[TargetAnnotation]] = None
+    alignment_annotation: Optional[List[AlignmentAnnotation]] = None
     copyright: str
+    category_id: str
+
+
+class CreateCommentary(BaseModel):
+    language: str
+    content: str
+    title: str
+    author: Author
+    segmentation: List[Segmentation]
+    target_annotation: Optional[List[TargetAnnotation]] = None
+    alignment_annotation: Optional[List[AlignmentAnnotation]] = None
+    copyright: str
+    category_id: str
 
 
 class TranslationResponse(BaseModel):
     message: str
     instance_id: str
     text_id: str
+
 
 
 class InstanceListItem(BaseModel):
@@ -102,6 +117,18 @@ async def create_translation(instance_id: str, translation: CreateTranslation):
     response = requests.post(
         f"{API_ENDPOINT}/instances/{instance_id}/translation", 
         json=translation.dict()
+    )
+    if response.status_code != 201:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+    return response.json()
+
+
+@router.post("/{instance_id}/commentary", status_code=201)
+async def create_commentary(instance_id: str, commentary: CreateCommentary):
+    """Create a commentary for a specific instance"""
+    response = requests.post(
+        f"{API_ENDPOINT}/instances/{instance_id}/commentary", 
+        json=commentary.dict()
     )
     if response.status_code != 201:
         raise HTTPException(status_code=response.status_code, detail=response.text)
