@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Union
 import requests
 import os
 from dotenv import load_dotenv
@@ -30,7 +30,13 @@ class TargetAnnotationItem(BaseModel):
     index: int
 
 
-class AnnotationData(BaseModel):
+class SegmentationAnnotationItem(BaseModel):
+    id: str
+    span: Span
+    reference: Optional[str] = None
+
+
+class AlignmentAnnotationData(BaseModel):
     alignment_annotation: List[AlignmentAnnotationItem]
     target_annotation: List[TargetAnnotationItem]
 
@@ -38,17 +44,13 @@ class AnnotationData(BaseModel):
 class AnnotationResponse(BaseModel):
     id: str
     type: str
-    data: AnnotationData
+    data: Union[AlignmentAnnotationData, List[SegmentationAnnotationItem]]
 
 
-@router.get("/{annotation_id}", response_model=AnnotationResponse)
+@router.get("/{annotation_id}")
 async def get_annotation(annotation_id: str):
     """Get annotation by ID"""
     response = requests.get(f"{API_ENDPOINT}/annotations/{annotation_id}")
-    try:
-
-        if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail=response.text)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
     return response.json()

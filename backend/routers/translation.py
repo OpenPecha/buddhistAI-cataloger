@@ -87,7 +87,7 @@ class RelatedInstance(BaseModel):
     relationship: str
 
 
-@router.get("/{text_id}/instances", response_model=List[InstanceListItem])
+@router.get("/{text_id}/instances")
 async def get_text_instances(text_id: str):
     """Get all instances for a specific text"""
     response = requests.get(f"{API_ENDPOINT}/texts/{text_id}/instances")
@@ -96,7 +96,7 @@ async def get_text_instances(text_id: str):
     return response.json()
 
 
-@router.post("/{instance_id}/translation", response_model=TranslationResponse, status_code=201)
+@router.post("/{instance_id}/translation", status_code=201)
 async def create_translation(instance_id: str, translation: CreateTranslation):
     """Create a translation for a specific instance"""
     response = requests.post(
@@ -108,7 +108,7 @@ async def create_translation(instance_id: str, translation: CreateTranslation):
     return response.json()
 
 
-@router.get("/{instance_id}/related", response_model=List[RelatedInstance])
+@router.get("/{instance_id}/related")
 async def get_related_instances(instance_id: str, type: Optional[str] = None):
     """Get all instances related to a specific instance
     
