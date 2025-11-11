@@ -7,6 +7,7 @@ import FormattedTextDisplay from '../FormattedTextDisplay';
 import { useBibliography } from '@/contexts/BibliographyContext';
 import { BibliographyAnnotationsList } from '../BibliographyAnnotationsList';
 import { annotationsField, annotationPlugin, annotationTheme, updateAnnotationsEffect } from '@/editor/textAnnotations';
+import { useTranslation } from 'react-i18next';
 
 interface TextEditorViewProps {
   content: string;
@@ -20,6 +21,7 @@ interface TextEditorViewProps {
 }
 
 const TextEditorView = ({ content, filename, onChange, editable = false, onTextSelect, isCreatingNewText = true, hasIncipit = false, hasTitle = false }: TextEditorViewProps) => {
+  const { t, i18n } = useTranslation();
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [selectedText, setSelectedText] = useState('');
@@ -30,7 +32,7 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
   const cmRef = useRef<ReactCodeMirrorRef>(null);
   const { annotations } = useBibliography();
 
-  // Update CodeMirror decorations when annotations change or when switching back to content tab
+  // Update CodeMirror decorations when annotations change, language changes, or when switching back to content tab
   useEffect(() => {
     if (activeTab === 'content') {
       // Small delay to ensure the editor is fully rendered
@@ -45,7 +47,7 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
       
       return () => clearTimeout(timeoutId);
     }
-  }, [annotations, activeTab]);
+  }, [annotations, activeTab, i18n.language]);
 
   const handleMouseUp = (event: React.MouseEvent) => {
     // Only show selection menu when in the content (CodeMirror) tab
@@ -150,7 +152,7 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
-            Content
+            {t('editor.content')}
           </button>
           <button
             onClick={() => setActiveTab('preview')}
@@ -160,7 +162,7 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
-            Preview
+            {t('editor.preview')}
           </button>
           <button
             onClick={() => setActiveTab('bibliography')}
@@ -170,7 +172,7 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
                 : 'border-transparent text-gray-600 hover:text-gray-900'
             }`}
           >
-            Bibliography
+            {t('editor.bibliography')}
             {annotations.length > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                 {annotations.length}

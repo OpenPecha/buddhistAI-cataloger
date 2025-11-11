@@ -58,5 +58,3 @@ export const useCategories = (parentId: string | null = null): UseCategoriesResu
   };
 };
 
-export type { Category };
-

@@ -16,6 +16,7 @@ import { detectLanguage } from "@/utils/languageDetection";
 import PersonFormModal from "@/components/PersonFormModal";
 import { MultilevelCategorySelector } from "@/components/MultilevelCategorySelector";
 import { fetchTextByBdrcId } from "@/api/texts";
+import { useTranslation } from "react-i18next";
 
 interface TextCreationFormProps {
   onDataChange?: (textData: any) => void;
@@ -58,6 +59,8 @@ const LANGUAGE_OPTIONS = [
 
 const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
   ({ onDataChange, onExistingTextFound }, ref) => {
+    const { t } = useTranslation();
+    
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
       addTitle: (text: string, language?: string) => {
@@ -213,13 +216,13 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     const getPersonDisplayName = (person: Person): string => {
       // Safety check in case name is undefined
       if (!person.name) {
-        return person.id || "Unknown";
+        return person.id || t("textForm.unknown");
       }
       return (
         person.name.bo ||
         person.name.en ||
         Object.values(person.name)[0] ||
-        "Unknown"
+        t("textForm.unknown")
       );
     };
 
@@ -243,7 +246,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       const newErrors: Record<string, string> = {};
 
       if (!selectedPerson) {
-        newErrors.contributor = "Please select a person";
+        newErrors.contributor = t("textForm.selectPerson");
         setErrors(newErrors);
         return;
       }
@@ -270,11 +273,11 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     const buildFormData = useCallback(() => {
       // Validate required fields
       if (!selectedType) {
-        throw new Error("Type is required");
+        throw new Error(t("textForm.typeRequired"));
       }
 
       if (!language.trim()) {
-        throw new Error("Language is required");
+        throw new Error(t("textForm.languageRequired"));
       }
 
       // Build title object from titles array (last value wins for duplicate languages)
@@ -286,16 +289,16 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       });
 
       if (Object.keys(title).length === 0) {
-        throw new Error("At least one title is required");
+        throw new Error(t("textForm.titleRequired"));
       }
 
       if (contributors.length === 0) {
-        throw new Error("At least one contributor is required");
+        throw new Error(t("textForm.contributorRequired"));
       }
 
       if (!categoryId.trim()) {
         setCategoryError(true);
-        throw new Error("Category is required");
+        throw new Error(t("textForm.categoryRequired"));
       } else {
         setCategoryError(false);
       }
@@ -353,6 +356,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       date,
       bdrc,
       categoryId,
+      t,
     ]);
 
     // Expose buildFormData to parent via window object
@@ -394,7 +398,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
               htmlFor="type"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Type <span className="text-red-500">*</span>
+              {t("textForm.type")} <span className="text-red-500">*</span>
             </label>
             <select
               id="type"
@@ -402,10 +406,10 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
               onChange={(e) => setSelectedType(e.target.value as any)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Select type</option>
-              <option value="root">Root</option>
-              <option value="translation">Translation</option>
-              {/* <option value="commentary">Commentary</option> */}
+              <option value="">{t("textForm.selectType")}</option>
+              <option value="root">{t("textForm.root")}</option>
+              <option value="translation">{t("textForm.translation")}</option>
+              {/* <option value="commentary">{t("textForm.commentary")}</option> */}
             </select>
             {errors.type && (
               <p className="mt-1 text-sm text-red-600">{errors.type}</p>
@@ -417,7 +421,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
               htmlFor="language"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Language <span className="text-red-500">*</span>
+              {t("textForm.language")} <span className="text-red-500">*</span>
             </label>
             <select
               id="language"
@@ -425,7 +429,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
               onChange={(e) => setLanguage(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Select language</option>
+              <option value="">{t("textForm.selectLanguage")}</option>
               {LANGUAGE_OPTIONS.map((lang) => (
                 <option key={lang.code} value={lang.code}>
                   {lang.name}
@@ -445,7 +449,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
               htmlFor="target"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Target Text ID
+              {t("textForm.targetTextId")}
             </label>
             <input
               id="target"
@@ -453,7 +457,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
               value={target}
               onChange={(e) => setTarget(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Leave empty for N/A"
+              placeholder={t("textForm.leaveEmptyNA")}
             />
 
             {errors.target && (
@@ -466,8 +470,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="block text-sm font-medium text-gray-700">
-              Title <span className="text-red-500">*</span> (at least one
-              required)
+              {t("textForm.title")} <span className="text-red-500">*</span> ({t("textForm.atLeastOneRequired")})
             </label>
             <Button
               type="button"
@@ -479,7 +482,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
               className="flex items-center gap-1"
             >
               <Plus className="h-4 w-4" />
-              Add Title
+              {t("textForm.addTitle")}
             </Button>
           </div>
 
@@ -515,7 +518,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                     }}
                     className="w-20 sm:w-32 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   >
-                    <option value="">Lang</option>
+                    <option value="">{t("textForm.lang")}</option>
                     {LANGUAGE_OPTIONS.map((lang) => (
                       <option key={lang.code} value={lang.code}>
                         {lang.name}
@@ -562,7 +565,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                       }
                     }}
                     className="flex-1 min-w-0 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                    placeholder="Enter title"
+                    placeholder={t("textForm.enterTitle")}
                   />
                   <Button
                     type="button"
@@ -598,7 +601,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="block text-sm font-medium text-gray-700">
-              Alternative Titles (optional)
+              {t("textForm.alternativeTitle")}
             </label>
             <Button
               type="button"
@@ -608,7 +611,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
               className="flex items-center gap-1"
             >
               <Plus className="h-4 w-4" />
-              Add
+              {t("textForm.addAlternativeTitle")}
             </Button>
           </div>
 
@@ -619,7 +622,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-700">
-                  Alternative {groupIndex + 1}
+                  {t("textForm.alternativeTitle")} {groupIndex + 1}
                 </span>
                 <Button
                   type="button"
@@ -660,7 +663,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                     }}
                     className="w-20 sm:w-32 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
                   >
-                    <option value="">Lang</option>
+                    <option value="">{t("textForm.lang")}</option>
                     {LANGUAGE_OPTIONS.map((lang) => (
                       <option key={lang.code} value={lang.code}>
                         {lang.name}
@@ -685,7 +688,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                       setAltTitles(updated);
                     }}
                     className="flex-1 min-w-0 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                    placeholder="Enter alternative title"
+                    placeholder={t("textForm.enterAlternativeTitle")}
                   />
                   {titleGroup.length > 1 && (
                     <Button
@@ -717,7 +720,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                 className="mt-2 flex items-center gap-1 text-xs"
               >
                 <Plus className="h-3 w-3" />
-                Add Language
+                {t("textForm.addLanguage")}
               </Button>
             </div>
           ))}
@@ -727,8 +730,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="block text-sm font-medium text-gray-700">
-              Contributors <span className="text-red-500">*</span> (at least one
-              required)
+              {t("textForm.contributors")} <span className="text-red-500">*</span> ({t("textForm.atLeastOneRequired")})
             </label>
             <Button
               type="button"
@@ -738,7 +740,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
               className="flex items-center gap-1"
             >
               <Plus className="h-4 w-4" />
-              Add Contributor
+              {t("textForm.addContributor")}
             </Button>
           </div>
 
@@ -757,7 +759,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                         {getPersonDisplayName(contributor.person!)}
                       </div>
                       <div className="text-sm text-gray-500">
-                        Role: {contributor.role}
+                        {t("textForm.role")}: {t(`textForm.${contributor.role}`)}
                       </div>
                     </div>
                   </div>
@@ -787,10 +789,10 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                       onChange={(e) => setRole(e.target.value as any)}
                       className="w-fit px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="author">Author</option>
-                      <option value="translator">Translator</option>
-                      <option value="reviser">Reviser</option>
-                      <option value="scholar">Scholar</option>
+                      <option value="author">{t("textForm.author")}</option>
+                      <option value="translator">{t("textForm.translator")}</option>
+                      <option value="reviser">{t("textForm.reviser")}</option>
+                      <option value="scholar">{t("textForm.scholar")}</option>
                     </select>
                     <input
                       type="text"
@@ -801,7 +803,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                         setTimeout(() => setShowPersonDropdown(false), 200)
                       }
                       className="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base leading-relaxed"
-                      placeholder="Search for person..."
+                      placeholder={t("textForm.searchForPerson")}
                     />
 
                     {personsLoading && (
@@ -817,13 +819,13 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                           <>
                             <div className="px-4 py-2 bg-gray-100 border-b border-gray-200">
                               <span className="text-xs font-semibold text-gray-700 uppercase">
-                                BDRC Catalog
+                                {t("textForm.bdrcCatalogPerson")}
                               </span>
                             </div>
                             {bdrcPersonLoading ? (
                               <div className="px-4 py-4 flex items-center gap-2">
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
-                                <div className="text-sm text-gray-500">Searching BDRC...</div>
+                                <div className="text-sm text-gray-500">{t("textForm.searchingBdrcPerson")}</div>
                               </div>
                             ) : bdrcPersonResults.length > 0 ? (
                               bdrcPersonResults.map((result) => (
@@ -860,7 +862,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                               ))
                             ) : debouncedPersonSearch.trim() ? (
                               <div className="px-4 py-2 text-gray-500 text-sm">
-                                No BDRC persons found
+                                {t("textForm.noBdrcPersonResults")}
                               </div>
                             ) : null}
                           </>
@@ -887,7 +889,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                   onClick={handleAddContributor}
                   className="flex-1"
                 >
-                  Add
+                  {t("textForm.add")}
                 </Button>
                 <Button
                   type="button"
@@ -898,7 +900,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                   variant="outline"
                   className="flex-1"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </Button>
               </div>
             </div>
@@ -912,7 +914,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
               htmlFor="date"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Date
+              {t("textForm.date")}
             </label>
             <input
               id="date"
@@ -928,7 +930,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
               htmlFor="bdrc"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              BDRC Work ID
+              {t("textForm.bdrcWorkId")}
             </label>
             <div className="relative">
               {selectedBdrc ? (
@@ -943,7 +945,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                   className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between"
                 >
                   <span className="text-sm font-medium text-gray-900">{selectedBdrc.id}</span>
-                  <span className="text-xs text-blue-600">Click to change</span>
+                  <span className="text-xs text-blue-600">{t("textForm.clickToChange")}</span>
                 </div>
               ) : (
                 // Search input
@@ -967,7 +969,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                       }, 200);
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Search BDRC entries..."
+                    placeholder={t("textForm.searchBdrcEntries")}
                   />
                   {/* BDRC Dropdown */}
                   {showBdrcDropdown && bdrcSearch.trim() && (
@@ -975,7 +977,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                       {bdrcLoading ? (
                         <div className="px-4 py-8 flex flex-col items-center justify-center">
                           <Loader2 className="w-6 h-6 text-blue-600 animate-spin mb-2" />
-                          <div className="text-sm text-gray-500">Searching...</div>
+                          <div className="text-sm text-gray-500">{t("textForm.searching")}</div>
                         </div>
                       ) : bdrcResults.length > 0 ? (
                         bdrcResults
@@ -1031,7 +1033,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                           ))
                       ) : (
                         <div className="px-4 py-3 text-sm text-gray-500">
-                          No BDRC entries found
+                          {t("textForm.noBdrcEntries")}
                         </div>
                       )}
                     </div>
@@ -1056,7 +1058,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
           />
           {categoryError && (
             <p className="mt-1 text-sm text-red-600">
-              Please select a category
+              {t("textForm.selectCategory")}
             </p>
           )}
         </div>
@@ -1091,10 +1093,10 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
 
                 {/* Loading Text */}
                 <h3 className="text-xl font-bold text-gray-900 mb-2">
-                  Checking BDRC ID...
+                  {t("textForm.checkingBdrcId")}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Verifying if this text already exists in the catalog
+                  {t("textForm.verifyingText")}
                 </p>
 
                 {/* Progress Bar */}
@@ -1117,10 +1119,10 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                 </div>
                 <div className="flex-1">
                   <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                    Text Already Exists
+                    {t("textForm.textAlreadyExists")}
                   </h3>
                   <p className="text-sm text-gray-600">
-                    This BDRC ID is already associated with an existing text in the catalog.
+                    {t("textForm.bdrcAlreadyAssociated")}
                   </p>
                 </div>
               </div>
@@ -1128,31 +1130,31 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
               {/* Existing Text Info */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <div className="text-sm font-medium text-blue-900 mb-2">
-                  Existing Text:
+                  {t("textForm.existingText")}
                 </div>
                 <div className="space-y-1 text-sm text-gray-700">
                   <div>
-                    <strong>BDRC ID:</strong> {pendingBdrcSelection.id}
+                    <strong>{t("textForm.bdrcId")}:</strong> {pendingBdrcSelection.id}
                   </div>
                   <div>
-                    <strong>Title:</strong>{" "}
+                    <strong>{t("text.textTitle")}:</strong>{" "}
                     {conflictingText.title.bo ||
                       conflictingText.title.en ||
                       Object.values(conflictingText.title)[0] ||
                       "Untitled"}
                   </div>
                   <div>
-                    <strong>Type:</strong> {conflictingText.type}
+                    <strong>{t("textForm.type")}:</strong> {conflictingText.type}
                   </div>
                   <div>
-                    <strong>Language:</strong> {conflictingText.language}
+                    <strong>{t("textForm.language")}:</strong> {conflictingText.language}
                   </div>
                 </div>
               </div>
 
               {/* Question */}
               <p className="text-sm text-gray-700 mb-6">
-                Would you like to use this existing text, or choose a different BDRC ID?
+                {t("textForm.useExistingQuestion")}
               </p>
 
               {/* Actions */}
@@ -1172,7 +1174,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                     setShowBdrcDropdown(true);
                   }}
                 >
-                  Choose Another
+                  {t("textForm.chooseAnother")}
                 </Button>
                 <Button
                   type="button"
@@ -1187,7 +1189,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                     setPendingBdrcSelection(null);
                   }}
                 >
-                  Use Existing Text
+                  {t("textForm.useExistingText")}
                 </Button>
               </div>
             </div>

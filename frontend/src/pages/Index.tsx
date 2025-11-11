@@ -1,22 +1,24 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-blue-800">
-          OpenPecha Text Cataloger
+          {t("header.title")}
         </h1>
         <Button
           onClick={() => navigate("/create")}
           variant="default"
           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 text-lg font-semibold shadow-lg"
         >
-          + Create
+          + {t("common.create")}
         </Button>
       </div>
 
@@ -42,15 +44,15 @@ const Index = () => {
                   />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Manage Texts</h3>
+              <h3 className="text-xl font-semibold mb-2">{t("text.texts")}</h3>
               <p className="text-gray-600 mb-4">
-                Browse, create, and manage Tibetan texts with metadata.
+                {t("home.description")}
               </p>
               <a
                 href="/texts"
                 className="text-blue-600 hover:text-blue-800 font-medium"
               >
-                View Texts
+                {t("text.texts")}
               </a>
             </div>
 
@@ -70,15 +72,15 @@ const Index = () => {
                   />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-2">Manage Authors</h3>
+              <h3 className="text-xl font-semibold mb-2">{t("person.persons")}</h3>
               <p className="text-gray-600 mb-4">
-                Browse and manage person records and contributors.
+                {t("home.description")}
               </p>
               <a
                 href="/persons"
                 className="text-purple-600 hover:text-purple-800 font-medium"
               >
-                View Persons
+                {t("person.persons")}
               </a>
             </div>
           </div>

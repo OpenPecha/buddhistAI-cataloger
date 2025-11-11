@@ -4,8 +4,10 @@ import type { Person } from '@/types/person';
 import { Button } from '@/components/ui/button';
 import PersonCard from '@/components/PersonCard';
 import PersonFormModal from '@/components/PersonFormModal';
+import { useTranslation } from 'react-i18next';
 
 const PersonCRUD = () => {
+  const { t } = useTranslation();
   const [showModal, setShowModal] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
@@ -55,12 +57,12 @@ const PersonCRUD = () => {
       
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Person Management</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{t('personsPage.title')}</h2>
         <Button
           onClick={handleCreate}
           className="w-full sm:w-auto"
         >
-          + Create Person
+          {t('personsPage.createPerson')}
         </Button>
       </div>
 
@@ -70,7 +72,7 @@ const PersonCRUD = () => {
           <div className="bg-white rounded-lg shadow-md p-3 sm:p-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4">
               <div>
-                <label htmlFor="limit" className="block text-sm font-medium text-gray-700 mb-1">Limit</label>
+                <label htmlFor="limit" className="block text-sm font-medium text-gray-700 mb-1">{t('personsPage.limit')}</label>
                 <select
                   id="limit"
                   value={pagination.limit}
@@ -83,25 +85,25 @@ const PersonCRUD = () => {
                 </select>
               </div>
               <div>
-                <label htmlFor="nationality" className="block text-sm font-medium text-gray-700 mb-1">Nationality</label>
+                <label htmlFor="nationality" className="block text-sm font-medium text-gray-700 mb-1">{t('personsPage.nationality')}</label>
                 <input
                   id="nationality"
                   type="text"
                   value={pagination.nationality}
                   onChange={(e) => handlePaginationChange({ nationality: e.target.value, offset: 0 })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Filter by nationality"
+                  placeholder={t('personsPage.filterByNationality')}
                 />
               </div>
               <div>
-                <label htmlFor="occupation" className="block text-sm font-medium text-gray-700 mb-1">Occupation</label>
+                <label htmlFor="occupation" className="block text-sm font-medium text-gray-700 mb-1">{t('personsPage.occupation')}</label>
                 <input
                   id="occupation"
                   type="text"
                   value={pagination.occupation}
                   onChange={(e) => handlePaginationChange({ occupation: e.target.value, offset: 0 })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Filter by occupation"
+                  placeholder={t('personsPage.filterByOccupation')}
                 />
               </div>
             </div>
@@ -114,10 +116,13 @@ const PersonCRUD = () => {
                 variant="outline"
                 className="w-full sm:w-auto"
               >
-                Previous
+                {t('personsPage.previous')}
               </Button>
               <span className="text-xs sm:text-sm text-gray-600 text-center">
-                Showing {pagination.offset + 1} - {pagination.offset + persons.length}
+                {t('personsPage.showing', { 
+                  start: pagination.offset + 1, 
+                  end: pagination.offset + persons.length 
+                })}
               </span>
               <Button
                 onClick={handleNextPage}
@@ -125,7 +130,7 @@ const PersonCRUD = () => {
                 variant="outline"
                 className="w-full sm:w-auto"
               >
-                Next
+                {t('personsPage.next')}
               </Button>
             </div>
           </div>
@@ -134,26 +139,26 @@ const PersonCRUD = () => {
             <div className="flex justify-center items-center h-64 bg-white rounded-lg shadow-md mx-1 sm:mx-0">
               <div className="text-center px-4">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                <p className="text-sm sm:text-base text-gray-600">Loading persons...</p>
+                <p className="text-sm sm:text-base text-gray-600">{t('personsPage.loadingPersons')}</p>
               </div>
             </div>
           ) : error ? (
             <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mx-1 sm:mx-0">
               <div className="text-center">
-                <p className="text-sm sm:text-base text-red-500 mb-4">Error loading persons</p>
+                <p className="text-sm sm:text-base text-red-500 mb-4">{t('personsPage.errorLoadingPersons')}</p>
                 <button
                   onClick={() => refetch()}
                   className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors text-sm sm:text-base"
                 >
-                  Retry
+                  {t('personsPage.retry')}
                 </button>
               </div>
             </div>
           ) : persons.length === 0 ? (
             <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mx-1 sm:mx-0">
               <div className="text-center text-gray-500">
-                <p className="text-base sm:text-lg">No persons found</p>
-                <p className="text-xs sm:text-sm mt-2">Try adjusting your filters or create a new person</p>
+                <p className="text-base sm:text-lg">{t('personsPage.noPersonsFound')}</p>
+                <p className="text-xs sm:text-sm mt-2">{t('personsPage.adjustFiltersOrCreate')}</p>
               </div>
             </div>
           ) : (

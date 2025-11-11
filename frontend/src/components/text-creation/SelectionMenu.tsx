@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useBibliography } from "@/contexts/BibliographyContext";
+import { useTranslation } from "react-i18next";
 
 interface SelectionMenuProps {
   position: { x: number; y: number };
@@ -14,6 +15,7 @@ interface SelectionMenuProps {
 }
 
 const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, onClose, isCreatingNewText = true, hasIncipit = false, hasTitle = false }: SelectionMenuProps) => {
+  const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
   const [adjustedPosition, setAdjustedPosition] = useState(position);
   const [isVisible, setIsVisible] = useState(false);
@@ -98,51 +100,51 @@ const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, o
   const allMenuItems = [
     {
       type: "title" as const,
-      label: "Title",
+      label: t("selectionMenu.title"),
       icon: "📄",
       color: "from-yellow-50 to-yellow-100/50 hover:from-yellow-100 hover:to-yellow-200/50 border-yellow-300",
       textColor: "text-yellow-800",
-      description: "Mark as document title",
+      description: t("selectionMenu.titleDesc"),
     },
     {
       type: "alt_title" as const,
-      label: "Alternative Title",
+      label: t("selectionMenu.altTitle"),
       icon: "📑",
       color: "from-purple-50 to-purple-100/50 hover:from-purple-100 hover:to-purple-200/50 border-purple-300",
       textColor: "text-purple-800",
-      description: "Alternative title variant",
+      description: t("selectionMenu.altTitleDesc"),
     },
     {
       type: "colophon" as const,
-      label: "Colophon",
+      label: t("selectionMenu.colophon"),
       icon: "✍️",
       color: "from-green-50 to-green-100/50 hover:from-green-100 hover:to-green-200/50 border-green-300",
       textColor: "text-green-800",
-      description: "Mark as colophon",
+      description: t("selectionMenu.colophonDesc"),
     },
     {
       type: "incipit" as const,
-      label: "Incipit",
+      label: t("selectionMenu.incipit"),
       icon: "🔖",
       color: "from-blue-50 to-blue-100/50 hover:from-blue-100 hover:to-blue-200/50 border-blue-300",
       textColor: "text-blue-800",
-      description: "Mark as incipit title",
+      description: t("selectionMenu.incipitDesc"),
     },
     {
       type: "alt_incipit" as const,
-      label: "Alt Incipit",
+      label: t("selectionMenu.altIncipit"),
       icon: "🏷️",
       color: "from-cyan-50 to-cyan-100/50 hover:from-cyan-100 hover:to-cyan-200/50 border-cyan-300",
       textColor: "text-cyan-800",
-      description: "Alternative incipit",
+      description: t("selectionMenu.altIncipitDesc"),
     },
     {
       type: "person" as const,
-      label: "Person",
+      label: t("selectionMenu.person"),
       icon: "👤",
       color: "from-orange-50 to-orange-100/50 hover:from-orange-100 hover:to-orange-200/50 border-orange-300",
       textColor: "text-orange-800",
-      description: "Mark as person name",
+      description: t("selectionMenu.personDesc"),
     },
   ];
 
@@ -170,8 +172,8 @@ const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, o
             (item.type === "alt_title" && !hasTitle);
           
           const disabledMessage = 
-            item.type === "alt_incipit" ? "Please add an Incipit title first" :
-            item.type === "alt_title" ? "Please add a Title first" :
+            item.type === "alt_incipit" ? t("selectionMenu.addIncipitFirst") :
+            item.type === "alt_title" ? t("selectionMenu.addTitleFirst") :
             item.description;
           
           return (
