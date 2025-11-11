@@ -1,13 +1,16 @@
 import { Link, useLocation } from "react-router-dom";
 import { Book, Users, Home, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
+import LanguageSwitcher from "../LanguageSwitcher";
 
 const Navigation = () => {
   const location = useLocation();
+  const { t } = useTranslation();
   
   const navItems = [
-    { path: "/texts", icon: Book, label: "Texts" },
-    { path: "/persons", icon: Users, label: "Persons" },
+    { path: "/texts", icon: Book, label: t("header.texts") },
+    { path: "/persons", icon: Users, label: t("header.persons") },
   ];
 
   return (
@@ -17,11 +20,12 @@ const Navigation = () => {
           <Link to="/" className="flex items-center gap-3 group">
               <img src="/icon.png" alt="OpenPecha" className="w-10 h-10" />
             <div>
-              <h1 className="">Text Cataloger</h1>
+              <h1 className="">{t("header.title")}</h1>
             </div>
           </Link>
           
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = location.pathname.includes(item.path);
@@ -42,6 +46,8 @@ const Navigation = () => {
                 </Link>
               );
             })}
+            </div>
+            <LanguageSwitcher />
           </div>
         </div>
       </div>

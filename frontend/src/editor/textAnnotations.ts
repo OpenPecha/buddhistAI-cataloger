@@ -1,19 +1,42 @@
 import { Decoration,type DecorationSet, EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view";
 import { StateField, StateEffect } from "@codemirror/state";
 import type { BibliographyAnnotation } from "@/contexts/BibliographyContext";
+import i18n from "@/i18n/config";
 
 // Define the effect for updating annotations
 export const updateAnnotationsEffect = StateEffect.define<BibliographyAnnotation[]>();
 
-// Color schemes for different annotation types
-const annotationStyles: Record<string, { color: string; label: string; bgColor: string }> = {
-  title: { color: "#854d0e", label: "Title", bgColor: "#fef3c7" },
-  alt_title: { color: "#6b21a8", label: "Alt Title", bgColor: "#f3e8ff" },
-  colophon: { color: "#166534", label: "Colophon", bgColor: "#dcfce7" },
-  incipit: { color: "#1e40af", label: "Incipit", bgColor: "#dbeafe" },
-  alt_incipit: { color: "#0e7490", label: "Alt Incipit", bgColor: "#cffafe" },
-  person: { color: "#c2410c", label: "Person", bgColor: "#fed7aa" },
+// Color schemes for different annotation types (colors only)
+const annotationColors: Record<string, { color: string; bgColor: string }> = {
+  title: { color: "#854d0e", bgColor: "#fef3c7" },
+  alt_title: { color: "#6b21a8", bgColor: "#f3e8ff" },
+  colophon: { color: "#166534", bgColor: "#dcfce7" },
+  incipit: { color: "#1e40af", bgColor: "#dbeafe" },
+  alt_incipit: { color: "#0e7490", bgColor: "#cffafe" },
+  person: { color: "#c2410c", bgColor: "#fed7aa" },
 };
+
+// Function to get translated label for annotation type
+function getAnnotationLabel(type: string): string {
+  const labelMap: Record<string, string> = {
+    title: i18n.t("selectionMenu.title"),
+    alt_title: i18n.t("selectionMenu.altTitle"),
+    colophon: i18n.t("selectionMenu.colophon"),
+    incipit: i18n.t("selectionMenu.incipit"),
+    alt_incipit: i18n.t("selectionMenu.altIncipit"),
+    person: i18n.t("selectionMenu.person"),
+  };
+  return labelMap[type] || type;
+}
+
+// Function to get annotation style with translated label
+function getAnnotationStyle(type: string) {
+  const colors = annotationColors[type] || annotationColors.title;
+  return {
+    ...colors,
+    label: getAnnotationLabel(type),
+  };
+}
 
 // Create the state field to store annotations
 export const annotationsField = StateField.define<BibliographyAnnotation[]>({
@@ -32,7 +55,7 @@ export const annotationsField = StateField.define<BibliographyAnnotation[]>({
 
 // Function to create decoration for an annotation
 function createAnnotationDecoration(annotation: BibliographyAnnotation): Decoration {
-  const style = annotationStyles[annotation.type] || annotationStyles.title;
+  const style = getAnnotationStyle(annotation.type);
   
   return Decoration.mark({
     class: `cm-annotation cm-annotation-${annotation.type}`,
@@ -124,39 +147,39 @@ export const annotationTheme = EditorView.baseTheme({
     },
   },
   ".cm-annotation-title::before": {
-    backgroundColor: annotationStyles.title.bgColor,
-    color: annotationStyles.title.color,
-    border: `1px solid ${annotationStyles.title.color}`,
+    backgroundColor: annotationColors.title.bgColor,
+    color: annotationColors.title.color,
+    border: `1px solid ${annotationColors.title.color}`,
     borderBottom: "none",
   },
   ".cm-annotation-alt_title::before": {
-    backgroundColor: annotationStyles.alt_title.bgColor,
-    color: annotationStyles.alt_title.color,
-    border: `1px solid ${annotationStyles.alt_title.color}`,
+    backgroundColor: annotationColors.alt_title.bgColor,
+    color: annotationColors.alt_title.color,
+    border: `1px solid ${annotationColors.alt_title.color}`,
     borderBottom: "none",
   },
   ".cm-annotation-colophon::before": {
-    backgroundColor: annotationStyles.colophon.bgColor,
-    color: annotationStyles.colophon.color,
-    border: `1px solid ${annotationStyles.colophon.color}`,
+    backgroundColor: annotationColors.colophon.bgColor,
+    color: annotationColors.colophon.color,
+    border: `1px solid ${annotationColors.colophon.color}`,
     borderBottom: "none",
   },
   ".cm-annotation-incipit::before": {
-    backgroundColor: annotationStyles.incipit.bgColor,
-    color: annotationStyles.incipit.color,
-    border: `1px solid ${annotationStyles.incipit.color}`,
+    backgroundColor: annotationColors.incipit.bgColor,
+    color: annotationColors.incipit.color,
+    border: `1px solid ${annotationColors.incipit.color}`,
     borderBottom: "none",
   },
   ".cm-annotation-alt_incipit::before": {
-    backgroundColor: annotationStyles.alt_incipit.bgColor,
-    color: annotationStyles.alt_incipit.color,
-    border: `1px solid ${annotationStyles.alt_incipit.color}`,
+    backgroundColor: annotationColors.alt_incipit.bgColor,
+    color: annotationColors.alt_incipit.color,
+    border: `1px solid ${annotationColors.alt_incipit.color}`,
     borderBottom: "none",
   },
   ".cm-annotation-person::before": {
-    backgroundColor: annotationStyles.person.bgColor,
-    color: annotationStyles.person.color,
-    border: `1px solid ${annotationStyles.person.color}`,
+    backgroundColor: annotationColors.person.bgColor,
+    color: annotationColors.person.color,
+    border: `1px solid ${annotationColors.person.color}`,
     borderBottom: "none",
   },
 });

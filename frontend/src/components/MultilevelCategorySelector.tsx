@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useCategories } from '@/hooks/useCategories';
 import type { Category } from '@/hooks/useCategories';
 import { ChevronRight, Loader2, Check, Home } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface CategoryLevel {
   id: string;
@@ -19,6 +20,7 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
   onCategorySelect,
   selectedCategoryId,
 }) => {
+  const { t } = useTranslation();
   const [navigationPath, setNavigationPath] = useState<CategoryLevel[]>([]);
   const [currentParentId, setCurrentParentId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<{
@@ -77,7 +79,7 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
     <div className="space-y-3">
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">
-          Category <span className="text-red-500">*</span>
+          {t('category.category')} <span className="text-red-500">*</span>
         </label>
         
       
@@ -90,7 +92,7 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
               className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-200 transition-colors text-gray-600 hover:text-gray-900"
             >
               <Home className="h-3 w-3" />
-              <span>Root</span>
+              <span>{t('category.root')}</span>
             </button>
             {navigationPath.map((level, index) => (
               <div key={level.id} className="flex items-center gap-1">
@@ -113,15 +115,15 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
           {loading ? (
             <div className="flex items-center justify-center gap-2 py-8 text-sm text-gray-500">
               <Loader2 className="h-5 w-5 animate-spin" />
-              <span>Loading categories...</span>
+              <span>{t('category.loadingCategories')}</span>
             </div>
           ) : error ? (
             <div className="py-8 text-center text-sm text-red-600">
-              Error loading categories: {error}
+              {t('category.errorLoadingCategories')} {error}
             </div>
           ) : categories.length === 0 ? (
             <div className="py-8 text-center text-sm text-gray-500">
-              No categories available
+              {t('category.noCategoriesAvailable')}
             </div>
           ) : (
             <div className="flex flex-wrap gap-2">

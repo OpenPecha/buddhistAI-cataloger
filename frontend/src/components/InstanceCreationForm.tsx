@@ -4,6 +4,7 @@ import { Plus, X, Loader2 } from "lucide-react";
 import { calculateAnnotations } from "@/utils/annotationCalculator";
 import { useBdrcSearch } from "@/hooks/useBdrcSearch";
 import { useBibliographyAPI } from "@/hooks/useBibliographyAPI";
+import { useTranslation } from "react-i18next";
 
 interface InstanceData {
   metadata: {
@@ -63,6 +64,8 @@ const InstanceCreationForm = forwardRef<
   InstanceCreationFormRef,
   InstanceCreationFormProps
 >(({ onSubmit, isSubmitting, onCancel, content = "" }, ref) => {
+  const { t } = useTranslation();
+  
   // State declarations
   const [type, setType] = useState<"diplomatic" | "critical">(
     "critical"
@@ -351,19 +354,19 @@ const InstanceCreationForm = forwardRef<
 
     // Validate required fields
     if (!type) {
-      setErrors({ type: "Type is required" });
+      setErrors({ type: t("instance.typeRequired") });
       return;
     }
 
     // Validate content is not empty
     if (!content || content.trim().length === 0) {
-      setErrors({ content: "Content is required. Please upload and edit a text file first." });
+      setErrors({ content: t("instance.contentRequired") });
       return;
     }
 
     // Validate BDRC ID for diplomatic type
     if (type === "diplomatic" && !bdrc?.trim()) {
-      setErrors({ bdrc: "BDRC ID is required when type is Diplomatic" });
+      setErrors({ bdrc: t("instance.bdrcIdRequired") });
       return;
     }
 
@@ -377,8 +380,7 @@ const InstanceCreationForm = forwardRef<
 
     if (hasAltTitles && !hasIncipitTitle) {
       setErrors({
-        alt_incipit_titles:
-          "Alternative incipit titles can only be set when incipit title is also provided",
+        alt_incipit_titles: t("instance.altIncipitRequiresIncipit"),
       });
       return;
     }
@@ -426,7 +428,7 @@ const InstanceCreationForm = forwardRef<
               htmlFor="copyright"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Copyright
+              {t("instance.copyright")}
             </label>
             <select
               id="copyright"
@@ -434,8 +436,8 @@ const InstanceCreationForm = forwardRef<
               onChange={(e) => setCopyright(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="public">Public</option>
-              <option value="copyrighted">Copyrighted</option>
+              <option value="public">{t("instance.public")}</option>
+              <option value="copyrighted">{t("instance.copyrighted")}</option>
             </select>
           </div>
 
@@ -446,7 +448,7 @@ const InstanceCreationForm = forwardRef<
                 htmlFor="bdrc"
                 className="block text-sm font-medium text-gray-700 mb-1"
               >
-                BDRC Instance ID <span className="text-red-500">*</span>
+                {t("instance.bdrcInstanceId")} <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 {selectedBdrc ? (
@@ -461,7 +463,7 @@ const InstanceCreationForm = forwardRef<
                     className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors flex items-center justify-between"
                   >
                     <span className="text-sm font-medium text-gray-900">{selectedBdrc.id}</span>
-                    <span className="text-xs text-blue-600">Click to change</span>
+                    <span className="text-xs text-blue-600">{t("textForm.clickToChange")}</span>
                   </div>
                 ) : (
                   // Search input
@@ -486,7 +488,7 @@ const InstanceCreationForm = forwardRef<
                       }}
                       required
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Search BDRC entries..."
+                      placeholder={t("instance.searchBdrcEntries")}
                     />
                     {/* BDRC Dropdown */}
                     {showBdrcDropdown && bdrcSearch.trim() && (
@@ -494,7 +496,7 @@ const InstanceCreationForm = forwardRef<
                         {bdrcLoading ? (
                           <div className="px-4 py-8 flex flex-col items-center justify-center">
                             <Loader2 className="w-6 h-6 text-blue-600 animate-spin mb-2" />
-                            <div className="text-sm text-gray-500">Searching...</div>
+                            <div className="text-sm text-gray-500">{t("textForm.searching")}</div>
                           </div>
                         ) : bdrcResults.length > 0 ? (
                           bdrcResults
@@ -505,10 +507,10 @@ const InstanceCreationForm = forwardRef<
                                 type="button"
                                 onClick={() => {
                                   setSelectedBdrc({
-                                    id: result.instanceId,
-                                    label: result.prefLabel,
+                                    id: result.instanceId ?? "",
+                                    label: result.prefLabel ?? "",
                                   });
-                                  setBdrc(result.instanceId);
+                                  setBdrc(result.instanceId ?? "");
                                   setShowBdrcDropdown(false);
                                 }}
                                 className="w-full px-4 py-2 text-left hover:bg-gray-200 border-b border-gray-100"
@@ -521,7 +523,7 @@ const InstanceCreationForm = forwardRef<
                             ))
                         ) : (
                           <div className="px-4 py-3 text-sm text-gray-500">
-                            No BDRC entries found
+                            {t("instance.noBdrcEntries")}
                           </div>
                         )}
                       </div>
@@ -559,7 +561,7 @@ const InstanceCreationForm = forwardRef<
               htmlFor="colophon"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Colophon
+              {t("instance.colophon")}
             </label>
             <input
               id="colophon"
@@ -567,7 +569,7 @@ const InstanceCreationForm = forwardRef<
               value={colophon}
               onChange={(e) => setColophon(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Colophon text"
+              placeholder={t("instance.colophonText")}
             />
           </div>
         </div>
@@ -583,13 +585,13 @@ const InstanceCreationForm = forwardRef<
               className="flex items-center gap-1"
             >
               <Plus className="h-4 w-4" />
-              Add Incipit Title
+              {t("instance.addIncipitTitle")}
             </Button>
           ) : (
             <div>
               <div className="flex items-center justify-between mb-3">
                 <label className="block text-sm font-medium text-gray-700">
-                  Incipit Title
+                  {t("instance.incipitTitle")}
                 </label>
                 <Button
                   type="button"
@@ -632,7 +634,7 @@ const InstanceCreationForm = forwardRef<
                       }}
                       className="w-20 sm:w-32 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     >
-                      <option value="">Lang</option>
+                      <option value="">{t("textForm.lang")}</option>
                       {LANGUAGE_OPTIONS.map((lang) => (
                         <option key={lang.code} value={lang.code}>
                           {lang.name}
@@ -646,7 +648,7 @@ const InstanceCreationForm = forwardRef<
                         updateIncipitTitle(index, "value", e.target.value)
                       }
                       className="flex-1 min-w-0 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      placeholder="Enter incipit title"
+                      placeholder={t("instance.enterIncipitTitle")}
                     />
                     <Button
                       type="button"
@@ -669,7 +671,7 @@ const InstanceCreationForm = forwardRef<
                 className="flex items-center gap-1"
               >
                 <Plus className="h-4 w-4" />
-                Add Language
+                {t("textForm.addLanguage")}
               </Button>
             </div>
           )}
@@ -680,7 +682,7 @@ const InstanceCreationForm = forwardRef<
           <div className="mt-4">
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-gray-700">
-                Alternative Incipit Titles
+                {t("instance.alternativeIncipitTitles")}
               </label>
               <Button
                 type="button"
@@ -690,7 +692,7 @@ const InstanceCreationForm = forwardRef<
                 className="flex items-center gap-1"
               >
                 <Plus className="h-4 w-4" />
-                Add
+                {t("textForm.add")}
               </Button>
             </div>
 
@@ -701,7 +703,7 @@ const InstanceCreationForm = forwardRef<
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-medium text-gray-700">
-                    Alternative {groupIndex + 1}
+                    {t("instance.alternative")} {groupIndex + 1}
                   </span>
                   <Button
                     type="button"
@@ -742,7 +744,7 @@ const InstanceCreationForm = forwardRef<
                       }}
                       className="w-20 sm:w-32 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     >
-                      <option value="">Lang</option>
+                      <option value="">{t("textForm.lang")}</option>
                       {LANGUAGE_OPTIONS.map((lang) => (
                         <option key={lang.code} value={lang.code}>
                           {lang.name}
@@ -761,7 +763,7 @@ const InstanceCreationForm = forwardRef<
                         )
                       }
                       className="flex-1 min-w-0 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                      placeholder="Enter alternative title"
+                      placeholder={t("instance.enterAlternativeTitle")}
                     />
                     {titleGroup.length > 1 && (
                       <Button
@@ -785,7 +787,7 @@ const InstanceCreationForm = forwardRef<
                   className="flex items-center gap-1 mt-2"
                 >
                   <Plus className="h-4 w-4" />
-                  Add Language
+                  {t("textForm.addLanguage")}
                 </Button>
               </div>
             ))}
@@ -812,17 +814,17 @@ const InstanceCreationForm = forwardRef<
       <div className="flex justify-center space-x-3 pt-4">
         {onCancel && (
           <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
+            {t("common.cancel")}
           </Button>
         )}
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Creating...
+              {t("instance.creating")}
             </>
           ) : (
-            "Create"
+            t("common.create")
           )}
         </Button>
       </div>
