@@ -108,10 +108,10 @@ async def create_translation(instance_id: str, translation: CreateTranslation):
     return response.json()
 
 
-@router.get("/{instance_id}/relatedto", response_model=List[RelatedInstance])
+@router.get("/{instance_id}/related", response_model=List[RelatedInstance])
 async def get_related_instances(instance_id: str):
     """Get all instances related to a specific instance"""
-    response = requests.get(f"{API_ENDPOINT}/instances/{instance_id}/relatedto")
+    response = requests.get(f"{API_ENDPOINT}/instances/{instance_id}/related")
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=response.text)
     return response.json()
