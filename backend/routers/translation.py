@@ -83,7 +83,7 @@ class RelatedInstanceMetadata(BaseModel):
 class RelatedInstance(BaseModel):
     instance_id: str
     metadata: RelatedInstanceMetadata
-    annotation: str
+    annotation: Optional[str] = None
     relationship: str
 
 
