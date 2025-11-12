@@ -124,6 +124,12 @@
     "networkError": "Network error",
     "confirmDelete": "Are you sure you want to delete this?"
   },
+  "successModal": {
+    "textCreatedSuccessfully": "Text created successfully",
+    "translatorEditorSubtitle": "Computer‑assisted translation for Tibetan texts",
+    "formatterSubtitle": "Generate clean Tables of Contents",
+    "accessTool": "Access Tool"
+  },
   "create": {
     "pageTitle": "OpenPecha Text Cataloger",
     "searchExistingText": "Search for existing text",

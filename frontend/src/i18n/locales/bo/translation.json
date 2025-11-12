@@ -124,6 +124,12 @@
     "networkError": "ཡོངས་འབྲེལ་ནོར་འཁྲུལ།",
     "confirmDelete": "ཁྱེད་ཀྱིས་འདི་སུབ་དགོས་སམ།"
   },
+  "successModal": {
+    "textCreatedSuccessfully": "དཔེ་ཆ་གསར་བཟོ་ལེགས་གྲུབ།",
+    "translatorEditorSubtitle": "བོད་ཡིག་དཔེ་ཆའི་ཆས་རོགས་བསྒྱུར་བ།",
+    "formatterSubtitle": "དཀར་ཆག་གསལ་པོ་བཟོ་བ།",
+    "accessTool": "ཆས་ལ་འབྲེལ་བ།"
+  },
   "create": {
     "pageTitle": "དཔེ་ཆའི་ཐོ་གཞུང་།",
     "searchExistingText": "དཔེ་ཆ་འཚོལ་བ།",

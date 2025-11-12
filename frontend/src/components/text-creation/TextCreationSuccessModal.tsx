@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from "react";
 import { FileText, X, CheckCircle2, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 interface TextCreationSuccessModalProps {
   message: string;
@@ -14,6 +15,7 @@ function cn(...classes: Array<string | false | null | undefined>) {
 }
 
 const TextCreationSuccessModal = ({ message, onClose, instanceId }: TextCreationSuccessModalProps) => {
+  const { t } = useTranslation();
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
 
   // Focus close button on mount (basic a11y)
@@ -104,7 +106,7 @@ const TextCreationSuccessModal = ({ message, onClose, instanceId }: TextCreation
                   <CheckCircle2 className="text-emerald-600" size={20} />
                 </div>
                 <h2 id="success-title" className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100">
-                  Text created successfully
+                  {t('successModal.textCreatedSuccessfully')}
                 </h2>
               </div>
 
@@ -138,7 +140,7 @@ const TextCreationSuccessModal = ({ message, onClose, instanceId }: TextCreation
                 {/* Translator Editor Card */}
                 <ActionCard
                   title="Translator Editor"
-                  subtitle="Computer‑assisted translation for Tibetan texts"
+                  subtitle={t('successModal.translatorEditorSubtitle')}
                   icon={
                     <div className="bg-blue-500 rounded-xl p-2 ring-1 ring-white/40">
                       <FileText className="text-white" size={22} />
@@ -150,7 +152,7 @@ const TextCreationSuccessModal = ({ message, onClose, instanceId }: TextCreation
                 {/* Formatter Card */}
                 <ActionCard
                   title="Formatter"
-                  subtitle="Generate clean Tables of Contents"
+                  subtitle={t('successModal.formatterSubtitle')}
                   icon={
                     <div className="bg-yellow-500 rounded-xl p-2 ring-1 ring-white/40">
                       {/* Inline SVG icon to avoid extra deps */}
@@ -187,6 +189,8 @@ interface ActionCardProps {
 }
 
 function ActionCard({ title, subtitle, icon, onClick }: ActionCardProps) {
+  const { t } = useTranslation();
+  
   return (
     <motion.button
       type="button"
@@ -209,7 +213,7 @@ function ActionCard({ title, subtitle, icon, onClick }: ActionCardProps) {
       <p className="mt-3 text-sm text-gray-400 min-h-[2.5rem]">{subtitle}</p>
 
       <div className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-white/90">
-        <span className="opacity-90">Access Tool</span>
+        <span className="opacity-90">{t('successModal.accessTool')}</span>
         <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
       </div>
 
