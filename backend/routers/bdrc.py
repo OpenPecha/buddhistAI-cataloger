@@ -422,14 +422,20 @@ async def bdrc_search(request: BdrcSearchRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class Creator(BaseModel):
+    creator: Optional[str] = None  # Creator entity ID like CR7FBB8DAF61E7BE24
+    agent: Optional[str] = None  # Person ID like P1KG4922
+    agentName: Optional[str] = None  # Person name from BDRC
+    role: Optional[str] = None  # Role ID like R0ER0019
+    roleName: Optional[str] = None  # Role name from BDRC
+
+
 class WorkDetail(BaseModel):
     workId: str
     instanceId: str  # BDRC instance ID from search results
     prefLabel: Optional[str] = None
     catalogInfo: Optional[str] = None
-    creator: Optional[str] = None
-    creatorAgent: Optional[str] = None  # Person data from get_person
-    creatorRole: Optional[str] = None  # Role ID like R0ER0015
+    creators: List[Creator] = []  # List of creators with their roles
     language: Optional[str] = None
     workGenre: Optional[str] = None
     workHasInstance: List[str] = []
@@ -552,6 +558,7 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
     # Define RDF namespaces
     BDO = Namespace("http://purl.bdrc.io/ontology/core/")
     TMP = Namespace("http://purl.bdrc.io/ontology/tmp/")
+    BDR = Namespace("http://purl.bdrc.io/resource/")
     
     # Constants for URI parsing
     HTTP_PREFIX = "http://"
@@ -575,9 +582,7 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
             # Extract all required fields
             pref_label = None
             catalog_info = None
-            creator = None
-            creator_agent = None
-            creator_role = None
+            creators_list = []  # List to collect all creators
             language = None
             work_genre = None
             work_has_instance = []
@@ -593,19 +598,23 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
                 catalog_info = str(obj)
                 break
                 
-            # Get creator (bdo:creator) and fetch creator details
+            # Get all creators (bdo:creator) and fetch creator details for each
             for obj in g.objects(subject=None, predicate=BDO.creator):
-                creator = str(obj)
+                creator_uri = str(obj)
                 # Extract creator ID from URI (handle both full URI and prefixed forms)
                 creator_id = None
-                if creator.startswith(HTTP_PREFIX):
+                if creator_uri.startswith(HTTP_PREFIX):
                     # Full URI: extract the ID from the end
-                    creator_id = creator.split("/")[-1]
-                elif URI_SEPARATOR in creator:
+                    creator_id = creator_uri.split("/")[-1]
+                elif URI_SEPARATOR in creator_uri:
                     # Prefixed form like "bdr:CRWA3KG118CWRAH4EZ"
-                    creator_id = creator.split(URI_SEPARATOR)[-1]
+                    creator_id = creator_uri.split(URI_SEPARATOR)[-1]
                 else:
-                    creator_id = creator
+                    creator_id = creator_uri
+                
+                # Initialize creator data
+                agent_id = None
+                role_id = None
                 
                 # Fetch creator entity details if we have an ID
                 if creator_id:
@@ -616,32 +625,41 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
                             creator_g = Graph()
                             creator_g.parse(data=creator_response.text, format="turtle")
                             
-                            # Get agent (bdo:agent) - this is what we need (like P2KG1685)
-                            for agent_obj in creator_g.objects(subject=None, predicate=BDO.agent):
+                            # Find the creator subject
+                            creator_subject = BDR[creator_id]
+                            
+                            # Get agent (bdo:agent) - this is what we need (like P1KG4922)
+                            for agent_obj in creator_g.objects(subject=creator_subject, predicate=BDO.agent):
                                 agent_uri = str(agent_obj)
-                                # Extract agent ID (like P2KG1685)
+                                # Extract agent ID (like P1KG4922)
                                 if agent_uri.startswith(HTTP_PREFIX):
-                                    creator_agent = agent_uri.split("/")[-1]
+                                    agent_id = agent_uri.split("/")[-1]
                                 elif URI_SEPARATOR in agent_uri:
-                                    creator_agent = agent_uri.split(URI_SEPARATOR)[-1]
+                                    agent_id = agent_uri.split(URI_SEPARATOR)[-1]
                                 else:
-                                    creator_agent = agent_uri
+                                    agent_id = agent_uri
                                 break
                             
                             # Get role (bdo:role) - optional
-                            for role_obj in creator_g.objects(subject=None, predicate=BDO.role):
+                            for role_obj in creator_g.objects(subject=creator_subject, predicate=BDO.role):
                                 role_uri = str(role_obj)
-                                # Extract role ID (like R0ER0015)
+                                # Extract role ID (like R0ER0019)
                                 if role_uri.startswith(HTTP_PREFIX):
-                                    creator_role = role_uri.split("/")[-1]
+                                    role_id = role_uri.split("/")[-1]
                                 elif URI_SEPARATOR in role_uri:
-                                    creator_role = role_uri.split(URI_SEPARATOR)[-1]
+                                    role_id = role_uri.split(URI_SEPARATOR)[-1]
                                 else:
-                                    creator_role = role_uri
+                                    role_id = role_uri
                                 break
                     except Exception as e:
                         logging.warning(f"Failed to fetch creator details for {creator_id}: {str(e)}")
-                break
+                
+                # Store creator info (will fetch names later)
+                creators_list.append({
+                    "creator_id": creator_id,
+                    "agent_id": agent_id,
+                    "role_id": role_id
+                })
                 
             # Get language (bdo:language)
             for obj in g.objects(subject=None, predicate=BDO.language):
@@ -671,24 +689,35 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
                     entity_score = None
                 break
             
-            # Get person detail using the creator_agent
-            person_name = None
-            if creator_agent:
-                person_name = await get_person_from_bdrc(creator_agent)
-            
-            # Get role detail using the creator_role
-            role_name = None
-            if creator_role:
-                role_name = await get_role_from_bdrc(creator_role)
+            # Fetch person and role names for all creators
+            creators_objects = []
+            for creator_info in creators_list:
+                agent_name = None
+                role_name = None
+                
+                # Get person name if agent exists
+                if creator_info["agent_id"]:
+                    agent_name = await get_person_from_bdrc(creator_info["agent_id"])
+                
+                # Get role name if role exists
+                if creator_info["role_id"]:
+                    role_name = await get_role_from_bdrc(creator_info["role_id"])
+                
+                # Create Creator object
+                creators_objects.append(Creator(
+                    creator=creator_info["creator_id"],
+                    agent=creator_info["agent_id"],
+                    agentName=agent_name,
+                    role=creator_info["role_id"],
+                    roleName=role_name
+                ))
             
             work_details.append(WorkDetail(
                 workId=work_id,
                 instanceId=instance_id,
                 prefLabel=converter.toUnicode(pref_label),
                 catalogInfo=catalog_info,
-                creator=creator,
-                creatorAgent=person_name if person_name else creator_agent,
-                creatorRole=role_name if role_name else creator_role,
+                creators=creators_objects,
                 language=language,
                 workGenre=work_genre,
                 workHasInstance=work_has_instance,
