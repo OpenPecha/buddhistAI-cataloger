@@ -4,7 +4,7 @@ from typing import List, Optional, Dict, Any
 import requests
 import json
 import logging
-from rdflib import Graph, Namespace
+from rdflib import Graph, Namespace, Literal
 from rdflib.namespace import SKOS
 import os
 from dotenv import load_dotenv
@@ -428,7 +428,7 @@ class WorkDetail(BaseModel):
     prefLabel: Optional[str] = None
     catalogInfo: Optional[str] = None
     creator: Optional[str] = None
-    creatorAgent: Optional[Person] = None  # Person data from get_person
+    creatorAgent: Optional[str] = None  # Person data from get_person
     creatorRole: Optional[str] = None  # Role ID like R0ER0015
     language: Optional[str] = None
     workGenre: Optional[str] = None
@@ -445,6 +445,104 @@ class BdrcPersonSearchRequest(BaseModel):
     search_query: str
     from_: int = Field(default=0, alias="from")
     size: int = 20
+
+
+async def get_person_from_bdrc(person_id: str) -> Optional[str]:
+    """Fetch person details from BDRC RDF endpoint and return prefLabel"""
+    try:
+        # Fetch RDF data from BDRC
+        url = f"https://ldspdi.bdrc.io/resource/{person_id}.ttl"
+        response = requests.get(url, timeout=10)
+        
+        if response.status_code != 200:
+            logging.warning(f"Failed to fetch person {person_id}: HTTP {response.status_code}")
+            return None
+            
+        # Parse RDF/Turtle data
+        g = Graph()
+        g.parse(data=response.text, format="turtle")
+        
+        # Find the person subject (bdr:{person_id})
+        BDR = Namespace("http://purl.bdrc.io/resource/")
+        person_subject = BDR[person_id]
+        
+        # Get prefLabel (skos:prefLabel) for this person - can have language tags
+        for obj in g.objects(subject=person_subject, predicate=SKOS.prefLabel):
+            # Check if it's a Literal with language tag
+            if isinstance(obj, Literal) and obj.language:
+                lang = obj.language.lower()
+                name = str(obj)
+                
+                # If English, return as is
+                if lang == "en":
+                    return name
+                # If Tibetan (bo or bo-x-ewts), convert to Unicode
+                elif lang.startswith("bo"):
+                    return converter.toUnicode(name)
+                # For other languages, return as is
+                else:
+                    return name
+            else:
+                # No language tag, return as is
+                return str(obj)
+        
+        return None
+        
+    except Exception as e:
+        logging.error(f"Error fetching person details for {person_id}: {str(e)}")
+        return None
+
+
+async def get_role_from_bdrc(role_id: str) -> Optional[str]:
+    """Fetch role details from BDRC RDF endpoint and return prefLabel"""
+    try:
+        # Fetch RDF data from BDRC
+        url = f"https://ldspdi.bdrc.io/resource/{role_id}.ttl"
+        response = requests.get(url, timeout=10)
+        
+        if response.status_code != 200:
+            logging.warning(f"Failed to fetch role {role_id}: HTTP {response.status_code}")
+            return None
+            
+        # Parse RDF/Turtle data
+        g = Graph()
+        g.parse(data=response.text, format="turtle")
+        
+        # Find the role subject (bdr:{role_id})
+        BDR = Namespace("http://purl.bdrc.io/resource/")
+        role_subject = BDR[role_id]
+        
+        # Collect all prefLabels with their language tags
+        pref_labels = []
+        for obj in g.objects(subject=role_subject, predicate=SKOS.prefLabel):
+            if isinstance(obj, Literal) and obj.language:
+                lang = obj.language.lower()
+                name = str(obj)
+                pref_labels.append((lang, name))
+            else:
+                # No language tag, add as fallback
+                pref_labels.append(("", str(obj)))
+        
+        if not pref_labels:
+            return None
+        
+        # Prioritize: English first, then Tibetan (converted), then others
+        # First, try to find English
+        for lang, name in pref_labels:
+            if lang == "en":
+                return name
+        
+        # If no English, try Tibetan (convert to Unicode)
+        for lang, name in pref_labels:
+            if lang.startswith("bo"):
+                return converter.toUnicode(name)
+        
+        # Otherwise, return the first available label
+        return pref_labels[0][1]
+        
+    except Exception as e:
+        logging.error(f"Error fetching role details for {role_id}: {str(e)}")
+        return None
 
 
 async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetail]:
@@ -573,17 +671,15 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
                     entity_score = None
                 break
             
-            # Fetch person data if creator_agent exists
-            person_data = None
+            # Get person detail using the creator_agent
+            person_name = None
             if creator_agent:
-                try:
-                    person_data = await get_person(creator_agent)
-                except HTTPException:
-                    # Person not found in database, keep person_data as None
-                    logging.warning(f"Person {creator_agent} not found in database")
-                except Exception as e:
-                    # Other errors fetching person data
-                    logging.warning(f"Error fetching person data for {creator_agent}: {str(e)}")
+                person_name = await get_person_from_bdrc(creator_agent)
+            
+            # Get role detail using the creator_role
+            role_name = None
+            if creator_role:
+                role_name = await get_role_from_bdrc(creator_role)
             
             work_details.append(WorkDetail(
                 workId=work_id,
@@ -591,8 +687,8 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
                 prefLabel=converter.toUnicode(pref_label),
                 catalogInfo=catalog_info,
                 creator=creator,
-                creatorAgent=person_data,
-                creatorRole=creator_role,
+                creatorAgent=person_name if person_name else creator_agent,
+                creatorRole=role_name if role_name else creator_role,
                 language=language,
                 workGenre=work_genre,
                 workHasInstance=work_has_instance,
