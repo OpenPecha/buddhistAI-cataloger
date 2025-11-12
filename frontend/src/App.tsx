@@ -6,6 +6,8 @@ import Instance from './pages/Instance';
 import Headers from './components/layout/Header';
 import Index from './pages/Index';
 import Create from './pages/Create';
+import CreateTranslation from './pages/CreateTranslation';
+import CreateCommentary from './pages/CreateCommentary';
 
 function App() {
   return (
@@ -24,6 +26,8 @@ function App() {
               } />
           <Route path="/texts/:text_id/instances" element={<TextInstanceCRUD />} />
           <Route path="/texts/:text_id/instances/:instance_id" element={<Instance />} />
+          <Route path="/texts/:text_id/instances/:instance_id/translation" element={<CreateTranslation />} />
+          <Route path="/texts/:text_id/instances/:instance_id/commentary" element={<CreateCommentary />} />
         </Routes>
         </div>
     </div>

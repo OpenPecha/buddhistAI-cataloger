@@ -18,9 +18,10 @@ interface TextEditorViewProps {
   isCreatingNewText?: boolean;
   hasIncipit?: boolean;
   hasTitle?: boolean;
+  allowedTypes?: ("title" | "alt_title" | "colophon" | "incipit" | "alt_incipit" | "person")[];
 }
 
-const TextEditorView = ({ content, filename, onChange, editable = false, onTextSelect, isCreatingNewText = true, hasIncipit = false, hasTitle = false }: TextEditorViewProps) => {
+const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isCreatingNewText = true, hasIncipit = false, hasTitle = false, allowedTypes }: TextEditorViewProps) => {
   const { t, i18n } = useTranslation();
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
@@ -135,6 +136,7 @@ const TextEditorView = ({ content, filename, onChange, editable = false, onTextS
           isCreatingNewText={isCreatingNewText}
           hasIncipit={hasIncipit}
           hasTitle={hasTitle}
+          allowedTypes={allowedTypes}
         />
       )}
       

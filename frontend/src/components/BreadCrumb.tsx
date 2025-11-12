@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { Home, Book, FileText } from 'lucide-react';
+import { Book, FileText } from 'lucide-react';
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -9,7 +9,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { useInstance, useText } from '@/hooks/useTexts';
+import { useTranslation } from 'react-i18next';
 
 interface BreadcrumbItem {
   label: string;
@@ -26,10 +26,9 @@ interface BreadCrumbProps {
 }
 
 const BreadCrumb: React.FC<BreadCrumbProps> = ({ items, className = '',textname,instancename,personname }) => {
+  const { t } = useTranslation();
   const location = useLocation();
   const params = useParams();
-  const {data:text} = useText(params.text_id || '');
-  const {data:instance} = useInstance(params.instance_id || '');
   // Generate breadcrumb items based on current route
   const generateBreadcrumbs = (): BreadcrumbItem[] => {
     const pathSegments = location.pathname.split('/').filter(Boolean);
@@ -39,7 +38,7 @@ const BreadCrumb: React.FC<BreadCrumbProps> = ({ items, className = '',textname,
     // Handle different routes
     if (pathSegments.includes('texts')) {
       breadcrumbs.push({ 
-        label: 'Texts', 
+        label: t('header.texts'), 
         href: '/texts', 
         icon: <Book className="w-4 h-4" /> 
       });
