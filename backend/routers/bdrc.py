@@ -547,7 +547,13 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
                 
             # Get language (bdo:language)
             for obj in g.objects(subject=None, predicate=BDO.language):
-                language = str(obj)
+                language_uri = str(obj)
+                # Extract language code from URI (e.g., "LangBo" -> "bo")
+                language_code = language_uri.split("/")[-1]
+                if language_code.startswith("Lang"):
+                    language = language_code[4:].lower()  # Remove "Lang" prefix and lowercase
+                else:
+                    language = language_code.lower()
                 break
                 
             # Get workGenre (bdo:workGenre)
