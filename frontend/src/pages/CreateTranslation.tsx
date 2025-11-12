@@ -11,6 +11,8 @@ import { MultilevelCategorySelector } from '@/components/MultilevelCategorySelec
 import type { Person } from '@/types/person';
 import { useInstance } from '@/hooks/useTexts';
 import type { OpenPechaTextInstance } from '@/types/text';
+import { useBibliography } from '@/contexts/BibliographyContext';
+import TextCreationSuccessModal from '@/components/text-creation/TextCreationSuccessModal';
 
 const CreateTranslation = () => {
   const { text_id, instance_id } = useParams();
@@ -43,6 +45,15 @@ const CreateTranslation = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+
+  // Bibliography annotations
+  const { clearAnnotations } = useBibliography();
+
+  // Clear annotations when component mounts (to clear any stale annotations from previous visits)
+  useEffect(() => {
+    clearAnnotations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Debounce person search
   useEffect(() => {
@@ -192,12 +203,10 @@ const CreateTranslation = () => {
       // Create translation
       await createTranslation(instance_id || '', translationData);
       
-      setSuccess(true);
+      // Clear bibliography annotations after successful submission
+      clearAnnotations();
       
-      // Navigate back after 2 seconds
-      setTimeout(() => {
-        navigate(`/texts/${text_id}/instances/${instance_id}`);
-      }, 2000);
+      setSuccess(true);
     } catch (err: any) {
       setError(err.message || t('messages.createError'));
     } finally {
@@ -205,23 +214,21 @@ const CreateTranslation = () => {
     }
   };
 
+  // Handle modal close - navigate back to instance page
+  const handleModalClose = () => {
+    setSuccess(false);
+    navigate(`/texts/${text_id}/instances/${instance_id}`);
+  };
+
   return (
     <>
       {/* Success Modal */}
       {success && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">{t('messages.createSuccess')}</h3>
-              <p className="text-sm text-gray-500">{t('textForm.translation')} created successfully!</p>
-            </div>
-          </div>
-        </div>
+        <TextCreationSuccessModal
+          message={`${t('textForm.translation')} ${t('messages.createSuccess').toLowerCase()}`}
+          onClose={handleModalClose}
+          instanceId={instance_id || null}
+        />
       )}
 
       {/* Error Toast */}

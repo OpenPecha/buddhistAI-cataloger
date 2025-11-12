@@ -12,26 +12,55 @@ const handleApiResponse = async (response: Response, customMessages?: { 400?: st
     if (contentType && contentType.includes('application/json')) {
       try {
         const errorData = await response.json();
-        errorMessage = errorData.detail || errorData.details || errorData.message || errorData.error;
+        let rawMessage = errorData.detail || errorData.details || errorData.message || errorData.error;
+        
+        // If detail is a JSON string, parse it to extract the actual error message
+        // Format: detail = "{\"error\":\"Translation must have a different language...\"}"
+        if (rawMessage && typeof rawMessage === 'string') {
+          const trimmedMessage = rawMessage.trim();
+          
+          // Try to parse as JSON if it looks like a JSON string
+          try {
+            const parsed = JSON.parse(trimmedMessage);
+            if (parsed.error) {
+              errorMessage = parsed.error;
+            } else if (parsed.detail) {
+              // Nested detail field
+              try {
+                const nestedParsed = JSON.parse(parsed.detail.trim());
+                errorMessage = nestedParsed.error || parsed.detail.trim();
+              } catch {
+                errorMessage = parsed.detail.trim();
+              }
+            } else {
+              errorMessage = trimmedMessage;
+            }
+          } catch {
+            // If parsing fails, use the raw message as is
+            errorMessage = trimmedMessage;
+          }
+        } else {
+          errorMessage = rawMessage || '';
+        }
       } catch {
         // If JSON parsing fails, ignore and use default message
       }
     }
 
-    // Provide user-friendly messages based on status code
+    // Use backend error message if available, otherwise fall back to custom messages or defaults
     switch (response.status) {
       case 404:
-        throw new Error(customMessages?.['404'] || errorMessage || 'The requested resource was not found. It may have been deleted or the link is incorrect.');
+        throw new Error(errorMessage || customMessages?.['404'] || 'The requested resource was not found. It may have been deleted or the link is incorrect.');
       case 500:
       case 502:
       case 503:
-        throw new Error(customMessages?.['500'] || errorMessage || 'The server is experiencing issues. Please try again later.');
+        throw new Error(errorMessage || customMessages?.['500'] || 'The server is experiencing issues. Please try again later.');
       case 400:
-        throw new Error(errorMessage || 'Invalid request. Please check your data and try again.');
+        throw new Error(errorMessage || customMessages?.['400'] || 'Invalid request. Please check your data and try again.');
       case 401:
-        throw new Error('You are not authorized to access this resource.');
+        throw new Error(errorMessage || 'You are not authorized to access this resource.');
       case 403:
-        throw new Error('Access to this resource is forbidden.');
+        throw new Error(errorMessage || 'Access to this resource is forbidden.');
       default:
         throw new Error(errorMessage || `An error occurred while connecting to the server (Error ${response.status}).`);
     }
@@ -189,11 +218,8 @@ export const createTranslation = async (instanceId: string, translationData: any
       body: JSON.stringify(translationData),
     });
     
-    return await handleApiResponse(response, {
-      400: 'Invalid translation data. Please check all fields.',
-      404: 'Instance not found. Cannot create translation for non-existent instance.',
-      500: 'Server error while creating translation. Please try again.'
-    });
+    // Let handleApiResponse extract and show the actual backend error message
+    return await handleApiResponse(response);
   } catch (error) {
     if (error instanceof Error) {
       throw error;
@@ -212,11 +238,8 @@ export const createCommentary = async (instanceId: string, commentaryData: any):
       body: JSON.stringify(commentaryData),
     });
     
-    return await handleApiResponse(response, {
-      400: 'Invalid commentary data. Please check all fields.',
-      404: 'Instance not found. Cannot create commentary for non-existent instance.',
-      500: 'Server error while creating commentary. Please try again.'
-    });
+    // Let handleApiResponse extract and show the actual backend error message
+    return await handleApiResponse(response);
   } catch (error) {
     if (error instanceof Error) {
       throw error;
