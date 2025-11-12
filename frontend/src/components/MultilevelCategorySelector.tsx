@@ -18,7 +18,6 @@ interface MultilevelCategorySelectorProps {
 
 export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProps> = ({
   onCategorySelect,
-  selectedCategoryId,
 }) => {
   const { t } = useTranslation();
   const [navigationPath, setNavigationPath] = useState<CategoryLevel[]>([]);
@@ -68,12 +67,6 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
   };
 
   // Reset selection
-  const handleReset = () => {
-    setSelectedCategory(null);
-    setNavigationPath([]);
-    setCurrentParentId(null);
-    onCategorySelect('', []);
-  };
 
   return (
     <div className="space-y-3">
@@ -88,6 +81,7 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
         {navigationPath.length > 0 && (
           <div className="flex items-center gap-1 text-xs flex-wrap  px-3 py-2 rounded-md ">
             <button
+              type="button"
               onClick={() => handleBreadcrumbClick(-1)}
               className="flex items-center gap-1 px-2 py-1 rounded hover:bg-gray-200 transition-colors text-gray-600 hover:text-gray-900"
             >
@@ -98,6 +92,7 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
               <div key={level.id} className="flex items-center gap-1">
                 <ChevronRight className="h-3 w-3 text-gray-400" />
                 <button
+                  type="button"
                   onClick={() => handleBreadcrumbClick(index)}
                   className="px-2 py-1 rounded hover:bg-gray-200 transition-colors text-gray-600 hover:text-gray-900"
                 >
@@ -131,6 +126,7 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
                 const isSelected = selectedCategory?.category.id === category.id;
                 return (
                   <button
+                    type="button"
                     key={category.id}
                     onClick={() => handleCategoryClick(category)}
                     className={`

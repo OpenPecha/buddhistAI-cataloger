@@ -178,3 +178,49 @@ export const fetchTextByBdrcId = async (bdrcId: string): Promise<OpenPechaText |
     return null;
   }
 };
+
+export const createTranslation = async (instanceId: string, translationData: any): Promise<any> => {
+  try {
+    const response = await fetch(`${API_URL}/instances/${instanceId}/translation`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(translationData),
+    });
+    
+    return await handleApiResponse(response, {
+      400: 'Invalid translation data. Please check all fields.',
+      404: 'Instance not found. Cannot create translation for non-existent instance.',
+      500: 'Server error while creating translation. Please try again.'
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unable to create translation. Please check your connection and try again.');
+  }
+};
+
+export const createCommentary = async (instanceId: string, commentaryData: any): Promise<any> => {
+  try {
+    const response = await fetch(`${API_URL}/instances/${instanceId}/commentary`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(commentaryData),
+    });
+    
+    return await handleApiResponse(response, {
+      400: 'Invalid commentary data. Please check all fields.',
+      404: 'Instance not found. Cannot create commentary for non-existent instance.',
+      500: 'Server error while creating commentary. Please try again.'
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unable to create commentary. Please check your connection and try again.');
+  }
+};
