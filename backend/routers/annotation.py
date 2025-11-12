@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Literal
 import requests
 import os
 from dotenv import load_dotenv
@@ -70,6 +70,37 @@ class UpdateAnnotation(BaseModel):
     data: Union[UpdateAlignmentAnnotationData, UpdateSegmentationAnnotationData]
 
 
+# Models for POST (create annotation)
+class CreateAlignmentTargetAnnotationItem(BaseModel):
+    span: Span
+    index: int
+
+
+class CreateAlignmentAnnotationItem(BaseModel):
+    span: Span
+    index: int
+    alignment_index: List[int]
+
+
+class CreateAlignmentAnnotation(BaseModel):
+    type: Literal["alignment"]
+    target_manifestation_id: str
+    target_annotation: List[CreateAlignmentTargetAnnotationItem]
+    alignment_annotation: List[CreateAlignmentAnnotationItem]
+
+
+class CreateSegmentationAnnotationItem(BaseModel):
+    span: Span
+
+
+class CreateSegmentationAnnotation(BaseModel):
+    type: Literal["segmentation"]
+    annotation: List[CreateSegmentationAnnotationItem]
+
+
+CreateAnnotation = Union[CreateAlignmentAnnotation, CreateSegmentationAnnotation]
+
+
 class AnnotationResponse(BaseModel):
     id: str
     type: str
@@ -93,5 +124,16 @@ async def update_annotation(annotation_id: str, annotation: UpdateAnnotation):
         json=annotation.dict()
     )
     if response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail=response.text)
+    return response.json()
+
+@router.post("/{instance_id}/annotation")
+async def create_annotation(instance_id: str, annotation: CreateAnnotation):
+    """Create an annotation for a specific instance"""
+    response = requests.post(
+        f"{API_ENDPOINT}/annotations/{instance_id}/annotation", 
+        json=annotation.dict()
+    )
+    if response.status_code != 201:
         raise HTTPException(status_code=response.status_code, detail=response.text)
     return response.json()

@@ -9,6 +9,8 @@ from rdflib.namespace import SKOS
 import os
 from dotenv import load_dotenv
 import pyewts
+
+from routers.person import get_person, Person
 load_dotenv(override=True)
 
 router = APIRouter()
@@ -379,6 +381,7 @@ async def bdrc_search(request: BdrcSearchRequest):
                 limited_pairs = work_instance_pairs[:5]  # Only take first 5 pairs
                 work_details = await fetch_work_details(limited_pairs)
             
+            
             # Return only work details for Instance searches
             return work_details
         
@@ -425,6 +428,8 @@ class WorkDetail(BaseModel):
     prefLabel: Optional[str] = None
     catalogInfo: Optional[str] = None
     creator: Optional[str] = None
+    creatorAgent: Optional[Person] = None  # Person data from get_person
+    creatorRole: Optional[str] = None  # Role ID like R0ER0015
     language: Optional[str] = None
     workGenre: Optional[str] = None
     workHasInstance: List[str] = []
@@ -450,11 +455,16 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
     BDO = Namespace("http://purl.bdrc.io/ontology/core/")
     TMP = Namespace("http://purl.bdrc.io/ontology/tmp/")
     
+    # Constants for URI parsing
+    HTTP_PREFIX = "http://"
+    URI_SEPARATOR = ":"
+    
     for work_id, instance_id in work_instance_pairs:
         try:
             # Fetch RDF data from BDRC
             url = f"https://ldspdi.bdrc.io/resource/{work_id}.ttl"
             response = requests.get(url, timeout=10)
+            print(response.text)
             
             if response.status_code != 200:
                 logging.warning(f"Failed to fetch work {work_id}: HTTP {response.status_code}")
@@ -468,6 +478,8 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
             pref_label = None
             catalog_info = None
             creator = None
+            creator_agent = None
+            creator_role = None
             language = None
             work_genre = None
             work_has_instance = []
@@ -483,9 +495,54 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
                 catalog_info = str(obj)
                 break
                 
-            # Get creator (bdo:creator)
+            # Get creator (bdo:creator) and fetch creator details
             for obj in g.objects(subject=None, predicate=BDO.creator):
                 creator = str(obj)
+                # Extract creator ID from URI (handle both full URI and prefixed forms)
+                creator_id = None
+                if creator.startswith(HTTP_PREFIX):
+                    # Full URI: extract the ID from the end
+                    creator_id = creator.split("/")[-1]
+                elif URI_SEPARATOR in creator:
+                    # Prefixed form like "bdr:CRWA3KG118CWRAH4EZ"
+                    creator_id = creator.split(URI_SEPARATOR)[-1]
+                else:
+                    creator_id = creator
+                
+                # Fetch creator entity details if we have an ID
+                if creator_id:
+                    try:
+                        creator_url = f"https://ldspdi.bdrc.io/resource/{creator_id}.ttl"
+                        creator_response = requests.get(creator_url, timeout=10)
+                        if creator_response.status_code == 200:
+                            creator_g = Graph()
+                            creator_g.parse(data=creator_response.text, format="turtle")
+                            
+                            # Get agent (bdo:agent) - this is what we need (like P2KG1685)
+                            for agent_obj in creator_g.objects(subject=None, predicate=BDO.agent):
+                                agent_uri = str(agent_obj)
+                                # Extract agent ID (like P2KG1685)
+                                if agent_uri.startswith(HTTP_PREFIX):
+                                    creator_agent = agent_uri.split("/")[-1]
+                                elif URI_SEPARATOR in agent_uri:
+                                    creator_agent = agent_uri.split(URI_SEPARATOR)[-1]
+                                else:
+                                    creator_agent = agent_uri
+                                break
+                            
+                            # Get role (bdo:role) - optional
+                            for role_obj in creator_g.objects(subject=None, predicate=BDO.role):
+                                role_uri = str(role_obj)
+                                # Extract role ID (like R0ER0015)
+                                if role_uri.startswith(HTTP_PREFIX):
+                                    creator_role = role_uri.split("/")[-1]
+                                elif URI_SEPARATOR in role_uri:
+                                    creator_role = role_uri.split(URI_SEPARATOR)[-1]
+                                else:
+                                    creator_role = role_uri
+                                break
+                    except Exception as e:
+                        logging.warning(f"Failed to fetch creator details for {creator_id}: {str(e)}")
                 break
                 
             # Get language (bdo:language)
@@ -510,12 +567,26 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
                     entity_score = None
                 break
             
+            # Fetch person data if creator_agent exists
+            person_data = None
+            if creator_agent:
+                try:
+                    person_data = await get_person(creator_agent)
+                except HTTPException:
+                    # Person not found in database, keep person_data as None
+                    logging.warning(f"Person {creator_agent} not found in database")
+                except Exception as e:
+                    # Other errors fetching person data
+                    logging.warning(f"Error fetching person data for {creator_agent}: {str(e)}")
+            
             work_details.append(WorkDetail(
                 workId=work_id,
                 instanceId=instance_id,
                 prefLabel=converter.toUnicode(pref_label),
                 catalogInfo=catalog_info,
                 creator=creator,
+                creatorAgent=person_data,
+                creatorRole=creator_role,
                 language=language,
                 workGenre=work_genre,
                 workHasInstance=work_has_instance,
