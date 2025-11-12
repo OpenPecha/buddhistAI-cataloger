@@ -98,7 +98,18 @@ class CreateSegmentationAnnotation(BaseModel):
     annotation: List[CreateSegmentationAnnotationItem]
 
 
-CreateAnnotation = Union[CreateAlignmentAnnotation, CreateSegmentationAnnotation]
+class CreateTableOfContentsAnnotationItem(BaseModel):
+    id: str
+    title: str
+    segments: List[str]
+
+
+class CreateTableOfContentsAnnotation(BaseModel):
+    type: Literal["table_of_contents"]
+    annotation: List[CreateTableOfContentsAnnotationItem]
+
+
+CreateAnnotation = Union[CreateAlignmentAnnotation, CreateSegmentationAnnotation, CreateTableOfContentsAnnotation]
 
 
 class AnnotationResponse(BaseModel):
