@@ -433,9 +433,9 @@ class Creator(BaseModel):
 class WorkDetail(BaseModel):
     workId: str
     instanceId: str  # BDRC instance ID from search results
-    prefLabel: Optional[str] = None
+    title: Optional[str] = None
     catalogInfo: Optional[str] = None
-    creators: List[Creator] = []  # List of creators with their roles
+    contributors: List[Creator] = []  # List of creators with their roles
     language: Optional[str] = None
     workGenre: Optional[str] = None
     workHasInstance: List[str] = []
@@ -715,9 +715,9 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
             work_details.append(WorkDetail(
                 workId=work_id,
                 instanceId=instance_id,
-                prefLabel=converter.toUnicode(pref_label),
+                title=converter.toUnicode(pref_label),
                 catalogInfo=catalog_info,
-                creators=creators_objects,
+                contributors=creators_objects,
                 language=language,
                 workGenre=work_genre,
                 workHasInstance=work_has_instance,
