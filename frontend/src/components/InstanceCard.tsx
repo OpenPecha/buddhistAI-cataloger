@@ -3,12 +3,17 @@ import type { OpenPechaTextInstance, SegmentationAnnotation } from '@/types/text
 import { useAnnnotation } from '@/hooks/useTexts';
 import { Button } from './ui/button';
 import FormattedTextDisplay from './FormattedTextDisplay';
+import { useTranslation } from 'react-i18next';
+import { useNavigate, useParams } from 'react-router-dom';
 
 interface InstanceCardProps {
   instance: OpenPechaTextInstance;
 }
 
 const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { text_id, instance_id } = useParams();
   const [expandedAnnotations, setExpandedAnnotations] = useState<string[]>([]);
 
   // Find segmentation annotation ID from instance.annotations array
@@ -111,14 +116,43 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
     <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">{t('editor.content')}</h3>
+            </div>
           </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">Content</h3>
+          
+          {/* Translation and Commentary Buttons */}
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => {
+                navigate(`/texts/${text_id}/instances/${instance_id}/translation`);
+              }}
+              className="group relative px-5 py-2.5 bg-gradient-to-r from-sky-400 to-cyan-500 hover:from-sky-500 hover:to-cyan-600 text-white font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+              </svg>
+              {t('textForm.translation')}
+            </Button>
+            
+            <Button
+              onClick={() => {
+                navigate(`/texts/${text_id}/instances/${instance_id}/commentary`);
+              }}
+              className="group relative px-5 py-2.5 bg-gradient-to-r from-emerald-400 to-green-500 hover:from-emerald-500 hover:to-green-600 text-white font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+              </svg>
+              {t('textForm.commentary')}
+            </Button>
           </div>
         </div>
       </div>

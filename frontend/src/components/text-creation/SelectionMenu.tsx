@@ -12,9 +12,10 @@ interface SelectionMenuProps {
   isCreatingNewText?: boolean;
   hasIncipit?: boolean;
   hasTitle?: boolean;
+  allowedTypes?: ("title" | "alt_title" | "colophon" | "incipit" | "alt_incipit" | "person")[];
 }
 
-const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, onClose, isCreatingNewText = true, hasIncipit = false, hasTitle = false }: SelectionMenuProps) => {
+const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, onClose, hasIncipit = false, hasTitle = false, allowedTypes }: SelectionMenuProps) => {
   const { t } = useTranslation();
   const menuRef = useRef<HTMLDivElement>(null);
   const [adjustedPosition, setAdjustedPosition] = useState(position);
@@ -148,14 +149,15 @@ const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, o
     },
   ];
 
-  // Filter menu items based on whether we're creating new text or working with existing text
-  // For existing text, hide Title, Alternative Title, and Person options
-   
+  // Filter menu items based on allowedTypes prop
+  const filteredMenuItems = allowedTypes 
+    ? allMenuItems.filter(item => allowedTypes.includes(item.type))
+    : allMenuItems;
 
   return (
     <div
       ref={menuRef}
-      className={`fixed z-50 rounded-xl shadow-2xl border border-gray-200/60 backdrop-blur-sm bg-white/95 p-1.5 min-w-[200px] transition-all duration-200 ${
+      className={`absolute z-50 rounded-xl shadow-2xl border border-gray-200/60 backdrop-blur-sm bg-white/95 p-1.5 min-w-[200px] transition-all duration-200 ${
         isVisible ? "opacity-100 scale-100" : "opacity-0 scale-95"
       }`}
       style={{
@@ -164,7 +166,7 @@ const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, o
       }}
     >
       <div className="space-y-1">
-        {allMenuItems.map((item, index) => {
+        {filteredMenuItems.map((item, index) => {
           // Disable alt_incipit if there's no incipit title
           // Disable alt_title if there's no main title
           const isDisabled = 

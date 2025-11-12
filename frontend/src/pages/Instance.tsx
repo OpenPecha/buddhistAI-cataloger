@@ -3,8 +3,10 @@ import { useParams } from 'react-router-dom';
 import InstanceCard from '../components/InstanceCard';
 import BreadCrumb from '../components/BreadCrumb';
 import type { OpenPechaTextInstance } from '@/types/text';
+import { useTranslation } from 'react-i18next';
 
 function Instance() {
+  const { t } = useTranslation();
   const { instance_id } = useParams();
   const {
     data: instance,
@@ -17,7 +19,7 @@ function Instance() {
     return (
       <div className="flex items-center justify-center min-h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2 text-gray-600">Loading details...</span>
+        <span className="ml-2 text-gray-600">{t('common.loading')}</span>
       </div>
     );
   }
@@ -32,9 +34,9 @@ function Instance() {
             </svg>
           </div>
           <div>
-            <h3 className="text-sm font-medium text-red-800">Error loading details</h3>
+            <h3 className="text-sm font-medium text-red-800">{t('common.error')}</h3>
             <p className="text-sm text-red-600 mt-1">
-              {error instanceof Error ? error.message : 'An unknown error occurred'}
+              {error instanceof Error ? error.message : t('messages.loadError')}
             </p>
           </div>
         </div>
@@ -42,7 +44,7 @@ function Instance() {
           onClick={() => refetch()}
           className="mt-3 px-4 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors text-sm font-medium"
         >
-          Try Again
+          {t('textsPage.retry')}
         </button>
       </div>
     );
@@ -56,12 +58,12 @@ function Instance() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
         </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Details Not Found</h3>
-        <p className="text-gray-500">The requested details could not be found.</p>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">{t('messages.loadError')}</h3>
+        <p className="text-gray-500">{t('messages.loadError')}</p>
       </div>
     );
   }
-  const title = instance.metadata?.colophon || 'Instance Details';
+  const title = instance.metadata?.colophon || t('header.instances');
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
