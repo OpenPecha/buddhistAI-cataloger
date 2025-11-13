@@ -95,7 +95,7 @@ class CreateInstanceResponse(BaseModel):
     id: str
 
 
-@router.get("", response_model=List[Text])
+@router.get("")
 async def get_texts(
     limit: int = 30,
     offset: int = 0,
@@ -134,7 +134,7 @@ async def get_texts(
             detail=f"Error connecting to OpenPecha API: {str(e)}"
         )
 
-@router.post("", response_model=CreateTextResponse, status_code=201)
+@router.post("", status_code=201)
 async def create_text(text: CreateText):
     if not API_ENDPOINT:
         raise HTTPException(
@@ -186,7 +186,7 @@ async def get_text(id: str):
             detail=f"Error connecting to OpenPecha API: {str(e)}"
         )
 
-@router.get("/{id}/instances", response_model=List[InstanceListItem])
+@router.get("/{id}/instances")
 async def get_instances(id: str):
     if not API_ENDPOINT:
         raise HTTPException(
@@ -207,7 +207,7 @@ async def get_instances(id: str):
             detail=f"Error connecting to OpenPecha API: {str(e)}"
         )
 
-@router.post("/{id}/instances", response_model=CreateInstanceResponse, status_code=201)
+@router.post("/{id}/instances",  status_code=201)
 async def create_instance(id: str, instance: CreateInstance):
     if not API_ENDPOINT:
         raise HTTPException(
@@ -237,7 +237,7 @@ async def create_instance(id: str, instance: CreateInstance):
             detail=f"Error connecting to OpenPecha API: {str(e)}"
         )
 
-@router.get("/instances/{instance_id}", response_model=Instance)
+@router.get("/instances/{instance_id}")
 async def get_instance(instance_id: str, annotation: bool = True):
     if not API_ENDPOINT:
         raise HTTPException(
