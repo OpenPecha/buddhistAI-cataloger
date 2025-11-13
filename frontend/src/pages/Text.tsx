@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useTexts } from "@/hooks/useTexts";
 import type { OpenPechaText } from "@/types/text";
 import { Button } from "@/components/ui/button";
@@ -7,30 +7,24 @@ import { useTranslation } from "react-i18next";
 
 const TextCRUD = () => {
   const { t } = useTranslation();
-  const [pagination, setPagination] = useState({
-    limit: 50,
-    offset: 0,
-    language: "",
-    author: "",
-  });
+  const [offset, setOffset] = useState(0);
+  const LIMIT = 30; // Fixed limit of 30
+  const OFFSET_STEP = 30; // Offset increment/decrement step
 
-  const { data: texts = [], isLoading, error, refetch } = useTexts(pagination);
+  // Memoize params to prevent unnecessary refetches
+  const paginationParams = useMemo(() => ({
+    limit: LIMIT,
+    offset: offset,
+  }), [offset]);
 
-  const handlePaginationChange = (
-    newPagination: Partial<typeof pagination>
-  ) => {
-    setPagination((prev) => ({ ...prev, ...newPagination }));
-  };
+  const { data: texts = [], isLoading, error, refetch } = useTexts(paginationParams);
 
   const handleNextPage = () => {
-    setPagination((prev) => ({ ...prev, offset: prev.offset + prev.limit }));
+    setOffset((prev) => prev + OFFSET_STEP);
   };
 
   const handlePrevPage = () => {
-    setPagination((prev) => ({
-      ...prev,
-      offset: Math.max(0, prev.offset - prev.limit),
-    }));
+    setOffset((prev) => Math.max(0, prev - OFFSET_STEP));
   };
 
   return (
@@ -42,90 +36,12 @@ const TextCRUD = () => {
 
       {/* Content */}
       <div className="space-y-4">
-        {/* Filters and Controls */}
+        {/* Pagination Controls */}
         <div className="bg-white rounded-lg shadow-md p-3 sm:p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4">
-            <div>
-              <label
-                htmlFor="limit"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                {t('textsPage.limit')}
-              </label>
-              <select
-                id="limit"
-                value={pagination.limit}
-                onChange={(e) =>
-                  handlePaginationChange({
-                    limit: parseInt(e.target.value),
-                    offset: 0,
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="50">50</option>
-                <option value="100">100</option>
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="language"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                {t('textsPage.language')}
-              </label>
-              <select
-                id="language"
-                value={pagination.language}
-                onChange={(e) =>
-                  handlePaginationChange({
-                    language: e.target.value,
-                    offset: 0,
-                  })
-                }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">{t('textsPage.allLanguages')}</option>
-                <option value="bo">{t('textsPage.tibetan')}</option>
-                <option value="en">{t('textsPage.english')}</option>
-                <option value="zh">{t('textsPage.chinese')}</option>
-                <option value="sa">{t('textsPage.sanskrit')}</option>
-                <option value="fr">{t('textsPage.french')}</option>
-                <option value="mn">{t('textsPage.mongolian')}</option>
-                <option value="pi">{t('textsPage.pali')}</option>
-                <option value="cmg">{t('textsPage.classicalMongolian')}</option>
-                <option value="ja">{t('textsPage.japanese')}</option>
-                <option value="ru">{t('textsPage.russian')}</option>
-                <option value="lzh">{t('textsPage.literaryChinese')}</option>
-              </select>
-            </div>
-
-            <div>
-              <label
-                htmlFor="author"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                {t('textsPage.authorId')}
-              </label>
-              <input
-                id="author"
-                type="text"
-                value={pagination.author}
-                onChange={(e) =>
-                  handlePaginationChange({ author: e.target.value, offset: 0 })
-                }
-                placeholder={t('textsPage.enterAuthorId')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
-          {/* Pagination Controls */}
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 pt-4 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
             <Button
               onClick={handlePrevPage}
-              disabled={pagination.offset === 0}
+              disabled={offset === 0}
               variant="outline"
               className="w-full sm:w-auto"
             >
@@ -133,13 +49,13 @@ const TextCRUD = () => {
             </Button>
             <span className="text-xs sm:text-sm text-gray-600 text-center">
               {t('textsPage.showing', { 
-                start: pagination.offset + 1, 
-                end: pagination.offset + texts.length 
+                start: offset + 1, 
+                end: offset + texts.length 
               })}
             </span>
             <Button
               onClick={handleNextPage}
-              disabled={texts.length < pagination.limit}
+              disabled={texts.length < LIMIT}
               variant="outline"
               className="w-full sm:w-auto"
             >
@@ -172,7 +88,6 @@ const TextCRUD = () => {
           <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mx-1 sm:mx-0">
             <div className="text-center text-gray-500">
               <p className="text-base sm:text-lg">{t('textsPage.noTextsFound')}</p>
-              <p className="text-xs sm:text-sm mt-2">{t('textsPage.adjustFilters')}</p>
             </div>
           </div>
         ) : (

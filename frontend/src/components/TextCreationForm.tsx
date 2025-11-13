@@ -31,6 +31,8 @@ export interface TextCreationFormRef {
   openContributorForm: () => void;
   hasTitle: () => boolean;
   setBdrcId: (bdrcId: string, label: string) => void;
+  setFormLanguage: (language: string) => void;
+  addContributorFromBdrc: (personBdrcId: string, personName: string, role: "translator" | "reviser" | "author" | "scholar") => void;
 }
 
 interface Contributor {
@@ -121,6 +123,26 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         setBdrcSearch(label);
         setSelectedBdrc({ id: bdrcId, label: label });
         setShowBdrcDropdown(false);
+      },
+      setFormLanguage: (lang: string) => {
+        setLanguage(lang);
+      },
+      addContributorFromBdrc: (personBdrcId: string, personName: string, role: "translator" | "reviser" | "author" | "scholar") => {
+        // Create a Person-like object with BDRC ID
+        const bdrcPerson: Person = {
+          id: personBdrcId, // Use BDRC ID as temporary ID
+          name: { bo: personName }, // Set name in Tibetan (or default language)
+          alt_names: null,
+          bdrc: personBdrcId,
+          wiki: null,
+        };
+        
+        const newContributor: Contributor = {
+          person: bdrcPerson,
+          role: role,
+        };
+        
+        setContributors((prev) => [...prev, newContributor]);
       },
     }));
 
@@ -305,8 +327,10 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
 
       // Build contributions array
       const contributionsArray = contributors.map((contributor) => {
+        // Use bdrc field if available, otherwise fall back to id
+        const personBdrcId = contributor.person!.bdrc || contributor.person!.id;
         return {
-          person_bdrc_id: contributor.person!.id,
+          person_bdrc_id: personBdrcId,
           role: contributor.role,
         };
       });
@@ -981,14 +1005,14 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                         </div>
                       ) : bdrcResults.length > 0 ? (
                         bdrcResults
-                          .filter((result) => result.prefLabel && result.prefLabel !== " - no data - ")
+                          .filter((result) => result.title && result.title !== " - no data - ")
                           .map((result, index) => (
                             <button
                               key={`${result.workId}-${index}`}
                               type="button"
                               onClick={async () => {
                                 const workId = result.workId || '';
-                                const label = result.prefLabel || '';
+                                const label = result.title || '';
                                 
                                 // Show loading state
                                 setIsCheckingBdrcId(true);
@@ -1026,7 +1050,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                               className="w-full px-4 py-2 text-left hover:bg-gray-100 border-b border-gray-100"
                             >
                               <div className="text-sm font-medium text-gray-900">
-                                {result.prefLabel}
+                                {result.title}
                               </div>
                               <div className="text-xs text-gray-500">{result.workId}</div>
                             </button>
