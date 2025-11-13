@@ -127,6 +127,7 @@
   "successModal": {
     "textCreatedSuccessfully": "དཔེ་ཆ་གསར་བཟོ་ལེགས་གྲུབ།",
     "translatorEditorSubtitle": "བོད་ཡིག་དཔེ་ཆའི་ཆས་རོགས་བསྒྱུར་བ།",
+    "alignerSubtitle": "ཡིག་ཆའི་འབྱུང་ཁུངས་དང་དམིགས་ཡུལ་སྙོམས་པ།",
     "formatterSubtitle": "དཀར་ཆག་གསལ་པོ་བཟོ་བ།",
     "accessTool": "ཆས་ལ་འབྲེལ་བ།"
   },

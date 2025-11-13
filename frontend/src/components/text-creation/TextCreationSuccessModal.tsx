@@ -6,7 +6,8 @@ import { useTranslation } from "react-i18next";
 interface TextCreationSuccessModalProps {
   message: string;
   onClose: () => void;
-  instanceId?: string | null;
+  instanceId?: string | null; // Current instance ID (from API response)
+  parentInstanceId?: string | null; // Parent instance ID (from URL params)
 }
 
 // Utility: join class names
@@ -14,7 +15,7 @@ function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-const TextCreationSuccessModal = ({ message, onClose, instanceId }: TextCreationSuccessModalProps) => {
+const TextCreationSuccessModal = ({ message, onClose, instanceId, parentInstanceId }: TextCreationSuccessModalProps) => {
   const { t } = useTranslation();
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
 
@@ -30,6 +31,16 @@ const TextCreationSuccessModal = ({ message, onClose, instanceId }: TextCreation
       const baseUrl = import.meta.env.VITE_FORMATTER_URL || 'http://localhost:5000';
       const formatterUrl = `${baseUrl}/formatter?I_id=${instanceId}`;
       window.open(formatterUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  // Handler for Aligner card click
+  const handleAlignerClick = () => {
+    if (parentInstanceId && instanceId) {
+      // Use environment variable if set, otherwise use default localhost
+      const baseUrl = import.meta.env.VITE_FORMATTER_URL || 'http://localhost:5000';
+      const alignerUrl = `${baseUrl}/aligner?s_id=${parentInstanceId}&t_id=${instanceId}`;
+      window.open(alignerUrl, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -137,16 +148,16 @@ const TextCreationSuccessModal = ({ message, onClose, instanceId }: TextCreation
 
               {/* Tool grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                {/* Translator Editor Card */}
+                {/* Aligner Card */}
                 <ActionCard
-                  title="Translator Editor"
-                  subtitle={t('successModal.translatorEditorSubtitle')}
+                  title="Aligner"
+                  subtitle={t('successModal.alignerSubtitle')}
                   icon={
                     <div className="bg-blue-500 rounded-xl p-2 ring-1 ring-white/40">
                       <FileText className="text-white" size={22} />
                     </div>
                   }
-                  onClick={() => {/* attach handler here */}}
+                  onClick={handleAlignerClick}
                 />
 
                 {/* Formatter Card */}

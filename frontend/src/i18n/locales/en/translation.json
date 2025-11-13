@@ -127,6 +127,7 @@
   "successModal": {
     "textCreatedSuccessfully": "Text created successfully",
     "translatorEditorSubtitle": "Computer‑assisted translation for Tibetan texts",
+    "alignerSubtitle": "Align source and target texts",
     "formatterSubtitle": "Generate clean Tables of Contents",
     "accessTool": "Access Tool"
   },
