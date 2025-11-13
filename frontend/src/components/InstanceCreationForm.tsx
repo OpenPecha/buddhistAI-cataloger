@@ -10,6 +10,7 @@ interface InstanceData {
   metadata: {
     type: string;
     copyright?: string;
+    source: string;
     colophon?: string;
     incipit_title?: Record<string, string>;
     alt_incipit_titles?: Record<string, string>[];
@@ -72,6 +73,7 @@ const InstanceCreationForm = forwardRef<
     "critical"
   );
   const [copyright, setCopyright] = useState("public");
+  const [source, setSource] = useState("");
   const [bdrc, setBdrc] = useState("");
   const [wiki, setWiki] = useState("");
   const [colophon, setColophon] = useState("");
@@ -281,6 +283,7 @@ const InstanceCreationForm = forwardRef<
     const cleaned: InstanceData = {
       metadata: {
         type: type,
+        source: source.trim(),
       },
     };
 
@@ -366,6 +369,12 @@ const InstanceCreationForm = forwardRef<
       return;
     }
 
+    // Validate source is not empty
+    if (!source || source.trim().length === 0) {
+      setErrors({ source: t("instance.sourceRequired") });
+      return;
+    }
+
     // Validate content is not empty
     if (!content || content.trim().length === 0) {
       setErrors({ content: t("instance.contentRequired") });
@@ -447,6 +456,28 @@ const InstanceCreationForm = forwardRef<
               <option value="public">{t("instance.public")}</option>
               <option value="copyrighted">{t("instance.copyrighted")}</option>
             </select>
+          </div>
+
+          {/* Source */}
+          <div className="md:col-span-2">
+            <label
+              htmlFor="source"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              {t("instance.source")} <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              id="source"
+              value={source}
+              onChange={(e) => setSource(e.target.value)}
+              required
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+              placeholder={t("instance.sourcePlaceholder")}
+            />
+            {errors.source && (
+              <p className="mt-1 text-sm text-red-600">{errors.source}</p>
+            )}
           </div>
 
           {/* BDRC ID - Only shown for diplomatic type */}

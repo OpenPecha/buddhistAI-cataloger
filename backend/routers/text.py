@@ -48,6 +48,8 @@ class CreateText(BaseModel):
     bdrc: Optional[str] = None
     category_id: Optional[str] = None
     alt_titles: List[Dict[str, str]] = []
+    copyright: Optional[str] = None
+    license: Optional[str] = None
 
 
 class Annotation(BaseModel):
@@ -76,10 +78,10 @@ class Instance(BaseModel):
 
 class InstanceListItem(BaseModel):
     id: str
+    type: str
+    source: Optional[str] = None
     bdrc: Optional[str] = None
     wiki: Optional[str] = None
-    type: str
-    copyright: str
     colophon: Optional[str] = None
     incipit_title: Optional[Dict[str, str]] = None
     alt_incipit_titles: Optional[List[Dict[str, str]]] = None
@@ -145,7 +147,7 @@ async def create_text(text: CreateText):
     try:
         # Convert to dict, excluding None values
         payload = text.model_dump(exclude_none=True)
-        print(payload)
+        print(f"📤 Sending payload to OpenPecha API: {payload}")
         response = requests.post(f"{API_ENDPOINT}/texts", json=payload)
         
         if response.status_code != 201:
@@ -200,7 +202,24 @@ async def get_instances(id: str):
         
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
-        return response.json()
+        
+        data = response.json()
+        
+        # Handle both array and {results: [...], count: ...} formats
+        if isinstance(data, dict) and "results" in data:
+            return data["results"]
+        elif isinstance(data, list):
+            return data
+        else:
+            # If it's neither format, return empty list
+            return []
+    except HTTPException:
+        raise
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out after 30 seconds"
+        )
     except requests.exceptions.RequestException as e:
         raise HTTPException(
             status_code=500,

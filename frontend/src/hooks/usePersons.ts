@@ -48,13 +48,11 @@ const handleApiResponse = async (response: Response, customMessages?: { 404?: st
 };
 
 // Real API function for Person
-const fetchPersons = async (params?: { limit?: number; offset?: number; nationality?: string; occupation?: string }): Promise<Person[]> => {
+const fetchPersons = async (params?: { limit?: number; offset?: number }): Promise<Person[]> => {
   const queryParams = new URLSearchParams();
   
   if (params?.limit) queryParams.append('limit', params.limit.toString());
   if (params?.offset) queryParams.append('offset', params.offset.toString());
-  if (params?.nationality) queryParams.append('nationality', params.nationality);
-  if (params?.occupation) queryParams.append('occupation', params.occupation);
   
   const url = queryParams.toString() ? `${API_URL}/person?${queryParams.toString()}` : `${API_URL}/person`;
   
@@ -127,7 +125,7 @@ const deletePerson = async (id: string): Promise<void> => {
 };
 
 // Person hooks
-export const usePersons = (params?: { limit?: number; offset?: number; nationality?: string; occupation?: string }) => {
+export const usePersons = (params?: { limit?: number; offset?: number }) => {
   return useQuery({
     queryKey: ['persons', params],
     queryFn: () => fetchPersons(params),

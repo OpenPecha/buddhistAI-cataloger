@@ -265,7 +265,21 @@
     "useExistingQuestion": "Would you like to use this existing text, or choose a different BDRC ID?",
     "chooseAnother": "Choose Another",
     "useExistingText": "Use Existing Text",
-    "unknown": "Unknown"
+    "unknown": "Unknown",
+    "copyright": "Copyright",
+    "copyrightPublicDomain": "Public domain",
+    "copyrightInCopyright": "In copyright",
+    "copyrightUnknown": "Unknown",
+    "license": "License",
+    "licenseCC0": "CC0",
+    "licensePublicDomainMark": "Public Domain Mark",
+    "licenseCCBY": "CC BY",
+    "licenseCCBYSA": "CC BY-SA",
+    "licenseCCBYND": "CC BY-ND",
+    "licenseCCBYNC": "CC BY-NC",
+    "licenseCCBYNCSA": "CC BY-NC-SA",
+    "licenseCCBYNCND": "CC BY-NC-ND",
+    "licenseUnderCopyright": "Under copyright"
   },
   "instance": {
     "copyright": "Copyright",
@@ -276,6 +290,9 @@
     "wikiReference": "Wiki reference",
     "colophon": "Colophon",
     "colophonText": "Colophon text",
+    "source": "Source",
+    "sourcePlaceholder": "Enter the source of this instance",
+    "sourceRequired": "Source is required",
     "incipitTitle": "Incipit Title",
     "addIncipitTitle": "Add Incipit Title",
     "enterIncipitTitle": "Enter incipit title",
@@ -326,6 +343,11 @@
     "noTextsFound": "No texts found",
     "adjustFilters": "Try adjusting your filters",
     "untitled": "Untitled",
+    "checkingText": "Checking if text exists...",
+    "textNotFound": "Text not found",
+    "createText": "+ Create",
+    "showingSearchResult": "Showing search result",
+    "clearSearch": "Clear Search",
     "bdrcId": "BDRC ID:",
     "date": "Date:",
     "contributor_one": "contributor",
@@ -348,9 +370,22 @@
     "translation": "Translation",
     "commentary": "Commentary"
   },
+  "commentary": {
+    "source": "Source",
+    "sourcePlaceholder": "Enter the source of this commentary",
+    "sourceRequired": "Source is required",
+    "copyright": "Copyright",
+    "license": "License"
+  },
+  "translation": {
+    "source": "Source",
+    "sourcePlaceholder": "Enter the source of this translation",
+    "sourceRequired": "Source is required",
+    "copyright": "Copyright",
+    "license": "License"
+  },
   "personsPage": {
     "title": "Person Management",
-    "createPerson": "+ Create Person",
     "limit": "Limit",
     "nationality": "Nationality",
     "filterByNationality": "Filter by nationality",

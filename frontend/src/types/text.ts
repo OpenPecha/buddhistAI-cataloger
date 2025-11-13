@@ -53,10 +53,10 @@ export interface IncipitTitle {
 // Instance list item (flat structure from GET /text/{text_id}/instances)
 export interface OpenPechaTextInstanceListItem {
   id: string;
+  type: string;
+  source: string | null;
   bdrc: string | null;
   wiki: string | null;
-  type: string;
-  copyright: string;
   colophon: string | null;
   incipit_title: IncipitTitle | null;
   alt_incipit_titles: any[] | null;

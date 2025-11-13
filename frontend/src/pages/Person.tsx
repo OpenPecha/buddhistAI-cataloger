@@ -9,29 +9,12 @@ import { useTranslation } from 'react-i18next';
 const PersonCRUD = () => {
   const { t } = useTranslation();
   const [showModal, setShowModal] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [modalMode] = useState<'create' | 'edit'>('create');
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
-  const [pagination, setPagination] = useState({
-    limit: 30,
-    offset: 0,
-    nationality: '',
-    occupation: ''
-  });
+  const LIMIT = 40; // Fixed limit
+  const [offset, setOffset] = useState(0);
 
-  const { data: persons = [], isLoading, error, refetch } = usePersons(pagination);
-
-
-  const handleCreate = () => {
-    setModalMode('create');
-    setSelectedPerson(null);
-    setShowModal(true);
-  };
-
-  const handleEdit = (person: Person) => {
-    setModalMode('edit');
-    setSelectedPerson(person);
-    setShowModal(true);
-  };
+  const { data: persons = [], isLoading, error, refetch } = usePersons({ limit: LIMIT, offset });
 
   const handleModalSuccess = () => {
     setShowModal(false);
@@ -39,16 +22,12 @@ const PersonCRUD = () => {
     refetch();
   };
 
-  const handlePaginationChange = (newPagination: Partial<typeof pagination>) => {
-    setPagination(prev => ({ ...prev, ...newPagination }));
-  };
-
   const handleNextPage = () => {
-    setPagination(prev => ({ ...prev, offset: prev.offset + prev.limit }));
+    setOffset(prev => prev + LIMIT);
   };
 
   const handlePrevPage = () => {
-    setPagination(prev => ({ ...prev, offset: Math.max(0, prev.offset - prev.limit) }));
+    setOffset(prev => Math.max(0, prev - LIMIT));
   };
 
   return (
@@ -58,61 +37,16 @@ const PersonCRUD = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{t('personsPage.title')}</h2>
-        <Button
-          onClick={handleCreate}
-          className="w-full sm:w-auto"
-        >
-          {t('personsPage.createPerson')}
-        </Button>
       </div>
 
       {/* Content */}
       <div className="space-y-4">
-          {/* Filters and Controls */}
+          {/* Pagination Controls */}
           <div className="bg-white rounded-lg shadow-md p-3 sm:p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4">
-              <div>
-                <label htmlFor="limit" className="block text-sm font-medium text-gray-700 mb-1">{t('personsPage.limit')}</label>
-                <select
-                  id="limit"
-                  value={pagination.limit}
-                  onChange={(e) => handlePaginationChange({ limit: parseInt(e.target.value), offset: 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value={30}>30</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor="nationality" className="block text-sm font-medium text-gray-700 mb-1">{t('personsPage.nationality')}</label>
-                <input
-                  id="nationality"
-                  type="text"
-                  value={pagination.nationality}
-                  onChange={(e) => handlePaginationChange({ nationality: e.target.value, offset: 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder={t('personsPage.filterByNationality')}
-                />
-              </div>
-              <div>
-                <label htmlFor="occupation" className="block text-sm font-medium text-gray-700 mb-1">{t('personsPage.occupation')}</label>
-                <input
-                  id="occupation"
-                  type="text"
-                  value={pagination.occupation}
-                  onChange={(e) => handlePaginationChange({ occupation: e.target.value, offset: 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder={t('personsPage.filterByOccupation')}
-                />
-              </div>
-            </div>
-            
-            {/* Pagination Controls */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0 pt-4 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
               <Button
                 onClick={handlePrevPage}
-                disabled={pagination.offset === 0}
+                disabled={offset === 0}
                 variant="outline"
                 className="w-full sm:w-auto"
               >
@@ -120,13 +54,13 @@ const PersonCRUD = () => {
               </Button>
               <span className="text-xs sm:text-sm text-gray-600 text-center">
                 {t('personsPage.showing', { 
-                  start: pagination.offset + 1, 
-                  end: pagination.offset + persons.length 
+                  start: offset + 1, 
+                  end: offset + persons.length 
                 })}
               </span>
               <Button
                 onClick={handleNextPage}
-                disabled={persons.length < pagination.limit}
+                disabled={persons.length < LIMIT}
                 variant="outline"
                 className="w-full sm:w-auto"
               >
@@ -166,8 +100,7 @@ const PersonCRUD = () => {
             {persons.map((person: Person) => (
               <PersonCard 
                 key={`person-card-${person.id}`} 
-                person={person} 
-                onEdit={handleEdit}
+                person={person}
               />
             ))}
             </div>
