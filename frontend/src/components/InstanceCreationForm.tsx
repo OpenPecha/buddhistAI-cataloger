@@ -9,7 +9,6 @@ import { useTranslation } from "react-i18next";
 interface InstanceData {
   metadata: {
     type: string;
-    copyright?: string;
     source: string;
     colophon?: string;
     incipit_title?: Record<string, string>;
@@ -72,7 +71,6 @@ const InstanceCreationForm = forwardRef<
   const [type, setType] = useState<"diplomatic" | "critical">(
     "critical"
   );
-  const [copyright, setCopyright] = useState("public");
   const [source, setSource] = useState("");
   const [bdrc, setBdrc] = useState("");
   const [wiki, setWiki] = useState("");
@@ -288,10 +286,6 @@ const InstanceCreationForm = forwardRef<
     };
 
     // Add optional metadata fields only if non-empty
-    if (copyright) {
-      cleaned.metadata.copyright = copyright;
-    }
-
     if (bdrc?.trim()) {
       cleaned.metadata.bdrc = bdrc.trim();
     }
@@ -438,25 +432,6 @@ const InstanceCreationForm = forwardRef<
               <p className="mt-1 text-sm text-red-600">{errors.type}</p>
             )}
           </div> */}
-
-          {/* Copyright */}
-          <div>
-            <label
-              htmlFor="copyright"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              {t("instance.copyright")}
-            </label>
-            <select
-              id="copyright"
-              value={copyright}
-              onChange={(e) => setCopyright(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="public">{t("instance.public")}</option>
-              <option value="copyrighted">{t("instance.copyrighted")}</option>
-            </select>
-          </div>
 
           {/* Source */}
           <div className="md:col-span-2">
