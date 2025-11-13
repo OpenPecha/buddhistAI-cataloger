@@ -53,19 +53,11 @@ class CreatePersonResponse(BaseModel):
 async def get_persons(
     limit: int = 100,
     offset: int = 0,
-    nationality: Optional[str] = None,
-    occupation: Optional[str] = None,
-    search: Optional[str] = None,
 ):
     params = {
         "limit": limit,
         "offset": offset,
-        "nationality": nationality,
-        "occupation": occupation,
-        "search": search,
     }
-    # remove none values
-    params = {k: v for k, v in params.items() if v is not None}
     
     response = requests.get(f"{API_ENDPOINT}/persons", params=params)
     if response.status_code != 200:

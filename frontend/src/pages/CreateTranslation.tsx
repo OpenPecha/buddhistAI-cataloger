@@ -7,12 +7,26 @@ import { createTranslation } from '@/api/texts';
 import { calculateAnnotations } from '@/utils/annotationCalculator';
 import { useTranslation } from 'react-i18next';
 import { useBdrcSearch } from '@/hooks/useBdrcSearch';
-import { MultilevelCategorySelector } from '@/components/MultilevelCategorySelector';
 import type { Person } from '@/types/person';
 import { useInstance } from '@/hooks/useTexts';
 import type { OpenPechaTextInstance } from '@/types/text';
 import { useBibliography } from '@/contexts/BibliographyContext';
+import { useBibliographyAPI } from '@/hooks/useBibliographyAPI';
 import TextCreationSuccessModal from '@/components/text-creation/TextCreationSuccessModal';
+
+const LANGUAGE_OPTIONS = [
+  { code: "bo", name: "Tibetan" },
+  { code: "en", name: "English" },
+  { code: "zh", name: "Chinese" },
+  { code: "sa", name: "Sanskrit" },
+  { code: "fr", name: "French" },
+  { code: "mn", name: "Mongolian" },
+  { code: "pi", name: "Pali" },
+  { code: "cmg", name: "Classical Mongolian" },
+  { code: "ja", name: "Japanese" },
+  { code: "ru", name: "Russian" },
+  { code: "lzh", name: "Literary Chinese" },
+];
 
 const CreateTranslation = () => {
   const { text_id, instance_id } = useParams();
@@ -27,8 +41,9 @@ const CreateTranslation = () => {
   const [language, setLanguage] = useState('');
   const [title, setTitle] = useState('');
   const [altTitles, setAltTitles] = useState<string[]>([]);
-  const [categoryId, setCategoryId] = useState<string>('');
-  const [copyright, setCopyright] = useState<'public' | 'copyrighted'>('public');
+  const [source, setSource] = useState('');
+  const [copyright, setCopyright] = useState<string>('Unknown');
+  const [license, setLicense] = useState<string>('CC0');
   const [content, setContent] = useState('');
   const [uploadedFilename, setUploadedFilename] = useState('');
 
@@ -49,6 +64,7 @@ const CreateTranslation = () => {
 
   // Bibliography annotations
   const { clearAnnotations } = useBibliography();
+  const { getAPIAnnotations, hasAnnotations } = useBibliographyAPI();
 
   // Clear annotations when component mounts (to clear any stale annotations from previous visits)
   useEffect(() => {
@@ -170,6 +186,9 @@ const CreateTranslation = () => {
       if (!title || title.trim() === '') {
         throw new Error(t('textForm.titleRequired'));
       }
+      if (!source || source.trim() === '') {
+        throw new Error(t('translation.sourceRequired'));
+      }
       if (!content || content.trim() === '') {
         throw new Error(t('instance.contentRequired'));
       }
@@ -182,9 +201,10 @@ const CreateTranslation = () => {
         language,
         content: cleanedContent,
         title,
+        source: source.trim(),
         segmentation: annotations,
         copyright,
-        category_id: categoryId && categoryId.trim() !== '' ? categoryId : null
+        license
       };
 
       // Add alt_titles if any exist
@@ -199,6 +219,11 @@ const CreateTranslation = () => {
         } else {
           translationData.author = { person_id: selectedPerson.id };
         }
+      }
+
+      // Add bibliography annotations if they exist
+      if (hasAnnotations()) {
+        translationData.biblography_annotation = getAPIAnnotations();
       }
 
       // Create translation
@@ -300,12 +325,24 @@ const CreateTranslation = () => {
                   required
                 >
                   <option value="">{t('textForm.selectLanguage')}</option>
-                  <option value="bo">{t('textsPage.tibetan')}</option>
-                  <option value="en">{t('textsPage.english')}</option>
-                  <option value="zh">{t('textsPage.chinese')}</option>
-                  <option value="sa">{t('textsPage.sanskrit')}</option>
-                  <option value="fr">{t('textsPage.french')}</option>
-                  <option value="mn">{t('textsPage.mongolian')}</option>
+                  {LANGUAGE_OPTIONS.map((lang) => {
+                    const translationKey = lang.code === 'bo' ? 'tibetan' :
+                                          lang.code === 'en' ? 'english' :
+                                          lang.code === 'zh' ? 'chinese' :
+                                          lang.code === 'sa' ? 'sanskrit' :
+                                          lang.code === 'fr' ? 'french' :
+                                          lang.code === 'mn' ? 'mongolian' :
+                                          lang.code === 'pi' ? 'pali' :
+                                          lang.code === 'cmg' ? 'classicalMongolian' :
+                                          lang.code === 'ja' ? 'japanese' :
+                                          lang.code === 'ru' ? 'russian' :
+                                          lang.code === 'lzh' ? 'literaryChinese' : '';
+                    return (
+                      <option key={lang.code} value={lang.code}>
+                        {t(`textsPage.${translationKey}`)}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -380,11 +417,23 @@ const CreateTranslation = () => {
                 </div>
               </div>
 
-              {/* Category Field (Optional) */} 
+              {/* Source Field */}
               <div>
-                <MultilevelCategorySelector
-                  onCategorySelect={(categoryId, _path) => setCategoryId(categoryId || '')}
-                  selectedCategoryId={categoryId || undefined}
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('translation.source')} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={source}
+                  onChange={(e) => setSource(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder={t('translation.sourcePlaceholder')}
+                  required
                 />
               </div>
 
@@ -502,16 +551,40 @@ const CreateTranslation = () => {
               {/* Copyright Field */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('instance.copyright')} <span className="text-red-500">*</span>
+                  {t('translation.copyright')} <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={copyright}
-                  onChange={(e) => setCopyright(e.target.value as 'public' | 'copyrighted')}
+                  onChange={(e) => setCopyright(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
-                  <option value="public">{t('instance.public')}</option>
-                  <option value="copyrighted">{t('instance.copyrighted')}</option>
+                  <option value="Public domain">Public domain</option>
+                  <option value="In copyright">In copyright</option>
+                  <option value="Unknown">Unknown</option>
+                </select>
+              </div>
+
+              {/* License Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('translation.license')} <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={license}
+                  onChange={(e) => setLicense(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="CC0">CC0</option>
+                  <option value="Public Domain Mark">Public Domain Mark</option>
+                  <option value="CC BY">CC BY</option>
+                  <option value="CC BY-SA">CC BY-SA</option>
+                  <option value="CC BY-ND">CC BY-ND</option>
+                  <option value="CC BY-NC">CC BY-NC</option>
+                  <option value="CC BY-NC-SA">CC BY-NC-SA</option>
+                  <option value="CC BY-NC-ND">CC BY-NC-ND</option>
+                  <option value="under copyright">under copyright</option>
                 </select>
               </div>
 
@@ -519,7 +592,7 @@ const CreateTranslation = () => {
               <div className="pt-4 border-t border-gray-200">
                 <Button
                   type="submit"
-                  disabled={isSubmitting || !content || !language || !title}
+                  disabled={isSubmitting || !content || !language || !title || !source}
                   className="w-full bg-gradient-to-r from-sky-400 to-cyan-500 hover:from-sky-500 hover:to-cyan-600 text-white py-3"
                 >
                   {isSubmitting ? (
@@ -550,9 +623,10 @@ const CreateTranslation = () => {
                           language,
                           content: cleanedContent,
                           title,
+                          source: source.trim(),
                           segmentation: annotations,
                           copyright,
-                          category_id: categoryId && categoryId.trim() !== '' ? categoryId : null
+                          license
                         };
                         if (altTitles.length > 0) {
                           payload.alt_titles = altTitles.filter(t => t.trim() !== '');
@@ -563,6 +637,9 @@ const CreateTranslation = () => {
                           } else {
                             payload.author = { person_id: selectedPerson.id };
                           }
+                        }
+                        if (hasAnnotations()) {
+                          payload.biblography_annotation = getAPIAnnotations();
                         }
                         navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
                         alert('JSON copied to clipboard!');
@@ -579,9 +656,10 @@ const CreateTranslation = () => {
                           language,
                           content: cleanedContent,
                           title,
+                          source: source.trim(),
                           segmentation: annotations,
                           copyright,
-                          category_id: categoryId && categoryId.trim() !== '' ? categoryId : null
+                          license
                         };
                         if (altTitles.length > 0) {
                           payload.alt_titles = altTitles.filter(t => t.trim() !== '');
@@ -592,6 +670,9 @@ const CreateTranslation = () => {
                           } else {
                             payload.author = { person_id: selectedPerson.id };
                           }
+                        }
+                        if (hasAnnotations()) {
+                          payload.biblography_annotation = getAPIAnnotations();
                         }
                         return payload;
                       })(),

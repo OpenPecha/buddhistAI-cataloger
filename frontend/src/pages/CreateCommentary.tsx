@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, X, Upload, ArrowLeft } from 'lucide-react';
+import { AlertCircle, X, Upload, ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import TextEditorView from '@/components/text-creation/TextEditorView';
 import { createCommentary } from '@/api/texts';
 import { calculateAnnotations } from '@/utils/annotationCalculator';
@@ -12,7 +12,23 @@ import type { Person } from '@/types/person';
 import { useInstance } from '@/hooks/useTexts';
 import type { OpenPechaTextInstance } from '@/types/text';
 import { useBibliography } from '@/contexts/BibliographyContext';
+import { useBibliographyAPI } from '@/hooks/useBibliographyAPI';
 import TextCreationSuccessModal from '@/components/text-creation/TextCreationSuccessModal';
+
+
+const LANGUAGE_OPTIONS = [
+  { code: "bo", name: "Tibetan" },
+  { code: "en", name: "English" },
+  { code: "zh", name: "Chinese" },
+  { code: "sa", name: "Sanskrit" },
+  { code: "fr", name: "French" },
+  { code: "mn", name: "Mongolian" },
+  { code: "pi", name: "Pali" },
+  { code: "cmg", name: "Classical Mongolian" },
+  { code: "ja", name: "Japanese" },
+  { code: "ru", name: "Russian" },
+  { code: "lzh", name: "Literary Chinese" },
+];
 
 const CreateCommentary = () => {
   const { text_id, instance_id } = useParams();
@@ -26,7 +42,10 @@ const CreateCommentary = () => {
   // Form state
   const [language, setLanguage] = useState('');
   const [title, setTitle] = useState('');
-  const [copyright, setCopyright] = useState<'public' | 'copyrighted'>('public');
+  const [source, setSource] = useState('');
+  const [altTitles, setAltTitles] = useState<string[]>([]);
+  const [copyright, setCopyright] = useState<string>('Unknown');
+  const [license, setLicense] = useState<string>('CC0');
   const [categoryId, setCategoryId] = useState<string>('');
   const [content, setContent] = useState('');
   const [uploadedFilename, setUploadedFilename] = useState('');
@@ -48,6 +67,7 @@ const CreateCommentary = () => {
 
   // Bibliography annotations
   const { clearAnnotations } = useBibliography();
+  const { getAPIAnnotations, hasAnnotations } = useBibliographyAPI();
 
   // Clear annotations when component mounts (to clear any stale annotations from previous visits)
   useEffect(() => {
@@ -131,7 +151,7 @@ const CreateCommentary = () => {
     setUploadedFilename(filename);
   };
 
-  // Handle text selection from editor (only Title and Person)
+  // Handle text selection from editor (Title, Alt Title, and Person)
   const handleEditorTextSelect = (
     text: string,
     type: "title" | "alt_title" | "colophon" | "incipit" | "alt_incipit" | "person"
@@ -140,6 +160,10 @@ const CreateCommentary = () => {
       case "title":
         // Fill the title field in the form
         setTitle(text);
+        break;
+      case "alt_title":
+        // Add to alt titles array
+        setAltTitles(prev => [...prev, text]);
         break;
       case "person":
         // Fill the person search field
@@ -165,6 +189,9 @@ const CreateCommentary = () => {
       if (!title || title.trim() === '') {
         throw new Error(t('textForm.titleRequired'));
       }
+      if (!source || source.trim() === '') {
+        throw new Error(t('commentary.sourceRequired'));
+      }
       if (!content || content.trim() === '') {
         throw new Error(t('instance.contentRequired'));
       }
@@ -177,10 +204,17 @@ const CreateCommentary = () => {
         language,
         content: cleanedContent,
         title,
+        source: source.trim(),
         segmentation: annotations,
         copyright,
+        license,
         category_id: categoryId && categoryId.trim() !== '' ? categoryId : null
       };
+
+      // Add alt_titles if any exist
+      if (altTitles.length > 0) {
+        commentaryData.alt_titles = altTitles.filter(t => t.trim() !== '');
+      }
 
       // Add author only if selected
       if (selectedPerson) {
@@ -189,6 +223,11 @@ const CreateCommentary = () => {
         } else {
           commentaryData.author = { person_id: selectedPerson.id };
         }
+      }
+
+      // Add bibliography annotations if they exist
+      if (hasAnnotations()) {
+        commentaryData.biblography_annotation = getAPIAnnotations();
       }
 
       // Create commentary
@@ -290,10 +329,24 @@ const CreateCommentary = () => {
                   required
                 >
                   <option value="">{t('textForm.selectLanguage')}</option>
-                  <option value="bo">{t('textsPage.tibetan')}</option>
-                  <option value="en">{t('textsPage.english')}</option>
-                  <option value="zh">{t('textsPage.chinese')}</option>
-                  <option value="sa">{t('textsPage.sanskrit')}</option>
+                  {LANGUAGE_OPTIONS.map((lang) => {
+                    const translationKey = lang.code === 'bo' ? 'tibetan' :
+                                          lang.code === 'en' ? 'english' :
+                                          lang.code === 'zh' ? 'chinese' :
+                                          lang.code === 'sa' ? 'sanskrit' :
+                                          lang.code === 'fr' ? 'french' :
+                                          lang.code === 'mn' ? 'mongolian' :
+                                          lang.code === 'pi' ? 'pali' :
+                                          lang.code === 'cmg' ? 'classicalMongolian' :
+                                          lang.code === 'ja' ? 'japanese' :
+                                          lang.code === 'ru' ? 'russian' :
+                                          lang.code === 'lzh' ? 'literaryChinese' : '';
+                    return (
+                      <option key={lang.code} value={lang.code}>
+                        {t(`textsPage.${translationKey}`)}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 
@@ -315,6 +368,57 @@ const CreateCommentary = () => {
                   placeholder={t('textForm.enterTitle')}
                   required
                 />
+              </div>
+
+              {/* Alternative Titles Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('textForm.altTitles')}
+                </label>
+                <div className="space-y-2">
+                  {altTitles.map((altTitle, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={altTitle}
+                        onChange={(e) => {
+                          const newAltTitles = [...altTitles];
+                          newAltTitles[index] = e.target.value;
+                          setAltTitles(newAltTitles);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                          }
+                        }}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder={t('textForm.enterAltTitle')}
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          const newAltTitles = altTitles.filter((_, i) => i !== index);
+                          setAltTitles(newAltTitles);
+                        }}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setAltTitles([...altTitles, ''])}
+                    className="w-full border-dashed"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    {t('textForm.addAltTitle')}
+                  </Button>
+                </div>
               </div>
 
               {/* Author Field (Optional) */}
@@ -443,27 +547,71 @@ const CreateCommentary = () => {
                 />
               </div>
 
+              {/* Source Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('commentary.source')} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={source}
+                  onChange={(e) => setSource(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder={t('commentary.sourcePlaceholder')}
+                  required
+                />
+              </div>
+
               {/* Copyright Field */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('instance.copyright')} <span className="text-red-500">*</span>
+                  {t('commentary.copyright')} <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={copyright}
-                  onChange={(e) => setCopyright(e.target.value as 'public' | 'copyrighted')}
+                  onChange={(e) => setCopyright(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
-                  <option value="public">{t('instance.public')}</option>
-                  <option value="copyrighted">{t('instance.copyrighted')}</option>
+                  <option value="Public domain">Public domain</option>
+                  <option value="In copyright">In copyright</option>
+                  <option value="Unknown">Unknown</option>
                 </select>
+              </div>
+
+              {/* License Field */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('commentary.license')} <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={license}
+                  onChange={(e) => setLicense(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                 <option value="CC0">CC0</option>
+                  <option value="Public Domain Mark">Public Domain Mark</option>
+                  <option value="CC BY">CC BY</option>
+                  <option value="CC BY-SA">CC BY-SA</option>
+                  <option value="CC BY-ND">CC BY-ND</option>
+                  <option value="CC BY-NC">CC BY-NC</option>
+                  <option value="CC BY-NC-SA">CC BY-NC-SA</option>
+                  <option value="CC BY-NC-ND">CC BY-NC-ND</option>
+                  <option value="under copyright">under copyright</option>
+                      </select>
               </div>
 
               {/* Submit Button */}
               <div className="pt-4 border-t border-gray-200">
                 <Button
                   type="submit"
-                  disabled={isSubmitting || !content || !language || !title}
+                  disabled={isSubmitting || !content || !language || !title || !source}
                   className="w-full bg-gradient-to-r from-emerald-400 to-green-500 hover:from-emerald-500 hover:to-green-600 text-white py-3"
                 >
                   {isSubmitting ? (
@@ -478,7 +626,7 @@ const CreateCommentary = () => {
               </div>
 
               {/* JSON Preview Section (Temporary for Testing) */}
-              {/* {content && (
+              {content && (
                 <div className="mt-6 pt-6 border-t border-gray-200">
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-gray-700">
@@ -494,16 +642,24 @@ const CreateCommentary = () => {
                           language,
                           content: cleanedContent,
                           title,
+                          source: source.trim(),
                           segmentation: annotations,
                           copyright,
+                          license,
                           category_id: categoryId && categoryId.trim() !== '' ? categoryId : null
                         };
+                        if (altTitles.length > 0) {
+                          payload.alt_titles = altTitles.filter(t => t.trim() !== '');
+                        }
                         if (selectedPerson) {
                           if (selectedPerson.bdrc) {
                             payload.author = { person_bdrc_id: selectedPerson.bdrc };
                           } else {
                             payload.author = { person_id: selectedPerson.id };
                           }
+                        }
+                        if (hasAnnotations()) {
+                          payload.biblography_annotation = getAPIAnnotations();
                         }
                         navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
                         alert('JSON copied to clipboard!');
@@ -520,16 +676,24 @@ const CreateCommentary = () => {
                           language,
                           content: cleanedContent,
                           title,
+                          source: source.trim(),
                           segmentation: annotations,
                           copyright,
+                          license,
                           category_id: categoryId && categoryId.trim() !== '' ? categoryId : null
                         };
+                        if (altTitles.length > 0) {
+                          payload.alt_titles = altTitles.filter(t => t.trim() !== '');
+                        }
                         if (selectedPerson) {
                           if (selectedPerson.bdrc) {
                             payload.author = { person_bdrc_id: selectedPerson.bdrc };
                           } else {
                             payload.author = { person_id: selectedPerson.id };
                           }
+                        }
+                        if (hasAnnotations()) {
+                          payload.biblography_annotation = getAPIAnnotations();
                         }
                         return payload;
                       })(),
@@ -538,7 +702,7 @@ const CreateCommentary = () => {
                     )}
                   </pre>
                 </div>
-              )} */}
+              )}
             </form>
           </div>
         </div>
@@ -622,7 +786,7 @@ const CreateCommentary = () => {
                 isCreatingNewText={false}
                 hasIncipit={false}
                 hasTitle={!!title}
-                allowedTypes={["title", "person"]}
+                allowedTypes={["title", "alt_title", "person"]}
               />
             </div>
           </div>

@@ -1,7 +1,6 @@
 import {
   useState,
   useEffect,
-  useMemo,
   useCallback,
   forwardRef,
   useImperativeHandle,
@@ -161,6 +160,8 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     const [bdrc, setBdrc] = useState("");
     const [categoryId, setCategoryId] = useState<string>("");
     const [categoryError, setCategoryError] = useState<boolean>(false);
+    const [copyright, setCopyright] = useState<string>("Public domain");
+    const [license, setLicense] = useState<string>("CC0");
     
     // BDRC search state
     const [bdrcSearch, setBdrcSearch] = useState("");
@@ -205,35 +206,10 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       return () => clearTimeout(timer);
     }, [personSearch]);
 
-    const { data: persons = [], isLoading: personsLoading } = usePersons({
+    const { isLoading: personsLoading } = usePersons({
       limit: 100,
       offset: 0,
     });
-
-    const filteredPersons = useMemo(() => {
-      if (!debouncedPersonSearch.trim()) return persons;
-
-      return persons
-        .filter((person) => {
-          // Safety check in case name is undefined
-          const mainName = person.name
-            ? (person.name.bo ||
-               person.name.en ||
-               Object.values(person.name)[0] ||
-               "")
-            : person.id || "";
-          const altNames = person.alt_names
-            ? person.alt_names.map((alt) => Object.values(alt)[0]).join(" ")
-            : "";
-          const searchLower = debouncedPersonSearch.toLowerCase();
-
-          return (
-            mainName.toLowerCase().includes(searchLower) ||
-            altNames.toLowerCase().includes(searchLower) ||
-            person.id.toLowerCase().includes(searchLower)
-          );
-        })
-    }, [persons, debouncedPersonSearch]);
 
     const getPersonDisplayName = (person: Person): string => {
       // Safety check in case name is undefined
@@ -367,7 +343,22 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       if (bdrc.trim()) textData.bdrc = bdrc.trim();
       
       // Add required category
-      textData.category_id = categoryId.trim();
+      if (categoryId && categoryId.trim()) {
+        textData.category_id = categoryId.trim();
+      }
+
+      // Add copyright (optional field)
+      if (copyright && copyright.trim()) {
+        textData.copyright = copyright.trim();
+      }
+
+      // Add license (optional field, send "CC0" if empty/unknown)
+      if (license && license.trim()) {
+        textData.license = license.trim();
+      } else {
+        // If license is empty, send "CC0" as default
+        textData.license = "CC0";
+      }
 
       return textData;
     }, [
@@ -380,6 +371,8 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       date,
       bdrc,
       categoryId,
+      copyright,
+      license,
       t,
     ]);
 
@@ -403,14 +396,17 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     }, [
       selectedType,
       titles,
+      altTitles,
       language,
       target,
       contributors,
       date,
       bdrc,
       categoryId,
+      copyright,
+      license,
       onDataChange,
-      buildFormData,
+      // Note: buildFormData is excluded from deps since all its dependencies are already listed above
     ]);
 
     return (
@@ -1085,6 +1081,46 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
               {t("textForm.selectCategory")}
             </p>
           )}
+        </div>
+
+        {/* Copyright Field */}
+        <div>
+          <label htmlFor="copyright" className="block text-sm font-medium text-gray-700 mb-2">
+            {t("textForm.copyright")}
+          </label>
+          <select
+            id="copyright"
+            value={copyright}
+            onChange={(e) => setCopyright(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+          >
+            <option value="Public domain">{t("textForm.copyrightPublicDomain")}</option>
+            <option value="In copyright">{t("textForm.copyrightInCopyright")}</option>
+            <option value="Unknown">{t("textForm.copyrightUnknown")}</option>
+          </select>
+        </div>
+
+        {/* License Field */}
+        <div>
+          <label htmlFor="license" className="block text-sm font-medium text-gray-700 mb-2">
+            {t("textForm.license")}
+          </label>
+          <select
+            id="license"
+            value={license}
+            onChange={(e) => setLicense(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+          >
+            <option value="CC0">{t("textForm.licenseCC0")}</option>
+            <option value="Public Domain Mark">{t("textForm.licensePublicDomainMark")}</option>
+            <option value="CC BY">{t("textForm.licenseCCBY")}</option>
+            <option value="CC BY-SA">{t("textForm.licenseCCBYSA")}</option>
+            <option value="CC BY-ND">{t("textForm.licenseCCBYND")}</option>
+            <option value="CC BY-NC">{t("textForm.licenseCCBYNC")}</option>
+            <option value="CC BY-NC-SA">{t("textForm.licenseCCBYNCSA")}</option>
+            <option value="CC BY-NC-ND">{t("textForm.licenseCCBYNCND")}</option>
+            <option value="under copyright">{t("textForm.licenseUnderCopyright")}</option>
+          </select>
         </div>
 
         {/* Person Creation Modal */}

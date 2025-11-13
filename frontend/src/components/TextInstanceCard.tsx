@@ -25,18 +25,6 @@ const TextInstanceCard: React.FC<TextInstanceCardProps> = ({ instance }) => {
     }
   };
 
-  const getCopyrightColor = (copyright: string) => {
-    if (!copyright) return 'bg-gray-100 text-gray-800';
-    switch (copyright.toLowerCase()) {
-      case 'public':
-        return 'bg-green-100 text-green-800';
-      case 'private':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-yellow-100 text-yellow-800';
-    }
-  };
-
   // Title logic: 
   // 1. Try Tibetan incipit title
   // 2. If not, try first available language in incipit_title
@@ -75,9 +63,6 @@ const TextInstanceCard: React.FC<TextInstanceCardProps> = ({ instance }) => {
         <div className="flex gap-2">
           <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getTypeColor(instance.type || '')}`}>
             {instance.type}
-          </span>
-          <span className={`px-3 py-1 rounded-full text-xs font-medium ${getCopyrightColor(instance.copyright || '')}`}>
-            {instance.copyright}
           </span>
         </div>
       </div>

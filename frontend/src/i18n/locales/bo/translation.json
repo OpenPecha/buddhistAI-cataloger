@@ -265,7 +265,21 @@
     "useExistingQuestion": "ཁྱེད་ཀྱིས་ཡོད་པའི་དཔེ་ཆ་འདི་བེད་སྤྱོད་དགོས་སམ། ཡང་ན་ BDRC ཨང་གཞན་པ་འདེམས་དགོས་སམ།",
     "chooseAnother": "གཞན་པ་འདེམས་པ།",
     "useExistingText": "ཡོད་པའི་དཔེ་ཆ་སྤྱོད་པ།",
-    "unknown": "མི་ཤེས།"
+    "unknown": "མི་ཤེས།",
+    "copyright": "པར་དབང་།",
+    "copyrightPublicDomain": "མང་ཚོགས་ཀྱི་རྒྱུ་ནོར།",
+    "copyrightInCopyright": "པར་དབང་ཅན།",
+    "copyrightUnknown": "མི་ཤེས།",
+    "license": "ཆོག་མཆན།",
+    "licenseCC0": "CC0",
+    "licensePublicDomainMark": "མང་ཚོགས་ཀྱི་རྒྱུ་ནོར་རྟགས།",
+    "licenseCCBY": "CC BY",
+    "licenseCCBYSA": "CC BY-SA",
+    "licenseCCBYND": "CC BY-ND",
+    "licenseCCBYNC": "CC BY-NC",
+    "licenseCCBYNCSA": "CC BY-NC-SA",
+    "licenseCCBYNCND": "CC BY-NC-ND",
+    "licenseUnderCopyright": "པར་དབང་འོག་ཏུ།"
   },
   "instance": {
     "copyright": "པར་དབང་།",
@@ -276,6 +290,9 @@
     "wikiReference": "དྲ་རྒྱའི་གཞུང་།",
     "colophon": "མཇུག་བྲིས།",
     "colophonText": "མཇུག་བྲིས་ཡི་གེ",
+    "source": "འབྱུང་ཁུངས།",
+    "sourcePlaceholder": "མ་ཕྱིའི་འབྱུང་ཁུངས་འཇུག་རོགས།",
+    "sourceRequired": "འབྱུང་ཁུངས་དགོས།",
     "incipitTitle": "མགོ་ཚིག་མཚན།",
     "addIncipitTitle": "མགོ་ཚིག་མཚན་ཁ་སྣོན།",
     "enterIncipitTitle": "མགོ་ཚིག་མཚན་འཇུག་རོགས།",
@@ -326,6 +343,11 @@
     "noTextsFound": "དཔེ་ཆ་མ་རྙེད།",
     "adjustFilters": "ཚགས་མ་བཟོ་སྒྲིག་བྱས་རོགས།",
     "untitled": "མཚན་མེད།",
+    "checkingText": "དཔེ་ཆ་ཡོད་མེད་ཞིབ་བཤེར་བྱེད་བཞིན་པ...",
+    "textNotFound": "དཔེ་ཆ་མ་རྙེད།",
+    "createText": "+ གསར་བཟོ།",
+    "showingSearchResult": "འཚོལ་བཤེར་འབྲས་བུ་སྟོན་བཞིན་པ།",
+    "clearSearch": "འཚོལ་བཤེར་བསལ་བ།",
     "bdrcId": "BDRC ཨང་།:",
     "date": "དུས་ཚོད།:",
     "contributor_one": "མཉམ་ཞུགས་པ།",
@@ -348,9 +370,22 @@
     "translation": "བསྒྱུར་བ།",
     "commentary": "མཆན་འགྲེལ།"
   },
+  "commentary": {
+    "source": "འབྱུང་ཁུངས།",
+    "sourcePlaceholder": "འགྲེལ་བཤད་ཀྱི་འབྱུང་ཁུངས་འཇུག་རོགས།",
+    "sourceRequired": "འབྱུང་ཁུངས་དགོས།",
+    "copyright": "པར་དབང་།",
+    "license": "ཆོག་མཆན།"
+  },
+  "translation": {
+    "source": "འབྱུང་ཁུངས།",
+    "sourcePlaceholder": "བསྒྱུར་བའི་འབྱུང་ཁུངས་འཇུག་རོགས།",
+    "sourceRequired": "འབྱུང་ཁུངས་དགོས།",
+    "copyright": "པར་དབང་།",
+    "license": "ཆོག་མཆན།"
+  },
   "personsPage": {
     "title": "མི་སྣ་འཛིན་སྐྱོང་།",
-    "createPerson": "+ མི་སྣ་གསར་བཟོ།",
     "limit": "ཚད་འཛིན།",
     "nationality": "རྒྱལ་ཁབ།",
     "filterByNationality": "རྒྱལ་ཁབ་ཀྱིས་ཚགས་མ་བཟོ།",

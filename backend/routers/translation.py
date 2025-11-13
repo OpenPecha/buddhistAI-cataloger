@@ -37,28 +37,40 @@ class AlignmentAnnotation(BaseModel):
     alignment_index: List[int]
 
 
+class BibliographyAnnotation(BaseModel):
+    span: Span
+    type: str
+
+
 class CreateTranslation(BaseModel):
     language: str
     content: str
     title: str
-    author: Author
+    source: str
+    alt_titles: Optional[List[str]] = None
+    author: Optional[Author] = None
     segmentation: List[Segmentation]
     target_annotation: Optional[List[TargetAnnotation]] = None
     alignment_annotation: Optional[List[AlignmentAnnotation]] = None
     copyright: str
-    category_id: str
+    license: str
+    biblography_annotation: Optional[List[BibliographyAnnotation]] = None
 
 
 class CreateCommentary(BaseModel):
     language: str
     content: str
     title: str
-    author: Author
+    source: str
+    alt_titles: Optional[List[str]] = None
+    author: Optional[Author] = None
     segmentation: List[Segmentation]
     target_annotation: Optional[List[TargetAnnotation]] = None
     alignment_annotation: Optional[List[AlignmentAnnotation]] = None
     copyright: str
-    category_id: str
+    license: str
+    category_id: Optional[str] = None
+    biblography_annotation: Optional[List[BibliographyAnnotation]] = None
 
 
 class TranslationResponse(BaseModel):
@@ -70,10 +82,10 @@ class TranslationResponse(BaseModel):
 
 class InstanceListItem(BaseModel):
     id: str
+    type: str
+    source: Optional[str] = None
     bdrc: Optional[str] = None
     wiki: Optional[str] = None
-    type: str
-    copyright: str
     colophon: Optional[str] = None
     incipit_title: Optional[Dict[str, str]] = None
     alt_incipit_titles: List[Dict[str, str]] = []
@@ -114,25 +126,69 @@ async def get_text_instances(text_id: str):
 @router.post("/{instance_id}/translation", status_code=201)
 async def create_translation(instance_id: str, translation: CreateTranslation):
     """Create a translation for a specific instance"""
-    response = requests.post(
-        f"{API_ENDPOINT}/instances/{instance_id}/translation", 
-        json=translation.dict()
-    )
-    if response.status_code != 201:
-        raise HTTPException(status_code=response.status_code, detail=response.text)
-    return response.json()
+    if not API_ENDPOINT:
+        raise HTTPException(
+            status_code=500,
+            detail="OPENPECHA_ENDPOINT environment variable is not set"
+        )
+    
+    try:
+        # Convert to dict, excluding None values
+        payload = translation.model_dump(exclude_none=True)
+        print(f"📤 Sending translation payload to OpenPecha API: {payload}")
+        response = requests.post(
+            f"{API_ENDPOINT}/instances/{instance_id}/translation", 
+            json=payload,
+            timeout=30
+        )
+        if response.status_code != 201:
+            print(f"❌ Error response from OpenPecha API: {response.status_code} - {response.text}")
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out after 30 seconds"
+        )
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error connecting to OpenPecha API: {str(e)}"
+        )
 
 
 @router.post("/{instance_id}/commentary", status_code=201)
 async def create_commentary(instance_id: str, commentary: CreateCommentary):
     """Create a commentary for a specific instance"""
-    response = requests.post(
-        f"{API_ENDPOINT}/instances/{instance_id}/commentary", 
-        json=commentary.dict()
-    )
-    if response.status_code != 201:
-        raise HTTPException(status_code=response.status_code, detail=response.text)
-    return response.json()
+    if not API_ENDPOINT:
+        raise HTTPException(
+            status_code=500,
+            detail="OPENPECHA_ENDPOINT environment variable is not set"
+        )
+    
+    try:
+        # Convert to dict, excluding None values
+        payload = commentary.model_dump(exclude_none=True)
+        print(f"📤 Sending commentary payload to OpenPecha API: {payload}")
+        response = requests.post(
+            f"{API_ENDPOINT}/instances/{instance_id}/commentary", 
+            json=payload,
+            timeout=30
+        )
+        if response.status_code != 201:
+            print(f"❌ Error response from OpenPecha API: {response.status_code} - {response.text}")
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out after 30 seconds"
+        )
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error connecting to OpenPecha API: {str(e)}"
+        )
 
 
 @router.get("/{instance_id}/related")
