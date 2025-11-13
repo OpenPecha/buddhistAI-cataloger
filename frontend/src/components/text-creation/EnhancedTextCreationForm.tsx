@@ -6,7 +6,7 @@ import TextCreationForm from "@/components/TextCreationForm";
 import type { TextCreationFormRef } from "@/components/TextCreationForm";
 import InstanceCreationForm from "@/components/InstanceCreationForm";
 import type { InstanceCreationFormRef } from "@/components/InstanceCreationForm";
-import { useTexts, useCreateText, useCreateTextInstance } from "@/hooks/useTexts";
+import { useText, useCreateText, useCreateTextInstance } from "@/hooks/useTexts";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { detectLanguage } from "@/utils/languageDetection";
 import { useBibliographyAPI } from "@/hooks/useBibliographyAPI";
@@ -94,8 +94,15 @@ const EnhancedTextCreationForm = () => {
   // Track search attempts for "Create" button activation
   const [searchAttempts, setSearchAttempts] = useState(0);
 
+  // JSON Viewer state for debugging payloads (commented out for now)
+  const [textPayload, setTextPayload] = useState<any>(null);
+  // const [instancePayload, setInstancePayload] = useState<any>(null);
+  // const [showJsonViewer, setShowJsonViewer] = useState(false);
+
   // Mutations and data
-  const { data: texts = [], isLoading: isLoadingTexts } = useTexts({ limit: 100, offset: 0 });
+  // Only fetch texts when t_id is present in URL (for auto-selection)
+  // Use useText to fetch only the specific text needed instead of all texts
+  const { data: textFromUrl, isLoading: isLoadingTextFromUrl } = useText(t_id || '');
   const createTextMutation = useCreateText();
   const createInstanceMutation = useCreateTextInstance();
   
@@ -116,24 +123,19 @@ const EnhancedTextCreationForm = () => {
 
   // Auto-select text when t_id is provided in URL
   useEffect(() => {
-    if (t_id && texts.length > 0 && !selectedText && !hasAutoSelectedRef.current) {
-      // Try to find the text by ID
-      const foundText = texts.find((text: OpenPechaText) => text.id === t_id);
-      
-      if (foundText) {
-        // Automatically select the found text
-        setSelectedText(foundText);
-        setTextSearch(getTextDisplayName(foundText));
-        setShowTextDropdown(false);
-        setIsCreatingNewText(false);
-        hasAutoSelectedRef.current = true; // Mark as auto-selected
-      }
+    if (t_id && textFromUrl && !selectedText && !hasAutoSelectedRef.current) {
+      // Automatically select the found text
+      setSelectedText(textFromUrl);
+      setTextSearch(getTextDisplayName(textFromUrl));
+      setShowTextDropdown(false);
+      setIsCreatingNewText(false);
+      hasAutoSelectedRef.current = true; // Mark as auto-selected
     }
     // Reset the flag when there's no t_id in URL
     if (!t_id) {
       hasAutoSelectedRef.current = false;
     }
-  }, [t_id, texts, selectedText]);
+  }, [t_id, textFromUrl, selectedText]);
 
   // Periodically check if incipit and title exist to keep the state up to date
   useEffect(() => {
@@ -148,6 +150,38 @@ const EnhancedTextCreationForm = () => {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Handle text form data changes for real-time JSON viewer
+  const handleTextDataChange = (textData: any) => {
+    if (isCreatingNewText && textData) {
+      setTextPayload(textData);
+    } else {
+      setTextPayload(null);
+    }
+  };
+
+  // Periodically update instance payload for real-time JSON viewer (commented out)
+  // useEffect(() => {
+  //   const interval = setInterval(() => {
+  //     // Get instance payload if content exists
+  //     if (editedContent && editedContent.trim() !== "") {
+  //       try {
+  //         const instanceData = instanceFormRef.current?.getFormData();
+  //         if (instanceData) {
+  //           setInstancePayload(instanceData);
+  //         } else {
+  //           setInstancePayload(null);
+  //         }
+  //       } catch (error) {
+  //         setInstancePayload(null);
+  //       }
+  //     } else {
+  //       setInstancePayload(null);
+  //     }
+  //   }, 1000); // Update every second
+
+  //   return () => clearInterval(interval);
+  // }, [editedContent]);
 
   // Helper function to get text display name
   const getTextDisplayName = (text: OpenPechaText): string => {
@@ -252,7 +286,7 @@ const EnhancedTextCreationForm = () => {
         navigate(`/create?t_id=${existingText.id}`, { replace: true });
         setNotification(t("create.textFound", { name: getTextDisplayName(existingText) }));
       } else {
-        // Case 2: Text doesn't exist - create new with BDRC prefilled
+        // Case 2: Text doesn't exist - create new with BDRC data prefilled
         setSelectedText(null);
         setTextSearch("");
         setIsCreatingNewText(true);
@@ -260,9 +294,52 @@ const EnhancedTextCreationForm = () => {
         hasAutoSelectedRef.current = true;
         clearUrlParams();
         
-        // Prefill BDRC field in TextCreationForm
+        // Helper function to map BDRC roleName to form role
+        const mapRoleNameToFormRole = (roleName: string | undefined): "translator" | "reviser" | "author" | "scholar" => {
+          if (!roleName) return "author"; // Default to author
+          const lowerRoleName = roleName.toLowerCase();
+          if (lowerRoleName.includes("author") || lowerRoleName.includes("main author")) {
+            return "author";
+          } else if (lowerRoleName.includes("translator")) {
+            return "translator";
+          } else if (lowerRoleName.includes("reviser") || lowerRoleName.includes("revisor")) {
+            return "reviser";
+          } else if (lowerRoleName.includes("scholar")) {
+            return "scholar";
+          }
+          return "author"; // Default fallback
+        };
+        
+        // Prefill form with BDRC data
         setTimeout(() => {
-          textFormRef.current?.setBdrcId(workId, result.prefLabel || '');
+          if (textFormRef.current) {
+            // Set BDRC ID
+            textFormRef.current.setBdrcId(workId, result.title || '');
+            
+            // Set language if available
+            if (result.language) {
+              textFormRef.current.setFormLanguage(result.language);
+            }
+            
+            // Add title with language from response
+            if (result.title && result.title !== " - no data - ") {
+              textFormRef.current.addTitle(result.title, result.language || undefined);
+            }
+            
+            // Add all contributors
+            if (result.contributors && result.contributors.length > 0) {
+              result.contributors.forEach((contributor) => {
+                if (contributor.agent && contributor.agentName) {
+                  const formRole = mapRoleNameToFormRole(contributor.roleName);
+                  textFormRef.current?.addContributorFromBdrc(
+                    contributor.agent,
+                    contributor.agentName,
+                    formRole
+                  );
+                }
+              });
+            }
+          }
         }, 100);
         
         setNotification(t("create.creatingNewForBdrc", { id: workId }));
@@ -299,6 +376,9 @@ const EnhancedTextCreationForm = () => {
 
   // Handle unified creation: create text then instance
   const handleInstanceCreation = async (instanceData: any) => {
+    // Capture instance payload for JSON viewer (commented out)
+    // setInstancePayload(instanceData);
+    
     setError(null);
     setSuccess(null);
     setIsSubmitting(true);
@@ -307,8 +387,8 @@ const EnhancedTextCreationForm = () => {
       let textId: string;
 
       if (isCreatingNewText) {
-        // Creating new text - get form data from the global function
-        const textFormData = (window as any).__getTextFormData?.();
+        // Creating new text - use real-time payload or fallback to window method
+        const textFormData = textPayload || (window as any).__getTextFormData?.();
         if (!textFormData) {
           throw new Error(t("create.textFormDataNotAvailable"));
         }
@@ -418,7 +498,7 @@ const EnhancedTextCreationForm = () => {
   const canUpload = selectedText !== null || isCreatingNewText;
 
   // Show loading screen when auto-selecting text from URL
-  const isAutoSelecting = t_id && (isLoadingTexts || (texts.length > 0 && !selectedText));
+  const isAutoSelecting = t_id && (isLoadingTextFromUrl || (textFromUrl && !selectedText));
 
   return (
     <>
@@ -683,7 +763,7 @@ const EnhancedTextCreationForm = () => {
                                     </span>
                                     <div className="flex-1">
                                       <div className="font-medium text-sm">
-                                        {result.prefLabel || "Untitled"}
+                                        {result.title || "Untitled"}
                                       </div>
                                       <div className="text-xs text-gray-500 mt-1">
                                         {result.workId}
@@ -768,6 +848,7 @@ const EnhancedTextCreationForm = () => {
                        <TextCreationForm 
                          ref={textFormRef}
                          onExistingTextFound={handleExistingTextFoundFromForm}
+                         onDataChange={handleTextDataChange}
                        />
                    </div>
                  )}
@@ -784,6 +865,59 @@ const EnhancedTextCreationForm = () => {
                     />
                   </div>
                 )}
+
+                {/* JSON Viewer - Debug Panel */}
+                {/* <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 shadow-sm">
+                  <button
+                    type="button"
+                    onClick={() => setShowJsonViewer(!showJsonViewer)}
+                    className="w-full flex items-center justify-between text-left text-white hover:text-gray-300 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Code className="w-4 h-4" />
+                      <span className="font-semibold text-sm">JSON Payload Viewer (Debug)</span>
+                    </div>
+                    {showJsonViewer ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
+                  </button>
+
+                  {showJsonViewer && (
+                    <div className="mt-4 space-y-4">
+                      {/* Text Payload */}
+                      {/* {isCreatingNewText && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <FileText className="w-4 h-4 text-blue-400" />
+                            <h3 className="text-sm font-semibold text-blue-400">Text Payload</h3>
+                          </div>
+                          <div className="bg-gray-800 rounded p-3 overflow-x-auto">
+                            <pre className="text-xs text-gray-300 font-mono whitespace-pre-wrap break-words">
+                              {textPayload ? JSON.stringify(textPayload, null, 2) : 'No text payload available'}
+                            </pre>
+                          </div>
+                        </div>
+                      )} */}
+
+                      {/* Instance Payload */}
+                      {/* {(selectedText || (isCreatingNewText && editedContent && editedContent.trim() !== "")) && (
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <FileText className="w-4 h-4 text-green-400" />
+                            <h3 className="text-sm font-semibold text-green-400">Instance Payload</h3>
+                          </div>
+                          <div className="bg-gray-800 rounded p-3 overflow-x-auto">
+                            <pre className="text-xs text-gray-300 font-mono whitespace-pre-wrap break-words">
+                              {instancePayload ? JSON.stringify(instancePayload, null, 2) : 'No instance payload available (form data will appear here as you fill it)'}
+                            </pre>
+                          </div>
+                        </div>
+                      )} */}
+                    {/* </div>
+                  )}
+                </div> */}
               </div>
             )}
           </div>

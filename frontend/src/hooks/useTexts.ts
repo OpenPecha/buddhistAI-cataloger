@@ -19,7 +19,7 @@ export const useTexts = (params?: {
   return useQuery({
     queryKey: ["texts", params],
     queryFn: () => fetchTexts(params),
-    select: (data) => data.results || data || [],
+    // fetchTexts already returns OpenPechaText[], no need for select
     staleTime: 5 * 60 * 1000,
     retry: 1,
   });
@@ -29,8 +29,10 @@ export const useText = (id: string) => {
   return useQuery({
     queryKey: ["text", id],
     queryFn: () => fetchText(id),
-    select: (data) => data.results || data || [],
+    select: (data) => data, // fetchText returns a single text object, not an array
     enabled: !!id, // Only fetch when id exists
+    refetchOnWindowFocus: false, // Prevent refetch on window focus
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
   });
 };
 
@@ -38,7 +40,7 @@ export const useTextInstance = (id: string) => {
   return useQuery({
     queryKey: ["textInstance", id],
     queryFn: () => fetchTextInstances(id),
-    select: (data) => data.results || data || [],
+    // fetchTextInstances already returns OpenPechaTextInstanceListItem[], no need for select
     enabled: !!id, // Only fetch when id exists
   });
 };
@@ -47,7 +49,7 @@ export const useInstance = (id: string) => {
   return useQuery({
     queryKey: ["instance", id],
     queryFn: () => fetchInstance(id),
-    select: (data) => data.results || data || [],
+    // fetchInstance already returns OpenPechaTextInstance, no need for select
     enabled: !!id, // Only fetch when id exists
   });
 };

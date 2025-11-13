@@ -39,6 +39,7 @@ export interface InstanceCreationFormRef {
   addIncipit: (text: string, language?: string) => void;
   addAltIncipit: (text: string, language?: string) => void;
   hasIncipit: () => boolean;
+  getFormData: () => InstanceData | null;
 }
 
 interface TitleEntry {
@@ -182,6 +183,13 @@ const InstanceCreationForm = forwardRef<
     hasIncipit: () => {
       // Check if incipit section is shown and has at least one entry with a value
       return showIncipitTitle && incipitTitles.length > 0 && incipitTitles.some(t => t.value.trim() !== "");
+    },
+    getFormData: () => {
+      // Return null if content is empty (form not ready)
+      if (!content || content.trim().length === 0) {
+        return null;
+      }
+      return cleanFormData();
     },
   }));
 
@@ -500,7 +508,7 @@ const InstanceCreationForm = forwardRef<
                           </div>
                         ) : bdrcResults.length > 0 ? (
                           bdrcResults
-                            .filter((result) => result.prefLabel && result.prefLabel !== " - no data - ")
+                            .filter((result) => result.title && result.title !== " - no data - ")
                             .map((result, index) => (
                               <button
                                 key={`${result.instanceId}-${index}`}
@@ -508,7 +516,7 @@ const InstanceCreationForm = forwardRef<
                                 onClick={() => {
                                   setSelectedBdrc({
                                     id: result.instanceId ?? "",
-                                    label: result.prefLabel ?? "",
+                                    label: result.title ?? "",
                                   });
                                   setBdrc(result.instanceId ?? "");
                                   setShowBdrcDropdown(false);
@@ -516,7 +524,7 @@ const InstanceCreationForm = forwardRef<
                                 className="w-full px-4 py-2 text-left hover:bg-gray-200 border-b border-gray-100"
                               >
                                 <div className="text-sm font-medium text-gray-900">
-                                  {result.prefLabel}
+                                  {result.title}
                                 </div>
                                 <div className="text-xs text-gray-500">{result.instanceId}</div>
                               </button>
