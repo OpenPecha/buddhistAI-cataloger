@@ -936,103 +936,86 @@ const EnhancedTextCreationForm = () => {
             }
           `}
         >
-          {!canUpload ? (
-            /* Disabled State - No text selected */
-            <div className="h-full flex flex-col items-center justify-center p-8">
-              <div className="text-center max-w-md">
-                <div className="mb-6 opacity-50">
-                  <Upload className="w-20 h-20 mx-auto text-gray-400" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-600 mb-2">
-                  {t("create.editorDisabled")}
-                </h3>
-                <p className="text-gray-500">
-                  {t("create.editorDisabledDesc")}
-                </p>
-              </div>
-            </div>
-          ) : (
-            /* Editor View */
-            <div className="h-full flex flex-col">
-              {/* Upload Button in Header */}
-              <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
-                <div className="flex items-center justify-between">
-                  {!editedContent || editedContent?.trim() === "" ? (
-                    <>
-                      <p className="text-sm text-gray-600">
-                        {t("create.startTyping")}
-                      </p>
-                      <div>
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept=".txt"
-                          onChange={(e) => {
-                            const files = e.target.files;
-                            if (files && files.length > 0) {
-                              const file = files[0];
-                              
-                              // Validate file size
-                              if (file.size < 1024) {
-                                alert(t("create.fileTooSmall"));
-                                e.target.value = '';
-                                return;
-                              }
-                              
-                              // Validate file type
-                              if (!file.name.endsWith('.txt')) {
-                                alert(t("create.uploadTxtOnly"));
-                                e.target.value = '';
-                                return;
-                              }
-                              
-                              const reader = new FileReader();
-                              reader.onload = (event) => {
-                                const content = event.target?.result as string;
-                                handleFileUpload(content, file.name);
-                              };
-                              reader.readAsText(file);
+          {/* Editor View */}
+          <div className="h-full flex flex-col">
+            {/* Upload Button in Header */}
+            <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
+              <div className="flex items-center justify-between">
+                {!editedContent || editedContent?.trim() === "" ? (
+                  <>
+                    <p className="text-sm text-gray-600">
+                      {t("create.startTyping")}
+                    </p>
+                    <div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".txt"
+                        onChange={(e) => {
+                          const files = e.target.files;
+                          if (files && files.length > 0) {
+                            const file = files[0];
+                            
+                            // Validate file size
+                            if (file.size < 1024) {
+                              alert(t("create.fileTooSmall"));
+                              e.target.value = '';
+                              return;
                             }
-                            e.target.value = ''; // Reset input
-                          }}
-                          className="hidden"
-                        />
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() => {
-                            fileInputRef.current?.click();
-                          }}
-                          className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-                        >
-                          <Upload className="w-4 h-4" />
-                          {t("create.uploadFile")}
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <span className="text-xs text-gray-500">
-                      {editedContent?.length} {t("create.characters")}
-                    </span>
-                  )}
-                </div>
-              </div>
-              
-              {/* Editor */}
-              <div className="flex-1 overflow-hidden">
-                <TextEditorView
-                  content={editedContent || ""}
-                  filename={editedContent ? uploadedFilename : t("editor.newDocument")}
-                  editable={true}
-                  onChange={(value) => setEditedContent(value)}
-                  onTextSelect={handleEditorTextSelect}
-                  isCreatingNewText={isCreatingNewText}
-                  hasIncipit={hasIncipitTitle}
-                  hasTitle={hasTitle}
-                />
+                            
+                            // Validate file type
+                            if (!file.name.endsWith('.txt')) {
+                              alert(t("create.uploadTxtOnly"));
+                              e.target.value = '';
+                              return;
+                            }
+                            
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              const content = event.target?.result as string;
+                              handleFileUpload(content, file.name);
+                            };
+                            reader.readAsText(file);
+                          }
+                          e.target.value = ''; // Reset input
+                        }}
+                        className="hidden"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          fileInputRef.current?.click();
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                      >
+                        <Upload className="w-4 h-4" />
+                        {t("create.uploadFile")}
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <span className="text-xs text-gray-500">
+                    {editedContent?.length} {t("create.characters")}
+                  </span>
+                )}
               </div>
             </div>
-          )}
+            
+            {/* Editor */}
+            <div className="flex-1 overflow-hidden">
+              <TextEditorView
+                content={editedContent || ""}
+                filename={editedContent ? uploadedFilename : t("editor.newDocument")}
+                editable={true}
+                onChange={(value) => setEditedContent(value)}
+                onTextSelect={handleEditorTextSelect}
+                isCreatingNewText={isCreatingNewText}
+                hasIncipit={hasIncipitTitle}
+                hasTitle={hasTitle}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </>
