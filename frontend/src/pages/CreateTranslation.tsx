@@ -45,6 +45,7 @@ const CreateTranslation = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [createdInstanceId, setCreatedInstanceId] = useState<string | null>(null);
 
   // Bibliography annotations
   const { clearAnnotations } = useBibliography();
@@ -201,7 +202,12 @@ const CreateTranslation = () => {
       }
 
       // Create translation
-      await createTranslation(instance_id || '', translationData);
+      const response = await createTranslation(instance_id || '', translationData);
+      
+      // Extract instance_id from response
+      if (response && response.instance_id) {
+        setCreatedInstanceId(response.instance_id);
+      }
       
       // Clear bibliography annotations after successful submission
       clearAnnotations();
@@ -227,7 +233,8 @@ const CreateTranslation = () => {
         <TextCreationSuccessModal
           message={`${t('textForm.translation')} ${t('messages.createSuccess').toLowerCase()}`}
           onClose={handleModalClose}
-          instanceId={instance_id || null}
+          instanceId={createdInstanceId || null}
+          parentInstanceId={instance_id || null}
         />
       )}
 
