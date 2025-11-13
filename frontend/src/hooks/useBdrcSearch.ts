@@ -2,12 +2,20 @@ import { useState, useEffect } from "react";
 
 const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8000';
 
+export interface BdrcContributor {
+  creator?: string;
+  agent?: string;
+  agentName?: string;
+  role?: string;
+  roleName?: string;
+}
+
 export interface BdrcSearchResult {
   workId?: string;
   instanceId?: string;
-  prefLabel?: string;
+  title?: string;
   catalogInfo?: string | null;
-  creator?: string | null;
+  contributors?: BdrcContributor[];
   language?: string | null;
   workGenre?: string | null;
   workHasInstance?: string[];

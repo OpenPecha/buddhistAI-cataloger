@@ -471,7 +471,7 @@ const CreateCommentary = () => {
               </div>
 
               {/* JSON Preview Section (Temporary for Testing) */}
-              {content && (
+              {/* {content && (
                 <div className="mt-6 pt-6 border-t border-gray-200">
                   <div className="mb-2 flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-gray-700">
@@ -531,7 +531,7 @@ const CreateCommentary = () => {
                     )}
                   </pre>
                 </div>
-              )}
+              )} */}
             </form>
           </div>
         </div>
