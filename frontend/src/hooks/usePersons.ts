@@ -4,7 +4,7 @@ import type { Person, CreatePersonData, UpdatePersonData } from '../types/person
 const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8000';
 
 // Helper function to handle API responses with better error messages
-const handleApiResponse = async (response: Response, customMessages?: { 404?: string; 500?: string }) => {
+const handleApiResponse = async (response: Response, customMessages?: { 400?: string; 404?: string; 500?: string }) => {
   if (!response.ok) {
     // Try to parse error response
     const contentType = response.headers.get('content-type');
@@ -107,20 +107,14 @@ const updatePerson = async (data: UpdatePersonData): Promise<Person> => {
   await new Promise(resolve => setTimeout(resolve, 1000));
   return {
     id: data.id,
-    name: data.name || '',
-    bdrc_id: data.bdrc_id,
-    birth_year: data.birth_year,
-    death_year: data.death_year,
-    nationality: data.nationality,
-    occupation: data.occupation,
-    description: data.description,
-    wiki_url: data.wiki_url,
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: new Date().toISOString()
+    name: data.name || {},
+    alt_names: data.alt_names || null,
+    bdrc: data.bdrc || '',
+    wiki: data.wiki || null
   };
 };
 
-const deletePerson = async (id: string): Promise<void> => {
+const deletePerson = async (_id: string): Promise<void> => {
   await new Promise(resolve => setTimeout(resolve, 500));
 };
 
