@@ -13,6 +13,7 @@ load_dotenv( override=True)
 router = APIRouter()
 
 API_ENDPOINT = os.getenv("OPENPECHA_ENDPOINT")
+TRANSLATION_BACKEND_URL = os.getenv("TRANSLATION_BACKEND_URL")
 
 class Contribution(BaseModel):
     person_id: Optional[str] = None
@@ -253,6 +254,15 @@ async def create_instance(id: str, instance: CreateInstance):
                 )
                 if annotation_response_id:
                     print(text_id, instance_id, annotation_response_id)
+                    
+                    temp_database_response = requests.post(f"{TRANSLATION_BACKEND_URL}/temp_annotation", json={
+                        "textId": text_id,
+                        "instanceId": instance_id,
+                        "annotationId": annotation_response_id,
+                        "createdBy": "cataloger"
+                    })
+                    if temp_database_response.status_code != 201:
+                        print(f"Error creating temp annotation: {temp_database_response.text}")
         except Exception as e:
             print(e)
         
