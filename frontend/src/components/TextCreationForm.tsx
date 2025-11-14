@@ -162,6 +162,13 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     const [categoryError, setCategoryError] = useState<boolean>(false);
     const [copyright, setCopyright] = useState<string>("Public domain");
     const [license, setLicense] = useState<string>("CC0");
+
+    // Auto-set license to "unknown" when copyright is "Unknown"
+    useEffect(() => {
+      if (copyright === "Unknown") {
+        setLicense("unknown");
+      }
+    }, [copyright]);
     
     // BDRC search state
     const [bdrcSearch, setBdrcSearch] = useState("");
@@ -352,8 +359,10 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         textData.copyright = copyright.trim();
       }
 
-      // Add license (optional field, send "CC0" if empty/unknown)
-      if (license && license.trim()) {
+      // Add license (if copyright is Unknown, send "unknown", otherwise use selected license or default to "CC0")
+      if (copyright === "Unknown") {
+        textData.license = "unknown";
+      } else if (license && license.trim()) {
         textData.license = license.trim();
       } else {
         // If license is empty, send "CC0" as default
@@ -1094,9 +1103,9 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
             onChange={(e) => setCopyright(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
           >
-            <option value="Public domain">{t("textForm.copyrightPublicDomain")}</option>
-            <option value="In copyright">{t("textForm.copyrightInCopyright")}</option>
             <option value="Unknown">{t("textForm.copyrightUnknown")}</option>
+            <option value="In copyright">{t("textForm.copyrightInCopyright")}</option>
+            <option value="Public domain">{t("textForm.copyrightPublicDomain")}</option>
           </select>
         </div>
 
@@ -1109,8 +1118,12 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
             id="license"
             value={license}
             onChange={(e) => setLicense(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
+            disabled={copyright === "Unknown"}
+            className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm ${
+              copyright === "Unknown" ? "bg-gray-100 cursor-not-allowed opacity-60" : ""
+            }`}
           >
+            <option value="unknown">{t("textForm.licenseUnknown")}</option>
             <option value="CC0">{t("textForm.licenseCC0")}</option>
             <option value="Public Domain Mark">{t("textForm.licensePublicDomainMark")}</option>
             <option value="CC BY">{t("textForm.licenseCCBY")}</option>

@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, X, Upload, FileText, Code } from "lucide-react";
+import { AlertCircle, X, Upload, FileText, Code, CheckCircle2, ArrowRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import TextEditorView from "./TextEditorView";
 import TextCreationForm from "@/components/TextCreationForm";
 import type { TextCreationFormRef } from "@/components/TextCreationForm";
@@ -11,7 +12,6 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { detectLanguage } from "@/utils/languageDetection";
 import { useBibliographyAPI } from "@/hooks/useBibliographyAPI";
 import type { OpenPechaText } from "@/types/text";
-import TextCreationSuccessModal from "./TextCreationSuccessModal";
 import { useBdrcSearch, type BdrcSearchResult } from "@/hooks/useBdrcSearch";
 import { fetchTextByBdrcId, fetchBdrcWorkInstance } from "@/api/texts";
 import { useTranslation } from "react-i18next";
@@ -79,7 +79,8 @@ const EnhancedTextCreationForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [createdInstanceId, setCreatedInstanceId] = useState<string | null>(null);
+  const [successTextId, setSuccessTextId] = useState<string | null>(null);
+  const [successInstanceId, setSuccessInstanceId] = useState<string | null>(null);
   
   // Notification state for text selection actions
   const [notification, setNotification] = useState<string | null>(null);
@@ -447,16 +448,32 @@ const EnhancedTextCreationForm = () => {
       // Now create the instance
       const createdInstance = await createInstanceMutation.mutateAsync({ textId, instanceData });
       // The API returns { message: string, id: string }, so access id directly
-      setCreatedInstanceId(createdInstance?.id || null);
+      const instanceId = createdInstance?.id;
+      
+      if (!instanceId) {
+        throw new Error(t("create.instanceCreationFailed"));
+      }
       
       // Clear bibliography annotations only after successful instance creation
       clearAfterSubmission();
       
+      // Store IDs for navigation
+      setSuccessTextId(textId);
+      setSuccessInstanceId(instanceId);
+      
+      // Show success notification
       setSuccess(
         isCreatingNewText
           ? t("create.textAndInstanceCreated")
           : t("create.instanceCreated")
       );
+      
+      // Clear form state (without navigating)
+      setSelectedText(null);
+      setTextSearch("");
+      setIsCreatingNewText(false);
+      clearFileUpload();
+      hasAutoSelectedRef.current = true;
     } catch (err: any) {
       setError(parseErrorMessage(err));
     } finally {
@@ -464,15 +481,40 @@ const EnhancedTextCreationForm = () => {
     }
   };
 
-  // Reset everything after success
-  const handleCloseSuccessModal = () => {
+  // Handle success modal close - navigate to instance page
+  const handleSuccessModalClose = useCallback(() => {
+    if (successTextId && successInstanceId) {
+      navigate(`/texts/${successTextId}/instances/${successInstanceId}`);
+    }
     setSuccess(null);
-    setError(null);
-    setIsSubmitting(false);
-    setCreatedInstanceId(null);
-    setActivePanel("form");
-    resetToInitialState();
-  };
+    setSuccessTextId(null);
+    setSuccessInstanceId(null);
+  }, [successTextId, successInstanceId, navigate]);
+
+  // Close modal on ESC key
+  useEffect(() => {
+    if (!success) return;
+    
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleSuccessModalClose();
+      }
+    };
+    
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [success, handleSuccessModalClose]);
+
+  // Prevent background scroll while modal is open
+  useEffect(() => {
+    if (!success) return;
+    
+    const original = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = original;
+    };
+  }, [success]);
 
   // Handle cancel - reset file upload but keep text selection
   const handleCancel = () => {
@@ -541,16 +583,116 @@ const EnhancedTextCreationForm = () => {
   // Show loading screen when auto-selecting text from URL
   const isAutoSelecting = t_id && (isLoadingTextFromUrl || (textFromUrl && !selectedText));
 
+  // Utility: join class names
+  const cn = (...classes: Array<string | false | null | undefined>) => {
+    return classes.filter(Boolean).join(" ");
+  };
+
   return (
     <>
-      {/* Success Modal - Full screen overlay */}
-      {success && (
-        <TextCreationSuccessModal
-          message={success}
-          onClose={handleCloseSuccessModal}
-          instanceId={createdInstanceId}
-        />
-      )}
+      {/* Success Modal */}
+      <AnimatePresence>
+        {success && (
+          <div
+            aria-modal
+            role="dialog"
+            aria-labelledby="success-title"
+            aria-describedby="success-desc"
+            className="fixed inset-0 z-50 h-screen w-screen"
+          >
+            {/* Transparent backdrop */}
+            <motion.div
+              className="absolute inset-0 h-full w-full bg-black/20 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={handleSuccessModalClose}
+            />
+
+            {/* Decorative floating blobs */}
+            <div className="pointer-events-none absolute inset-0 overflow-hidden">
+              <motion.div
+                className="absolute -top-20 -left-20 h-72 w-72 rounded-full bg-emerald-400/20 blur-3xl"
+                animate={{ x: [0, 20, -10, 0], y: [0, 10, -10, 0] }}
+                transition={{ repeat: Infinity, duration: 12, ease: "easeInOut" }}
+              />
+              <motion.div
+                className="absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-indigo-400/20 blur-3xl"
+                animate={{ x: [0, -15, 10, 0], y: [0, -10, 15, 0] }}
+                transition={{ repeat: Infinity, duration: 14, ease: "easeInOut" }}
+              />
+            </div>
+
+            {/* Modal card */}
+            <div className="relative flex min-h-full items-center justify-center p-4 sm:p-8">
+              <motion.div
+                initial={{ y: 20, opacity: 0, scale: 0.98 }}
+                animate={{ y: 0, opacity: 1, scale: 1 }}
+                exit={{ y: 10, opacity: 0, scale: 0.98 }}
+                transition={{ type: "spring", stiffness: 220, damping: 22 }}
+                onClick={(e) => e.stopPropagation()}
+                className={cn(
+                  "relative w-full max-w-md",
+                  "rounded-3xl border border-white/20 bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl",
+                  "shadow-[0_10px_40px_-12px_rgba(0,0,0,0.35)]"
+                )}
+              >
+                {/* Gradient ring */}
+                <div className="pointer-events-none absolute -inset-[1px] rounded-3xl bg-gradient-to-br from-white/70 via-emerald-300/40 to-transparent opacity-70 [mask:linear-gradient(#000,transparent_60%)]" />
+
+                {/* Top bar with close */}
+                <div className="relative px-6 py-4 sm:px-8 sm:py-5 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/20 ring-1 ring-emerald-500/40">
+                      <CheckCircle2 className="text-emerald-600" size={20} />
+                    </div>
+                    <h2 id="success-title" className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-100">
+                      {t("create.success")}
+                    </h2>
+                  </div>
+
+                  <button
+                    onClick={handleSuccessModalClose}
+                    className={cn(
+                      "group inline-flex items-center justify-center rounded-full p-2.5",
+                      "text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200",
+                      "ring-1 ring-black/5 hover:ring-black/10 transition"
+                    )}
+                    aria-label="Close"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="relative px-6 pb-6 sm:px-8 sm:pb-8">
+                  {/* Success message */}
+                  <div className="mb-6 overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-900/20 dark:to-gray-900">
+                    <div className="relative px-6 py-5 sm:px-8 sm:py-6">
+                      <p id="success-desc" className="text-base sm:text-lg font-medium text-gray-800 dark:text-gray-100 text-center">
+                        {success || t("create.textAndInstanceCreated")}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* View Instance Button */}
+                  <Button
+                    onClick={handleSuccessModalClose}
+                    className={cn(
+                      "w-full bg-emerald-600 hover:bg-emerald-700 text-white",
+                      "flex items-center justify-center gap-2 py-6 text-base font-medium",
+                      "rounded-xl shadow-lg transition-all duration-200"
+                    )}
+                  >
+                    <span>{t("create.viewInstance")}</span>
+                    <ArrowRight size={18} />
+                  </Button>
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Notification Toast - Success/Info Messages */}
       {notification && (
