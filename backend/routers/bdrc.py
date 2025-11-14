@@ -422,6 +422,11 @@ async def bdrc_search(request: BdrcSearchRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/work/{work_id}/instances/{instance_id}")
+async def get_work_instance(work_id: str, instance_id: str):
+    work_details = await fetch_work_details([(work_id, instance_id)])
+    return work_details[0]
+
 class Creator(BaseModel):
     creator: Optional[str] = None  # Creator entity ID like CR7FBB8DAF61E7BE24
     agent: Optional[str] = None  # Person ID like P1KG4922
@@ -569,7 +574,6 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
             # Fetch RDF data from BDRC
             url = f"https://ldspdi.bdrc.io/resource/{work_id}.ttl"
             response = requests.get(url, timeout=10)
-            print(response.text)
             
             if response.status_code != 200:
                 logging.warning(f"Failed to fetch work {work_id}: HTTP {response.status_code}")

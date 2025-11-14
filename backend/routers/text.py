@@ -5,6 +5,9 @@ import requests
 import os
 from dotenv import load_dotenv
 
+
+from utils.segmentor import create_segmentation_annotation
+
 load_dotenv( override=True)
 
 router = APIRouter()
@@ -147,7 +150,6 @@ async def create_text(text: CreateText):
     try:
         # Convert to dict, excluding None values
         payload = text.model_dump(exclude_none=True)
-        print(f"📤 Sending payload to OpenPecha API: {payload}")
         response = requests.post(f"{API_ENDPOINT}/texts", json=payload)
         
         if response.status_code != 201:
@@ -237,10 +239,23 @@ async def create_instance(id: str, instance: CreateInstance):
     try:
         # Convert to dict, excluding None values
         payload = instance.model_dump(exclude_none=True)
-        print(f"📥 Received instance data: {payload}")
-        print(f"📚 Bibliography annotations: {payload.get('biblography_annotation', 'Not found')}")
-        
         response = requests.post(f"{API_ENDPOINT}/texts/{id}/instances", json=payload)
+        try:
+            text_id = id
+            instance_id = response.json().get("id")
+            content = payload.get("content")
+            text_response  = requests.get(f"{API_ENDPOINT}/texts/{text_id}")
+            language = text_response.json().get("language")
+            if instance_id and content and language:
+                
+                annotation_response_id = create_segmentation_annotation(
+                    instance_id, content, language
+                )
+                if annotation_response_id:
+                    print(text_id, instance_id, annotation_response_id)
+        except Exception as e:
+            print(e)
+        
         
         if response.status_code != 201:
             raise HTTPException(status_code=response.status_code, detail=response.text)
@@ -280,3 +295,5 @@ async def get_instance(instance_id: str, annotation: bool = True):
             status_code=500,
             detail=f"Error connecting to OpenPecha API: {str(e)}"
         )
+
+
