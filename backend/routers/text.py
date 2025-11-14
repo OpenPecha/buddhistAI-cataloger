@@ -263,7 +263,7 @@ async def create_instance(id: str, instance: CreateInstance, background_tasks: B
     try:
         # Convert to dict, excluding None values
         payload = instance.model_dump(exclude_none=True)
-        response = requests.post(f"{API_ENDPOINT}/texts/{id}/instances", json=payload)
+        response = requests.post(f"{API_ENDPOINT}/texts/{id}/instances", json=payload,timeout=120)
         
         if response.status_code != 201:
             raise HTTPException(status_code=response.status_code, detail=response.text)
