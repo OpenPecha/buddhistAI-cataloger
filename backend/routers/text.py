@@ -93,7 +93,7 @@ class InstanceListItem(BaseModel):
 class CreateInstance(BaseModel):
     metadata: Dict[str, Any]
     annotation: List[Dict[str, Any]]
-    biblography_annotation: Optional[List[BibliographyAnnotation]] = []
+    biblography_annotation: Optional[List[BibliographyAnnotation]] = None
     content: str
 
 class CreateInstanceResponse(BaseModel):

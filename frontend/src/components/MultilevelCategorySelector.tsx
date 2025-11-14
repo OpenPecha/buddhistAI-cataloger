@@ -28,11 +28,10 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
   } | null>(null);
 
   const { categories, loading, error } = useCategories(currentParentId);
-
   // Handle category badge click
   const handleCategoryClick = (category: Category) => {
     if (category.has_child) {
-      // Navigate into this category
+      // Navigate into this category (categories with children cannot be selected)
       const newPath = [...navigationPath, {
         id: category.id,
         title: category.title,
@@ -40,8 +39,10 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
       }];
       setNavigationPath(newPath);
       setCurrentParentId(category.id);
+      // Clear selection when navigating into a parent category
+      setSelectedCategory(null);
     } else {
-      // Select this leaf category
+      // Only select leaf categories (categories without children)
       const fullPath = [...navigationPath, {
         id: category.id,
         title: category.title,
@@ -51,7 +52,6 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
       onCategorySelect(category.id, fullPath);
     }
   };
-
   // Handle breadcrumb click
   const handleBreadcrumbClick = (index: number) => {
     if (index === -1) {
@@ -64,6 +64,8 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
       setNavigationPath(newPath);
       setCurrentParentId(newPath[index].id);
     }
+    // Clear selection when navigating
+    setSelectedCategory(null);
   };
 
   // Reset selection
@@ -123,7 +125,9 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
           ) : (
             <div className="flex flex-wrap gap-2">
               {categories.map((category) => {
-                const isSelected = selectedCategory?.category.id === category.id;
+                // Only leaf nodes (categories without children) can be selected
+                const isSelected = !category.has_child && selectedCategory?.category.id === category.id;
+                const isSelectable = !category.has_child;
                 return (
                   <button
                     type="button"
@@ -134,14 +138,16 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
                       transition-all duration-200
                       ${isSelected 
                         ? 'bg-blue-600 text-white shadow-md' 
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-sm'
+                        : isSelectable
+                        ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-sm'
+                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:shadow-sm cursor-pointer'
                       }
                       ${category.has_child ? 'pr-3' : ''}
                     `}
                   >
                     <span>{category.title}</span>
                     {isSelected && <Check className="h-4 w-4" />}
-                    {category.has_child && !isSelected && (
+                    {category.has_child && (
                       <ChevronRight className="h-4 w-4 text-gray-500" />
                     )}
                   </button>
