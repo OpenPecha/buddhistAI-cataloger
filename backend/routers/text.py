@@ -150,7 +150,6 @@ async def create_text(text: CreateText):
     try:
         # Convert to dict, excluding None values
         payload = text.model_dump(exclude_none=True)
-        print(f"📤 Sending payload to OpenPecha API: {payload}")
         response = requests.post(f"{API_ENDPOINT}/texts", json=payload)
         
         if response.status_code != 201:
@@ -245,9 +244,10 @@ async def create_instance(id: str, instance: CreateInstance):
             text_id = id
             instance_id = response.json().get("id")
             content = payload.get("content")
-            text_response =await get_text(text_id)
-            language = text_response.get("language")
+            text_response  = requests.get(f"{API_ENDPOINT}/texts/{text_id}")
+            language = text_response.json().get("language")
             if instance_id and content and language:
+                
                 annotation_response_id = create_segmentation_annotation(
                     instance_id, content, language
                 )

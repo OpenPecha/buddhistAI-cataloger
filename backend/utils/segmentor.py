@@ -15,49 +15,23 @@ def get_segmented_text(text: str, lang: str):
 
 
 def create_segmentation_annotation(instance_id: str, content: str, language: str):
-    """
-    Create segmentation annotation for an instance based on its content and language.
+    # If language is English, ensure content ends with a period
+    if language == "en" and content and not content.rstrip().endswith('.'):
+        content = content.rstrip() + '.'
+    elif language == "bo" and content and not content.rstrip().endswith('།'):
+        content = content.rstrip() + '།'
     
-    Args:
-        instance_id: The ID of the instance to create annotation for
-        content: The text content to segment
-        language: The language of the content
-        
-    Returns:
-        tuple: (text_id, instance_id, annotation_response_id) or None if error occurs
-    """
     try:
-        spans, segments = get_segmented_text(content, language)
-        
-        annotation = []
-        for span in spans:
-            start = span.get("start")
-            end = span.get("end")
-            segment = segments.get(start)
-            if segment:
-                annotation.append({
-                    "type": "search_segmentation",
-                    "span": {
-                        "start": start,
-                        "end": end
-                    }
-                })
+        spans, _ = get_segmented_text(content, language)
+        annotation = spans
         
         if not API_ENDPOINT:
             print("Warning: OPENPECHA_ENDPOINT not set, skipping annotation creation")
             return None
         
         annotation_payload = {
-            "type": "segmentation",
-            "annotation": [
-                {
-                    "span": {
-                        "start": item["span"]["start"],
-                        "end": item["span"]["end"]
-                    }
-                }
-                for item in annotation
-            ]
+            "type": "search_segmentation",
+            "annotation": annotation
         }
         
         annotation_response = requests.post(
@@ -69,10 +43,10 @@ def create_segmentation_annotation(instance_id: str, content: str, language: str
             print(f"Failed to create annotation: {annotation_response.text}")
             return None
         
-        annotation_response_id = annotation_response.json().get("id")
+        annotation_response_id = annotation_response.json().get("annotation_id")
         return annotation_response_id
         
     except Exception as e:
-        print(f"Error creating segmentation annotation: {e}")
+        print(f"Error   : {e}")
         return None
 
