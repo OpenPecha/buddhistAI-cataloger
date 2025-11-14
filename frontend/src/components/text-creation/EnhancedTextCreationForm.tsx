@@ -243,7 +243,8 @@ const EnhancedTextCreationForm = () => {
         setIsCreatingNewText(true);
         clearFileUpload();
         hasAutoSelectedRef.current = true;
-        clearUrlParams();
+        navigate(`/create?t_id=${workId}`, { replace: true });
+
         
         // Helper function to map BDRC roleName to form role
         const mapRoleNameToFormRole = (roleName: string | undefined): "translator" | "reviser" | "author" | "scholar" => {
