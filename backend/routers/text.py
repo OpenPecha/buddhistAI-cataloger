@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import requests
@@ -229,8 +229,31 @@ async def get_instances(id: str):
             detail=f"Error connecting to OpenPecha API: {str(e)}"
         )
 
+def create_annotation_background(text_id: str, instance_id: str, content: str):
+    """Background task to create segmentation annotation and temp annotation"""
+    try:
+        text_response = requests.get(f"{API_ENDPOINT}/texts/{text_id}")
+        language = text_response.json().get("language")
+        if instance_id and content and language:
+            annotation_response_id = create_segmentation_annotation(
+                instance_id, content, language
+            )
+            if annotation_response_id:
+                print(text_id, instance_id, annotation_response_id)
+                
+                temp_database_response = requests.post(f"{TRANSLATION_BACKEND_URL}/temp_annotation", json={
+                    "textId": text_id,
+                    "instanceId": instance_id,
+                    "annotationId": annotation_response_id,
+                    "createdBy": "cataloger"
+                })
+                if temp_database_response.status_code != 201:
+                    print(f"Error creating temp annotation: {temp_database_response.text}")
+    except Exception as e:
+        print(e)
+
 @router.post("/{id}/instances",  status_code=201)
-async def create_instance(id: str, instance: CreateInstance):
+async def create_instance(id: str, instance: CreateInstance, background_tasks: BackgroundTasks):
     if not API_ENDPOINT:
         raise HTTPException(
             status_code=500, 
@@ -241,34 +264,21 @@ async def create_instance(id: str, instance: CreateInstance):
         # Convert to dict, excluding None values
         payload = instance.model_dump(exclude_none=True)
         response = requests.post(f"{API_ENDPOINT}/texts/{id}/instances", json=payload)
-        try:
-            text_id = id
-            instance_id = response.json().get("id")
-            content = payload.get("content")
-            text_response  = requests.get(f"{API_ENDPOINT}/texts/{text_id}")
-            language = text_response.json().get("language")
-            if instance_id and content and language:
-                
-                annotation_response_id = create_segmentation_annotation(
-                    instance_id, content, language
-                )
-                if annotation_response_id:
-                    print(text_id, instance_id, annotation_response_id)
-                    
-                    temp_database_response = requests.post(f"{TRANSLATION_BACKEND_URL}/temp_annotation", json={
-                        "textId": text_id,
-                        "instanceId": instance_id,
-                        "annotationId": annotation_response_id,
-                        "createdBy": "cataloger"
-                    })
-                    if temp_database_response.status_code != 201:
-                        print(f"Error creating temp annotation: {temp_database_response.text}")
-        except Exception as e:
-            print(e)
-        
         
         if response.status_code != 201:
             raise HTTPException(status_code=response.status_code, detail=response.text)
+        
+        # Schedule background task for annotation creation
+        instance_id = response.json().get("id")
+        content = payload.get("content")
+        if instance_id and content:
+            background_tasks.add_task(
+                create_annotation_background,
+                text_id=id,
+                instance_id=instance_id,
+                content=content
+            )
+        
         return response.json()
     except requests.exceptions.Timeout:
         raise HTTPException(
