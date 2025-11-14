@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8000';
 
@@ -26,71 +27,68 @@ export interface BdrcSearchResult {
 }
 
 /**
- * Custom hook for searching BDRC entries
+ * Custom hook for searching BDRC entries using React Query
  * 
  * @param searchQuery - The search query string
  * @param type - The type to search for (Instance, Text, Person, etc.)
- * @param debounceMs - Debounce delay in milliseconds (default: 500ms)
+ * @param debounceMs - Debounce delay in milliseconds (default: 1000ms)
  * @returns search results and loading state
  */
 
 export function useBdrcSearch(searchQuery: string, type: string = "Instance", debounceMs: number = 1000) {
-  const [results, setResults] = useState<BdrcSearchResult[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
 
+  // Debounce the search query
   useEffect(() => {
-    // If search query is empty, reset results
-    if (!searchQuery.trim()) {
-      setResults([]);
-      setIsLoading(false);
-      setError(null);
-      return;
-    }
-
-    // Set loading immediately
-    setIsLoading(true);
-    setError(null);
-
-    // Debounce API call
-    const timer = setTimeout(async () => {
-      try {
-        const response = await fetch(`${API_URL}/bdrc/search`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            search_query: searchQuery.trim(),
-            from: 0,
-            size: 20,
-            filter: [],
-            type: type,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to search BDRC entries");
-        }
-
-        const data = await response.json();
-        setResults(Array.isArray(data) ? data : []);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
-        setResults([]);
-      } finally {
-        setIsLoading(false);
-      }
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
     }, debounceMs);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, type, debounceMs]);
+  }, [searchQuery, debounceMs]);
+
+  const trimmedQuery = debouncedQuery.trim();
+  const isEnabled = trimmedQuery.length > 0;
+
+  const { data, isLoading, error } = useQuery<BdrcSearchResult[]>({
+    queryKey: ["bdrc-search", trimmedQuery, type],
+    queryFn: async ({ signal }) => {
+      const response = await fetch(`${API_URL}/bdrc/search`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          search_query: trimmedQuery,
+          from: 0,
+          size: 20,
+          filter: [],
+          type: type,
+        }),
+        signal, // AbortSignal will cancel the request when query is retriggered
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to search BDRC entries");
+      }
+
+      const data = await response.json();
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: isEnabled,
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+    retry: 1,
+  });
+
+  let errorMessage: string | null = null;
+  if (error) {
+    errorMessage = error instanceof Error ? error.message : "Unknown error";
+  }
 
   return {
-    results,
+    results: data ?? [],
     isLoading,
-    error,
+    error: errorMessage,
   };
 }
 
