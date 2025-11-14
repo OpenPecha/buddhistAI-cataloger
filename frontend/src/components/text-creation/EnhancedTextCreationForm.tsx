@@ -13,7 +13,7 @@ import { useBibliographyAPI } from "@/hooks/useBibliographyAPI";
 import type { OpenPechaText } from "@/types/text";
 import TextCreationSuccessModal from "./TextCreationSuccessModal";
 import { useBdrcSearch, type BdrcSearchResult } from "@/hooks/useBdrcSearch";
-import { fetchTextByBdrcId } from "@/api/texts";
+import { fetchTextByBdrcId, fetchBdrcWorkInstance } from "@/api/texts";
 import { useTranslation } from "react-i18next";
 
 const EnhancedTextCreationForm = () => {
@@ -59,6 +59,8 @@ const EnhancedTextCreationForm = () => {
   const [isCreatingNewText, setIsCreatingNewText] = useState(false);
   const [searchParams] = useSearchParams();
   const t_id = searchParams.get("t_id") || "";
+  const w_id = searchParams.get("w_id") || "";
+  const i_id = searchParams.get("i_id") || "";
 
   // Text selection state
   const [selectedText, setSelectedText] = useState<OpenPechaText | null>(null);
@@ -125,14 +127,12 @@ const EnhancedTextCreationForm = () => {
       setIsCreatingNewText(false);
       hasAutoSelectedRef.current = true; // Mark as auto-selected
     }
-    // Reset the flag when there's no t_id in URL
-    if (!t_id) {
+    // Reset the flag when there's no t_id, w_id, or i_id in URL
+    if (!t_id && !w_id && !i_id) {
       hasAutoSelectedRef.current = false;
     }
   }, [t_id, textFromUrl, selectedText]);
   // Auto-select text when t_id is provided in URL
-
-  // Periodically check if incipit and title exist to keep the state up to date
 
   // Helper function to get text display name
   const getTextDisplayName = (text: OpenPechaText): string => {
@@ -146,7 +146,7 @@ const EnhancedTextCreationForm = () => {
 
   // Helper: Clear URL parameters if needed
   const clearUrlParams = () => {
-    if (t_id) {
+    if (t_id || w_id) {
       navigate("/create", { replace: true });
     }
   };
@@ -156,6 +156,122 @@ const EnhancedTextCreationForm = () => {
     setEditedContent(" ");
     setUploadedFilename("");
   };
+
+  // Helper function to map BDRC roleName to form role
+  const mapRoleNameToFormRole = (roleName: string | undefined): "translator" | "reviser" | "author" | "scholar" => {
+    if (!roleName) return "author"; // Default to author
+    const lowerRoleName = roleName.toLowerCase();
+    if (lowerRoleName.includes("author") || lowerRoleName.includes("main author")) {
+      return "author";
+    } else if (lowerRoleName.includes("translator")) {
+      return "translator";
+    } else if (lowerRoleName.includes("reviser") || lowerRoleName.includes("revisor")) {
+      return "reviser";
+    } else if (lowerRoleName.includes("scholar")) {
+      return "scholar";
+    }
+    return "author"; // Default fallback
+  };
+
+  // Helper function to prefilled form with BDRC data
+  const prefilledFormWithBdrcData = (result: BdrcSearchResult, workId: string) => {
+    setTimeout(() => {
+      if (textFormRef.current) {
+        // Set BDRC ID
+        textFormRef.current.setBdrcId(workId, result.title || '');
+        
+        // Set language if available
+        if (result.language) {
+          textFormRef.current.setFormLanguage(result.language);
+        }
+        
+        // Add title with language from response
+        if (result.title && result.title !== " - no data - ") {
+          textFormRef.current.addTitle(result.title, result.language || undefined);
+        }
+        
+        // Add all contributors
+        if (result.contributors && result.contributors.length > 0) {
+          result.contributors.forEach((contributor) => {
+            if (contributor.agent && contributor.agentName) {
+              const formRole = mapRoleNameToFormRole(contributor.roleName);
+              textFormRef.current?.addContributorFromBdrc(
+                contributor.agent,
+                contributor.agentName,
+                formRole
+              );
+            }
+          });
+        }
+      }
+    }, 100);
+  };
+
+  // Handle BDRC workId and instanceId from URL when page loads
+  useEffect(() => {
+    const handleBdrcWorkInstanceFromUrl = async () => {
+      // Only process if:
+      // 1. w_id and i_id exist in URL
+      // 2. We haven't auto-selected a text yet
+      // 3. We're not already creating a new text
+      // 4. No text is selected
+      if (
+        w_id &&
+        i_id &&
+        !hasAutoSelectedRef.current &&
+        !isCreatingNewText &&
+        !selectedText &&
+        !isCheckingBdrc
+      ) {
+        hasAutoSelectedRef.current = true;
+        setIsCheckingBdrc(true);
+
+        try {
+          // First check if it exists locally by BDRC ID
+          const existingText = await fetchTextByBdrcId(w_id);
+
+          if (existingText) {
+            // Text exists locally - select it and update URL
+            setSelectedText(existingText);
+            setTextSearch(getTextDisplayName(existingText));
+            setIsCreatingNewText(false);
+            hasAutoSelectedRef.current = true;
+            navigate(`/create?t_id=${existingText.id}`, { replace: true });
+            setNotification(t("create.textFound", { name: getTextDisplayName(existingText) }));
+          } else {
+            // Text doesn't exist locally - fetch from BDRC endpoint
+            try {
+              const workInstanceData = await fetchBdrcWorkInstance(w_id, i_id);
+              
+              // Set up for creating new text
+              setSelectedText(null);
+              setTextSearch("");
+              setIsCreatingNewText(true);
+              clearFileUpload();
+              
+              // Prefill form with BDRC data
+              prefilledFormWithBdrcData(workInstanceData, w_id);
+              
+              setNotification(t("create.creatingNewForBdrc", { id: w_id }));
+              setTimeout(() => setNotification(null), 3000);
+            } catch (error) {
+              console.error("Error fetching BDRC work instance:", error);
+              setError(t("create.failedToFetchBdrcWorkInstance"));
+            }
+          }
+        } catch (error) {
+          console.error("Error checking BDRC ID:", error);
+          setError(t("create.failedToCheckBdrc"));
+        } finally {
+          setIsCheckingBdrc(false);
+        }
+      }
+    };
+
+    handleBdrcWorkInstanceFromUrl();
+  }, [w_id, i_id, selectedText, isCreatingNewText, navigate, t, prefilledFormWithBdrcData, clearFileUpload, getTextDisplayName]);
+
+  // Periodically check if incipit and title exist to keep the state up to date
 
   // Helper: Reset to initial clean state
   const resetToInitialState = () => {
@@ -218,6 +334,7 @@ const EnhancedTextCreationForm = () => {
   // Handle BDRC text selection
   const handleBdrcTextSelect = async (result: BdrcSearchResult) => {
     const workId = result.workId;
+    const instanceId = result.instanceId;
     if (!workId) return;
     
     setShowTextDropdown(false);
@@ -237,62 +354,37 @@ const EnhancedTextCreationForm = () => {
         navigate(`/create?t_id=${existingText.id}`, { replace: true });
         setNotification(t("create.textFound", { name: getTextDisplayName(existingText) }));
       } else {
-        // Case 2: Text doesn't exist - create new with BDRC data prefilled
+        // Case 2: Text doesn't exist - fetch from BDRC endpoint if instanceId exists
+        let bdrcData: BdrcSearchResult = result;
+        
+        if (instanceId) {
+          try {
+            // Call the BDRC work instance endpoint
+            const workInstanceData = await fetchBdrcWorkInstance(workId, instanceId);
+            bdrcData = workInstanceData;
+          } catch (error) {
+            console.error("Error fetching BDRC work instance:", error);
+            // Fall back to using search result data
+            bdrcData = result;
+          }
+        }
+        
+        // Set up for creating new text
         setSelectedText(null);
         setTextSearch("");
         setIsCreatingNewText(true);
         clearFileUpload();
         hasAutoSelectedRef.current = true;
-        navigate(`/create?t_id=${workId}`, { replace: true });
-
         
-        // Helper function to map BDRC roleName to form role
-        const mapRoleNameToFormRole = (roleName: string | undefined): "translator" | "reviser" | "author" | "scholar" => {
-          if (!roleName) return "author"; // Default to author
-          const lowerRoleName = roleName.toLowerCase();
-          if (lowerRoleName.includes("author") || lowerRoleName.includes("main author")) {
-            return "author";
-          } else if (lowerRoleName.includes("translator")) {
-            return "translator";
-          } else if (lowerRoleName.includes("reviser") || lowerRoleName.includes("revisor")) {
-            return "reviser";
-          } else if (lowerRoleName.includes("scholar")) {
-            return "scholar";
-          }
-          return "author"; // Default fallback
-        };
+        // Navigate with new URL pattern if instanceId exists, otherwise use workId only
+        if (instanceId) {
+          navigate(`/create?w_id=${workId}&i_id=${instanceId}`, { replace: true });
+        } else {
+          navigate(`/create?w_id=${workId}`, { replace: true });
+        }
         
         // Prefill form with BDRC data
-        setTimeout(() => {
-          if (textFormRef.current) {
-            // Set BDRC ID
-            textFormRef.current.setBdrcId(workId, result.title || '');
-            
-            // Set language if available
-            if (result.language) {
-              textFormRef.current.setFormLanguage(result.language);
-            }
-            
-            // Add title with language from response
-            if (result.title && result.title !== " - no data - ") {
-              textFormRef.current.addTitle(result.title, result.language || undefined);
-            }
-            
-            // Add all contributors
-            if (result.contributors && result.contributors.length > 0) {
-              result.contributors.forEach((contributor) => {
-                if (contributor.agent && contributor.agentName) {
-                  const formRole = mapRoleNameToFormRole(contributor.roleName);
-                  textFormRef.current?.addContributorFromBdrc(
-                    contributor.agent,
-                    contributor.agentName,
-                    formRole
-                  );
-                }
-              });
-            }
-          }
-        }, 100);
+        prefilledFormWithBdrcData(bdrcData, workId);
         
         setNotification(t("create.creatingNewForBdrc", { id: workId }));
       }

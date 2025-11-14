@@ -6,7 +6,7 @@ import os
 from dotenv import load_dotenv
 
 
-from backend.utils.segmentor import create_segmentation_annotation
+from utils.segmentor import create_segmentation_annotation
 
 load_dotenv( override=True)
 
