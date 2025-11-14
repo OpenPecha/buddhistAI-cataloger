@@ -165,7 +165,8 @@
     "textFormDataNotAvailable": "དཔེ་ཆའི་གཞི་གྲངས་མེད།",
     "noTextSelected": "དཔེ་ཆ་འདེམས་མེད།",
     "fileTooSmall": "ཡིག་ཆ་ཆུང་དྲགས། (ཉུང་མཐར་ 1KB དགོས།)",
-    "uploadTxtOnly": ".txt ཡིག་ཆ་ཁོ་ན་མཐོ་འདོན་བྱོས།"
+    "uploadTxtOnly": ".txt ཡིག་ཆ་ཁོ་ན་མཐོ་འདོན་བྱོས།",
+    "textAlreadyInCataloger": "དཔེ་མཛོད་ནང་དཔེ་ཆ་འདི་ཡོད་ཟིན།"
   },
   "loading": {
     "loadingText": "དཔེ་ཆ་འགེལ་བཞིན་པ...",

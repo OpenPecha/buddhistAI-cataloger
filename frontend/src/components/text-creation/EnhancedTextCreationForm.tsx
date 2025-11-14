@@ -94,11 +94,6 @@ const EnhancedTextCreationForm = () => {
   // Track search attempts for "Create" button activation
   const [searchAttempts, setSearchAttempts] = useState(0);
 
-  // JSON Viewer state for debugging payloads (commented out for now)
-  const [textPayload, setTextPayload] = useState<any>(null);
-  // const [instancePayload, setInstancePayload] = useState<any>(null);
-  // const [showJsonViewer, setShowJsonViewer] = useState(false);
-
   // Mutations and data
   // Only fetch texts when t_id is present in URL (for auto-selection)
   // Use useText to fetch only the specific text needed instead of all texts
@@ -121,7 +116,6 @@ const EnhancedTextCreationForm = () => {
     return () => clearTimeout(timer);
   }, [textSearch]);
 
-  // Auto-select text when t_id is provided in URL
   useEffect(() => {
     if (t_id && textFromUrl && !selectedText && !hasAutoSelectedRef.current) {
       // Automatically select the found text
@@ -136,52 +130,9 @@ const EnhancedTextCreationForm = () => {
       hasAutoSelectedRef.current = false;
     }
   }, [t_id, textFromUrl, selectedText]);
+  // Auto-select text when t_id is provided in URL
 
   // Periodically check if incipit and title exist to keep the state up to date
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (instanceFormRef.current) {
-        setHasIncipitTitle(instanceFormRef.current.hasIncipit());
-      }
-      if (textFormRef.current) {
-        setHasTitle(textFormRef.current.hasTitle());
-      }
-    }, 500); // Check every 500ms
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // Handle text form data changes for real-time JSON viewer
-  const handleTextDataChange = (textData: any) => {
-    if (isCreatingNewText && textData) {
-      setTextPayload(textData);
-    } else {
-      setTextPayload(null);
-    }
-  };
-
-  // Periodically update instance payload for real-time JSON viewer (commented out)
-  // useEffect(() => {
-  //   const interval = setInterval(() => {
-  //     // Get instance payload if content exists
-  //     if (editedContent && editedContent.trim() !== "") {
-  //       try {
-  //         const instanceData = instanceFormRef.current?.getFormData();
-  //         if (instanceData) {
-  //           setInstancePayload(instanceData);
-  //         } else {
-  //           setInstancePayload(null);
-  //         }
-  //       } catch (error) {
-  //         setInstancePayload(null);
-  //       }
-  //     } else {
-  //       setInstancePayload(null);
-  //     }
-  //   }, 1000); // Update every second
-
-  //   return () => clearInterval(interval);
-  // }, [editedContent]);
 
   // Helper function to get text display name
   const getTextDisplayName = (text: OpenPechaText): string => {
@@ -376,9 +327,6 @@ const EnhancedTextCreationForm = () => {
 
   // Handle unified creation: create text then instance
   const handleInstanceCreation = async (instanceData: any) => {
-    // Capture instance payload for JSON viewer (commented out)
-    // setInstancePayload(instanceData);
-    
     setError(null);
     setSuccess(null);
     setIsSubmitting(true);
@@ -387,8 +335,8 @@ const EnhancedTextCreationForm = () => {
       let textId: string;
 
       if (isCreatingNewText) {
-        // Creating new text - use real-time payload or fallback to window method
-        const textFormData = textPayload || (window as any).__getTextFormData?.();
+        // Creating new text - use window method to get form data
+        const textFormData = (window as any).__getTextFormData?.();
         if (!textFormData) {
           throw new Error(t("create.textFormDataNotAvailable"));
         }
@@ -631,27 +579,65 @@ const EnhancedTextCreationForm = () => {
         </div>
       )}
 
-      {/* Two-Panel Layout */}
-      <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gray-50 flex">
-        {/* Mobile Toggle Button */}
-        <button
-          onClick={() =>
-            setActivePanel(activePanel === "form" ? "editor" : "form")
-          }
-          className="md:hidden fixed bottom-6 right-6 z-30 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-200 flex items-center gap-2"
-        >
-          {activePanel === "form" ? (
-            <>
-              <Code className="w-5 h-5" />
-              <span className="text-sm font-medium">{t("editor.content")}</span>
-            </>
-          ) : (
-            <>
-              <FileText className="w-5 h-5" />
-              <span className="text-sm font-medium">{t("common.create")}</span>
-            </>
-          )}
-        </button>
+      {/* Single Full-Page Message when text exists in cataloger */}
+      {selectedText && !isCreatingNewText ? (
+        <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gray-50 flex items-center justify-center p-8">
+          <div className="max-w-md w-full bg-white rounded-lg shadow-lg border border-gray-200 p-8 text-center">
+            <div className="mb-6">
+              <FileText className="w-16 h-16 text-blue-500 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">
+                {t("create.textAlreadyInCataloger")}
+              </h2>
+              <div className="space-y-2 text-left bg-gray-50 rounded-md p-4 mb-4">
+                <div className="text-sm">
+                  <strong className="text-gray-700">{t("text.textTitle")}:</strong>{" "}
+                  <span className="text-gray-900">{getTextDisplayName(selectedText)}</span>
+                </div>
+                <div className="text-sm">
+                  <strong className="text-gray-700">{t("create.type")}:</strong>{" "}
+                  <span className="text-gray-900">{selectedText.type}</span>
+                </div>
+                <div className="text-sm">
+                  <strong className="text-gray-700">{t("text.language")}:</strong>{" "}
+                  <span className="text-gray-900">{selectedText.language}</span>
+                </div>
+              </div>
+            </div>
+            <Button
+              onClick={() => {
+                // Reset all state and navigate to clean /create page
+                resetToInitialState();
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 flex items-center gap-2 mx-auto"
+            >
+              <span className="text-lg">+</span>
+              {t("common.create")}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Two-Panel Layout - Show when creating new text or no text selected */}
+          <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gray-50 flex">
+            {/* Mobile Toggle Button */}
+            <button
+              onClick={() =>
+                setActivePanel(activePanel === "form" ? "editor" : "form")
+              }
+              className="md:hidden fixed bottom-6 right-6 z-30 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-200 flex items-center gap-2"
+            >
+              {activePanel === "form" ? (
+                <>
+                  <Code className="w-5 h-5" />
+                  <span className="text-sm font-medium">{t("editor.content")}</span>
+                </>
+              ) : (
+                <>
+                  <FileText className="w-5 h-5" />
+                  <span className="text-sm font-medium">{t("common.create")}</span>
+                </>
+              )}
+            </button>
 
         {/* LEFT PANEL: Search + Forms */}
         <div
@@ -787,8 +773,8 @@ const EnhancedTextCreationForm = () => {
                   </div>
                 )}
 
-                {/* Selected Text Info */}
-                {selectedText && !isCreatingNewText && (
+                {/* Selected Text Info - COMMENTED OUT: Now shown in single full-page message */}
+                {/* {selectedText && !isCreatingNewText && (
                   <div className="bg-blue-50 border border-blue-200 px-4 py-3 rounded-md">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-blue-900">
@@ -815,7 +801,7 @@ const EnhancedTextCreationForm = () => {
                       </div>
                     </div>
                   </div>
-                )}
+                )} */}
 
                 {/* Creating New Text Info */}
                 {isCreatingNewText && (
@@ -848,13 +834,26 @@ const EnhancedTextCreationForm = () => {
                        <TextCreationForm 
                          ref={textFormRef}
                          onExistingTextFound={handleExistingTextFoundFromForm}
-                         onDataChange={handleTextDataChange}
                        />
                    </div>
                  )}
 
                 {/* Instance Creation Form - Show when text is selected or creating new with content */}
-                {(selectedText || (isCreatingNewText && editedContent && editedContent.trim() !== "")) && (
+                {/* COMMENTED OUT: When text exists in cataloger, don't show instance form */}
+                {/* {(selectedText || (isCreatingNewText && editedContent && editedContent.trim() !== "")) && (
+                  <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                    <InstanceCreationForm
+                      ref={instanceFormRef}
+                      onSubmit={handleInstanceCreation}
+                      isSubmitting={isSubmitting}
+                      onCancel={handleCancel}
+                      content={editedContent}
+                    />
+                  </div>
+                )} */}
+
+                {/* Show instance form only when creating new text with content */}
+                {isCreatingNewText && editedContent && editedContent.trim() !== "" && (
                   <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                     <InstanceCreationForm
                       ref={instanceFormRef}
@@ -865,159 +864,211 @@ const EnhancedTextCreationForm = () => {
                     />
                   </div>
                 )}
-
-                {/* JSON Viewer - Debug Panel */}
-                {/* <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 shadow-sm">
-                  <button
-                    type="button"
-                    onClick={() => setShowJsonViewer(!showJsonViewer)}
-                    className="w-full flex items-center justify-between text-left text-white hover:text-gray-300 transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Code className="w-4 h-4" />
-                      <span className="font-semibold text-sm">JSON Payload Viewer (Debug)</span>
-                    </div>
-                    {showJsonViewer ? (
-                      <ChevronUp className="w-4 h-4" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4" />
-                    )}
-                  </button>
-
-                  {showJsonViewer && (
-                    <div className="mt-4 space-y-4">
-                      {/* Text Payload */}
-                      {/* {isCreatingNewText && (
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <FileText className="w-4 h-4 text-blue-400" />
-                            <h3 className="text-sm font-semibold text-blue-400">Text Payload</h3>
-                          </div>
-                          <div className="bg-gray-800 rounded p-3 overflow-x-auto">
-                            <pre className="text-xs text-gray-300 font-mono whitespace-pre-wrap break-words">
-                              {textPayload ? JSON.stringify(textPayload, null, 2) : 'No text payload available'}
-                            </pre>
-                          </div>
-                        </div>
-                      )} */}
-
-                      {/* Instance Payload */}
-                      {/* {(selectedText || (isCreatingNewText && editedContent && editedContent.trim() !== "")) && (
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <FileText className="w-4 h-4 text-green-400" />
-                            <h3 className="text-sm font-semibold text-green-400">Instance Payload</h3>
-                          </div>
-                          <div className="bg-gray-800 rounded p-3 overflow-x-auto">
-                            <pre className="text-xs text-gray-300 font-mono whitespace-pre-wrap break-words">
-                              {instancePayload ? JSON.stringify(instancePayload, null, 2) : 'No instance payload available (form data will appear here as you fill it)'}
-                            </pre>
-                          </div>
-                        </div>
-                      )} */}
-                    {/* </div>
-                  )}
-                </div> */}
               </div>
             )}
           </div>
         </div>
 
-        {/* RIGHT PANEL: Editor with Optional File Upload */}
-        <div
-          className={`
-            w-full md:w-1/2 h-full overflow-hidden bg-gray-50
-            absolute md:relative
-            transition-transform duration-300 ease-in-out
-            ${
-              activePanel === "editor"
-                ? "translate-x-0"
-                : "translate-x-full md:translate-x-0"
-            }
-          `}
-        >
-          {/* Editor View */}
-          <div className="h-full flex flex-col">
-            {/* Upload Button in Header */}
-            <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
-              <div className="flex items-center justify-between">
-                {!editedContent || editedContent?.trim() === "" ? (
-                  <>
-                    <p className="text-sm text-gray-600">
-                      {t("create.startTyping")}
-                    </p>
-                    <div>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".txt"
-                        onChange={(e) => {
-                          const files = e.target.files;
-                          if (files && files.length > 0) {
-                            const file = files[0];
-                            
-                            // Validate file size
-                            if (file.size < 1024) {
-                              alert(t("create.fileTooSmall"));
+            {/* RIGHT PANEL: Editor with Optional File Upload */}
+            {/* COMMENTED OUT: When text exists in cataloger, don't show editor */}
+            {/* <div
+              className={`
+                w-full md:w-1/2 h-full overflow-hidden bg-gray-50
+                absolute md:relative
+                transition-transform duration-300 ease-in-out
+                ${
+                  activePanel === "editor"
+                    ? "translate-x-0"
+                    : "translate-x-full md:translate-x-0"
+                }
+              `}
+            >
+              <div className="h-full flex flex-col">
+                <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    {!editedContent || editedContent?.trim() === "" ? (
+                      <>
+                        <p className="text-sm text-gray-600">
+                          {t("create.startTyping")}
+                        </p>
+                        <div>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".txt"
+                            onChange={(e) => {
+                              const files = e.target.files;
+                              if (files && files.length > 0) {
+                                const file = files[0];
+                                
+                                if (file.size < 1024) {
+                                  alert(t("create.fileTooSmall"));
+                                  e.target.value = '';
+                                  return;
+                                }
+                                
+                                if (!file.name.endsWith('.txt')) {
+                                  alert(t("create.uploadTxtOnly"));
+                                  e.target.value = '';
+                                  return;
+                                }
+                                
+                                const reader = new FileReader();
+                                reader.onload = (event) => {
+                                  const content = event.target?.result as string;
+                                  handleFileUpload(content, file.name);
+                                };
+                                reader.readAsText(file);
+                              }
                               e.target.value = '';
-                              return;
-                            }
-                            
-                            // Validate file type
-                            if (!file.name.endsWith('.txt')) {
-                              alert(t("create.uploadTxtOnly"));
-                              e.target.value = '';
-                              return;
-                            }
-                            
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              const content = event.target?.result as string;
-                              handleFileUpload(content, file.name);
-                            };
-                            reader.readAsText(file);
-                          }
-                          e.target.value = ''; // Reset input
-                        }}
-                        className="hidden"
-                      />
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => {
-                          fileInputRef.current?.click();
-                        }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-                      >
-                        <Upload className="w-4 h-4" />
-                        {t("create.uploadFile")}
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <span className="text-xs text-gray-500">
-                    {editedContent?.length} {t("create.characters")}
-                  </span>
-                )}
+                            }}
+                            className="hidden"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => {
+                              fileInputRef.current?.click();
+                            }}
+                            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                          >
+                            <Upload className="w-4 h-4" />
+                            {t("create.uploadFile")}
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-xs text-gray-500">
+                        {editedContent?.length} {t("create.characters")}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="flex-1 overflow-hidden">
+                  <TextEditorView
+                    content={editedContent || ""}
+                    filename={editedContent ? uploadedFilename : t("editor.newDocument")}
+                    editable={true}
+                    onChange={(value) => setEditedContent(value)}
+                    onTextSelect={handleEditorTextSelect}
+                    isCreatingNewText={isCreatingNewText}
+                    hasIncipit={hasIncipitTitle}
+                    hasTitle={hasTitle}
+                    allowedTypes={
+                      selectedText && !isCreatingNewText
+                        ? ["colophon", "incipit", "alt_incipit"]
+                        : undefined
+                    }
+                  />
+                </div>
+              </div>
+            </div> */}
+
+            {/* RIGHT PANEL: Editor - Show when creating new text or no text selected */}
+            <div
+              className={`
+                w-full md:w-1/2 h-full overflow-hidden bg-gray-50
+                absolute md:relative
+                transition-transform duration-300 ease-in-out
+                ${
+                  activePanel === "editor"
+                    ? "translate-x-0"
+                    : "translate-x-full md:translate-x-0"
+                }
+              `}
+            >
+              {/* Editor View */}
+              <div className="h-full flex flex-col">
+                {/* Upload Button in Header */}
+                <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    {!editedContent || editedContent?.trim() === "" ? (
+                      <>
+                        <p className="text-sm text-gray-600">
+                          {t("create.startTyping")}
+                        </p>
+                        <div>
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".txt"
+                            onChange={(e) => {
+                              const files = e.target.files;
+                              if (files && files.length > 0) {
+                                const file = files[0];
+                                
+                                // Validate file size
+                                if (file.size < 1024) {
+                                  alert(t("create.fileTooSmall"));
+                                  e.target.value = '';
+                                  return;
+                                }
+                                
+                                // Validate file type
+                                if (!file.name.endsWith('.txt')) {
+                                  alert(t("create.uploadTxtOnly"));
+                                  e.target.value = '';
+                                  return;
+                                }
+                                
+                                const reader = new FileReader();
+                                reader.onload = (event) => {
+                                  const content = event.target?.result as string;
+                                  handleFileUpload(content, file.name);
+                                };
+                                reader.readAsText(file);
+                              }
+                              e.target.value = ''; // Reset input
+                            }}
+                            className="hidden"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => {
+                              fileInputRef.current?.click();
+                            }}
+                            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                          >
+                            <Upload className="w-4 h-4" />
+                            {t("create.uploadFile")}
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <span className="text-xs text-gray-500">
+                        {editedContent?.length} {t("create.characters")}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Editor */}
+                <div className="flex-1 overflow-hidden">
+                  <TextEditorView
+                    content={editedContent || ""}
+                    filename={editedContent ? uploadedFilename : t("editor.newDocument")}
+                    editable={true}
+                    onChange={(value) => setEditedContent(value)}
+                    onTextSelect={handleEditorTextSelect}
+                    isCreatingNewText={isCreatingNewText}
+                    hasIncipit={hasIncipitTitle}
+                    hasTitle={hasTitle}
+                    allowedTypes={
+                      // If text is already selected (exists in cataloger), hide text-level fields
+                      // Only show instance-level fields: colophon, incipit, alt_incipit
+                      selectedText && !isCreatingNewText
+                        ? ["colophon", "incipit", "alt_incipit"]
+                        : undefined // Show all options when creating new text
+                    }
+                  />
+                </div>
               </div>
             </div>
-            
-            {/* Editor */}
-            <div className="flex-1 overflow-hidden">
-              <TextEditorView
-                content={editedContent || ""}
-                filename={editedContent ? uploadedFilename : t("editor.newDocument")}
-                editable={true}
-                onChange={(value) => setEditedContent(value)}
-                onTextSelect={handleEditorTextSelect}
-                isCreatingNewText={isCreatingNewText}
-                hasIncipit={hasIncipitTitle}
-                hasTitle={hasTitle}
-              />
-            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
     </>
   );
 };

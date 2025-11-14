@@ -165,7 +165,8 @@
     "textFormDataNotAvailable": "Text form data not available",
     "noTextSelected": "No text selected or created",
     "fileTooSmall": "File is too small (minimum 1KB required)",
-    "uploadTxtOnly": "Please upload a .txt file only"
+    "uploadTxtOnly": "Please upload a .txt file only",
+    "textAlreadyInCataloger": "Cataloger already contains the Text"
   },
   "loading": {
     "loadingText": "Loading Text...",
