@@ -1242,7 +1242,6 @@ interface BdrcPersonListProps {
 }
 
 const BdrcPersonList = memo(({ bdrcPersonResults, handlePersonSelect }: BdrcPersonListProps) => {
-  console.log('render')
   const handlePersonClick = useCallback((result: { bdrc_id?: string; name?: string }) => {
     // Create a temporary Person object from BDRC data
     const bdrcPerson: Person = {
@@ -1256,7 +1255,6 @@ const BdrcPersonList = memo(({ bdrcPersonResults, handlePersonSelect }: BdrcPers
   }, [handlePersonSelect]);
 
 function handleClick(result: { bdrc_id?: string; name?: string }){
-  console.log('hi')
     handlePersonClick(result)
 }
 
