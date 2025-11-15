@@ -98,7 +98,7 @@ function Navigation() {
                 Formatter
               </a>
               <a
-                href="https://aligner.buddhistai.tools/aligner"
+                href="https://formatter.buddhistai.tools/aligner"
                 className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   isActive('/create')
                     ? 'bg-blue-100 text-blue-700'
