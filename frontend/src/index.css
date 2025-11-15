@@ -36,3 +36,10 @@
   .cm-editor div {
     font-family: var(--font-monlam-2) !important;
   }
+  
+  body {
+    font-family: "poppins", sans-serif;
+    line-height: 1.6;
+    color: var(--text-color);
+    overflow: hidden;
+  }
