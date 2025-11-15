@@ -29,7 +29,7 @@ const TextCreationSuccessModal = ({ message, onClose, instanceId, parentInstance
     if (instanceId) {
       // Use environment variable if set, otherwise use default localhost
       const baseUrl = import.meta.env.VITE_FORMATTER_URL || 'http://localhost:5000';
-      const formatterUrl = `${baseUrl}/formatter?I_id=${instanceId}`;
+      const formatterUrl = `${baseUrl}/formatter/${instanceId}`;
       window.open(formatterUrl, '_blank', 'noopener,noreferrer');
     }
   };
@@ -39,7 +39,7 @@ const TextCreationSuccessModal = ({ message, onClose, instanceId, parentInstance
     if (parentInstanceId && instanceId) {
       // Use environment variable if set, otherwise use default localhost
       const baseUrl = import.meta.env.VITE_FORMATTER_URL || 'http://localhost:5000';
-      const alignerUrl = `${baseUrl}/aligner?s_id=${parentInstanceId}&t_id=${instanceId}`;
+      const alignerUrl = `${baseUrl}/aligner/${parentInstanceId}/${instanceId}`;
       window.open(alignerUrl, '_blank', 'noopener,noreferrer');
     }
   };
