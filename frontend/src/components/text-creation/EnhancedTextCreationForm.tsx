@@ -74,7 +74,7 @@ const EnhancedTextCreationForm = () => {
 
   // File upload state
   const [uploadedFilename, setUploadedFilename] = useState<string>("");
-  const [editedContent, setEditedContent] = useState<string>(" ");
+  const [editedContent, setEditedContent] = useState<string>("");
 
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState(false);

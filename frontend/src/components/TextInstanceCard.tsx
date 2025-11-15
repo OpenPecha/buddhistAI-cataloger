@@ -56,7 +56,7 @@ const TextInstanceCard: React.FC<TextInstanceCardProps> = ({ instance }) => {
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-gray-900 font-['noto']">
             {title}
           </h3>
         </div>

@@ -101,7 +101,7 @@ const TextListCard = ({ text }: TextListCardProps) => {
           <CardTitle className="text-lg w-full ">
             <Link 
               to={`/texts/${text.id}/instances`} 
-              className="hover:text-blue-600 w-full transition-colors duration-200 truncate"
+              className="hover:text-blue-600 w-full transition-colors duration-200 truncate font-['noto']"
             >
               {text.title?.[text.language] || t('textsPage.untitled')}
             </Link>

@@ -1147,7 +1147,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                   <AlertTriangle className="w-6 h-6 text-yellow-600" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1 font-['noto']">
                     {t("textForm.textAlreadyExists")}
                   </h3>
                   <p className="text-sm text-gray-600">

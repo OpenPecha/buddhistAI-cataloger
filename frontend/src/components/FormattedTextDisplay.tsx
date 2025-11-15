@@ -48,7 +48,7 @@ const FormattedTextDisplay: React.FC<FormattedTextDisplayProps> = ({ content, li
       {contentLines.map((line, index) => (
         <div 
           key={index} 
-          className="py-3 px-4 border-b border-gray-200 last:border-0 text-base leading-relaxed text-gray-900"
+          className="py-3 px-4 border-b border-gray-200 font-['noto'] last:border-0 text-base leading-relaxed text-gray-900"
         >
           {line || <span className="text-gray-400 italic">(empty line)</span>}
         </div>
