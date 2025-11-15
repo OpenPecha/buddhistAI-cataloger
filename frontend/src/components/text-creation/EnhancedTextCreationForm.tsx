@@ -15,6 +15,7 @@ import type { OpenPechaText } from "@/types/text";
 import { useBdrcSearch, type BdrcSearchResult } from "@/hooks/useBdrcSearch";
 import { fetchTextByBdrcId, fetchBdrcWorkInstance } from "@/api/texts";
 import { useTranslation } from "react-i18next";
+import { useBibliography } from "@/contexts/BibliographyContext";
 
 const EnhancedTextCreationForm = () => {
   const navigate = useNavigate();
@@ -273,7 +274,7 @@ const EnhancedTextCreationForm = () => {
   }, [w_id, i_id, selectedText, isCreatingNewText, navigate, t, prefilledFormWithBdrcData, clearFileUpload, getTextDisplayName]);
 
   // Periodically check if incipit and title exist to keep the state up to date
-
+  const { clearAnnotations } = useBibliography();
   // Helper: Reset to initial clean state
   const resetToInitialState = () => {
     // Set flag FIRST to prevent auto-select from re-triggering
@@ -284,7 +285,7 @@ const EnhancedTextCreationForm = () => {
     setTextSearch("");
     setIsCreatingNewText(false);
     clearFileUpload();
-    
+    clearAnnotations();
     // Clear URL params
     clearUrlParams();
   };

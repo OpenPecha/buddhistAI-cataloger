@@ -24,11 +24,11 @@ const Index = () => {
 
       {/* Content */}
       <div className="space-y-6">
-        <div className="bg-white rounded-lg  p-8">
+        <div className=" rounded-lg  p-8">
         
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-            <div className="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
+            <div className="border bg-white border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
               <div className="text-blue-600 mb-3">
                 <svg
                   className="w-12 h-12"
@@ -56,7 +56,7 @@ const Index = () => {
               </a>
             </div>
 
-            <div className="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
+            <div className="border bg-white border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
               <div className="text-purple-600 mb-3">
                 <svg
                   className="w-12 h-12"
