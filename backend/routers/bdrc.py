@@ -657,6 +657,7 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
                     "agent_id": agent_id,
                     "role_id": role_id
                 })
+                
             # Get language (bdo:language)
             for obj in g.objects(subject=None, predicate=BDO.language):
                 language_uri = str(obj)
