@@ -18,8 +18,6 @@ export interface BdrcSearchResult {
   catalogInfo?: string | null;
   contributors?: BdrcContributor[];
   language?: string | null;
-  workGenre?: string | null;
-  workHasInstance?: string[];
   entityScore?: number | null;
   // Person-specific fields
   bdrc_id?: string;

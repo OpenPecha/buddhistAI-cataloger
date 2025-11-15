@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
@@ -55,7 +56,6 @@ class Aggregations(BaseModel):
     script: Optional[Dict[str, TermsAgg]] = None
     translator: Optional[Dict[str, TermsAgg]] = None
     type: Optional[Dict[str, TermsAgg]] = None
-    workGenre: Optional[Dict[str, TermsAgg]] = None
     workIsAbout: Optional[Dict[str, TermsAgg]] = None
 
 
@@ -75,7 +75,6 @@ class HighlightFields(BaseModel):
     partOf: Optional[Dict] = {}
     partType: Optional[Dict] = {}
     issueName: Optional[Dict] = {}
-    workGenre: Optional[Dict] = {}
     workIsAbout: Optional[Dict] = {}
     author: Optional[Dict] = {}
     translator: Optional[Dict] = {}
@@ -207,7 +206,6 @@ async def bdrc_search(request: BdrcSearchRequest):
         "script": {"terms": {"field": "script", "size": 1000}},
         "translator": {"terms": {"field": "translator", "size": 1000}},
         "type": {"terms": {"field": "type", "size": 1000}},
-        "workGenre": {"terms": {"field": "workGenre", "size": 1000}},
         "workIsAbout": {"terms": {"field": "workIsAbout", "size": 1000}}
     }
     
@@ -229,7 +227,6 @@ async def bdrc_search(request: BdrcSearchRequest):
             "partOf": {},
             "partType": {},
             "issueName": {},
-            "workGenre": {},
             "workIsAbout": {},
             "author": {},
             "translator": {},
@@ -378,8 +375,9 @@ async def bdrc_search(request: BdrcSearchRequest):
             # Fetch work details if we have work-instance pairs (limit to first 5)
             work_details = []
             if work_instance_pairs:
-                limited_pairs = work_instance_pairs[:5]  # Only take first 5 pairs
-                work_details = await fetch_work_details(limited_pairs)
+                limited_pairs = work_instance_pairs[:1]  # Only take first 3 pairs
+                work_details = await asyncio.gather(*[fetch_work_details([pair]) for pair in limited_pairs])
+                work_details = [detail[0] for detail in work_details if detail]  # Flatten results
             
             
             # Return only work details for Instance searches
@@ -442,8 +440,6 @@ class WorkDetail(BaseModel):
     catalogInfo: Optional[str] = None
     contributors: List[Creator] = []  # List of creators with their roles
     language: Optional[str] = None
-    workGenre: Optional[str] = None
-    workHasInstance: List[str] = []
     entityScore: Optional[int] = None
 
 
@@ -588,9 +584,6 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
             catalog_info = None
             creators_list = []  # List to collect all creators
             language = None
-            work_genre = None
-            work_has_instance = []
-            entity_score = None
             
             # Get prefLabel (skos:prefLabel)
             for obj in g.objects(subject=None, predicate=SKOS.prefLabel):
@@ -664,7 +657,6 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
                     "agent_id": agent_id,
                     "role_id": role_id
                 })
-                
             # Get language (bdo:language)
             for obj in g.objects(subject=None, predicate=BDO.language):
                 language_uri = str(obj)
@@ -675,23 +667,7 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
                 else:
                     language = language_code.lower()
                 break
-                
-            # Get workGenre (bdo:workGenre)
-            for obj in g.objects(subject=None, predicate=BDO.workGenre):
-                work_genre = str(obj)
-                break
-                
-            # Get workHasInstance (bdo:workHasInstance) - can be multiple
-            for obj in g.objects(subject=None, predicate=BDO.workHasInstance):
-                work_has_instance.append(str(obj))
-                
-            # Get entityScore (tmp:entityScore)
-            for obj in g.objects(subject=None, predicate=TMP.entityScore):
-                try:
-                    entity_score = int(str(obj))
-                except ValueError:
-                    entity_score = None
-                break
+                            
             
             # Fetch person and role names for all creators
             creators_objects = []
@@ -700,12 +676,22 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
                 role_name = None
                 
                 # Get person name if agent exists
-                if creator_info["agent_id"]:
-                    agent_name = await get_person_from_bdrc(creator_info["agent_id"])
+                # Fetch agent and role names in parallel
+                agent_task = get_person_from_bdrc(creator_info["agent_id"]) if creator_info["agent_id"] else None
+                role_task = get_role_from_bdrc(creator_info["role_id"]) if creator_info["role_id"] else None
                 
-                # Get role name if role exists
-                if creator_info["role_id"]:
-                    role_name = await get_role_from_bdrc(creator_info["role_id"])
+                # Wait for both tasks to complete
+                tasks = [task for task in [agent_task, role_task] if task is not None]
+                if tasks:
+                    results = await asyncio.gather(*tasks, return_exceptions=True)
+                    
+                    # Extract results based on which tasks were created
+                    result_index = 0
+                    if agent_task:
+                        agent_name = results[result_index] if not isinstance(results[result_index], Exception) else None
+                        result_index += 1
+                    if role_task:
+                        role_name = results[result_index] if not isinstance(results[result_index], Exception) else None
                 
                 # Create Creator object
                 creators_objects.append(Creator(
@@ -723,9 +709,6 @@ async def fetch_work_details(work_instance_pairs: List[tuple]) -> List[WorkDetai
                 catalogInfo=catalog_info,
                 contributors=creators_objects,
                 language=language,
-                workGenre=work_genre,
-                workHasInstance=work_has_instance,
-                entityScore=entity_score
             ))
             
         except Exception as e:
