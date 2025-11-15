@@ -177,7 +177,10 @@
     "fetchingDetails": "Fetching text details from catalog...",
     "checkingBdrc": "Checking BDRC...",
     "lookingForText": "Looking for existing text",
-    "checkingLocal": "Checking if text exists in local catalog..."
+    "checkingLocal": "Checking if text exists in local catalog...",
+    "creatingTextAndInstance": "Creating Text and Instance...",
+    "pleaseWait": "Please wait while we process your request",
+    "processingRequest": "Processing your request..."
   },
   "editor": {
     "content": "Content",

@@ -42,7 +42,7 @@ const CreateTranslation = () => {
   const [title, setTitle] = useState('');
   const [altTitles, setAltTitles] = useState<string[]>([]);
   const [source, setSource] = useState('');
-  const [copyright, setCopyright] = useState<string>('Unknown');
+  const [copyright, setCopyright] = useState<string>('Public domain');
   const [license, setLicense] = useState<string>('CC0');
   const [content, setContent] = useState('');
   const [uploadedFilename, setUploadedFilename] = useState('');
@@ -79,6 +79,13 @@ const CreateTranslation = () => {
     }, 300);
     return () => clearTimeout(timer);
   }, [personSearch]);
+
+  // Auto-set license to "unknown" when copyright is "Unknown"
+  useEffect(() => {
+    if (copyright === "Unknown") {
+      setLicense("unknown");
+    }
+  }, [copyright]);
 
   // Extract instance title with fallback logic (same as CreateCommentary)
   const getInstanceTitle = (instance: OpenPechaTextInstance | undefined): string => {
@@ -204,7 +211,8 @@ const CreateTranslation = () => {
         source: source.trim(),
         segmentation: annotations,
         copyright,
-        license
+        // If copyright is Unknown, send "unknown", otherwise use selected license
+        license: copyright === "Unknown" ? "unknown" : license
       };
 
       // Add alt_titles if any exist
@@ -559,9 +567,9 @@ const CreateTranslation = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
-                  <option value="Public domain">Public domain</option>
-                  <option value="In copyright">In copyright</option>
-                  <option value="Unknown">Unknown</option>
+                  <option value="Unknown">{t("textForm.copyrightUnknown")}</option>
+                  <option value="In copyright">{t("textForm.copyrightInCopyright")}</option>
+                  <option value="Public domain">{t("textForm.copyrightPublicDomain")}</option>
                 </select>
               </div>
 
@@ -573,18 +581,22 @@ const CreateTranslation = () => {
                 <select
                   value={license}
                   onChange={(e) => setLicense(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={copyright === "Unknown"}
+                  className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    copyright === "Unknown" ? "bg-gray-100 cursor-not-allowed opacity-60" : ""
+                  }`}
                   required
                 >
-                  <option value="CC0">CC0</option>
-                  <option value="Public Domain Mark">Public Domain Mark</option>
-                  <option value="CC BY">CC BY</option>
-                  <option value="CC BY-SA">CC BY-SA</option>
-                  <option value="CC BY-ND">CC BY-ND</option>
-                  <option value="CC BY-NC">CC BY-NC</option>
-                  <option value="CC BY-NC-SA">CC BY-NC-SA</option>
-                  <option value="CC BY-NC-ND">CC BY-NC-ND</option>
-                  <option value="under copyright">under copyright</option>
+                  <option value="unknown">{t("textForm.licenseUnknown")}</option>
+                  <option value="CC0">{t("textForm.licenseCC0")}</option>
+                  <option value="Public Domain Mark">{t("textForm.licensePublicDomainMark")}</option>
+                  <option value="CC BY">{t("textForm.licenseCCBY")}</option>
+                  <option value="CC BY-SA">{t("textForm.licenseCCBYSA")}</option>
+                  <option value="CC BY-ND">{t("textForm.licenseCCBYND")}</option>
+                  <option value="CC BY-NC">{t("textForm.licenseCCBYNC")}</option>
+                  <option value="CC BY-NC-SA">{t("textForm.licenseCCBYNCSA")}</option>
+                  <option value="CC BY-NC-ND">{t("textForm.licenseCCBYNCND")}</option>
+                  <option value="under copyright">{t("textForm.licenseUnderCopyright")}</option>
                 </select>
               </div>
 

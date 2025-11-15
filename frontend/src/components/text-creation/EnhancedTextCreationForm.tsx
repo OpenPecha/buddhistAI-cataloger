@@ -814,6 +814,43 @@ const EnhancedTextCreationForm = () => {
         </div>
       )}
 
+      {/* Loading Screen - Show while creating text/instance */}
+      {isSubmitting && (
+        <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 flex items-center justify-center z-50">
+          <div className="text-center max-w-md mx-auto px-6">
+            {/* Animated Logo/Icon */}
+            <div className="relative mb-8">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-32 h-32 bg-gradient-to-br from-emerald-400 to-green-500 rounded-full opacity-20 animate-ping"></div>
+              </div>
+              <div className="relative flex items-center justify-center">
+                <div className="w-24 h-24 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl shadow-2xl flex items-center justify-center transform hover:scale-105 transition-transform">
+                  <FileText className="w-12 h-12 text-white" />
+                </div>
+              </div>
+            </div>
+
+            {/* Loading Text */}
+            <h2 className="text-3xl font-bold text-gray-800 mb-3 animate-pulse">
+              {t("loading.creatingTextAndInstance")}
+            </h2>
+            <p className="text-lg text-gray-600 mb-6">
+              {t("loading.pleaseWait")}
+            </p>
+
+            {/* Progress Indicator */}
+            <div className="relative w-64 h-2 bg-gray-200 rounded-full overflow-hidden mx-auto">
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 rounded-full animate-[loading_1.5s_ease-in-out_infinite]"></div>
+            </div>
+
+            {/* Additional Info */}
+            <p className="text-sm text-gray-500 mt-6">
+              {t("loading.processingRequest")}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Single Full-Page Message when text exists in cataloger */}
       {selectedText && !isCreatingNewText ? (
         <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gray-50 flex items-center justify-center p-8">
