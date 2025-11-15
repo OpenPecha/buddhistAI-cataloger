@@ -208,6 +208,19 @@ export const fetchTextByBdrcId = async (bdrcId: string): Promise<OpenPechaText |
   }
 };
 
+export const fetchBdrcWorkInstance = async (workId: string, instanceId: string): Promise<any> => {
+  try {
+    const response = await fetch(`${API_URL}/bdrc/work/${workId}/instances/${instanceId}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch BDRC work instance: ${response.statusText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error fetching BDRC work instance:", error);
+    throw error;
+  }
+};
+
 export const createTranslation = async (instanceId: string, translationData: any): Promise<any> => {
   try {
     const response = await fetch(`${API_URL}/instances/${instanceId}/translation`, {

@@ -99,7 +99,6 @@ class CreateSegmentationAnnotation(BaseModel):
 
 
 class CreateTableOfContentsAnnotationItem(BaseModel):
-    id: str
     title: str
     segments: List[str]
 

@@ -162,10 +162,14 @@
     "failedToCheckBdrc": "Failed to check BDRC text. Please try again.",
     "textAndInstanceCreated": "Text and instance created successfully!",
     "instanceCreated": "Instance created successfully!",
+    "instanceCreationFailed": "Failed to create instance. Please try again.",
+    "success": "Success",
+    "viewInstance": "View Instance",
     "textFormDataNotAvailable": "Text form data not available",
     "noTextSelected": "No text selected or created",
     "fileTooSmall": "File is too small (minimum 1KB required)",
-    "uploadTxtOnly": "Please upload a .txt file only"
+    "uploadTxtOnly": "Please upload a .txt file only",
+    "textAlreadyInCataloger": "Cataloger already contains the Text"
   },
   "loading": {
     "loadingText": "Loading Text...",
@@ -210,6 +214,7 @@
     "root": "Root",
     "translation": "Translation",
     "commentary": "Commentary",
+    "formatter": "Formatter",
     "createCommentaryDescription": "Create a commentary for this instance",
     "createCommentaryFor": "Create commentary for",
     "createTranslationFor": "Create translation for",
@@ -271,6 +276,7 @@
     "copyrightInCopyright": "In copyright",
     "copyrightUnknown": "Unknown",
     "license": "License",
+    "licenseUnknown": "unknown",
     "licenseCC0": "CC0",
     "licensePublicDomainMark": "Public Domain Mark",
     "licenseCCBY": "CC BY",

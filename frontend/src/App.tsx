@@ -3,19 +3,21 @@ import TextCRUD from './pages/Text';
 import PersonCRUD from './pages/Person';
 import TextInstanceCRUD from './pages/TextInstances';
 import Instance from './pages/Instance';
-import Headers from './components/layout/Header';
+import Navigation from './components/Navigation';
 import Index from './pages/Index';
 import Create from './pages/Create';
 import CreateTranslation from './pages/CreateTranslation';
 import CreateCommentary from './pages/CreateCommentary';
+import Login from './pages/Login';
 
 function App() {
   return (
     <div className="min-h-screen font-monlam-2 text-xl">
-      <Headers/>
+      <Navigation/>
       <div className='container mx-auto py-16'>
 
         <Routes>
+          <Route path="/login" element={<Login />} />
           <Route path="/" element={<Index />} />
           <Route path="/create" element={<Create />} />
           <Route path="/texts" element={

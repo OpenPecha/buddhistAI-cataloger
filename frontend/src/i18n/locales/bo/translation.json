@@ -162,10 +162,14 @@
     "failedToCheckBdrc": "BDRC ཞིབ་བཤེར་ཕམ་པ། ཡང་བསྐྱར་ཚོད་ལྟ་བྱོས།",
     "textAndInstanceCreated": "དཔེ་ཆ་དང་དཔེ་དེབ་གསར་བཟོ་ལེགས་གྲུབ།",
     "instanceCreated": "དཔེ་དེབ་གསར་བཟོ་ལེགས་གྲུབ།",
+    "instanceCreationFailed": "དཔེ་དེབ་གསར་བཟོ་ཕམ་པ། ཡང་བསྐྱར་ཚོད་ལྟ་བྱོས།",
+    "success": "ལེགས་གྲུབ།",
+    "viewInstance": "དཔེ་དེབ་ལ་ལྟ་བ།",
     "textFormDataNotAvailable": "དཔེ་ཆའི་གཞི་གྲངས་མེད།",
     "noTextSelected": "དཔེ་ཆ་འདེམས་མེད།",
     "fileTooSmall": "ཡིག་ཆ་ཆུང་དྲགས། (ཉུང་མཐར་ 1KB དགོས།)",
-    "uploadTxtOnly": ".txt ཡིག་ཆ་ཁོ་ན་མཐོ་འདོན་བྱོས།"
+    "uploadTxtOnly": ".txt ཡིག་ཆ་ཁོ་ན་མཐོ་འདོན་བྱོས།",
+    "textAlreadyInCataloger": "དཔེ་མཛོད་ནང་དཔེ་ཆ་འདི་ཡོད་ཟིན།"
   },
   "loading": {
     "loadingText": "དཔེ་ཆ་འགེལ་བཞིན་པ...",
@@ -210,6 +214,7 @@
     "root": "རྩ་བ།",
     "translation": "བསྒྱུར་བ།",
     "commentary": "མཆན་འགྲེལ།",
+    "formatter": "དཀར་ཆག་བཟོ་བ།",
     "createCommentaryDescription": "དཔེ་དེབ་འདིའི་དོན་དུ་མཆན་འགྲེལ་གསར་བཟོ།",
     "createCommentaryFor": "མཆན་འགྲེལ་གསར་བཟོ་བྱེད་ས།",
     "createTranslationFor": "བསྒྱུར་བ་གསར་བཟོ་བྱེད་ས།",
@@ -271,6 +276,7 @@
     "copyrightInCopyright": "པར་དབང་ཅན།",
     "copyrightUnknown": "མི་ཤེས།",
     "license": "ཆོག་མཆན།",
+    "licenseUnknown": "མི་ཤེས།",
     "licenseCC0": "CC0",
     "licensePublicDomainMark": "མང་ཚོགས་ཀྱི་རྒྱུ་ནོར་རྟགས།",
     "licenseCCBY": "CC BY",
