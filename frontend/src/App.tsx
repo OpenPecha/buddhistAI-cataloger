@@ -16,7 +16,7 @@ function App() {
   const isLoginPage = location.pathname === '/login';
 
   return (
-    <div className="h-screen overflow-auto font-monlam-2 text-xl">
+    <div className="h-screen overflow-auto font-monlam-2 text-xl bg-gradient-to-br from-blue-50 to-indigo-100">
       {!isLoginPage && <Navigation/>}
       <div className={isLoginPage ? '' : 'container mx-auto py-16'}>
         <Routes>
