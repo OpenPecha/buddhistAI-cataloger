@@ -853,7 +853,7 @@ const EnhancedTextCreationForm = () => {
 
       {/* Single Full-Page Message when text exists in cataloger */}
       {selectedText && !isCreatingNewText ? (
-        <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gray-50 flex items-center justify-center p-8">
+        <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-8">
           <div className="max-w-md w-full bg-white rounded-lg shadow-lg border border-gray-200 p-8 text-center">
             <div className="mb-6">
               <FileText className="w-16 h-16 text-blue-500 mx-auto mb-4" />
@@ -890,7 +890,7 @@ const EnhancedTextCreationForm = () => {
       ) : (
         <>
           {/* Two-Panel Layout - Show when creating new text or no text selected */}
-          <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gray-50 flex">
+          <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gradient-to-br from-blue-50 to-indigo-100 flex">
             {/* Mobile Toggle Button */}
             <button
               onClick={() =>
@@ -914,7 +914,7 @@ const EnhancedTextCreationForm = () => {
         {/* LEFT PANEL: Search + Forms */}
         <div
           className={`
-            w-full md:w-1/2 h-full overflow-y-auto bg-white border-r border-gray-200
+            w-full md:w-1/2 h-full overflow-y-auto  border-r border-gray-200
             absolute md:relative
             transition-transform duration-300 ease-in-out
             ${
@@ -948,7 +948,7 @@ const EnhancedTextCreationForm = () => {
                       onChange={handleTextSearchChange}
                       onFocus={() => setShowTextDropdown(true)}
                       onBlur={() => setTimeout(() => setShowTextDropdown(false), 200)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-3 py-2 border bg-white border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder={t("create.searchPlaceholder")}
                     />
 
