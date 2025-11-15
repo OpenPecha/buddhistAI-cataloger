@@ -398,9 +398,8 @@ const InstanceCreationForm = forwardRef<
     }
 
     const cleanedData = cleanFormData();
-    console.log(cleanedData);
     // Submit the form
-    // onSubmit(cleanedData);
+    onSubmit(cleanedData);
   };
 
   const hasIncipitTitle = incipitTitles.some(
