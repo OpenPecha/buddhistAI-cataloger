@@ -1099,7 +1099,7 @@ const EnhancedTextCreationForm = () => {
 
             {/* Forms Section - Show if in creation mode OR if text is selected */}
             {canUpload && (
-              <div className="space-y-6">
+              <div className="space-y-6 relative">
                 {/* Text Creation Form - Only show when creating new text */}
                  {isCreatingNewText && (
                    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mb-6">

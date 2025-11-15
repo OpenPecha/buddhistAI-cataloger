@@ -952,16 +952,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                       setBdrcSearch(e.target.value);
                       setShowBdrcDropdown(true);
                     }}
-                    onFocus={() => setShowBdrcDropdown(true)}
-                    onBlur={() => {
-                      setTimeout(() => {
-                        setShowBdrcDropdown(false);
-                        // Clear search if nothing was actually selected
-                        if (!selectedBdrc) {
-                          setBdrcSearch("");
-                        }
-                      }, 200);
-                    }}
+                   
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder={t("textForm.searchBdrcEntries")}
                   />
@@ -1114,7 +1105,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
 
         {/* BDRC Checking Loading Overlay */}
         {isCheckingBdrcId && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 w-full h-full overflow-hidden">
             <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-8 animate-in fade-in zoom-in-95 duration-200">
               <div className="text-center">
                 {/* Animated Icon */}
@@ -1148,8 +1139,8 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
 
         {/* BDRC Conflict Dialog */}
         {showBdrcConflictDialog && conflictingText && pendingBdrcSelection && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 animate-in fade-in zoom-in-95 duration-200">
+          <div className="absolute inset-0  bg-black/30 bg-opacity-50 flex  justify-center z-50 p-4 w-full  h-full  overflow-hidden">
+            <div className="bg-white mt-[200px] rounded-lg shadow-xl max-w-md w-full h-fit p-6 animate-in fade-in zoom-in-95 duration-200">
               {/* Header */}
               <div className="flex items-start gap-4 mb-4">
                 <div className="flex-shrink-0 w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
