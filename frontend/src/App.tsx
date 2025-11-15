@@ -18,7 +18,7 @@ function App() {
   return (
     <div className="h-screen overflow-auto  text-xl bg-gradient-to-br from-blue-50 to-indigo-100">
       {!isLoginPage && <Navigation/>}
-      <div className={isLoginPage ? '' : 'container mx-auto py-16 font-["noto"]'}>
+      <div className={isLoginPage ? '' : 'container mx-auto py-16 '}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={

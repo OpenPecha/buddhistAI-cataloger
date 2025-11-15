@@ -34,7 +34,8 @@
   
 
   .cm-editor div {
-    font-family: var(--font-monlam-2) !important;
+    font-family: 'noto', sans-serif !important;
+    line-height: 2;
   }
   
   body {

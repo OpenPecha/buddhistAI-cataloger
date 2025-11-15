@@ -309,7 +309,6 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
               annotationPlugin,
               annotationTheme,
             ], [])}
-            id='editor_div'
             editable={editable}
             onChange={onChange}
             basicSetup={useMemo(() => ({
@@ -319,7 +318,8 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
               foldGutter: true,
             }), [editable])}
             theme="light"
-            className="text-base h-full font-monlam-2"
+
+            className=" h-full text-base pt-2"
           />
         </div>
         
