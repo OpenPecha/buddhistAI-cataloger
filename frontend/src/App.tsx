@@ -12,7 +12,7 @@ import Login from './pages/Login';
 
 function App() {
   return (
-    <div className="min-h-screen font-monlam-2 text-xl">
+    <div className="h-screen overflow-auto font-monlam-2 text-xl">
       <Navigation/>
       <div className='container mx-auto py-16'>
 
