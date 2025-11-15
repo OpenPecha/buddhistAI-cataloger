@@ -1,6 +1,10 @@
 import { useBibliography } from '@/contexts/BibliographyContext';
 import { X, FileText, BookOpen, User, Scroll } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { EditorView } from '@codemirror/view';
+import { annotationsField, removeAnnotationEffect } from '@/editor/textAnnotations';
+import { useState, useEffect } from 'react';
+import type { BibliographyAnnotation } from '@/contexts/BibliographyContext';
 
 const TYPE_ICONS = {
   title: <FileText className="h-4 w-4" />,
@@ -30,13 +34,67 @@ const TYPE_COLORS = {
 
 interface BibliographyAnnotationsListProps {
   className?: string;
+  editorView: EditorView | null;
 }
 
 export const BibliographyAnnotationsList: React.FC<BibliographyAnnotationsListProps> = ({
   className = '',
+  editorView,
 }) => {
-  const { annotations, removeAnnotation, clearAnnotations } = useBibliography();
   const { t } = useTranslation();
+  const [annotations, setAnnotations] = useState<BibliographyAnnotation[]>([]);
+
+  // Read annotations from CodeMirror state and sync on changes
+  useEffect(() => {
+    if (!editorView) {
+      // Don't clear annotations immediately - editorView might be temporarily unavailable
+      // Only clear if we had annotations before and editorView is gone
+      return;
+    }
+
+    const updateAnnotations = () => {
+      if (!editorView) return;
+      try {
+        const cmAnnotations = editorView.state.field(annotationsField);
+        setAnnotations([...cmAnnotations]);
+      } catch (e) {
+        console.warn('Failed to read annotations from CodeMirror state:', e);
+      }
+    };
+
+    // Initial load
+    updateAnnotations();
+
+    // Use a polling approach to detect changes (simpler than transaction listeners)
+    const interval = setInterval(() => {
+      if (editorView) {
+        updateAnnotations();
+      }
+    }, 200);
+
+    return () => clearInterval(interval);
+  }, [editorView]);
+
+  const removeAnnotation = (id: string) => {
+    if (!editorView) return;
+    editorView.dispatch({
+      effects: removeAnnotationEffect.of(id)
+    });
+    // Update local state immediately
+    setAnnotations(prev => prev.filter(ann => ann.id !== id));
+  };
+
+  const clearAnnotations = () => {
+    if (!editorView) return;
+    // Remove all annotations
+    const cmAnnotations = editorView.state.field(annotationsField);
+    cmAnnotations.forEach(ann => {
+      editorView.dispatch({
+        effects: removeAnnotationEffect.of(ann.id)
+      });
+    });
+    setAnnotations([]);
+  };
 
   // Function to get translated label for annotation type
   const getTypeLabel = (type: string): string => {

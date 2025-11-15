@@ -4,6 +4,7 @@ import {
   useCallback,
   forwardRef,
   useImperativeHandle,
+  memo,
 } from "react";
 import { usePersons } from "@/hooks/usePersons";
 import { useBdrcSearch } from "@/hooks/useBdrcSearch";
@@ -62,6 +63,55 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
   ({ onDataChange, onExistingTextFound }, ref) => {
     const { t } = useTranslation();
     
+    // State declarations
+    const [selectedType, setSelectedType] = useState<
+      "root" | "commentary" | "translation" | ""
+    >("");
+    const [titles, setTitles] = useState<TitleEntry[]>([]);
+    const [altTitles, setAltTitles] = useState<TitleEntry[][]>([]);
+    const [language, setLanguage] = useState("");
+    const [target, setTarget] = useState("");
+    const [date, setDate] = useState(() => {
+      // Initialize with today's date in YYYY-MM-DD format
+      const today = new Date();
+      return today.toISOString().split('T')[0];
+    });
+    const [bdrc, setBdrc] = useState("");
+    const [categoryId, setCategoryId] = useState<string>("");
+    const [categoryError, setCategoryError] = useState<boolean>(false);
+    const [copyright, setCopyright] = useState<string>("Public domain");
+    const [license, setLicense] = useState<string>("CC0");
+
+    // BDRC search state
+    const [bdrcSearch, setBdrcSearch] = useState("");
+    const [showBdrcDropdown, setShowBdrcDropdown] = useState(false);
+    const [selectedBdrc, setSelectedBdrc] = useState<{ id: string; label: string } | null>(null);
+
+    // Contributor management
+    const [contributors, setContributors] = useState<Contributor[]>([]);
+    const [showAddContributor, setShowAddContributor] = useState(false);
+
+    // Contributor fields
+    const [personSearch, setPersonSearch] = useState("");
+    const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+    const [showPersonDropdown, setShowPersonDropdown] = useState(false);
+    const [debouncedPersonSearch, setDebouncedPersonSearch] = useState("");
+    const [role, setRole] = useState<
+      "translator" | "reviser" | "author" | "scholar"
+    >("author");
+
+    // Validation errors
+    const [errors, setErrors] = useState<Record<string, string>>({});
+
+    // Person creation modal
+    const [showPersonFormModal, setShowPersonFormModal] = useState(false);
+
+    // BDRC conflict state
+    const [showBdrcConflictDialog, setShowBdrcConflictDialog] = useState(false);
+    const [conflictingText, setConflictingText] = useState<OpenPechaText | null>(null);
+    const [pendingBdrcSelection, setPendingBdrcSelection] = useState<{ id: string; label: string } | null>(null);
+    const [isCheckingBdrcId, setIsCheckingBdrcId] = useState(false);
+    
     // Expose methods to parent component
     useImperativeHandle(ref, () => ({
       addTitle: (text: string, language?: string) => {
@@ -115,6 +165,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       },
       hasTitle: () => {
         // Check if there's at least one title with a value
+        // Use a callback to access current state
         return titles.length > 0 && titles.some(t => t.value.trim() !== "");
       },
       setBdrcId: (bdrcId: string, label: string) => {
@@ -143,25 +194,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         
         setContributors((prev) => [...prev, newContributor]);
       },
-    }));
-
-    const [selectedType, setSelectedType] = useState<
-      "root" | "commentary" | "translation" | ""
-    >("");
-    const [titles, setTitles] = useState<TitleEntry[]>([]);
-    const [altTitles, setAltTitles] = useState<TitleEntry[][]>([]);
-    const [language, setLanguage] = useState("");
-    const [target, setTarget] = useState("");
-    const [date, setDate] = useState(() => {
-      // Initialize with today's date in YYYY-MM-DD format
-      const today = new Date();
-      return today.toISOString().split('T')[0];
-    });
-    const [bdrc, setBdrc] = useState("");
-    const [categoryId, setCategoryId] = useState<string>("");
-    const [categoryError, setCategoryError] = useState<boolean>(false);
-    const [copyright, setCopyright] = useState<string>("Public domain");
-    const [license, setLicense] = useState<string>("CC0");
+    }), [titles]);
 
     // Auto-set license to "unknown" when copyright is "Unknown"
     useEffect(() => {
@@ -169,42 +202,16 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         setLicense("unknown");
       }
     }, [copyright]);
-    
-    // BDRC search state
-    const [bdrcSearch, setBdrcSearch] = useState("");
-    const [showBdrcDropdown, setShowBdrcDropdown] = useState(false);
-    const [selectedBdrc, setSelectedBdrc] = useState<{ id: string; label: string } | null>(null);
-
-    // Contributor management
-    const [contributors, setContributors] = useState<Contributor[]>([]);
-    const [showAddContributor, setShowAddContributor] = useState(false);
-
-    // Contributor fields
-    const [personSearch, setPersonSearch] = useState("");
-    const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
-    const [showPersonDropdown, setShowPersonDropdown] = useState(false);
-    const [debouncedPersonSearch, setDebouncedPersonSearch] = useState("");
-    const [role, setRole] = useState<
-      "translator" | "reviser" | "author" | "scholar"
-    >("author");
-
-    // Validation errors
-    const [errors, setErrors] = useState<Record<string, string>>({});
-
-    // Person creation modal
-    const [showPersonFormModal, setShowPersonFormModal] = useState(false);
-
-    // BDRC conflict state
-    const [showBdrcConflictDialog, setShowBdrcConflictDialog] = useState(false);
-    const [conflictingText, setConflictingText] = useState<OpenPechaText | null>(null);
-    const [pendingBdrcSelection, setPendingBdrcSelection] = useState<{ id: string; label: string } | null>(null);
-    const [isCheckingBdrcId, setIsCheckingBdrcId] = useState(false);
 
     // BDRC search hook for instances
     const { results: bdrcResults, isLoading: bdrcLoading } = useBdrcSearch(bdrcSearch);
     
     // BDRC search hook for persons
-    const { results: bdrcPersonResults, isLoading: bdrcPersonLoading } = useBdrcSearch(debouncedPersonSearch, "Person", 1000);
+    const { results: bdrcPersonResults, isLoading: bdrcPersonLoading } = useBdrcSearch(
+      debouncedPersonSearch,
+      "Person",
+      1000
+    );
 
     useEffect(() => {
       const timer = setTimeout(() => {
@@ -218,7 +225,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       offset: 0,
     });
 
-    const getPersonDisplayName = (person: Person): string => {
+    const getPersonDisplayName = useCallback((person: Person): string => {
       // Safety check in case name is undefined
       if (!person.name) {
         return person.id || t("textForm.unknown");
@@ -229,15 +236,15 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         Object.values(person.name)[0] ||
         t("textForm.unknown")
       );
-    };
+    }, [t]);
 
-    const handlePersonSelect = (person: Person) => {
+    const handlePersonSelect = useCallback((person: Person) => {
       setSelectedPerson(person);
       setPersonSearch(getPersonDisplayName(person));
       setShowPersonDropdown(false);
-    };
+    }, [getPersonDisplayName]);
 
-    const handlePersonSearchChange = (
+    const handlePersonSearchChange = useCallback((
       e: React.ChangeEvent<HTMLInputElement>
     ) => {
       setPersonSearch(e.target.value);
@@ -245,9 +252,9 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       if (!e.target.value) {
         setSelectedPerson(null);
       }
-    };
+    }, []);
 
-    const handleAddContributor = () => {
+    const handleAddContributor = useCallback(() => {
       const newErrors: Record<string, string> = {};
 
       if (!selectedPerson) {
@@ -256,23 +263,24 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         return;
       }
 
-      const newContributor: Contributor = {
-        person: selectedPerson,
-        role: role,
-      };
-
-      setContributors([...contributors, newContributor]);
+      setContributors((prev) => [
+        ...prev,
+        {
+          person: selectedPerson,
+          role: role,
+        },
+      ]);
 
       // Reset form
       setShowAddContributor(false);
       setSelectedPerson(null);
       setPersonSearch("");
       setErrors({});
-    };
+    }, [selectedPerson, role, t]);
 
-    const handleRemoveContributor = (index: number) => {
-      setContributors(contributors.filter((_, i) => i !== index));
-    };
+    const handleRemoveContributor = useCallback((index: number) => {
+      setContributors((prev) => prev.filter((_, i) => i !== index));
+    }, []);
 
     // Build form data - can be called on demand
     const buildFormData = useCallback(() => {
@@ -397,27 +405,15 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         try {
           const data = buildFormData();
           onDataChange(data);
-        } catch (error) {
+        } catch {
           // Form is not yet valid, don't call onDataChange
           onDataChange(null);
         }
       }
     }, [
-      selectedType,
-      titles,
-      altTitles,
-      language,
-      target,
-      contributors,
-      date,
-      bdrc,
-      categoryId,
-      copyright,
-      license,
+      buildFormData,
       onDataChange,
-      // Note: buildFormData is excluded from deps since all its dependencies are already listed above
     ]);
-
     return (
       <div className="space-y-6">
         {/* Type and Language */}
@@ -829,7 +825,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                       onChange={handlePersonSearchChange}
                       onFocus={() => setShowPersonDropdown(true)}
                       onBlur={() =>
-                        setTimeout(() => setShowPersonDropdown(false), 200)
+                        setTimeout(() => setShowPersonDropdown(false), 2000)
                       }
                       className="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-base leading-relaxed"
                       placeholder={t("textForm.searchForPerson")}
@@ -857,41 +853,10 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                                 <div className="text-sm text-gray-500">{t("textForm.searchingBdrcPerson")}</div>
                               </div>
                             ) : bdrcPersonResults.length > 0 ? (
-                              bdrcPersonResults.map((result) => (
-                                <button
-                                  key={result.bdrc_id}
-                                  type="button"
-                                  onClick={() => {
-                                    // Create a temporary Person object from BDRC data
-                                    const bdrcPerson: Person = {
-                                      id: result.bdrc_id || '',
-                                      name: { bo: result.name || '' },
-                                      alt_names: [],
-                                      bdrc: result.bdrc_id || '',
-                                      wiki: null
-                                    };
-                                    handlePersonSelect(bdrcPerson);
-                                  }}
-                                  className="w-full px-4 py-2 text-left hover:bg-purple-50 border-b border-gray-100"
-                                >
-                                  <div className="flex items-start gap-2">
-                                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">
-                                      BDRC
-                                    </span>
-                                    <div className="flex-1">
-                                      <div className="font-medium text-sm">
-                                        {result.name || "Untitled"}
-                                      </div>
-                                      <div className="text-xs text-gray-500 mt-1">
-                                        {result.bdrc_id}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </button>
-                              ))
+                             <BdrcPersonList  bdrcPersonResults={bdrcPersonResults} handlePersonSelect={handlePersonSelect} />
                             ) : debouncedPersonSearch.trim() ? (
                               <div className="px-4 py-2 text-gray-500 text-sm">
-                                {t("textForm.noBdrcPersonResults")}
+                              empty results
                               </div>
                             ) : null}
                           </>
@@ -1276,3 +1241,60 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
 TextCreationForm.displayName = "TextCreationForm";
 
 export default TextCreationForm;
+
+
+
+
+interface BdrcPersonListProps {
+  bdrcPersonResults: Array<{ bdrc_id?: string; name?: string }>;
+  handlePersonSelect: (person: Person) => void;
+}
+
+const BdrcPersonList = memo(({ bdrcPersonResults, handlePersonSelect }: BdrcPersonListProps) => {
+  console.log('render')
+  const handlePersonClick = useCallback((result: { bdrc_id?: string; name?: string }) => {
+    // Create a temporary Person object from BDRC data
+    const bdrcPerson: Person = {
+      id: result.bdrc_id || '',
+      name: { bo: result.name || '' },
+      alt_names: [],
+      bdrc: result.bdrc_id || '',
+      wiki: null
+    };
+    handlePersonSelect(bdrcPerson);
+  }, [handlePersonSelect]);
+
+function handleClick(result: { bdrc_id?: string; name?: string }){
+  console.log('hi')
+    handlePersonClick(result)
+}
+
+  return (
+    <div className="z-50">
+      {bdrcPersonResults.map((result) => (
+        <button
+          key={result.bdrc_id}
+          type="button"
+          onClick={() => handleClick(result)}
+          className="w-full px-4 py-2 z-50 text-left hover:bg-purple-50 border-b border-gray-100"
+        >
+          <div className="flex items-start gap-2">
+            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">
+              BDRC
+            </span>
+            <div className="flex-1">
+              <div className="font-medium text-sm">
+                {result.name || "Untitled"}
+              </div>
+              <div className="text-xs text-gray-500 mt-1">
+                {result.bdrc_id}
+              </div>
+            </div>
+          </div>
+        </button>
+      ))}
+    </div>
+  );
+});
+
+BdrcPersonList.displayName = "BdrcPersonList";

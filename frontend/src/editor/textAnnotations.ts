@@ -3,8 +3,10 @@ import { StateField, StateEffect } from "@codemirror/state";
 import type { BibliographyAnnotation } from "@/contexts/BibliographyContext";
 import i18n from "@/i18n/config";
 
-// Define the effect for updating annotations
-export const updateAnnotationsEffect = StateEffect.define<BibliographyAnnotation[]>();
+// Define effects for managing annotations
+export const addAnnotationEffect = StateEffect.define<Omit<BibliographyAnnotation, 'id' | 'timestamp'>>();
+export const removeAnnotationEffect = StateEffect.define<string>(); // annotation id
+export const syncAnnotationsCallback = new Map<EditorView, (annotations: BibliographyAnnotation[]) => void>();
 
 // Color schemes for different annotation types (colors only)
 const annotationColors: Record<string, { color: string; bgColor: string }> = {
@@ -38,18 +40,58 @@ function getAnnotationStyle(type: string) {
   };
 }
 
-// Create the state field to store annotations
+// Create the state field to store annotations in CodeMirror state
 export const annotationsField = StateField.define<BibliographyAnnotation[]>({
   create() {
     return [];
   },
   update(annotations, tr) {
+    let updated = annotations;
+    
+    // Handle text changes - map ranges through changes to adjust positions
+    if (tr.docChanged && tr.changes) {
+      updated = annotations.map(ann => {
+        try {
+          // Map the start and end positions through the changes
+          const newStart = tr.changes.mapPos(ann.span.start, 1); // 1 = map to after insertions
+          const newEnd = tr.changes.mapPos(ann.span.end, -1); // -1 = map to before deletions
+          
+          // Get the new text content
+          const newText = tr.state.doc.sliceString(newStart, newEnd);
+          
+          // Only keep if range is still valid
+          if (newStart >= 0 && newEnd <= tr.state.doc.length && newStart < newEnd) {
+            return { 
+              ...ann, 
+              span: { start: newStart, end: newEnd },
+              text: newText 
+            };
+          }
+          return null;
+        } catch (e) {
+          return null;
+        }
+      }).filter((ann): ann is BibliographyAnnotation => ann !== null);
+    }
+    
+    // Handle adding annotations
     for (let effect of tr.effects) {
-      if (effect.is(updateAnnotationsEffect)) {
-        return effect.value;
+      if (effect.is(addAnnotationEffect)) {
+        const newAnnotation: BibliographyAnnotation = {
+          ...effect.value,
+          id: `bib-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          timestamp: Date.now(),
+        };
+        updated = [...updated, newAnnotation];
+      }
+      
+      // Handle removing annotations
+      if (effect.is(removeAnnotationEffect)) {
+        updated = updated.filter(ann => ann.id !== effect.value);
       }
     }
-    return annotations;
+    
+    return updated;
   },
 });
 
@@ -95,12 +137,12 @@ export const annotationPlugin = ViewPlugin.fromClass(
 
       for (const annotation of annotations) {
         try {
-          // Ensure positions are within document bounds
+          // Use the annotation's span directly - CodeMirror handles range adjustments
           const docLength = view.state.doc.length;
           const start = Math.max(0, Math.min(annotation.span.start, docLength));
           const end = Math.max(start, Math.min(annotation.span.end, docLength));
 
-          if (start < end) {
+          if (start < end && start < docLength) {
             decorations.push(
               createAnnotationDecoration(annotation).range(start, end)
             );

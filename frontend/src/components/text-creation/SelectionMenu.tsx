@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useBibliography } from "@/contexts/BibliographyContext";
 import { useTranslation } from "react-i18next";
 
 interface SelectionMenuProps {
@@ -20,7 +19,6 @@ const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, o
   const menuRef = useRef<HTMLDivElement>(null);
   const [adjustedPosition, setAdjustedPosition] = useState(position);
   const [isVisible, setIsVisible] = useState(false);
-  const { addAnnotation } = useBibliography();
 
   // Trigger fade-in animation
   useEffect(() => {
@@ -80,17 +78,8 @@ const SelectionMenu = ({ position, selectedText, textStart, textEnd, onSelect, o
   }, [position]);
 
   const handleMenuItemClick = (type: "title" | "alt_title" | "colophon" | "incipit" | "alt_incipit" | "person") => {
-    // Add to bibliography annotations
-    addAnnotation({
-      span: {
-        start: textStart,
-        end: textEnd,
-      },
-      type: type,
-      text: selectedText,
-    });
-
-    // Call optional callback
+    // Annotation is now added directly in TextEditorView via CodeMirror effects
+    // Just call the callback for form updates
     if (onSelect) {
       onSelect(type);
     }
