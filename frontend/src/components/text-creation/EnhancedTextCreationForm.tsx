@@ -402,19 +402,20 @@ const EnhancedTextCreationForm = () => {
   // Handle file upload
   const handleFileUpload = (content: string, filename: string) => {
     // Clean content immediately: remove empty lines and trailing empty lines
+    
+   
+    
+    
+    
+
     let lines = content.split('\n');
     
-    // Remove trailing empty lines
-    while (lines.length > 0 && lines[lines.length - 1].length === 0) {
-      lines.pop();
-    }
-    
-    // Filter out empty lines (but keep lines with spaces)
-    lines = lines.filter(line => line.length > 0);
-    
-    // Rejoin with newlines
+    lines = lines.filter(line => line.trim() !== '');
+
     const cleanedContent = lines.join('\n');
-    
+
+
+
     setEditedContent(cleanedContent);
     setUploadedFilename(filename);
   };

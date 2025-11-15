@@ -144,11 +144,13 @@ const CreateTranslation = () => {
 
   const handleFileUpload = (content: string, filename: string) => {
     // Clean content
+  
+    
+
     let lines = content.split('\n');
-    while (lines.length > 0 && lines[lines.length - 1].length === 0) {
-      lines.pop();
-    }
-    lines = lines.filter(line => line.length > 0);
+    
+    lines = lines.filter(line => line.trim() !== '');
+
     const cleanedContent = lines.join('\n');
     
     setContent(cleanedContent);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useEffect, useState } from 'react';
 
 interface FormattedTextDisplayProps {
   content?: string;
@@ -34,9 +34,7 @@ const FormattedTextDisplay: React.FC<FormattedTextDisplayProps> = ({ content, li
     
     return filteredLines;
   };
-
   const contentLines = getFormattedLines();
-
   if (contentLines.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-gray-400">
@@ -59,5 +57,5 @@ const FormattedTextDisplay: React.FC<FormattedTextDisplayProps> = ({ content, li
   );
 };
 
-export default FormattedTextDisplay;
+export default memo(FormattedTextDisplay);
 

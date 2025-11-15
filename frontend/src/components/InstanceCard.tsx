@@ -198,7 +198,6 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
               </div>
             </div>
           )}
-
           {/* Content Display - Only show after annotation is loaded or if no annotation exists */}
           {(!segmentationAnnotationId || !isLoadingAnnotation) && (
             <FormattedTextDisplay lines={contentForView} />

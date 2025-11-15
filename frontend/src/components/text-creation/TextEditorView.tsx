@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
 import CodeMirror, { type ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { markdown } from '@codemirror/lang-markdown';
 import { EditorView } from '@codemirror/view';
@@ -39,26 +39,56 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
     const checkView = () => {
       if (cmRef.current?.view) {
         setEditorView(cmRef.current.view);
+        return true; // Found, stop checking
       }
+      return false;
     };
     
     // Check immediately
-    checkView();
+    if (checkView()) {
+      return; // Already found, no need for interval
+    }
     
     // Also check periodically in case CodeMirror initializes later
-    const interval = setInterval(checkView, 100);
+    const interval = setInterval(() => {
+      if (checkView()) {
+        clearInterval(interval); // Stop once found
+      }
+    }, 100);
     
     return () => clearInterval(interval);
   }, []);
+
+  // Track previous annotations to detect changes
+  const prevAnnotationsRef = useRef<string>('');
 
   // Sync annotations from CodeMirror state to BibliographyContext for API access
   useEffect(() => {
     const view = editorView || cmRef.current?.view;
     if (!view) return;
 
+    let timeoutId: number | null = null;
+
     const syncAnnotations = () => {
       try {
         const cmAnnotations = view.state.field(annotationsField);
+        
+        // Create a serialized version to compare
+        const annotationsKey = JSON.stringify(
+          cmAnnotations.map(ann => ({
+            start: ann.span.start,
+            end: ann.span.end,
+            type: ann.type,
+            text: ann.text,
+          }))
+        );
+        
+        // Only sync if annotations actually changed
+        if (annotationsKey === prevAnnotationsRef.current) {
+          return; // No changes, skip sync
+        }
+        
+        prevAnnotationsRef.current = annotationsKey;
         
         // Clear context and re-add all annotations from CodeMirror
         // This ensures context stays in sync with CodeMirror state
@@ -76,18 +106,33 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
       }
     };
 
+    // Debounced sync - only sync when changes occur, with debounce to batch rapid changes
+    const debouncedSync = () => {
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = globalThis.setTimeout(syncAnnotations, 500);
+    };
+
+    // Use CodeMirror's update listener - poll less frequently when editor is active
+    const interval = setInterval(() => {
+      debouncedSync();
+    }, 1000); // Check every second instead of every 500ms
+
     // Sync immediately
     syncAnnotations();
 
-    // Sync periodically to catch changes (when user edits text, annotations update)
-    const interval = setInterval(syncAnnotations, 500);
-
-    return () => clearInterval(interval);
+    return () => {
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+      }
+      clearInterval(interval);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editorView]);
 
-  // Get annotations count from CodeMirror state for display
-  const getAnnotationsCount = () => {
+  // Get annotations count from CodeMirror state for display (memoized)
+  const annotationsCount = useMemo(() => {
     const view = editorView || cmRef.current?.view;
     if (!view) return 0;
     try {
@@ -95,9 +140,8 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
     } catch {
       return 0;
     }
-  };
-
-  const handleMouseUp = (event: React.MouseEvent) => {
+  }, [editorView]); // Recalculate when editorView changes
+  const handleMouseUp = useCallback((event: React.MouseEvent) => {
     // Only show selection menu when in the content (CodeMirror) tab
     if (activeTab !== 'content') {
       return;
@@ -153,9 +197,9 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
         setShowMenu(true);
       }
     }
-  };
+  }, [activeTab]);
 
-  const handleMenuSelect = (type: 'title' | 'alt_title' | 'colophon' | 'incipit' | 'alt_incipit' | 'person') => {
+  const handleMenuSelect = useCallback((type: 'title' | 'alt_title' | 'colophon' | 'incipit' | 'alt_incipit' | 'person') => {
     const view = cmRef.current?.view;
     if (!view) {
       setShowMenu(false);
@@ -183,7 +227,11 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
     
     setShowMenu(false);
     setSelectedText('');
-  };
+  }, [selectedText, textStart, textEnd, onTextSelect]);
+  
+  const handleCloseMenu = useCallback(() => {
+    setShowMenu(false);
+  }, []);
   return (
     <div className="h-full flex flex-col">
       {/* Selection Menu */}
@@ -194,7 +242,7 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
           textStart={textStart}
           textEnd={textEnd}
           onSelect={handleMenuSelect}
-          onClose={() => setShowMenu(false)}
+          onClose={handleCloseMenu}
           isCreatingNewText={isCreatingNewText}
           hasIncipit={hasIncipit}
           hasTitle={hasTitle}
@@ -237,9 +285,9 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
             }`}
           >
             {t('editor.bibliography')}
-            {getAnnotationsCount() > 0 && (
+            {annotationsCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                {getAnnotationsCount()}
+                {annotationsCount}
               </span>
             )}
           </button>
@@ -254,22 +302,22 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
             ref={cmRef}
             value={content}
             height="100%"
-            extensions={[
+            extensions={useMemo(() => [
               markdown(),
               EditorView.lineWrapping,
               annotationsField,
               annotationPlugin,
               annotationTheme,
-            ]}
+            ], [])}
             id='editor_div'
             editable={editable}
             onChange={onChange}
-            basicSetup={{
+            basicSetup={useMemo(() => ({
               lineNumbers: true,
               highlightActiveLineGutter: editable,
               highlightActiveLine: editable,
               foldGutter: true,
-            }}
+            }), [editable])}
             theme="light"
             className="text-base h-full font-monlam-2"
           />
@@ -294,4 +342,4 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
   );
 };
 
-export default TextEditorView;
+export default memo(TextEditorView);
