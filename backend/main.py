@@ -62,6 +62,5 @@ if __name__ == "__main__":
         host="0.0.0.0", 
         port=int(os.getenv("PORT", 8000)), 
         reload=True,
-        # Increase request body size limit (default is ~1MB)
-        # This is handled at the ASGI level
+        limit_max_requests=32*1024*1024,
     )
