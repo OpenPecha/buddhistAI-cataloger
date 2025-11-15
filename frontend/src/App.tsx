@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import TextCRUD from './pages/Text';
 import PersonCRUD from './pages/Person';
 import TextInstanceCRUD from './pages/TextInstances';
@@ -8,28 +8,59 @@ import Index from './pages/Index';
 import Create from './pages/Create';
 import CreateTranslation from './pages/CreateTranslation';
 import CreateCommentary from './pages/CreateCommentary';
-import Login from './pages/Login';
+import LoginPage from './pages/LoginPage';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
+  const location = useLocation();
+  const isLoginPage = location.pathname === '/login';
+
   return (
     <div className="h-screen overflow-auto font-monlam-2 text-xl">
-      <Navigation/>
-      <div className='container mx-auto py-16'>
-
+      {!isLoginPage && <Navigation/>}
+      <div className={isLoginPage ? '' : 'container mx-auto py-16'}>
         <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/" element={<Index />} />
-          <Route path="/create" element={<Create />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Index />
+            </ProtectedRoute>
+          } />
+          <Route path="/create" element={
+            <ProtectedRoute>
+              <Create />
+            </ProtectedRoute>
+          } />
           <Route path="/texts" element={
-            <TextCRUD />
+            <ProtectedRoute>
+              <TextCRUD />
+            </ProtectedRoute>
           } />
           <Route path="/persons" element={
+            <ProtectedRoute>
               <PersonCRUD />
-              } />
-          <Route path="/texts/:text_id/instances" element={<TextInstanceCRUD />} />
-          <Route path="/texts/:text_id/instances/:instance_id" element={<Instance />} />
-          <Route path="/texts/:text_id/instances/:instance_id/translation" element={<CreateTranslation />} />
-          <Route path="/texts/:text_id/instances/:instance_id/commentary" element={<CreateCommentary />} />
+            </ProtectedRoute>
+          } />
+          <Route path="/texts/:text_id/instances" element={
+            <ProtectedRoute>
+              <TextInstanceCRUD />
+            </ProtectedRoute>
+          } />
+          <Route path="/texts/:text_id/instances/:instance_id" element={
+            <ProtectedRoute>
+              <Instance />
+            </ProtectedRoute>
+          } />
+          <Route path="/texts/:text_id/instances/:instance_id/translation" element={
+            <ProtectedRoute>
+              <CreateTranslation />
+            </ProtectedRoute>
+          } />
+          <Route path="/texts/:text_id/instances/:instance_id/commentary" element={
+            <ProtectedRoute>
+              <CreateCommentary />
+            </ProtectedRoute>
+          } />
         </Routes>
         </div>
     </div>

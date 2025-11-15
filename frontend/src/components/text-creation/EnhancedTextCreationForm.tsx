@@ -859,7 +859,7 @@ const EnhancedTextCreationForm = () => {
               onClick={() =>
                 setActivePanel(activePanel === "form" ? "editor" : "form")
               }
-              className="md:hidden fixed bottom-6 right-6 z-30 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-200 flex items-center gap-2"
+              className="md:hidden fixed bottom-6 right-6 z-30  bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-200 flex items-center gap-2"
             >
               {activePanel === "form" ? (
                 <>
