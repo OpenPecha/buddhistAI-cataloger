@@ -11,9 +11,11 @@ import type { OpenPechaTextInstanceListItem } from "@/types/text";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle } from "lucide-react";
+import { useAuth0 } from "@auth0/auth0-react";
 
 function TextInstanceCRUD() {
   const { text_id } = useParams();
+  const { user } = useAuth0();
   const [showModal, setShowModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notification, setNotification] = useState<{
@@ -36,6 +38,7 @@ function TextInstanceCRUD() {
       {
         textId: text_id || "",
         instanceData,
+        user:JSON.stringify(user || {}),
       },
       {
         onSuccess: () => {

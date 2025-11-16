@@ -164,14 +164,14 @@ export const fetchInstance = async (id: string): Promise<OpenPechaTextInstance> 
 };
 
 // Real API function for creating text instances
-export const createTextInstance = async (textId: string, instanceData: any): Promise<CreateInstanceResponse> => {
+export const createTextInstance = async (textId: string, instanceData: any, user: string): Promise<CreateInstanceResponse> => {
   try {
     const response = await fetch(`${API_URL}/text/${textId}/instances`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(instanceData),
+      body: JSON.stringify({ ...instanceData, user }),
     });
 
     return await handleApiResponse(response, {
@@ -221,14 +221,14 @@ export const fetchBdrcWorkInstance = async (workId: string, instanceId: string):
   }
 };
 
-export const createTranslation = async (instanceId: string, translationData: any): Promise<any> => {
+export const createTranslation = async (instanceId: string, translationData: any, user: string): Promise<any> => {
   try {
     const response = await fetch(`${API_URL}/instances/${instanceId}/translation`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(translationData),
+      body: JSON.stringify({ ...translationData, user }),
     });
     
     // Let handleApiResponse extract and show the actual backend error message
@@ -241,14 +241,14 @@ export const createTranslation = async (instanceId: string, translationData: any
   }
 };
 
-export const createCommentary = async (instanceId: string, commentaryData: any): Promise<any> => {
+export const createCommentary = async (instanceId: string, commentaryData: any, user: string): Promise<any> => {
   try {
     const response = await fetch(`${API_URL}/instances/${instanceId}/commentary`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(commentaryData),
+      body: JSON.stringify({ ...commentaryData, user }),
     });
     
     // Let handleApiResponse extract and show the actual backend error message

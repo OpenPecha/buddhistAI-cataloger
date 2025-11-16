@@ -16,9 +16,11 @@ import { useBdrcSearch, type BdrcSearchResult } from "@/hooks/useBdrcSearch";
 import { fetchTextByBdrcId, fetchBdrcWorkInstance } from "@/api/texts";
 import { useTranslation } from "react-i18next";
 import { useBibliography } from "@/contexts/BibliographyContext";
+import { useAuth0 } from "@auth0/auth0-react";
 
 const EnhancedTextCreationForm = () => {
   const navigate = useNavigate();
+  const { user } = useAuth0();
   const { t } = useTranslation();
   const textFormRef = useRef<TextCreationFormRef>(null);
   const instanceFormRef = useRef<InstanceCreationFormRef>(null);
@@ -448,7 +450,7 @@ const EnhancedTextCreationForm = () => {
       }
 
       // Now create the instance
-      const createdInstance = await createInstanceMutation.mutateAsync({ textId, instanceData });
+      const createdInstance = await createInstanceMutation.mutateAsync({ textId, instanceData, user:JSON.stringify(user || {}) });
       // The API returns { message: string, id: string }, so access id directly
       const instanceId = createdInstance?.id;
       

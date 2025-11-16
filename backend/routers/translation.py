@@ -1,15 +1,18 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import requests
 import os
 from dotenv import load_dotenv
 
+from utils.segmentor import create_segmentation_annotation
+
 load_dotenv(override=True)
 
 router = APIRouter()
 
 API_ENDPOINT = os.getenv("OPENPECHA_ENDPOINT")
+TRANSLATION_BACKEND_URL = os.getenv("TRANSLATION_BACKEND_URL")
 
 
 class Span(BaseModel):
@@ -55,6 +58,7 @@ class CreateTranslation(BaseModel):
     copyright: str
     license: str
     biblography_annotation: Optional[List[BibliographyAnnotation]] = None
+    user: Optional[str] = None
 
 
 class CreateCommentary(BaseModel):
@@ -71,6 +75,7 @@ class CreateCommentary(BaseModel):
     license: str
     category_id: Optional[str] = None
     biblography_annotation: Optional[List[BibliographyAnnotation]] = None
+    user: Optional[str] = None
 
 
 class TranslationResponse(BaseModel):
@@ -123,8 +128,28 @@ async def get_text_instances(text_id: str):
     return response.json()
 
 
+def create_annotation_background(text_id: str, instance_id: str, content: str, language: str, user: Optional[str] = None):
+    """Background task to create segmentation annotation and temp annotation"""
+    try:
+        if instance_id and content and language:
+            annotation_response_id = create_segmentation_annotation(
+                instance_id, content, language
+            )
+            if annotation_response_id and user:
+                temp_database_response = requests.post(f"{TRANSLATION_BACKEND_URL}/temp_annotation", json={
+                    "textId": text_id,
+                    "instanceId": instance_id,
+                    "annotationId": annotation_response_id,
+                    "createdBy": user
+                })
+                if temp_database_response.status_code != 201:
+                    print(f"Error creating temp annotation: {temp_database_response.text}")
+    except Exception as e:
+        print(e)
+
+
 @router.post("/{instance_id}/translation", status_code=201)
-async def create_translation(instance_id: str, translation: CreateTranslation):
+async def create_translation(instance_id: str, translation: CreateTranslation, background_tasks: BackgroundTasks):
     """Create a translation for a specific instance"""
     if not API_ENDPOINT:
         raise HTTPException(
@@ -135,16 +160,54 @@ async def create_translation(instance_id: str, translation: CreateTranslation):
     try:
         # Convert to dict, excluding None values
         payload = translation.model_dump(exclude_none=True)
-        print(f"📤 Sending translation payload to OpenPecha API: {payload}")
+        # Extract user before sending to OpenPecha API (user is only for our backend)
+        user = payload.pop("user", None)
         response = requests.post(
             f"{API_ENDPOINT}/instances/{instance_id}/translation", 
             json=payload,
             timeout=30
         )
         if response.status_code != 201:
-            print(f"❌ Error response from OpenPecha API: {response.status_code} - {response.text}")
             raise HTTPException(status_code=response.status_code, detail=response.text)
-        return response.json()
+        
+        response_data = response.json()
+        
+        # Schedule background task for annotation creation
+        new_instance_id = response_data.get("instance_id")
+        content = payload.get("content")
+        language = payload.get("language")
+        # Get text_id from the response or original instance
+        text_id = None
+        try:
+            # First try to get text_id from the response_data
+            text_id = response_data.get("text_id")
+            
+            # If not in response, try to get from the original instance
+            if not text_id:
+                instance_response = requests.get(f"{API_ENDPOINT}/instances/{instance_id}")
+                if instance_response.status_code == 200:
+                    instance_data = instance_response.json()
+                    text_id = instance_data.get("text_id")
+                else:
+                    print(f"❌ Failed to fetch instance: {instance_response.status_code}")
+            print(text_id,len(content),language,new_instance_id)
+            if new_instance_id and content and text_id and language:
+                background_tasks.add_task(
+                    create_annotation_background,
+                    text_id=text_id,
+                    instance_id=new_instance_id,
+                    content=content,
+                    language=language,
+                    user=user
+                )
+            else:
+                print(f"❌ Background task not scheduled - Missing: new_instance_id={bool(new_instance_id)}, content={bool(content)}, text_id={bool(text_id)}, language={bool(language)}")
+        except Exception as e:
+            print(f"❌ Error scheduling background task: {e}")
+            import traceback
+            traceback.print_exc()
+        
+        return response_data
     except requests.exceptions.Timeout:
         raise HTTPException(
             status_code=504,
@@ -158,7 +221,7 @@ async def create_translation(instance_id: str, translation: CreateTranslation):
 
 
 @router.post("/{instance_id}/commentary", status_code=201)
-async def create_commentary(instance_id: str, commentary: CreateCommentary):
+async def create_commentary(instance_id: str, commentary: CreateCommentary, background_tasks: BackgroundTasks):
     """Create a commentary for a specific instance"""
     if not API_ENDPOINT:
         raise HTTPException(
@@ -169,16 +232,40 @@ async def create_commentary(instance_id: str, commentary: CreateCommentary):
     try:
         # Convert to dict, excluding None values
         payload = commentary.model_dump(exclude_none=True)
-        print(f"📤 Sending commentary payload to OpenPecha API: {payload}")
+        # Extract user before sending to OpenPecha API (user is only for our backend)
+        user = payload.pop("user", None)
         response = requests.post(
             f"{API_ENDPOINT}/instances/{instance_id}/commentary", 
             json=payload,
             timeout=30
         )
         if response.status_code != 201:
-            print(f"❌ Error response from OpenPecha API: {response.status_code} - {response.text}")
             raise HTTPException(status_code=response.status_code, detail=response.text)
-        return response.json()
+        
+        response_data = response.json()
+        
+        # Schedule background task for annotation creation
+        new_instance_id = response_data.get("instance_id")
+        content = payload.get("content")
+        language = payload.get("language")
+        # Get text_id from the original instance
+        try:
+            instance_response = requests.get(f"{API_ENDPOINT}/instances/{instance_id}")
+            if instance_response.status_code == 200:
+                text_id = instance_response.json().get("text_id")
+                if new_instance_id and content and text_id and language:
+                    background_tasks.add_task(
+                        create_annotation_background,
+                        text_id=text_id,
+                        instance_id=new_instance_id,
+                        content=content,
+                        language=language,
+                        user=user
+                    )
+        except Exception as e:
+            print(f"Error scheduling background task: {e}")
+        
+        return response_data
     except requests.exceptions.Timeout:
         raise HTTPException(
             status_code=504,

@@ -80,10 +80,12 @@ export const useCreateTextInstance = () => {
     mutationFn: ({
       textId,
       instanceData,
+      user
     }: {
       textId: string;
       instanceData: any;
-    }) => createTextInstance(textId, instanceData),
+      user: string;
+    }) => createTextInstance(textId, instanceData, user),
     onSuccess: (_, { textId }) => {
       queryClient.invalidateQueries({ queryKey: ["textInstance", textId] });
     }

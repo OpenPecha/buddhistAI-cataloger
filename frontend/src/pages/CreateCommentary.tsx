@@ -14,6 +14,7 @@ import type { OpenPechaTextInstance } from '@/types/text';
 import { useBibliography } from '@/contexts/BibliographyContext';
 import { useBibliographyAPI } from '@/hooks/useBibliographyAPI';
 import TextCreationSuccessModal from '@/components/text-creation/TextCreationSuccessModal';
+import { useAuth0 } from '@auth0/auth0-react';
 
 
 const LANGUAGE_OPTIONS = [
@@ -34,6 +35,7 @@ const CreateCommentary = () => {
   const { text_id, instance_id } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { user } = useAuth0();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch instance data
@@ -242,7 +244,7 @@ const CreateCommentary = () => {
       }
 
       // Create commentary
-      const response = await createCommentary(instance_id || '', commentaryData);
+      const response = await createCommentary(instance_id || '', commentaryData, JSON.stringify(user || {}));
       
       // Extract instance_id from response
       if (response && response.instance_id) {

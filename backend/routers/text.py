@@ -95,6 +95,7 @@ class CreateInstance(BaseModel):
     annotation: List[Dict[str, Any]]
     biblography_annotation: Optional[List[BibliographyAnnotation]] = None
     content: str
+    user: Optional[str] = None
 
 class CreateInstanceResponse(BaseModel):
     message: str
@@ -229,7 +230,7 @@ async def get_instances(id: str):
             detail=f"Error connecting to OpenPecha API: {str(e)}"
         )
 
-def create_annotation_background(text_id: str, instance_id: str, content: str):
+def create_annotation_background(text_id: str, instance_id: str, content: str,user: str):
     """Background task to create segmentation annotation and temp annotation"""
     try:
         text_response = requests.get(f"{API_ENDPOINT}/texts/{text_id}")
@@ -239,13 +240,12 @@ def create_annotation_background(text_id: str, instance_id: str, content: str):
                 instance_id, content, language
             )
             if annotation_response_id:
-                print(text_id, instance_id, annotation_response_id)
                 
                 temp_database_response = requests.post(f"{TRANSLATION_BACKEND_URL}/temp_annotation", json={
                     "textId": text_id,
                     "instanceId": instance_id,
                     "annotationId": annotation_response_id,
-                    "createdBy": "cataloger"
+                    "createdBy": user
                 })
                 if temp_database_response.status_code != 201:
                     print(f"Error creating temp annotation: {temp_database_response.text}")
@@ -263,6 +263,8 @@ async def create_instance(id: str, instance: CreateInstance, background_tasks: B
     try:
         # Convert to dict, excluding None values
         payload = instance.model_dump(exclude_none=True)
+        # Extract user before sending to OpenPecha API (user is only for our backend)
+        user = payload.pop("user", None)
         response = requests.post(f"{API_ENDPOINT}/texts/{id}/instances", json=payload,timeout=120)
         
         if response.status_code != 201:
@@ -276,7 +278,8 @@ async def create_instance(id: str, instance: CreateInstance, background_tasks: B
                 create_annotation_background,
                 text_id=id,
                 instance_id=instance_id,
-                content=content
+                content=content,
+                user=user
             )
         
         return response.json()
