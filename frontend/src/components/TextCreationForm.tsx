@@ -589,7 +589,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                         setAltTitles([]);
                       }
                     }}
-                    className="flex-1 min-w-0 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="flex-1 font-['noto'] min-w-0 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     placeholder={t("textForm.enterTitle")}
                   />
                   <Button
