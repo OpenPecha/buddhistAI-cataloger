@@ -102,6 +102,42 @@ class CreateInstanceResponse(BaseModel):
     id: str
 
 
+
+@router.get("/title-search")
+async def search_texts_by_title(
+    title: str
+):
+    if not API_ENDPOINT:
+        raise HTTPException(
+            status_code=500, 
+            detail="OPENPECHA_ENDPOINT environment variable is not set"
+        )
+    
+    try:
+        params = {
+            "title": title
+        }
+        params = {k: v for k, v in params.items() if v is not None}
+        
+        url = f"{API_ENDPOINT}/texts/title-search"
+        response = requests.get(url, params=params)
+        
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out after 30 seconds"
+        )
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error connecting to OpenPecha API: {str(e)}"
+        )
+
+
+
 @router.get("")
 async def get_texts(
     limit: int = 30,

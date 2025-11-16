@@ -44,7 +44,7 @@ const FormattedTextDisplay: React.FC<FormattedTextDisplayProps> = ({ content, li
   }
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-[80dvh] overflow-y-auto">
       {contentLines.map((line, index) => (
         <div 
           key={index} 

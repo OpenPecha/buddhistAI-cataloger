@@ -8,6 +8,7 @@ import Index from './pages/Index';
 import Create from './pages/Create';
 import CreateTranslation from './pages/CreateTranslation';
 import CreateCommentary from './pages/CreateCommentary';
+import UpdateAnnotation from './pages/UpdateAnnotation';
 import LoginPage from './pages/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -59,6 +60,11 @@ function App() {
           <Route path="/texts/:text_id/instances/:instance_id/commentary" element={
             <ProtectedRoute>
               <CreateCommentary />
+            </ProtectedRoute>
+          } />
+          <Route path="/texts/:text_id/instances/:instance_id/update-annotation" element={
+            <ProtectedRoute>
+              <UpdateAnnotation />
             </ProtectedRoute>
           } />
         </Routes>

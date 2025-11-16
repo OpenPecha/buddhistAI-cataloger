@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import FormattedTextDisplay from './FormattedTextDisplay';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
+import { PencilIcon } from 'lucide-react';
 
 interface InstanceCardProps {
   instance: OpenPechaTextInstance;
@@ -167,6 +168,16 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h8a1 1 0 110 2H9a1 1 0 110-2zm0 4h6a1 1 0 110 2H9a1 1 0 110-2z" />
               </svg>
               {t('textForm.formatter')}
+            </Button>
+
+            <Button
+              onClick={() => {
+                navigate(`/texts/${text_id}/instances/${instance_id}/update-annotation`);
+              }}
+              className="group relative px-5 py-2.5 bg-gradient-to-r from-sky-400 to-cyan-500 hover:from-sky-500 hover:to-cyan-600 text-white font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
+            >
+              <PencilIcon className="w-4 h-4" />
+              Update Annotation
             </Button>
           </div>
         </div>

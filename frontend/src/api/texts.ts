@@ -260,3 +260,25 @@ export const createCommentary = async (instanceId: string, commentaryData: any, 
     throw new Error('Unable to create commentary. Please check your connection and try again.');
   }
 };
+
+export const updateAnnotation = async (annotationId: string, annotationData: any): Promise<any> => {
+  try {
+    const response = await fetch(`${API_URL}/v2/annotations/${annotationId}/annotation`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(annotationData),
+    });
+    
+    return await handleApiResponse(response, {
+      400: 'Invalid annotation data. Please check your segmentation and try again.',
+      404: 'Annotation not found. It may have been deleted or the link is incorrect.'
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unable to update annotation. Please check your connection and try again.');
+  }
+};

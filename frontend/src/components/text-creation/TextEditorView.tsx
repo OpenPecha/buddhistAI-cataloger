@@ -300,6 +300,12 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
         <div style={{ display: activeTab === 'content' ? 'block' : 'none', height: '100%' }}>
           <CodeMirror
             ref={cmRef}
+            onKeyDown={(e)=>{
+              if(e.key !== 'Enter' ) {
+                alert("you cannot change the content of the text");
+                e.preventDefault();
+              }
+            }}
             value={content}
             height="100%"
             extensions={useMemo(() => [
@@ -319,7 +325,7 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
             }), [editable])}
             theme="light"
 
-            className=" h-full text-base pt-2"
+            className=" h-[80vh] text-base pt-2"
           />
         </div>
         
