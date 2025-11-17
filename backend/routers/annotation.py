@@ -165,8 +165,10 @@ async def clean_annotation(request: CleanAnnotationRequest):
     try:
         #  function takes text, samplet text
         annotation_list = []
+        text_content = request.text.replace('\n', '')
         #  use the annotation from sample text to generate the annotation for the new text 
-        annotation_list = generate_clean_annotation(request.text, request.sample_text)
+        # sample text is the text thats being used to get the line breaks, base text is the text thats being annotated
+        annotation_list = generate_clean_annotation(text_content, request.sample_text)
         
         #  return the annoation list
         return annotation_list

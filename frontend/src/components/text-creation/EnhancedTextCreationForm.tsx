@@ -158,7 +158,7 @@ const EnhancedTextCreationForm = () => {
 
   // Helper: Clear file upload state
   const clearFileUpload = () => {
-    setEditedContent(" ");
+    setEditedContent("");
     setUploadedFilename("");
   };
 
@@ -313,7 +313,7 @@ const EnhancedTextCreationForm = () => {
     setIsCreatingNewText(true);
     // Don't clear file upload - keep editor open with placeholder content
     if (!editedContent || editedContent.trim() === "") {
-      setEditedContent(" "); // Set placeholder to show the editor
+      setEditedContent(""); // Set placeholder to show the editor
     }
     hasAutoSelectedRef.current = true;
     clearUrlParams();
