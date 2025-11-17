@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, X, Upload, ArrowLeft, Plus, Trash2 } from 'lucide-react';
@@ -14,6 +14,7 @@ import { useBibliography } from '@/contexts/BibliographyContext';
 import { useBibliographyAPI } from '@/hooks/useBibliographyAPI';
 import TextCreationSuccessModal from '@/components/text-creation/TextCreationSuccessModal';
 import { useAuth0 } from '@auth0/auth0-react';
+import { validateContentEndsWithTsheg } from '@/utils/contentValidation';
 
 const LANGUAGE_OPTIONS = [
   { code: "bo", name: "Tibetan" },
@@ -67,6 +68,15 @@ const CreateTranslation = () => {
   // Bibliography annotations
   const { clearAnnotations } = useBibliography();
   const { getAPIAnnotations, hasAnnotations } = useBibliographyAPI();
+
+  // Content validation - check if content ends with །
+  const contentValidationError = useMemo(() => {
+    if (!content || content.trim() === '') {
+      return null; // No validation needed for empty content
+    }
+    const isValid = validateContentEndsWithTsheg(content);
+    return isValid ? null : t("create.contentMustEndWithTsheg");
+  }, [content, t]);
 
   // Clear annotations when component mounts (to clear any stale annotations from previous visits)
   useEffect(() => {
@@ -604,7 +614,7 @@ const CreateTranslation = () => {
               <div className="pt-4 border-t border-gray-200">
                 <Button
                   type="submit"
-                  disabled={isSubmitting || !content || !language || !title || !source}
+                  disabled={isSubmitting || !content || !language || !title || !source || !!contentValidationError}
                   className="w-full bg-gradient-to-r from-sky-400 to-cyan-500 hover:from-sky-500 hover:to-cyan-600 text-white py-3"
                 >
                   {isSubmitting ? (
@@ -778,6 +788,7 @@ const CreateTranslation = () => {
                 hasIncipit={false}
                 hasTitle={!!title}
                 allowedTypes={["title", "alt_title", "person"]}
+                validationError={contentValidationError}
               />
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, X, Upload, FileText, Code, CheckCircle2, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next";
 import { useBibliography } from "@/contexts/BibliographyContext";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { validateContentEndsWithTsheg } from "@/utils/contentValidation";
 
 const EnhancedTextCreationForm = () => {
   const navigate = useNavigate();
@@ -100,6 +101,15 @@ const EnhancedTextCreationForm = () => {
 
   // Track search attempts for "Create" button activation
   const [searchAttempts, setSearchAttempts] = useState(0);
+
+  // Content validation - check if content ends with །
+  const contentValidationError = useMemo(() => {
+    if (!editedContent || editedContent.trim() === '') {
+      return null; // No validation needed for empty content
+    }
+    const isValid = validateContentEndsWithTsheg(editedContent);
+    return isValid ? null : t("create.contentMustEndWithTsheg");
+  }, [editedContent, t]);
 
   // Mutations and data
   // Only fetch texts when t_id is present in URL (for auto-selection)
@@ -1137,6 +1147,7 @@ const EnhancedTextCreationForm = () => {
                       isSubmitting={isSubmitting}
                       onCancel={handleCancel}
                       content={editedContent}
+                      disableSubmit={!!contentValidationError}
                     />
                   </div>
                 )}
@@ -1236,6 +1247,7 @@ const EnhancedTextCreationForm = () => {
                         ? ["colophon", "incipit", "alt_incipit"]
                         : undefined
                     }
+                    validationError={contentValidationError}
                   />
                 </div>
               </div>
@@ -1337,6 +1349,7 @@ const EnhancedTextCreationForm = () => {
                         ? ["colophon", "incipit", "alt_incipit"]
                         : undefined // Show all options when creating new text
                     }
+                    validationError={contentValidationError}
                   />
                 </div>
               </div>
