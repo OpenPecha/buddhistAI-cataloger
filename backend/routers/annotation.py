@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from typing import List, Optional, Union, Literal
 import requests
 import os
+from fast_antx.core import transfer
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
@@ -107,6 +108,9 @@ class CreateTableOfContentsAnnotation(BaseModel):
     type: Literal["table_of_contents"]
     annotation: List[CreateTableOfContentsAnnotationItem]
 
+class CleanAnnotationRequest(BaseModel):
+    text: str
+    sample_text: str
 
 CreateAnnotation = Union[CreateAlignmentAnnotation, CreateSegmentationAnnotation, CreateTableOfContentsAnnotation]
 
@@ -147,3 +151,45 @@ async def create_annotation(instance_id: str, annotation: CreateAnnotation):
     if response.status_code != 201:
         raise HTTPException(status_code=response.status_code, detail=response.text)
     return response.json()
+
+
+
+@router.post("/clean-annotation",  status_code=201)
+async def clean_annotation(request: CleanAnnotationRequest):
+    if not API_ENDPOINT:
+        raise HTTPException(
+            status_code=500, 
+            detail="OPENPECHA_ENDPOINT environment variable is not set"
+        )
+    
+    try:
+        #  function takes text, samplet text
+        annotation_list = []
+        #  use the annotation from sample text to generate the annotation for the new text 
+        annotation_list = generate_clean_annotation(request.text, request.sample_text)
+        print(annotation_list)
+        
+        #  return the annoation list
+        return annotation_list
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out after 30 seconds"
+        )
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error connecting to OpenPecha API: {str(e)}"
+        )
+
+
+def generate_clean_annotation(base_text: str, sample_text: str):
+    #  function takes text, samplet text
+    #  use the annotation from sample text to generate the annotation for the new text
+    #  return the annoation list
+    patterns = [
+        ["lines", r"(\[\d+\.\d\])"],
+        ["newlines", r"(\n)"],  # Transfer newlines from sample_text to text
+    ]
+    annotated_text = transfer(base_text, patterns, sample_text, "txt")
+    return annotated_text

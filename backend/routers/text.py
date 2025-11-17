@@ -5,7 +5,6 @@ import requests
 import os
 from dotenv import load_dotenv
 
-
 from utils.segmentor import create_segmentation_annotation
 
 load_dotenv( override=True)
@@ -24,7 +23,11 @@ class Contribution(BaseModel):
 class Text(BaseModel):
     id: str
     type: str
-    title: Dict[str, str]
+    title: Dict[str, str] = Field(
+        ...,
+        example={"bo": "དཔེ་མཚོན་ཞིག", "en": "Example Text"},
+        description="Title in multiple languages, keyed by language code"
+    )
     language: str
     target: Optional[str] = None
     contributions: List[Contribution]
@@ -44,14 +47,22 @@ class CreateTextResponse(BaseModel):
 
 class CreateText(BaseModel):
     type: str
-    title: Dict[str, str]
+    title: Dict[str, str] = Field(
+        ...,
+        example={"bo": "དཔེ་མཚོན་ཞིག", "en": "Example Text"},
+        description="Title in multiple languages, keyed by language code"
+    )
     language: str
     contributions: List[Contribution]
     target: Optional[str] = None
     date: Optional[str] = None
     bdrc: Optional[str] = None
     category_id: Optional[str] = None
-    alt_titles: List[Dict[str, str]] = []
+    alt_titles: List[Dict[str, str]] = Field(
+        default=[],
+        example=[{"bo": "མཚན་གཞན", "en": "Alternative Title"}],
+        description="Alternative titles in multiple languages"
+    )
     copyright: Optional[str] = None
     license: Optional[str] = None
 
@@ -61,8 +72,16 @@ class Annotation(BaseModel):
     type: str
 
 class BibliographyAnnotation(BaseModel):
-    span: Dict[str, int]  # {"start": int, "end": int}
-    type: str  # e.g., "citation", "reference", "title", "colophon", "incipit", "person"
+    span: Dict[str, int] = Field(
+        ...,
+        example={"start": 0, "end": 100},
+        description="Text span with start and end positions"
+    )
+    type: str = Field(
+        ...,
+        example="title",
+        description="Annotation type: citation, reference, title, colophon, incipit, person"
+    )
 
 class InstanceMetadata(BaseModel):
     id: str
@@ -71,8 +90,16 @@ class InstanceMetadata(BaseModel):
     bdrc: Optional[str] = None
     wiki: Optional[str] = None
     colophon: Optional[str] = None
-    incipit_title: Optional[Dict[str, str]] = None
-    alt_incipit_titles: Optional[List[Dict[str, str]]] = None
+    incipit_title: Optional[Dict[str, str]] = Field(
+        default=None,
+        example={"bo": "མགོ་ཚིག", "en": "Incipit Title"},
+        description="Incipit title in multiple languages"
+    )
+    alt_incipit_titles: Optional[List[Dict[str, str]]] = Field(
+        default=None,
+        example=[{"bo": "མགོ་ཚིག་གཞན", "en": "Alternative Incipit"}],
+        description="Alternative incipit titles in multiple languages"
+    )
 
 class Instance(BaseModel):
     content: Optional[str] = None
@@ -87,8 +114,16 @@ class InstanceListItem(BaseModel):
     bdrc: Optional[str] = None
     wiki: Optional[str] = None
     colophon: Optional[str] = None
-    incipit_title: Optional[Dict[str, str]] = None
-    alt_incipit_titles: Optional[List[Dict[str, str]]] = None
+    incipit_title: Optional[Dict[str, str]] = Field(
+        default=None,
+        example={"bo": "མགོ་ཚིག", "en": "Incipit Title"},
+        description="Incipit title in multiple languages"
+    )
+    alt_incipit_titles: Optional[List[Dict[str, str]]] = Field(
+        default=None,
+        example=[{"bo": "མགོ་ཚིག་གཞན", "en": "Alternative Incipit"}],
+        description="Alternative incipit titles in multiple languages"
+    )
 
 class CreateInstance(BaseModel):
     metadata: Dict[str, Any]
@@ -100,6 +135,8 @@ class CreateInstance(BaseModel):
 class CreateInstanceResponse(BaseModel):
     message: str
     id: str
+
+
 
 
 
@@ -356,39 +393,3 @@ async def get_instance(instance_id: str, annotation: bool = True):
         )
 
 
-
-@router.post("/clean-annotation",  status_code=201)
-async def clean_annotation(text: Text, sample_text: Text):
-    if not API_ENDPOINT:
-        raise HTTPException(
-            status_code=500, 
-            detail="OPENPECHA_ENDPOINT environment variable is not set"
-        )
-    
-    try:
-        #  function takes text, samplet text
-        annotation_list = []
-        #  use the annotation from sample text to generate the annotation for the new text 
-        annotation_list = generate_clean_annotation(text, sample_text)
-        print(annotation_list)
-        
-        #  return the annoation list
-        return annotation_list
-    except requests.exceptions.Timeout:
-        raise HTTPException(
-            status_code=504,
-            detail="Request to OpenPecha API timed out after 30 seconds"
-        )
-    except requests.exceptions.RequestException as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error connecting to OpenPecha API: {str(e)}"
-        )
-
-
-def generate_clean_annotation(text: Text, sample_text: Text):
-    #  function takes text, samplet text
-    #  use the annotation from sample text to generate the annotation for the new text
-    #  return the annoation list
-    annotation_list = []
-    return annotation_list

@@ -6,3 +6,4 @@ python-dotenv
 rdflib
 pyewts
 git+https://github.com/OpenPecha/milvus_segment_generator.git
+git+https://github.com/OpenPecha/fast-antx.git
