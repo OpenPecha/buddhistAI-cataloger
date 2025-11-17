@@ -17,6 +17,7 @@ import { fetchTextByBdrcId, fetchBdrcWorkInstance } from "@/api/texts";
 import { useTranslation } from "react-i18next";
 import { useBibliography } from "@/contexts/BibliographyContext";
 import { useAuth0 } from "@auth0/auth0-react";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 const EnhancedTextCreationForm = () => {
   const navigate = useNavigate();
@@ -76,7 +77,7 @@ const EnhancedTextCreationForm = () => {
 
   // File upload state
   const [uploadedFilename, setUploadedFilename] = useState<string>("");
-  const [editedContent, setEditedContent] = useState<string>("");
+  const [editedContent, setEditedContent] = useLocalStorage("editedContent", "");
 
   // Submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -377,7 +378,6 @@ const EnhancedTextCreationForm = () => {
         setSelectedText(null);
         setTextSearch("");
         setIsCreatingNewText(true);
-        clearFileUpload();
         hasAutoSelectedRef.current = true;
         
         // Navigate with new URL pattern if instanceId exists, otherwise use workId only
