@@ -113,6 +113,18 @@ export const fetchText = async (id: string): Promise<OpenPechaText> => {
   }
 };
 
+export const fetchTextsByTitle = async (title: string): Promise<OpenPechaText[]> => {
+  try {
+    const response = await fetch(`${API_URL}/text/title-search?title=${title}`);
+    return await handleApiResponse(response);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+  }
+};
+
+
 // Real API function for creating texts
 export const createText = async (textData: any): Promise<OpenPechaText> => {
   try {

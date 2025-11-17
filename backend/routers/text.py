@@ -356,3 +356,39 @@ async def get_instance(instance_id: str, annotation: bool = True):
         )
 
 
+
+@router.post("/clean-annotation",  status_code=201)
+async def clean_annotation(text: Text, sample_text: Text):
+    if not API_ENDPOINT:
+        raise HTTPException(
+            status_code=500, 
+            detail="OPENPECHA_ENDPOINT environment variable is not set"
+        )
+    
+    try:
+        #  function takes text, samplet text
+        annotation_list = []
+        #  use the annotation from sample text to generate the annotation for the new text 
+        annotation_list = generate_clean_annotation(text, sample_text)
+        print(annotation_list)
+        
+        #  return the annoation list
+        return annotation_list
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out after 30 seconds"
+        )
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error connecting to OpenPecha API: {str(e)}"
+        )
+
+
+def generate_clean_annotation(text: Text, sample_text: Text):
+    #  function takes text, samplet text
+    #  use the annotation from sample text to generate the annotation for the new text
+    #  return the annoation list
+    annotation_list = []
+    return annotation_list
