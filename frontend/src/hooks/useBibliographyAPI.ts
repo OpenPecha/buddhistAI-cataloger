@@ -12,14 +12,14 @@ export const useBibliographyAPI = () => {
   const { annotations, clearAnnotations } = useBibliography();
 
   // Map frontend annotation types to backend API types
-  // Backend expects: 'alt_incipit_title', 'alt_title', 'author', 'colophon', 'title'
+  // Backend expects: 'alt_incipit', 'alt_title', 'author', 'colophon', 'title'
   const mapAnnotationType = (frontendType: BibliographyAnnotation['type']): string | null => {
     const typeMap: Record<string, string> = {
       'title': 'title',
       'alt_title': 'alt_title',
       'colophon': 'colophon',
       'person': 'author',
-      'alt_incipit': 'alt_incipit_title',
+      'alt_incipit': 'alt_incipit',
       // 'incipit' and 'incipit_title' are not valid bibliography annotation types
       // They are only used for metadata (incipit_title field), so we filter them out
     };
