@@ -102,14 +102,41 @@ const EnhancedTextCreationForm = () => {
   // Track search attempts for "Create" button activation
   const [searchAttempts, setSearchAttempts] = useState(0);
 
-  // Content validation - check if content ends with །
+  // Track selected language from form for validation
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('');
+
+  // Watch for language changes in the form
+  useEffect(() => {
+    const checkLanguage = () => {
+      const currentLanguage = textFormRef.current?.getLanguage() || '';
+      if (currentLanguage !== selectedLanguage) {
+        setSelectedLanguage(currentLanguage);
+      }
+    };
+    
+    // Check immediately
+    checkLanguage();
+    
+    // Check periodically to catch language changes
+    const interval = setInterval(checkLanguage, 500);
+    return () => clearInterval(interval);
+  }, [selectedLanguage]);
+
+  // Content validation - check if content ends with ། (only for Tibetan language)
   const contentValidationError = useMemo(() => {
+    // Only validate if content is not empty
     if (!editedContent || editedContent.trim() === '') {
       return null; // No validation needed for empty content
     }
+    
+    // Only validate when language is explicitly "bo" (Tibetan)
+    if (selectedLanguage !== 'bo') {
+      return null; // No validation needed for non-Tibetan languages
+    }
+    
     const isValid = validateContentEndsWithTsheg(editedContent);
     return isValid ? null : t("create.contentMustEndWithTsheg");
-  }, [editedContent, t]);
+  }, [editedContent, selectedLanguage, t]);
 
   // Mutations and data
   // Only fetch texts when t_id is present in URL (for auto-selection)

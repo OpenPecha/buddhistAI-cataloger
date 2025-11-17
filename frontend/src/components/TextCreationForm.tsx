@@ -32,6 +32,7 @@ export interface TextCreationFormRef {
   hasTitle: () => boolean;
   setBdrcId: (bdrcId: string, label: string) => void;
   setFormLanguage: (language: string) => void;
+  getLanguage: () => string;
   addContributorFromBdrc: (personBdrcId: string, personName: string, role: "translator" | "reviser" | "author" | "scholar") => void;
 }
 
@@ -177,6 +178,9 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       setFormLanguage: (lang: string) => {
         setLanguage(lang);
       },
+      getLanguage: () => {
+        return language;
+      },
       addContributorFromBdrc: (personBdrcId: string, personName: string, role: "translator" | "reviser" | "author" | "scholar") => {
         // Create a Person-like object with BDRC ID
         const bdrcPerson: Person = {
@@ -194,7 +198,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         
         setContributors((prev) => [...prev, newContributor]);
       },
-    }), [titles]);
+    }), [titles, language]);
 
     // Auto-set license to "unknown" when copyright is "Unknown"
     useEffect(() => {
