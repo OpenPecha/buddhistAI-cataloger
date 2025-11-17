@@ -1,11 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 const Index = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
-
+  const [editedContent,setEditedContent] = useLocalStorage("editedContent", "");
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
       {/* Header */}
@@ -14,7 +15,9 @@ const Index = () => {
           {t("header.title")}
         </h1>
         <Button
-          onClick={() => navigate("/create")}
+          onClick={() => {
+            setEditedContent("");
+            navigate("/create")}}
           variant="default"
           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 text-lg font-semibold shadow-lg"
         >
