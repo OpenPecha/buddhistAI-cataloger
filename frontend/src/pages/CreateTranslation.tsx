@@ -69,14 +69,21 @@ const CreateTranslation = () => {
   const { clearAnnotations } = useBibliography();
   const { getAPIAnnotations, hasAnnotations } = useBibliographyAPI();
 
-  // Content validation - check if content ends with །
+  // Content validation - check if content ends with ། (only for Tibetan language)
   const contentValidationError = useMemo(() => {
+    // Only validate if content is not empty
     if (!content || content.trim() === '') {
       return null; // No validation needed for empty content
     }
+    
+    // Only validate when language is explicitly "bo" (Tibetan)
+    if (language !== 'bo') {
+      return null; // No validation needed for non-Tibetan languages
+    }
+    
     const isValid = validateContentEndsWithTsheg(content);
     return isValid ? null : t("create.contentMustEndWithTsheg");
-  }, [content, t]);
+  }, [content, language, t]);
 
   // Clear annotations when component mounts (to clear any stale annotations from previous visits)
   useEffect(() => {
