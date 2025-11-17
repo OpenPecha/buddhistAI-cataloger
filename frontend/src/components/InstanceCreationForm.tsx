@@ -32,6 +32,7 @@ interface InstanceCreationFormProps {
   isSubmitting: boolean;
   onCancel?: () => void;
   content?: string; // Content from editor for annotation calculation
+  disableSubmit?: boolean; // Additional condition to disable submit button
 }
 
 export interface InstanceCreationFormRef {
@@ -64,7 +65,7 @@ const LANGUAGE_OPTIONS = [
 const InstanceCreationForm = forwardRef<
   InstanceCreationFormRef,
   InstanceCreationFormProps
->(({ onSubmit, isSubmitting, onCancel, content = "" }, ref) => {
+>(({ onSubmit, isSubmitting, onCancel, content = "", disableSubmit = false }, ref) => {
   const { t } = useTranslation();
   
   // State declarations
@@ -831,7 +832,7 @@ const InstanceCreationForm = forwardRef<
             {t("common.cancel")}
           </Button>
         )}
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" disabled={isSubmitting || disableSubmit}>
           {isSubmitting ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>

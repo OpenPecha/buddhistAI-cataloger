@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
 import CodeMirror, { type ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { markdown } from '@codemirror/lang-markdown';
 import { EditorView } from '@codemirror/view';
+import { AlertCircle } from 'lucide-react';
 import SelectionMenu from './SelectionMenu';
 import FormattedTextDisplay from '../FormattedTextDisplay';
 import { BibliographyAnnotationsList } from '../BibliographyAnnotationsList';
@@ -19,9 +20,10 @@ interface TextEditorViewProps {
   hasIncipit?: boolean;
   hasTitle?: boolean;
   allowedTypes?: ("title" | "alt_title" | "colophon" | "incipit" | "alt_incipit" | "person")[];
+  validationError?: string | null;
 }
 
-const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isCreatingNewText = true, hasIncipit = false, hasTitle = false, allowedTypes }: TextEditorViewProps) => {
+const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isCreatingNewText = true, hasIncipit = false, hasTitle = false, allowedTypes, validationError }: TextEditorViewProps) => {
   const { t } = useTranslation();
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
@@ -255,42 +257,52 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
        
 
         {/* Tabs */}
-        <div className="flex items-center px-4">
-          <button
-            onClick={() => setActiveTab('content')}
-            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'content'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            {t('editor.content')}
-          </button>
-          <button
-            onClick={() => setActiveTab('preview')}
-            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'preview'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            {t('editor.preview')}
-          </button>
-          <button
-            onClick={() => setActiveTab('bibliography')}
-            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors relative ${
-              activeTab === 'bibliography'
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            {t('editor.bibliography')}
-            {annotationsCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                {annotationsCount}
-              </span>
-            )}
-          </button>
+        <div className="flex items-center px-4 flex-wrap gap-2">
+          <div className="flex items-center">
+            <button
+              onClick={() => setActiveTab('content')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'content'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              {t('editor.content')}
+            </button>
+            <button
+              onClick={() => setActiveTab('preview')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'preview'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              {t('editor.preview')}
+            </button>
+            <button
+              onClick={() => setActiveTab('bibliography')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors relative ${
+                activeTab === 'bibliography'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              {t('editor.bibliography')}
+              {annotationsCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {annotationsCount}
+                </span>
+              )}
+            </button>
+          </div>
+          
+          {/* Validation Error Message - Inline with tabs */}
+          {validationError && (
+            <div className="flex items-center gap-2 text-red-600 ml-auto py-3">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <p className="text-sm font-medium">{validationError}</p>
+            </div>
+          )}
         </div>
       </div>
 
