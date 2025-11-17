@@ -6,8 +6,20 @@ import {
   fetchText,
   fetchTextInstances,
   fetchTexts,
+  fetchTextsByTitle,
 } from "@/api/texts";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
+
+export const useTextsByTitle = (title: string) => {
+  return useQuery({
+    queryKey: ["textsByTitle", title],
+    queryFn: () => fetchTextsByTitle(title),
+    enabled: !!title && title.trim().length > 0, // Only fetch when there's a search query
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+};
 
 // Text hooks
 export const useTexts = (params?: {
@@ -91,3 +103,4 @@ export const useCreateTextInstance = () => {
     }
   });
 };
+ 

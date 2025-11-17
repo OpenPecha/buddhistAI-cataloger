@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
-import { useTexts } from "@/hooks/useTexts";
+import { useTexts, useTextsByTitle } from "@/hooks/useTexts";
 import type { OpenPechaText } from "@/types/text";
 import { Button } from "@/components/ui/button";
 import TextListCard from "@/components/TextListCard";
 import { useTranslation } from "react-i18next";
 import { useBdrcSearch, type BdrcSearchResult } from "@/hooks/useBdrcSearch";
 import { fetchTextByBdrcId } from "@/api/texts";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 
 const TextCRUD = () => {
@@ -27,6 +27,10 @@ const TextCRUD = () => {
   // BDRC search
   const { results: bdrcResults, isLoading: isLoadingBdrc } = useBdrcSearch(debouncedTextSearch, "Instance", 1000);
 
+  // Local text search
+  const { data: localTextResults = [], isLoading: isLoadingLocalTexts } = useTextsByTitle(
+    debouncedTextSearch.trim() || ""
+  );
   // Debounce text search
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -61,6 +65,14 @@ const TextCRUD = () => {
     }
   };
 
+  const getTitleDisplay = (text: OpenPechaText): string => {
+    if (text.title?.[text.language]) {
+      return text.title[text.language];
+    }
+    const firstTitle = Object.values(text.title || {})[0];
+    return firstTitle || "Untitled";
+  };
+
   const handleBdrcTextSelect = async (result: BdrcSearchResult) => {
     const workId = result.workId;
     if (!workId) return;
@@ -83,7 +95,7 @@ const TextCRUD = () => {
         setTextNotFound(true);
         setFoundText(null);
       }
-    } catch (error) {
+    } catch {
       // Treat any error as not found
       setTextNotFound(true);
       setFoundText(null);
@@ -91,6 +103,8 @@ const TextCRUD = () => {
       setIsCheckingText(false);
     }
   };
+
+
 
   const clearSearch = () => {
     setTextSearch("");
@@ -146,10 +160,10 @@ const TextCRUD = () => {
 
           {/* Text Dropdown */}
           {showTextDropdown && textSearch && (
-            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-96 overflow-y-auto">
-              {/* BDRC Results Section */}
+            <div className="absolute z-10 w-full font-['noto'] mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-96 overflow-y-auto">
               {debouncedTextSearch.trim() && (
                 <>
+                  {/* BDRC Results Section */}
                   <div className="px-4 py-2 bg-gray-100 border-b border-gray-200">
                     <span className="text-xs font-semibold text-gray-700 uppercase">
                       {t("create.bdrcCatalog")}
@@ -191,6 +205,45 @@ const TextCRUD = () => {
                   ) : debouncedTextSearch.trim() ? (
                     <div className="px-4 py-2 text-gray-500 text-sm">
                       {t("create.noBdrcResults")}
+                    </div>
+                  ) : null}
+
+                  {/* Local Text Results Section */}
+                  <div className="px-4 py-2 bg-gray-100 border-t border-b border-gray-200">
+                    <span className="text-xs font-semibold text-gray-700 uppercase">
+                      {"Local Texts"}
+                    </span>
+                  </div>
+                  
+                  {isLoadingLocalTexts ? (
+                    <div className="px-4 py-4 flex items-center gap-2">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                      <div className="text-sm text-gray-500">{t("create.searchingLocalTexts") || "Searching..."}</div>
+                    </div>
+                  ) : localTextResults.length > 0 ? (
+                    localTextResults.map((text) => (
+                      <Link
+                      to={`/texts/${text.text_id}/instances`}
+                        key={text.text_id+Math.random()}
+                       
+                        className="w-full px-4 py-2 text-left hover:bg-blue-50 border-b border-gray-100"
+                      >
+                        <div className="flex items-start gap-2">
+                          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                            LOCAL
+                          </span>
+                          <div className="flex-1">
+                            <div className="font-medium text-sm">
+                              {text.title}
+                            </div>
+                            
+                          </div>
+                        </div>
+                      </Link>
+                    ))
+                  ) : debouncedTextSearch.trim() ? (
+                    <div className="px-4 py-2 text-gray-500 text-sm">
+                      {t("create.noLocalTextResults") || "No texts found"}
                     </div>
                   ) : null}
                 </>

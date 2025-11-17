@@ -170,7 +170,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
               {t('textForm.formatter')}
             </Button>
 
-            <Button
+            {/* <Button
               onClick={() => {
                 navigate(`/texts/${text_id}/instances/${instance_id}/update-annotation`);
               }}
@@ -178,7 +178,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
             >
               <PencilIcon className="w-4 h-4" />
               Update Annotation
-            </Button>
+            </Button> */}
           </div>
         </div>
       </div>

@@ -1332,8 +1332,7 @@ const EnhancedTextCreationForm = () => {
                     hasIncipit={hasIncipitTitle}
                     hasTitle={hasTitle}
                     allowedTypes={
-                      // If text is already selected (exists in cataloger), hide text-level fields
-                      // Only show instance-level fields: colophon, incipit, alt_incipit
+                     
                       selectedText && !isCreatingNewText
                         ? ["colophon", "incipit", "alt_incipit"]
                         : undefined // Show all options when creating new text
