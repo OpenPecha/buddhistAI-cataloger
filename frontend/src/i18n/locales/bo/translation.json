@@ -149,6 +149,7 @@
     "startTyping": "འོག་ནས་འཇུག་རོགས་ཡང་ན་དཔེ་ཆའི་ཡིག་ཆ་མཐོ་འདོན་བྱོས།",
     "uploadFile": "ཡིག་ཆ་མཐོ་འདོན།",
     "characters": "ཡིག་འབྲུ།",
+    "contentMustEndWithTsheg": "ནང་དོན་མཐར་མ་ཚེག་གིས་མཐར་དགོས། (།)",
     "titleAddedSuccess": "✓ མཚན་བཏགས་ལེགས་གྲུབ།",
     "altTitleAddedSuccess": "✓ གཞན་མཚན་བཏགས་ལེགས་གྲུབ།",
     "colophonAddedSuccess": "✓ མཆན་བཀོད་བཏགས་ལེགས་གྲུབ།",

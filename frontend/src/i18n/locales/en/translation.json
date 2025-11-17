@@ -149,6 +149,7 @@
     "startTyping": "Start typing below or upload a text file",
     "uploadFile": "Upload File",
     "characters": "characters",
+    "contentMustEndWithTsheg": "Content must end with ། (Tibetan tsheg)",
     "titleAddedSuccess": "✓ Title added successfully",
     "altTitleAddedSuccess": "✓ Alternative title added successfully",
     "colophonAddedSuccess": "✓ Colophon added successfully",
