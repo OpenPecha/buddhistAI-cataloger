@@ -167,7 +167,6 @@ async def clean_annotation(request: CleanAnnotationRequest):
         annotation_list = []
         #  use the annotation from sample text to generate the annotation for the new text 
         annotation_list = generate_clean_annotation(request.text, request.sample_text)
-        print(annotation_list)
         
         #  return the annoation list
         return annotation_list
@@ -188,8 +187,7 @@ def generate_clean_annotation(base_text: str, sample_text: str):
     #  use the annotation from sample text to generate the annotation for the new text
     #  return the annoation list
     patterns = [
-        ["lines", r"(\[\d+\.\d\])"],
         ["newlines", r"(\n)"],  # Transfer newlines from sample_text to text
     ]
-    annotated_text = transfer(base_text, patterns, sample_text, "txt")
+    annotated_text = transfer(sample_text, patterns, base_text, "txt")
     return annotated_text
