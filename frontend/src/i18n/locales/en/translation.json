@@ -384,6 +384,7 @@
     "source": "Source",
     "sourcePlaceholder": "Enter the source of this commentary",
     "sourceRequired": "Source is required",
+    "authorRequired": "Author is required",
     "copyright": "Copyright",
     "license": "License"
   },
@@ -391,6 +392,7 @@
     "source": "Source",
     "sourcePlaceholder": "Enter the source of this translation",
     "sourceRequired": "Source is required",
+    "translatorRequired": "Translator is required",
     "copyright": "Copyright",
     "license": "License"
   },
