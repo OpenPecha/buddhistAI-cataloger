@@ -187,7 +187,9 @@
     "content": "ནང་དོན།",
     "preview": "སྔོན་ལྟ།",
     "bibliography": "དཔེ་དེབ་ཀྱི་ཐོ།",
-    "newDocument": "ཡིག་ཆ་གསར་པ།"
+    "newDocument": "ཡིག་ཆ་གསར་པ།",
+    "segmentLimitExceeded": "{{count}} ཡིག་ཚང་{{limit}} ཡིག་འབྲུའི་ཚད་ལས་བརྒལ་ཡོད།",
+    "segmentExceedsLimit": "ཡིག་ཚང་འདིར་{{length}} ཡིག་འབྲུ་ཡོད་པ་དང་། ཚད་ལྷག་ནི་{{limit}} ཡིག་འབྲུ་རེད།"
   },
   "selectionMenu": {
     "title": "མཚན།",

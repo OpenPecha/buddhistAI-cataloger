@@ -33,12 +33,12 @@ export interface TextCreationFormRef {
   setBdrcId: (bdrcId: string, label: string) => void;
   setFormLanguage: (language: string) => void;
   getLanguage: () => string;
-  addContributorFromBdrc: (personBdrcId: string, personName: string, role: "translator" | "reviser" | "author" | "scholar") => void;
+  addContributorFromBdrc: (personBdrcId: string, personName: string, role: "translator" | "author") => void;
 }
 
 interface Contributor {
   person?: Person;
-  role: "translator" | "reviser" | "author" | "scholar";
+  role: "translator" | "author";
 }
 
 interface TitleEntry {
@@ -98,7 +98,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     const [showPersonDropdown, setShowPersonDropdown] = useState(false);
     const [debouncedPersonSearch, setDebouncedPersonSearch] = useState("");
     const [role, setRole] = useState<
-      "translator" | "reviser" | "author" | "scholar"
+      "translator" | "author"
     >("author");
 
     // Validation errors
@@ -181,7 +181,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       getLanguage: () => {
         return language;
       },
-      addContributorFromBdrc: (personBdrcId: string, personName: string, role: "translator" | "reviser" | "author" | "scholar") => {
+      addContributorFromBdrc: (personBdrcId: string, personName: string, role: "translator" | "author") => {
         // Create a Person-like object with BDRC ID
         const bdrcPerson: Person = {
           id: personBdrcId, // Use BDRC ID as temporary ID
@@ -309,10 +309,6 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         throw new Error(t("textForm.titleRequired"));
       }
 
-      if (contributors.length === 0) {
-        throw new Error(t("textForm.contributorRequired"));
-      }
-
       if (!categoryId.trim()) {
         setCategoryError(true);
         throw new Error(t("textForm.categoryRequired"));
@@ -320,15 +316,18 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         setCategoryError(false);
       }
 
-      // Build contributions array
-      const contributionsArray = contributors.map((contributor) => {
-        // Use bdrc field if available, otherwise fall back to id
-        const personBdrcId = contributor.person!.bdrc || contributor.person!.id;
-        return {
-          person_bdrc_id: personBdrcId,
-          role: contributor.role,
-        };
-      });
+      // Build contributions array (only if contributors exist)
+      let contributionsArray;
+      if (contributors.length > 0) {
+        contributionsArray = contributors.map((contributor) => {
+          // Use bdrc field if available, otherwise fall back to id
+          const personBdrcId = contributor.person!.bdrc || contributor.person!.id;
+          return {
+            person_bdrc_id: personBdrcId,
+            role: contributor.role,
+          };
+        });
+      }
 
       // Build alt_titles array - transform from grouped structure to array of dictionaries
       const altTitlesArray = altTitles
@@ -348,9 +347,13 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         type: selectedType,
         title,
         language: language.trim(),
-        contributions: contributionsArray,
         alt_titles: altTitlesArray,
       };
+
+      // Only add contributions if there are any
+      if (contributors.length > 0) {
+        textData.contributions = contributionsArray;
+      }
 
       // Add target field for translation and commentary types
       if (selectedType === "translation" || selectedType === "commentary") {
@@ -759,7 +762,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="block text-sm font-medium text-gray-700">
-              {t("textForm.contributors")} <span className="text-red-500">*</span> ({t("textForm.atLeastOneRequired")})
+              {t("textForm.contributors")}
             </label>
             <Button
               type="button"
@@ -813,15 +816,13 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
             <div className="p-4 border border-gray-300 rounded-md bg-gray-50 space-y-4">
                   {/* Person Search */}
                   <div className="relative flex gap-2" >
-                  <select
+                    <select
                       value={role}
                       onChange={(e) => setRole(e.target.value as any)}
                       className="w-fit px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="author">{t("textForm.author")}</option>
                       <option value="translator">{t("textForm.translator")}</option>
-                      <option value="reviser">{t("textForm.reviser")}</option>
-                      <option value="scholar">{t("textForm.scholar")}</option>
                     </select>
                     <input
                       type="text"

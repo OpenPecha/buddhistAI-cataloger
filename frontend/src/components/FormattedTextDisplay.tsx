@@ -1,8 +1,18 @@
 import React, { memo, useEffect, useState } from 'react';
+import { SEGMENT_CHAR_LIMIT } from '@/utils/contentValidation';
+import { useTranslation } from 'react-i18next';
+
+interface SegmentValidation {
+  index: number;
+  length: number;
+}
 
 interface FormattedTextDisplayProps {
   content?: string;
   lines?: string[];
+  invalidSegments?: SegmentValidation[];
+  invalidCount?: number;
+  onInvalidSegmentClick?: (segmentIndex: number) => void;
 }
 
 /**
@@ -10,8 +20,18 @@ interface FormattedTextDisplayProps {
  * Accepts either:
  * - content: raw string that will be processed (removes empty lines)
  * - lines: pre-processed array of lines
+ * - invalidSegments: Array of segment indices that exceed character limit
+ * - invalidCount: Total count of invalid segments
  */
-const FormattedTextDisplay: React.FC<FormattedTextDisplayProps> = ({ content, lines }) => {
+const FormattedTextDisplay: React.FC<FormattedTextDisplayProps> = ({ 
+  content, 
+  lines, 
+  invalidSegments = [],
+  invalidCount = 0,
+  onInvalidSegmentClick
+}) => {
+  const { t } = useTranslation();
+  
   // Process content to split into lines (same logic as annotation calculator)
   const getFormattedLines = () => {
     // If lines are provided directly, use them
@@ -34,7 +54,12 @@ const FormattedTextDisplay: React.FC<FormattedTextDisplayProps> = ({ content, li
     
     return filteredLines;
   };
+  
   const contentLines = getFormattedLines();
+  
+  // Create a Set for quick lookup of invalid segment indices
+  const invalidSegmentSet = new Set(invalidSegments.map(seg => seg.index));
+  
   if (contentLines.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-gray-400">
@@ -45,14 +70,45 @@ const FormattedTextDisplay: React.FC<FormattedTextDisplayProps> = ({ content, li
 
   return (
     <div className="h-[80dvh] overflow-y-auto">
-      {contentLines.map((line, index) => (
-        <div 
-          key={index} 
-          className="py-3 px-4 border-b border-gray-200 font-['noto'] last:border-0 text-base leading-relaxed text-gray-900"
-        >
-          {line || <span className="text-gray-400 italic">(empty line)</span>}
+      {/* Summary of invalid segments */}
+      {invalidCount > 0 && (
+        <div className="sticky top-0 z-10 bg-red-50 border-b-2 border-red-300 px-4 py-3 mb-2">
+          <p className="text-sm font-medium text-red-800">
+            {t('editor.segmentLimitExceeded', { count: invalidCount, limit: SEGMENT_CHAR_LIMIT })}
+          </p>
         </div>
-      ))}
+      )}
+      
+      {contentLines.map((line, index) => {
+        const isInvalid = invalidSegmentSet.has(index);
+        const invalidSegment = invalidSegments.find(seg => seg.index === index);
+        
+        return (
+          <div 
+            key={index} 
+            onClick={() => {
+              if (isInvalid && onInvalidSegmentClick) {
+                onInvalidSegmentClick(index);
+              }
+            }}
+            className={`py-3 px-4 border-b font-['noto'] last:border-0 text-base leading-relaxed ${
+              isInvalid 
+                ? 'bg-red-50 border-red-300 border-l-4 border-l-red-500 cursor-pointer hover:bg-red-100 transition-colors' 
+                : 'border-gray-200 text-gray-900'
+            }`}
+          >
+            {line || <span className="text-gray-400 italic">(empty line)</span>}
+            {isInvalid && invalidSegment && (
+              <div className="mt-2 text-sm text-red-700 font-medium">
+                {t('editor.segmentExceedsLimit', { 
+                  length: invalidSegment.length, 
+                  limit: SEGMENT_CHAR_LIMIT 
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 };

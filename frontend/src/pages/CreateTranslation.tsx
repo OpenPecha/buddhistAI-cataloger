@@ -14,7 +14,7 @@ import { useBibliography } from '@/contexts/BibliographyContext';
 import { useBibliographyAPI } from '@/hooks/useBibliographyAPI';
 import TextCreationSuccessModal from '@/components/text-creation/TextCreationSuccessModal';
 import { useAuth0 } from '@auth0/auth0-react';
-import { validateContentEndsWithTsheg } from '@/utils/contentValidation';
+import { validateContentEndsWithTsheg, validateSegmentLimits } from '@/utils/contentValidation';
 
 const LANGUAGE_OPTIONS = [
   { code: "bo", name: "Tibetan" },
@@ -84,6 +84,24 @@ const CreateTranslation = () => {
     const isValid = validateContentEndsWithTsheg(content);
     return isValid ? null : t("create.contentMustEndWithTsheg");
   }, [content, language, t]);
+
+  // Segment character limit validation with debouncing (1000ms)
+  const [segmentValidation, setSegmentValidation] = useState<{
+    invalidSegments: Array<{ index: number; length: number }>;
+    invalidCount: number;
+  }>({ invalidSegments: [], invalidCount: 0 });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const validation = validateSegmentLimits(content);
+      setSegmentValidation({
+        invalidSegments: validation.invalidSegments.map(seg => ({ index: seg.index, length: seg.length })),
+        invalidCount: validation.invalidCount,
+      });
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [content]);
 
   // Clear annotations when component mounts (to clear any stale annotations from previous visits)
   useEffect(() => {
@@ -624,7 +642,7 @@ const CreateTranslation = () => {
               <div className="pt-4 border-t border-gray-200">
                 <Button
                   type="submit"
-                  disabled={isSubmitting || !content || !language || !title || !source || !selectedPerson || !!contentValidationError}
+                  disabled={isSubmitting || !content || !language || !title || !source || !selectedPerson || !!contentValidationError || segmentValidation.invalidCount > 0}
                   className="w-full bg-gradient-to-r from-sky-400 to-cyan-500 hover:from-sky-500 hover:to-cyan-600 text-white py-3"
                 >
                   {isSubmitting ? (
@@ -799,6 +817,7 @@ const CreateTranslation = () => {
                 hasTitle={!!title}
                 allowedTypes={["title", "alt_title", "person"]}
                 validationError={contentValidationError}
+                segmentValidation={segmentValidation}
               />
             </div>
           </div>
