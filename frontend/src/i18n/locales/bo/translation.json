@@ -384,6 +384,7 @@
     "source": "འབྱུང་ཁུངས།",
     "sourcePlaceholder": "འགྲེལ་བཤད་ཀྱི་འབྱུང་ཁུངས་འཇུག་རོགས།",
     "sourceRequired": "འབྱུང་ཁུངས་དགོས།",
+    "authorRequired": "རྩོམ་པ་པོ་དགོས།",
     "copyright": "པར་དབང་།",
     "license": "ཆོག་མཆན།"
   },
@@ -391,6 +392,7 @@
     "source": "འབྱུང་ཁུངས།",
     "sourcePlaceholder": "བསྒྱུར་བའི་འབྱུང་ཁུངས་འཇུག་རོགས།",
     "sourceRequired": "འབྱུང་ཁུངས་དགོས།",
+    "translatorRequired": "ལོ་ཙཱ་བ་དགོས།",
     "copyright": "པར་དབང་།",
     "license": "ཆོག་མཆན།"
   },
