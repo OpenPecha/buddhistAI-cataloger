@@ -13,6 +13,7 @@
     "close": "Close",
     "confirm": "Confirm",
     "back": "Back",
+    "previous": "Previous",
     "next": "Next",
     "submit": "Submit",
     "reset": "Reset",
@@ -189,7 +190,7 @@
     "bibliography": "Bibliography",
     "newDocument": "New Document",
     "segmentLimitExceeded": "{{count}} segment(s) exceed the {{limit}} character limit",
-    "segmentExceedsLimit": "This segment has {{length}} characters (limit: {{limit}})"
+    "segmentExceedsLimit": "This segment has {{length}} extra characters"
   },
   "selectionMenu": {
     "title": "Title",
