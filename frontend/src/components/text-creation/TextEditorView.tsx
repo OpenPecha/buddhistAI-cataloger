@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useMemo, useCallback, memo } from 'react';
 import CodeMirror, { type ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { markdown } from '@codemirror/lang-markdown';
-import { EditorView } from '@codemirror/view';
+import { EditorView, Decoration, type DecorationSet } from '@codemirror/view';
+import { StateEffect, StateField } from '@codemirror/state';
 import { AlertCircle } from 'lucide-react';
 import SelectionMenu from './SelectionMenu';
 import FormattedTextDisplay from '../FormattedTextDisplay';
@@ -21,9 +22,50 @@ interface TextEditorViewProps {
   hasTitle?: boolean;
   allowedTypes?: ("title" | "alt_title" | "colophon" | "incipit" | "alt_incipit" | "person")[];
   validationError?: string | null;
+  segmentValidation?: {
+    invalidSegments: Array<{ index: number; length: number }>;
+    invalidCount: number;
+  };
 }
 
-const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isCreatingNewText = true, hasIncipit = false, hasTitle = false, allowedTypes, validationError }: TextEditorViewProps) => {
+// Effect for highlighting a line (defined outside component to avoid recreation)
+const highlightLineEffect = StateEffect.define<number | null>();
+
+// Field for line highlighting (defined outside component)
+const highlightLineField = StateField.define<DecorationSet>({
+  create() {
+    return Decoration.none;
+  },
+  update(value, tr) {
+    value = value.map(tr.changes);
+    for (const effect of tr.effects) {
+      if (effect.is(highlightLineEffect)) {
+        const lineNumber = effect.value;
+        if (lineNumber === null) {
+          value = Decoration.none;
+        } else {
+          const line = tr.state.doc.line(lineNumber);
+          const lineDeco = Decoration.line({
+            class: 'cm-highlight-line',
+          });
+          value = Decoration.set([lineDeco.range(line.from)]);
+        }
+      }
+    }
+    return value;
+  },
+  provide: f => EditorView.decorations.from(f),
+});
+
+// Add CSS for highlight (defined outside component)
+const highlightTheme = EditorView.theme({
+  '.cm-highlight-line': {
+    backgroundColor: '#fef3c7',
+    transition: 'background-color 0.3s ease',
+  },
+});
+
+const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isCreatingNewText = true, hasIncipit = false, hasTitle = false, allowedTypes, validationError, segmentValidation }: TextEditorViewProps) => {
   const { t } = useTranslation();
   const [showMenu, setShowMenu] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
@@ -35,6 +77,7 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
   const cmRef = useRef<ReactCodeMirrorRef>(null);
   const [editorView, setEditorView] = useState<EditorView | null>(null);
   const { clearAnnotations, addAnnotation } = useBibliography();
+  const highlightTimeoutRef = useRef<number | null>(null);
 
   // Track editorView when CodeMirror initializes
   useEffect(() => {
@@ -234,6 +277,76 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
   const handleCloseMenu = useCallback(() => {
     setShowMenu(false);
   }, []);
+
+  // Map segment index to original line number in content
+  const getOriginalLineNumber = useCallback((segmentIndex: number, content: string): number => {
+    if (!content) return 0;
+    
+    // Process content the same way as calculateAnnotations
+    let lines = content.split('\n');
+    
+    // Remove trailing empty lines
+    while (lines.length > 0 && lines[lines.length - 1].length === 0) {
+      lines.pop();
+    }
+    
+    // Find which original line corresponds to the segment index
+    let nonEmptyLineCount = 0;
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].length > 0) {
+        if (nonEmptyLineCount === segmentIndex) {
+          return i; // Return 0-based line number
+        }
+        nonEmptyLineCount++;
+      }
+    }
+    
+    return 0; // Fallback
+  }, []);
+
+  // Handle clicking on invalid segment in preview
+  const handleInvalidSegmentClick = useCallback((segmentIndex: number) => {
+    // Switch to content tab
+    setActiveTab('content');
+    
+    // Wait for tab switch and editor to be visible
+    setTimeout(() => {
+      const view = cmRef.current?.view;
+      if (!view || !content) return;
+      
+      // Get original line number (0-based)
+      const lineNumber = getOriginalLineNumber(segmentIndex, content);
+      
+      // Get the line from the document (CodeMirror uses 1-based line numbers)
+      const line = view.state.doc.line(lineNumber + 1);
+      
+      // Scroll to center the line
+      const lineCenter = (line.from + line.to) / 2;
+      view.dispatch({
+        effects: EditorView.scrollIntoView(lineCenter, {
+          y: 'center',
+        }),
+      });
+      
+      // Highlight the line temporarily
+      view.dispatch({
+        effects: highlightLineEffect.of(lineNumber + 1),
+      });
+      
+      // Clear highlight after 3 seconds
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
+      highlightTimeoutRef.current = window.setTimeout(() => {
+        const currentView = cmRef.current?.view;
+        if (currentView) {
+          currentView.dispatch({
+            effects: highlightLineEffect.of(null),
+          });
+        }
+      }, 3000);
+    }, 100);
+  }, [content, getOriginalLineNumber]);
   return (
     <div className="h-full flex flex-col">
       {/* Selection Menu */}
@@ -271,13 +384,18 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
             </button>
             <button
               onClick={() => setActiveTab('preview')}
-              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors relative ${
                 activeTab === 'preview'
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
               {t('editor.preview')}
+              {segmentValidation && segmentValidation.invalidCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {segmentValidation.invalidCount}
+                </span>
+              )}
             </button>
             <button
               onClick={() => setActiveTab('bibliography')}
@@ -326,6 +444,8 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
               annotationsField,
               annotationPlugin,
               annotationTheme,
+              highlightLineField,
+              highlightTheme,
             ], [])}
             editable={editable}
             onChange={onChange}
@@ -343,7 +463,12 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
         
         {activeTab === 'preview' && (
           /* Preview - Formatted Text Display */
-          <FormattedTextDisplay content={content} />
+          <FormattedTextDisplay 
+            content={content} 
+            invalidSegments={segmentValidation?.invalidSegments}
+            invalidCount={segmentValidation?.invalidCount}
+            onInvalidSegmentClick={handleInvalidSegmentClick}
+          />
         )}
         
         {activeTab === 'bibliography' && (

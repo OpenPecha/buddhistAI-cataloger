@@ -18,7 +18,7 @@ import { useTranslation } from "react-i18next";
 import { useBibliography } from "@/contexts/BibliographyContext";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { validateContentEndsWithTsheg } from "@/utils/contentValidation";
+import { validateContentEndsWithTsheg, validateSegmentLimits } from "@/utils/contentValidation";
 
 const EnhancedTextCreationForm = () => {
   const navigate = useNavigate();
@@ -137,6 +137,24 @@ const EnhancedTextCreationForm = () => {
     const isValid = validateContentEndsWithTsheg(editedContent);
     return isValid ? null : t("create.contentMustEndWithTsheg");
   }, [editedContent, selectedLanguage, t]);
+
+  // Segment character limit validation with debouncing (1000ms)
+  const [segmentValidation, setSegmentValidation] = useState<{
+    invalidSegments: Array<{ index: number; length: number }>;
+    invalidCount: number;
+  }>({ invalidSegments: [], invalidCount: 0 });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const validation = validateSegmentLimits(editedContent);
+      setSegmentValidation({
+        invalidSegments: validation.invalidSegments.map(seg => ({ index: seg.index, length: seg.length })),
+        invalidCount: validation.invalidCount,
+      });
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [editedContent]);
 
   // Mutations and data
   // Only fetch texts when t_id is present in URL (for auto-selection)
@@ -1174,7 +1192,7 @@ const EnhancedTextCreationForm = () => {
                       isSubmitting={isSubmitting}
                       onCancel={handleCancel}
                       content={editedContent}
-                      disableSubmit={!!contentValidationError}
+                      disableSubmit={!!contentValidationError || segmentValidation.invalidCount > 0}
                     />
                   </div>
                 )}
@@ -1275,6 +1293,7 @@ const EnhancedTextCreationForm = () => {
                         : undefined
                     }
                     validationError={contentValidationError}
+                    segmentValidation={segmentValidation}
                   />
                 </div>
               </div>
@@ -1377,6 +1396,7 @@ const EnhancedTextCreationForm = () => {
                         : undefined // Show all options when creating new text
                     }
                     validationError={contentValidationError}
+                    segmentValidation={segmentValidation}
                   />
                 </div>
               </div>

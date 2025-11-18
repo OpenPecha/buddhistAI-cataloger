@@ -187,7 +187,9 @@
     "content": "Content",
     "preview": "Preview",
     "bibliography": "Bibliography",
-    "newDocument": "New Document"
+    "newDocument": "New Document",
+    "segmentLimitExceeded": "{{count}} segment(s) exceed the {{limit}} character limit",
+    "segmentExceedsLimit": "This segment has {{length}} characters (limit: {{limit}})"
   },
   "selectionMenu": {
     "title": "Title",
