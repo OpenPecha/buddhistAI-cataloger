@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { OpenPechaTextInstance, SegmentationAnnotation } from '@/types/text';
-import { useAnnnotation, useText } from '@/hooks/useTexts';
+import { useAnnnotation, useText, useTexts } from '@/hooks/useTexts';
 import { Button } from './ui/button';
 import FormattedTextDisplay from './FormattedTextDisplay';
 import { useTranslation } from 'react-i18next';
@@ -29,6 +29,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
     error: annotationError
   } = useAnnnotation(segmentationAnnotationId);
   const {data:text} = useText(text_id || '');
+  const title_text = text?.title?.tib || text?.title?.bo || text?.title?.en || "Content";
   const toggleAnnotation = (annotationType: string) => {
     setExpandedAnnotations(prev => 
       prev.includes(annotationType) 
@@ -120,7 +121,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
           <div className="flex items-center gap-3">
             <BookOpenText className="w-6 h-6" />
             <div>
-              <h3 className="text-xl font-bold text-gray-900 font-['monlam']">{text?.title?.bo || t('editor.content')}</h3>
+              <h3 className="text-xl font-bold text-gray-900 font-['monlam']">{title_text}</h3>
             </div>
           </div>
           

@@ -31,7 +31,7 @@ const CreateCommentary = () => {
   // Fetch instance data
   const { data: instance, isLoading: instanceLoading } = useInstance(instance_id || '');
   const { data: text } = useText(text_id || '');
-  const text_title = text?.title.bo || text?.title.en ;
+  const text_title = text?.title.tib || text?.title.bo || text?.title.en || "Content";
   // Form state
   const [language, setLanguage] = useState('');
   const [title, setTitle] = useState('');
