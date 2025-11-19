@@ -242,9 +242,6 @@ const CreateCommentary = () => {
       if (!content || content.trim() === '') {
         throw new Error(t('instance.contentRequired'));
       }
-      if (!selectedPerson) {
-        throw new Error(t('commentary.authorRequired'));
-      }
 
       // Calculate segmentation from content
       const { annotations, cleanedContent } = calculateAnnotations(content);
@@ -472,10 +469,10 @@ const CreateCommentary = () => {
                 </div>
               </div>
 
-              {/* Author Field (Required) */}
+              {/* Author Field */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('textForm.author')} <span className="text-red-500">*</span>
+                  {t('textForm.author')}
                 </label>
                 <div className="relative">
                   <input
@@ -666,7 +663,7 @@ const CreateCommentary = () => {
               <div className="pt-4 border-t border-gray-200">
                 <Button
                   type="submit"
-                  disabled={isSubmitting || !content || !language || !title || !source || !selectedPerson || !!contentValidationError || segmentValidation.invalidCount > 0}
+                  disabled={isSubmitting || !content || !language || !title || !source || !!contentValidationError || segmentValidation.invalidCount > 0}
                   className="w-full bg-gradient-to-r from-emerald-400 to-green-500 hover:from-emerald-500 hover:to-green-600 text-white py-3"
                 >
                   {isSubmitting ? (

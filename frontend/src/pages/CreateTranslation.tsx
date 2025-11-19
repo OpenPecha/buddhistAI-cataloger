@@ -234,9 +234,6 @@ const CreateTranslation = () => {
       if (!content || content.trim() === '') {
         throw new Error(t('instance.contentRequired'));
       }
-      if (!selectedPerson) {
-        throw new Error(t('translation.translatorRequired'));
-      }
 
       // Calculate segmentation from content
       const { annotations, cleanedContent } = calculateAnnotations(content);
@@ -483,10 +480,10 @@ const CreateTranslation = () => {
                 />
               </div>
 
-              {/* Author/Translator Field (Required) */}
+              {/* Author/Translator Field */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('textForm.translator')} <span className="text-red-500">*</span>
+                  {t('textForm.translator')}
                 </label>
                 <div className="relative">
                   <input
@@ -642,7 +639,7 @@ const CreateTranslation = () => {
               <div className="pt-4 border-t border-gray-200">
                 <Button
                   type="submit"
-                  disabled={isSubmitting || !content || !language || !title || !source || !selectedPerson || !!contentValidationError || segmentValidation.invalidCount > 0}
+                  disabled={isSubmitting || !content || !language || !title || !source || !!contentValidationError || segmentValidation.invalidCount > 0}
                   className="w-full bg-gradient-to-r from-sky-400 to-cyan-500 hover:from-sky-500 hover:to-cyan-600 text-white py-3"
                 >
                   {isSubmitting ? (
