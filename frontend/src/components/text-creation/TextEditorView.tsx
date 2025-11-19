@@ -370,7 +370,7 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
        
 
         {/* Tabs */}
-        <div className="flex items-center px-4 flex-wrap gap-2 font-['monlam'] font-bold">
+        <div className="flex items-center px-4 flex-wrap gap-2 font-['jomo']">
           <div className="flex items-center">
             <button
               onClick={() => setActiveTab('content')}
