@@ -30,7 +30,7 @@ class Text(BaseModel):
     )
     language: str
     target: Optional[str] = None
-    contributions: List[Contribution]
+    contributions: Optional[List[Contribution]] = None
     date: Optional[str] = None
     bdrc: Optional[str] = None
     wiki: Optional[str] = None
@@ -53,7 +53,7 @@ class CreateText(BaseModel):
         description="Title in multiple languages, keyed by language code"
     )
     language: str
-    contributions: List[Contribution]
+    contributions: Optional[List[Contribution]] = None
     target: Optional[str] = None
     date: Optional[str] = None
     bdrc: Optional[str] = None
