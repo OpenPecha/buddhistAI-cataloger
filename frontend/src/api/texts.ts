@@ -294,3 +294,15 @@ export const updateAnnotation = async (annotationId: string, annotationData: any
     throw new Error('Unable to update annotation. Please check your connection and try again.');
   }
 };
+
+
+export const fetchEnums = async (type: string): Promise<any> => {
+  try {
+    const response = await fetch(`${API_URL}/v2/enum?type=${type}`);
+    return await response.json();
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+  }
+};

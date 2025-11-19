@@ -17,6 +17,9 @@ import PersonFormModal from "@/components/PersonFormModal";
 import { MultilevelCategorySelector } from "@/components/MultilevelCategorySelector";
 import { fetchTextByBdrcId } from "@/api/texts";
 import { useTranslation } from "react-i18next";
+import { useLanguage } from "@/hooks/useEnum";
+import LanguageSelectorForm from "./LanguageSelectorForm";
+import RoleSelectionForm from "./RoleSelectionForm";
 
 interface TextCreationFormProps {
   onDataChange?: (textData: any) => void;
@@ -46,25 +49,12 @@ interface TitleEntry {
   value: string;
 }
 
-const LANGUAGE_OPTIONS = [
-  { code: "bo", name: "Tibetan" },
-  { code: "tib", name: "Spoken Tibetan" },
-  { code: "en", name: "English" },
-  { code: "zh", name: "Chinese" },
-  { code: "sa", name: "Sanskrit" },
-  { code: "fr", name: "French" },
-  { code: "mn", name: "Mongolian" },
-  { code: "pi", name: "Pali" },
-  { code: "cmg", name: "Classical Mongolian" },
-  { code: "ja", name: "Japanese" },
-  { code: "ru", name: "Russian" },
-  { code: "lzh", name: "Literary Chinese" },
-];
+
 
 const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
   ({ onDataChange, onExistingTextFound }, ref) => {
     const { t } = useTranslation();
-    
+    const {data: LANGUAGE_OPTIONS,isLoading: isLoadingLanguageOptions} = useLanguage();
     // State declarations
     const [selectedType, setSelectedType] = useState<
       "root" | "commentary" | "translation" | ""
@@ -83,7 +73,6 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     const [categoryError, setCategoryError] = useState<boolean>(false);
     const [copyright, setCopyright] = useState<string>("Public domain");
     const [license, setLicense] = useState<string>("CC0");
-
     // BDRC search state
     const [bdrcSearch, setBdrcSearch] = useState("");
     const [showBdrcDropdown, setShowBdrcDropdown] = useState(false);
@@ -98,9 +87,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
     const [showPersonDropdown, setShowPersonDropdown] = useState(false);
     const [debouncedPersonSearch, setDebouncedPersonSearch] = useState("");
-    const [role, setRole] = useState<
-      "translator" | "author"
-    >("author");
+    const [role, setRole] = useState<string | null>(null);
 
     // Validation errors
     const [errors, setErrors] = useState<Record<string, string>>({});
@@ -110,101 +97,23 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
 
     // BDRC conflict state
     const [showBdrcConflictDialog, setShowBdrcConflictDialog] = useState(false);
+    
     const [conflictingText, setConflictingText] = useState<OpenPechaText | null>(null);
     const [pendingBdrcSelection, setPendingBdrcSelection] = useState<{ id: string; label: string } | null>(null);
     const [isCheckingBdrcId, setIsCheckingBdrcId] = useState(false);
     
-    // Expose methods to parent component
-    useImperativeHandle(ref, () => ({
-      addTitle: (text: string, language?: string) => {
-        // Check if the detected language is in the LANGUAGE_OPTIONS array
-        const isValidLanguage = language && LANGUAGE_OPTIONS.some(
-          (option) => option.code === language
-        );
-        
-        const finalLanguage = isValidLanguage ? language : "";
-        
-        setTitles((prevTitles) => {
-          // Check if this language already exists
-          const existingIndex = prevTitles.findIndex(
-            (t) => t.language === finalLanguage && finalLanguage !== ""
-          );
-          
-          if (existingIndex !== -1) {
-            // Update the existing entry instead of adding a new one
-            const updatedTitles = [...prevTitles];
-            updatedTitles[existingIndex].value = text;
-            return updatedTitles;
-          } else {
-            // Add new entry
-            return [...prevTitles, { language: finalLanguage, value: text }];
-          }
-        });
-      },
-      addAltTitle: (text: string, language?: string) => {
-        // Check if the detected language is in the LANGUAGE_OPTIONS array
-        const isValidLanguage = language && LANGUAGE_OPTIONS.some(
-          (option) => option.code === language
-        );
-        
-        const finalLanguage = isValidLanguage ? language : "";
-        
-        // Add new alternative title group (array of arrays structure)
-        const newAltGroup = [{ language: finalLanguage, value: text }];
-        setAltTitles((prevAltTitles) => [
-          ...prevAltTitles, 
-          newAltGroup
-        ]);
-      },
-      setPersonSearch: (text: string) => {
-        // Set the person search field and show the dropdown
-        setPersonSearch(text);
-        setShowPersonDropdown(true);
-      },
-      openContributorForm: () => {
-        // Open the Add Contributor form
-        setShowAddContributor(true);
-      },
-      hasTitle: () => {
-        // Check if there's at least one title with a value
-        // Use a callback to access current state
-        return titles.length > 0 && titles.some(t => t.value.trim() !== "");
-      },
-      setBdrcId: (bdrcId: string, label: string) => {
-        setBdrc(bdrcId);
-        setBdrcSearch(label);
-        setSelectedBdrc({ id: bdrcId, label: label });
-        setShowBdrcDropdown(false);
-      },
-      setFormLanguage: (lang: string) => {
-        setLanguage(lang);
-      },
-      getLanguage: () => {
-        return language;
-      },
-      addContributorFromBdrc: (personBdrcId: string, personName: string, role: "translator" | "author") => {
-        // Create a Person-like object with BDRC ID
-        const bdrcPerson: Person = {
-          id: personBdrcId, // Use BDRC ID as temporary ID
-          name: { bo: personName }, // Set name in Tibetan (or default language)
-          alt_names: null,
-          bdrc: personBdrcId,
-          wiki: null,
-        };
-        
-        const newContributor: Contributor = {
-          person: bdrcPerson,
-          role: role,
-        };
-        
-        setContributors((prev) => [...prev, newContributor]);
-      },
-    }), [titles, language]);
+  
 
     // Auto-set license to "unknown" when copyright is "Unknown"
     useEffect(() => {
       if (copyright === "Unknown") {
         setLicense("unknown");
+      }
+      if (copyright === "Public domain") {
+        setLicense("Public Domain Mark");
+      }
+      if (copyright === "In copyright") {
+        setLicense("under copyright");
       }
     }, [copyright]);
 
@@ -224,6 +133,24 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       }, 300);
       return () => clearTimeout(timer);
     }, [personSearch]);
+
+    // Auto-add title entry with selected language when language is selected
+    useEffect(() => {
+      if (language && language.trim()) {
+        setTitles((prev) => {
+          // Check if there's already a title entry with this language
+          const hasTitleWithLanguage = prev.some(
+            (title) => title.language === language
+          );
+          
+          // If no title exists with this language, add one
+          if (!hasTitleWithLanguage) {
+            return [...prev, { language: language, value: "" }];
+          }
+          return prev;
+        });
+      }
+    }, [language]);
 
     const { isLoading: personsLoading } = usePersons({
       limit: 100,
@@ -423,7 +350,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       onDataChange,
     ]);
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 font-['jomo'] text-lg">
         {/* Type and Language */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -456,19 +383,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
             >
               {t("textForm.language")} <span className="text-red-500">*</span>
             </label>
-            <select
-              id="language"
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">{t("textForm.selectLanguage")}</option>
-              {LANGUAGE_OPTIONS.map((lang) => (
-                <option key={lang.code} value={lang.code}>
-                  {lang.name}
-                </option>
-              ))}
-            </select>
+           <LanguageSelectorForm language={language} setLanguage={setLanguage} />
             {errors.language && (
               <p className="mt-1 text-sm text-red-600">{errors.language}</p>
             )}
@@ -502,7 +417,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         {/* Titles Section */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-gray-700 ">
               {t("textForm.title")} <span className="text-red-500">*</span> ({t("textForm.atLeastOneRequired")})
             </label>
             <Button
@@ -527,6 +442,12 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                   key={index}
                   className="flex gap-2 items-start p-3 bg-gray-50 border border-gray-200 rounded-md"
                 >
+                   
+                  {isLoadingLanguageOptions && (
+                    <div className="w-20 sm:w-32 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    </div>
+                  )}
                   <select
                     value={title.language}
                     onChange={(e) => {
@@ -549,14 +470,14 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                         setTitles(newTitles);
                       }
                     }}
-                    className="w-20 sm:w-32 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-fit sm:w-32 font-poppins h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                   >
-                    <option value="">{t("textForm.lang")}</option>
-                    {LANGUAGE_OPTIONS.map((lang) => (
-                      <option key={lang.code} value={lang.code}>
+                    <option value="">{t("textForm.selectLanguage")}</option>
+                    {!isLoadingLanguageOptions && LANGUAGE_OPTIONS && LANGUAGE_OPTIONS.map((lang: LanguageOption) => (
+                      <option key={lang.code} value={lang.code} className="capitalize">
                         {lang.name}
-                      </option>
-                    ))}
+                        </option>
+                      ))}
                   </select>
                   <input
                     type="text"
@@ -817,14 +738,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
             <div className="p-4 border border-gray-300 rounded-md bg-gray-50 space-y-4">
                   {/* Person Search */}
                   <div className="relative flex gap-2" >
-                    <select
-                      value={role}
-                      onChange={(e) => setRole(e.target.value as any)}
-                      className="w-fit px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="author">{t("textForm.author")}</option>
-                      <option value="translator">{t("textForm.translator")}</option>
-                    </select>
+                  <RoleSelectionForm role={role} setRole={setRole} />
                     <input
                       type="text"
                       value={personSearch}
@@ -1080,10 +994,10 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
             id="license"
             value={license}
             onChange={(e) => setLicense(e.target.value)}
-            disabled={copyright === "Unknown"}
+            disabled={copyright === "Unknown" || copyright === "Public domain"}
             className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm ${
-              copyright === "Unknown" ? "bg-gray-100 cursor-not-allowed opacity-60" : ""
-            }`}
+              copyright === "Unknown" ? "bg-gray-100 cursor-not-allowed opacity-60" : ""}
+              ${copyright === "Public domain" ? "bg-gray-100 cursor-not-allowed opacity-60" : ""}`}
           >
             <option value="unknown">{t("textForm.licenseUnknown")}</option>
             <option value="CC0">{t("textForm.licenseCC0")}</option>

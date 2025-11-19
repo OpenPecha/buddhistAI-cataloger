@@ -8,27 +8,15 @@ import { calculateAnnotations } from '@/utils/annotationCalculator';
 import { useTranslation } from 'react-i18next';
 import { useBdrcSearch } from '@/hooks/useBdrcSearch';
 import type { Person } from '@/types/person';
-import { useInstance } from '@/hooks/useTexts';
-import type { OpenPechaTextInstance } from '@/types/text';
+import { useInstance, useText } from '@/hooks/useTexts';
 import { useBibliography } from '@/contexts/BibliographyContext';
 import { useBibliographyAPI } from '@/hooks/useBibliographyAPI';
 import TextCreationSuccessModal from '@/components/text-creation/TextCreationSuccessModal';
 import { useAuth0 } from '@auth0/auth0-react';
 import { validateContentEndsWithTsheg, validateSegmentLimits } from '@/utils/contentValidation';
+import LanguageSelectorForm from '@/components/LanguageSelectorForm';
 
-const LANGUAGE_OPTIONS = [
-  { code: "bo", name: "Tibetan" },
-  { code: "en", name: "English" },
-  { code: "zh", name: "Chinese" },
-  { code: "sa", name: "Sanskrit" },
-  { code: "fr", name: "French" },
-  { code: "mn", name: "Mongolian" },
-  { code: "pi", name: "Pali" },
-  { code: "cmg", name: "Classical Mongolian" },
-  { code: "ja", name: "Japanese" },
-  { code: "ru", name: "Russian" },
-  { code: "lzh", name: "Literary Chinese" },
-];
+
 
 const CreateTranslation = () => {
   const { text_id, instance_id } = useParams();
@@ -36,7 +24,6 @@ const CreateTranslation = () => {
   const { t } = useTranslation();
   const { user } = useAuth0();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
   // Fetch instance data
   const { data: instance, isLoading: instanceLoading } = useInstance(instance_id || '');
 
@@ -68,7 +55,8 @@ const CreateTranslation = () => {
   // Bibliography annotations
   const { clearAnnotations } = useBibliography();
   const { getAPIAnnotations, hasAnnotations } = useBibliographyAPI();
-
+  const { data: text } = useText(text_id || '');
+  const text_title = text?.title.bo || text?.title.en ;
   // Content validation - check if content ends with ། (only for Tibetan language)
   const contentValidationError = useMemo(() => {
     // Only validate if content is not empty
@@ -122,36 +110,12 @@ const CreateTranslation = () => {
     if (copyright === "Unknown") {
       setLicense("unknown");
     }
+    if (copyright === "Public domain") {
+      setLicense("Public Domain Mark");
+    }
   }, [copyright]);
 
-  // Extract instance title with fallback logic (same as CreateCommentary)
-  const getInstanceTitle = (instance: OpenPechaTextInstance | undefined): string => {
-    if (!instance || !instance.metadata) return t('header.instances');
-
-    let title = "";
-    
-    if (instance.metadata.incipit_title && typeof instance.metadata.incipit_title === 'object') {
-      const incipitObj = instance.metadata.incipit_title as Record<string, string>;
-      if (incipitObj.bo) {
-        title = incipitObj.bo;
-      } else {
-        // Get first available language from incipit_title
-        const firstLanguage = Object.keys(incipitObj)[0];
-        if (firstLanguage) {
-          title = incipitObj[firstLanguage];
-        }
-      }
-    }
-    
-    // If no incipit_title, format with colophon
-    if (!title) {
-      title = instance.metadata.colophon 
-        ? `Text Instance (${instance.metadata.colophon})` 
-        : "Text Instance";
-    }
-
-    return title;
-  };
+ 
 
   const getPersonDisplayName = (person: Person): string => {
     if (!person.name) {
@@ -323,7 +287,7 @@ const CreateTranslation = () => {
       )}
 
       {/* Main Split Layout */}
-      <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gray-50 flex">
+      <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gray-50 flex font-['jomo']">
         {/* LEFT PANEL: Translation Form */}
         <div className="w-1/2 h-full overflow-y-auto bg-white border-r border-gray-200">
           <div className="p-8">
@@ -348,7 +312,7 @@ const CreateTranslation = () => {
                 <div className="text-sm text-gray-600 mt-3 text-center">
                   <span>{t('textForm.createTranslationFor')}</span>
                   <span className="inline-block mx-2 px-3 py-1 bg-gradient-to-r from-sky-100 to-cyan-100 text-sky-800 font-semibold rounded-lg shadow-sm border border-sky-200">
-                    {getInstanceTitle(instance)}
+                  {text_title}
                   </span>
                 </div>
               )}
@@ -361,32 +325,7 @@ const CreateTranslation = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   {t('textForm.language')} <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">{t('textForm.selectLanguage')}</option>
-                  {LANGUAGE_OPTIONS.map((lang) => {
-                    const translationKey = lang.code === 'bo' ? 'tibetan' :
-                                          lang.code === 'en' ? 'english' :
-                                          lang.code === 'zh' ? 'chinese' :
-                                          lang.code === 'sa' ? 'sanskrit' :
-                                          lang.code === 'fr' ? 'french' :
-                                          lang.code === 'mn' ? 'mongolian' :
-                                          lang.code === 'pi' ? 'pali' :
-                                          lang.code === 'cmg' ? 'classicalMongolian' :
-                                          lang.code === 'ja' ? 'japanese' :
-                                          lang.code === 'ru' ? 'russian' :
-                                          lang.code === 'lzh' ? 'literaryChinese' : '';
-                    return (
-                      <option key={lang.code} value={lang.code}>
-                        {t(`textsPage.${translationKey}`)}
-                      </option>
-                    );
-                  })}
-                </select>
+                <LanguageSelectorForm language={language} setLanguage={setLanguage} />
               </div>
 
               {/* Title Field (REQUIRED) */}
@@ -616,10 +555,11 @@ const CreateTranslation = () => {
                 <select
                   value={license}
                   onChange={(e) => setLicense(e.target.value)}
-                  disabled={copyright === "Unknown"}
+                  disabled={copyright === "Unknown" || copyright === "Public domain"}
                   className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    copyright === "Unknown" ? "bg-gray-100 cursor-not-allowed opacity-60" : ""
-                  }`}
+                    copyright === "Unknown" ? "bg-gray-100 cursor-not-allowed opacity-60" : ""} 
+                    ${copyright === "Public domain" ? "bg-gray-100 cursor-not-allowed opacity-60" : ""}
+                    }`}
                   required
                 >
                   <option value="unknown">{t("textForm.licenseUnknown")}</option>

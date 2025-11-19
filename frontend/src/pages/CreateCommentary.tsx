@@ -9,28 +9,17 @@ import { useTranslation } from 'react-i18next';
 import { useBdrcSearch } from '@/hooks/useBdrcSearch';
 import { MultilevelCategorySelector } from '@/components/MultilevelCategorySelector';
 import type { Person } from '@/types/person';
-import { useInstance } from '@/hooks/useTexts';
+import { useInstance, useText } from '@/hooks/useTexts';
 import type { OpenPechaTextInstance } from '@/types/text';
 import { useBibliography } from '@/contexts/BibliographyContext';
 import { useBibliographyAPI } from '@/hooks/useBibliographyAPI';
 import TextCreationSuccessModal from '@/components/text-creation/TextCreationSuccessModal';
 import { useAuth0 } from '@auth0/auth0-react';
 import { validateContentEndsWithTsheg, validateSegmentLimits } from '@/utils/contentValidation';
+import LanguageSelectorForm from '@/components/LanguageSelectorForm';
 
 
-const LANGUAGE_OPTIONS = [
-  { code: "bo", name: "Tibetan" },
-  { code: "en", name: "English" },
-  { code: "zh", name: "Chinese" },
-  { code: "sa", name: "Sanskrit" },
-  { code: "fr", name: "French" },
-  { code: "mn", name: "Mongolian" },
-  { code: "pi", name: "Pali" },
-  { code: "cmg", name: "Classical Mongolian" },
-  { code: "ja", name: "Japanese" },
-  { code: "ru", name: "Russian" },
-  { code: "lzh", name: "Literary Chinese" },
-];
+
 
 const CreateCommentary = () => {
   const { text_id, instance_id } = useParams();
@@ -41,7 +30,8 @@ const CreateCommentary = () => {
 
   // Fetch instance data
   const { data: instance, isLoading: instanceLoading } = useInstance(instance_id || '');
-
+  const { data: text } = useText(text_id || '');
+  const text_title = text?.title.bo || text?.title.en ;
   // Form state
   const [language, setLanguage] = useState('');
   const [title, setTitle] = useState('');
@@ -124,6 +114,9 @@ const CreateCommentary = () => {
   useEffect(() => {
     if (copyright === "Unknown") {
       setLicense("unknown");
+    }
+    if (copyright === "Public domain") {
+      setLicense("Public Domain Mark");
     }
   }, [copyright]);
 
@@ -332,7 +325,7 @@ const CreateCommentary = () => {
       )}
 
       {/* Main Split Layout */}
-      <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gray-50 flex">
+      <div className="fixed inset-0 font-['jomo'] top-16 left-0 right-0 bottom-0 bg-gray-50 flex">
         {/* LEFT PANEL: Commentary Form */}
         <div className="w-1/2 h-full overflow-y-auto bg-white border-r border-gray-200">
           <div className="p-8">
@@ -357,7 +350,7 @@ const CreateCommentary = () => {
                 <div className="text-sm text-gray-600 mt-3 text-center">
                   <span>{t('textForm.createCommentaryFor')}</span>
                   <span className="inline-block mx-2 px-3 py-1 bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-800 font-semibold rounded-lg shadow-sm border border-indigo-200">
-                    {getInstanceTitle(instance)}
+                    {text_title}
                   </span>
                 </div>
               )}
@@ -370,32 +363,7 @@ const CreateCommentary = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   {t('textForm.language')} <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">{t('textForm.selectLanguage')}</option>
-                  {LANGUAGE_OPTIONS.map((lang) => {
-                    const translationKey = lang.code === 'bo' ? 'tibetan' :
-                                          lang.code === 'en' ? 'english' :
-                                          lang.code === 'zh' ? 'chinese' :
-                                          lang.code === 'sa' ? 'sanskrit' :
-                                          lang.code === 'fr' ? 'french' :
-                                          lang.code === 'mn' ? 'mongolian' :
-                                          lang.code === 'pi' ? 'pali' :
-                                          lang.code === 'cmg' ? 'classicalMongolian' :
-                                          lang.code === 'ja' ? 'japanese' :
-                                          lang.code === 'ru' ? 'russian' :
-                                          lang.code === 'lzh' ? 'literaryChinese' : '';
-                    return (
-                      <option key={lang.code} value={lang.code}>
-                        {t(`textsPage.${translationKey}`)}
-                      </option>
-                    );
-                  })}
-                </select>
+              <LanguageSelectorForm language={language} setLanguage={setLanguage} />
               </div>
 
               {/* Title Field (REQUIRED) */}
@@ -640,9 +608,10 @@ const CreateCommentary = () => {
                 <select
                   value={license}
                   onChange={(e) => setLicense(e.target.value)}
-                  disabled={copyright === "Unknown"}
+                  disabled={copyright === "Unknown" || copyright === "Public domain"}
                   className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    copyright === "Unknown" ? "bg-gray-100 cursor-not-allowed opacity-60" : ""
+                    copyright === "Unknown" ? "bg-gray-100 cursor-not-allowed opacity-60" : ""}
+                    ${copyright === "Public domain" ? "bg-gray-100 cursor-not-allowed opacity-60" : ""}
                   }`}
                   required
                 >

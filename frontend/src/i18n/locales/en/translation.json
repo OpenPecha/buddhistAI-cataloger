@@ -228,7 +228,7 @@
     "targetTextId": "Target Text ID",
     "leaveEmptyNA": "Leave empty for N/A",
     "title": "Title",
-    "atLeastOneRequired": "at least one required",
+    "atLeastOneRequired": "at least one required in the language chosen for the text",
     "addTitle": "Add Title",
     "lang": "Lang",
     "enterTitle": "Enter title",
@@ -292,7 +292,7 @@
     "licenseCCBYNC": "CC BY-NC",
     "licenseCCBYNCSA": "CC BY-NC-SA",
     "licenseCCBYNCND": "CC BY-NC-ND",
-    "licenseUnderCopyright": "Under copyright"
+    "licenseUnderCopyright": "© copyrighted"
   },
   "instance": {
     "copyright": "Copyright",

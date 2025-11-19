@@ -32,12 +32,12 @@ const Index = () => {
 
       {/* Content */}
       <div className="space-y-6">
-        <div className=" rounded-lg  p-8">
+        <div className=" rounded-lg  pt-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 font-['jomo']">
             <Link to="/texts">
               <div className=" flex gap-3 items-start border bg-white border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
                   <BookOpen className="w-12 h-12 text-blue-600" />
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 ml-2">
                   <h3 className="text-3xl flex items-center gap-3 font-semibold font-['noto']">
                     {t("text.texts")}
                   </h3>
