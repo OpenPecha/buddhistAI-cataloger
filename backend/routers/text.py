@@ -326,7 +326,7 @@ def create_annotation_background(text_id: str, instance_id: str, content: str,us
         print(e)
 
 @router.post("/{id}/instances",  status_code=201)
-async def create_instance(id: str, instance: CreateInstance, background_tasks: BackgroundTasks):
+async def create_instance(id: str, instance: CreateInstance):
     if not API_ENDPOINT:
         raise HTTPException(
             status_code=500, 
@@ -334,26 +334,14 @@ async def create_instance(id: str, instance: CreateInstance, background_tasks: B
         )
     
     try:
-        # Convert to dict, excluding None values
         payload = instance.model_dump(exclude_none=True)
-        # Extract user before sending to OpenPecha API (user is only for our backend)
         user = payload.pop("user", None)
         response = requests.post(f"{API_ENDPOINT}/texts/{id}/instances", json=payload,timeout=120)
         
         if response.status_code != 201:
             raise HTTPException(status_code=response.status_code, detail=response.text)
         
-        # Schedule background task for annotation creation
-        instance_id = response.json().get("id")
-        content = payload.get("content")
-        if instance_id and content:
-            background_tasks.add_task(
-                create_annotation_background,
-                text_id=id,
-                instance_id=instance_id,
-                content=content,
-                user=user
-            )
+    
         
         return response.json()
     except requests.exceptions.Timeout:

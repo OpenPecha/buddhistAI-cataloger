@@ -48,7 +48,7 @@ const PersonCard = ({ person }: PersonCardProps) => {
       
       <CardContent className="space-y-3">
         {person.bdrc && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2 font-sans" >
             <Badge className="bg-secondary-700 flex items-center gap-2">
               <span className="font-medium">{t('personsPage.bdrcId')}</span>
               <span className="font-mono text-xs">{person.bdrc}</span>

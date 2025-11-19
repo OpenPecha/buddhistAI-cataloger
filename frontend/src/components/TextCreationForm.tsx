@@ -48,6 +48,7 @@ interface TitleEntry {
 
 const LANGUAGE_OPTIONS = [
   { code: "bo", name: "Tibetan" },
+  { code: "tib", name: "Spoken Tibetan" },
   { code: "en", name: "English" },
   { code: "zh", name: "Chinese" },
   { code: "sa", name: "Sanskrit" },

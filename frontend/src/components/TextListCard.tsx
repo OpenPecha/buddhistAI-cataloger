@@ -94,14 +94,14 @@ const TextListCard = ({ text }: TextListCardProps) => {
   };
 
   return (
-    <Card className="hover:shadow-lg transition-shadow duration-200 gap-2">
+    <Card className="hover:shadow-lg transition-shadow duration-200 gap-2 font-['jomo']">
       <CardHeader>
         <div className="flex items-center gap-2 overflow-hidden">
           <Book className="w-5 h-5 text-gray-500  flex-shrink-0" />
           <CardTitle className="text-lg w-full ">
             <Link 
               to={`/texts/${text.id}/instances`} 
-              className="hover:text-blue-600 w-full transition-colors duration-200 truncate font-['noto']"
+              className="w-full transition-colors duration-200 truncate font-['jomo']"
             >
               {text.title?.[text.language] || t('textsPage.untitled')}
             </Link>

@@ -75,7 +75,7 @@ const BreadCrumb: React.FC<BreadCrumbProps> = ({ items, className = '',textname,
   const breadcrumbItems = items || generateBreadcrumbs();
 
   return (
-    <Breadcrumb className={className}>
+    <Breadcrumb className={className+" font-['monlam']"}>
       <BreadcrumbList>
         {breadcrumbItems.map((item, index) => (
           <React.Fragment key={`breadcrumb-${item.label}-${index}`}>

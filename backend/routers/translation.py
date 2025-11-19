@@ -149,7 +149,7 @@ def create_annotation_background(text_id: str, instance_id: str, content: str, l
 
 
 @router.post("/{instance_id}/translation", status_code=201)
-async def create_translation(instance_id: str, translation: CreateTranslation, background_tasks: BackgroundTasks):
+async def create_translation(instance_id: str, translation: CreateTranslation):
     """Create a translation for a specific instance"""
     if not API_ENDPOINT:
         raise HTTPException(
@@ -158,10 +158,9 @@ async def create_translation(instance_id: str, translation: CreateTranslation, b
         )
     
     try:
-        # Convert to dict, excluding None values
         payload = translation.model_dump(exclude_none=True)
-        # Extract user before sending to OpenPecha API (user is only for our backend)
         user = payload.pop("user", None)
+      
         response = requests.post(
             f"{API_ENDPOINT}/instances/{instance_id}/translation", 
             json=payload,
@@ -171,41 +170,7 @@ async def create_translation(instance_id: str, translation: CreateTranslation, b
             raise HTTPException(status_code=response.status_code, detail=response.text)
         
         response_data = response.json()
-        
-        # Schedule background task for annotation creation
-        new_instance_id = response_data.get("instance_id")
-        content = payload.get("content")
-        language = payload.get("language")
-        # Get text_id from the response or original instance
-        text_id = None
-        try:
-            # First try to get text_id from the response_data
-            text_id = response_data.get("text_id")
-            
-            # If not in response, try to get from the original instance
-            if not text_id:
-                instance_response = requests.get(f"{API_ENDPOINT}/instances/{instance_id}")
-                if instance_response.status_code == 200:
-                    instance_data = instance_response.json()
-                    text_id = instance_data.get("text_id")
-                else:
-                    print(f"❌ Failed to fetch instance: {instance_response.status_code}")
-            print(text_id,len(content),language,new_instance_id)
-            if new_instance_id and content and text_id and language:
-                background_tasks.add_task(
-                    create_annotation_background,
-                    text_id=text_id,
-                    instance_id=new_instance_id,
-                    content=content,
-                    language=language,
-                    user=user
-                )
-            else:
-                print(f"❌ Background task not scheduled - Missing: new_instance_id={bool(new_instance_id)}, content={bool(content)}, text_id={bool(text_id)}, language={bool(language)}")
-        except Exception as e:
-            print(f"❌ Error scheduling background task: {e}")
-            import traceback
-            traceback.print_exc()
+    
         
         return response_data
     except requests.exceptions.Timeout:
@@ -221,7 +186,7 @@ async def create_translation(instance_id: str, translation: CreateTranslation, b
 
 
 @router.post("/{instance_id}/commentary", status_code=201)
-async def create_commentary(instance_id: str, commentary: CreateCommentary, background_tasks: BackgroundTasks):
+async def create_commentary(instance_id: str, commentary: CreateCommentary):
     """Create a commentary for a specific instance"""
     if not API_ENDPOINT:
         raise HTTPException(
@@ -243,27 +208,6 @@ async def create_commentary(instance_id: str, commentary: CreateCommentary, back
             raise HTTPException(status_code=response.status_code, detail=response.text)
         
         response_data = response.json()
-        
-        # Schedule background task for annotation creation
-        new_instance_id = response_data.get("instance_id")
-        content = payload.get("content")
-        language = payload.get("language")
-        # Get text_id from the original instance
-        try:
-            instance_response = requests.get(f"{API_ENDPOINT}/instances/{instance_id}")
-            if instance_response.status_code == 200:
-                text_id = instance_response.json().get("text_id")
-                if new_instance_id and content and text_id and language:
-                    background_tasks.add_task(
-                        create_annotation_background,
-                        text_id=text_id,
-                        instance_id=new_instance_id,
-                        content=content,
-                        language=language,
-                        user=user
-                    )
-        except Exception as e:
-            print(f"Error scheduling background task: {e}")
         
         return response_data
     except requests.exceptions.Timeout:

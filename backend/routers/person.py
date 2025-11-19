@@ -60,6 +60,7 @@ async def get_persons(
     }
     
     response = requests.get(f"{API_ENDPOINT}/persons", params=params)
+    print(API_ENDPOINT)
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=response.text)
     return response.json()

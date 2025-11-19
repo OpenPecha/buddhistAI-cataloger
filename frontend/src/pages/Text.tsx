@@ -125,7 +125,7 @@ const TextCRUD = () => {
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 font-['jomo']">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-800">{t('textsPage.title')}</h2>
         
         {/* Search Input */}
@@ -284,7 +284,7 @@ const TextCRUD = () => {
 
         {/* Pagination Controls - Only show when not searching */}
         {showPagination && (
-          <div className="bg-white rounded-lg shadow-md p-3 sm:p-4">
+          <div className="bg-white rounded-lg shadow-md p-3 sm:p-4 font-['jomo']">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
               <Button
                 onClick={handlePrevPage}
@@ -294,7 +294,7 @@ const TextCRUD = () => {
               >
                 {t('textsPage.previous')}
               </Button>
-              <span className="text-xs sm:text-sm text-gray-600 text-center">
+              <span className="text-xs sm:text-sm text-gray-600 text-center font-['noto']">
                 {t('textsPage.showing', { 
                   start: offset + 1, 
                   end: offset + texts.length 
@@ -357,7 +357,7 @@ const TextCRUD = () => {
             </div>
           </div>
         ) : !isCheckingText && !textNotFound ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 font-['noto']">
             {displayTexts.map((text: OpenPechaText) => (
               <TextListCard key={text.id} text={text} />
             ))}

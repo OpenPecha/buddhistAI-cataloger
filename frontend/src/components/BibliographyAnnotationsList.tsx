@@ -115,10 +115,9 @@ export const BibliographyAnnotationsList: React.FC<BibliographyAnnotationsListPr
 
   if (annotations.length === 0) {
     return (
-      <div className={`text-center py-12 text-gray-500 ${className}`}>
+      <div className={`text-center py-12 text-gray-500 ${className}  flex flex-col items-center justify-center gap-3`}>
         <FileText className="h-16 w-16 mx-auto mb-4 opacity-30" />
-        <h3 className="text-lg font-medium text-gray-700 mb-2">{t('bibliography.noAnnotations')}</h3>
-        <p className="text-sm mb-1">{t('bibliography.selectTextPrompt')}</p>
+        <h3 className="text-4xl font-medium text-gray-700 mb-2">{t('bibliography.noAnnotations')}</h3>
         <p className="text-xs text-gray-400">{t('bibliography.typesPrompt')}</p>
       </div>
     );

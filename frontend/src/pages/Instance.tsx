@@ -68,7 +68,6 @@ function Instance() {
     <div className="space-y-6">
       {/* Breadcrumb */}
       <BreadCrumb instancename={title}/>
-      
       <InstanceCard instance={instance as OpenPechaTextInstance} />
     </div>
   );

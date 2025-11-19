@@ -29,7 +29,7 @@ const TextInstanceCard: React.FC<TextInstanceCardProps> = ({ instance }) => {
   // 1. Try Tibetan incipit title
   // 2. If not, try first available language in incipit_title
   // 3. If no incipit_title, show "Text Instance (colophon)"
-  let title = "";
+  let title = "Version";
   
   if (instance.incipit_title && typeof instance.incipit_title === 'object') {
     const incipitObj = instance.incipit_title as Record<string, string>;

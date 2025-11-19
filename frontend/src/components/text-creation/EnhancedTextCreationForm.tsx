@@ -1136,7 +1136,7 @@ const EnhancedTextCreationForm = () => {
 
                 {/* Creating New Text Info */}
                 {isCreatingNewText && (
-                  <div className="bg-green-50 border border-green-200 px-4 py-3 rounded-md">
+                  <div className="bg-green-50 border font-['monlam'] border-green-200 px-4 py-3 rounded-md">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-green-900">
                         {t("create.creatingNewText")}
@@ -1157,7 +1157,7 @@ const EnhancedTextCreationForm = () => {
 
             {/* Forms Section - Show if in creation mode OR if text is selected */}
             {canUpload && (
-              <div className="space-y-6 relative">
+              <div className="space-y-6 relative font-['monlam']">
                 {/* Text Creation Form - Only show when creating new text */}
                  {isCreatingNewText && (
                    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mb-6">
@@ -1315,7 +1315,7 @@ const EnhancedTextCreationForm = () => {
               {/* Editor View */}
               <div className="h-full flex flex-col">
                 {/* Upload Button in Header */}
-                <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
+                <div className="bg-blue-50 border-b border-blue-200 px-4 py-3 font-['noto']">
                   <div className="flex items-center justify-between">
                     {!editedContent || editedContent?.trim() === "" ? (
                       <>
