@@ -4,6 +4,7 @@ import { markdown } from '@codemirror/lang-markdown';
 import { EditorView, Decoration, type DecorationSet } from '@codemirror/view';
 import { StateEffect, StateField } from '@codemirror/state';
 import { AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import SelectionMenu from './SelectionMenu';
 import FormattedTextDisplay from '../FormattedTextDisplay';
 import { BibliographyAnnotationsList } from '../BibliographyAnnotationsList';
@@ -73,11 +74,12 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
   const [textStart, setTextStart] = useState(0);
   const [textEnd, setTextEnd] = useState(0);
   const [activeTab, setActiveTab] = useState<'content' | 'preview' | 'bibliography'>('content');
+  const [currentErrorIndex, setCurrentErrorIndex] = useState<number>(0);
   const editorRef = useRef<HTMLDivElement>(null);
   const cmRef = useRef<ReactCodeMirrorRef>(null);
   const [editorView, setEditorView] = useState<EditorView | null>(null);
   const { clearAnnotations, addAnnotation } = useBibliography();
-  const highlightTimeoutRef = useRef<number | null>(null);
+  const previewContainerRef = useRef<HTMLDivElement>(null);
 
   // Track editorView when CodeMirror initializes
   useEffect(() => {
@@ -278,75 +280,138 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
     setShowMenu(false);
   }, []);
 
-  // Map segment index to original line number in content
-  const getOriginalLineNumber = useCallback((segmentIndex: number, content: string): number => {
+
+  // Get sorted array of invalid segment indices for navigation
+  const invalidIndices = useMemo(() => {
+    if (!segmentValidation?.invalidSegments) return [];
+    return segmentValidation.invalidSegments.map(seg => seg.index).sort((a, b) => a - b);
+  }, [segmentValidation]);
+
+  // Reset current error index when invalid segments change
+  useEffect(() => {
+    if (invalidIndices.length > 0 && currentErrorIndex >= invalidIndices.length) {
+      setCurrentErrorIndex(0);
+    }
+  }, [invalidIndices.length, currentErrorIndex]);
+
+  // Map segment index to line number in content (accounting for empty lines)
+  const getLineNumberFromSegmentIndex = useCallback((segmentIndex: number): number => {
     if (!content) return 0;
     
     // Process content the same way as calculateAnnotations
-    let lines = content.split('\n');
+    const lines = content.split('\n');
     
     // Remove trailing empty lines
-    while (lines.length > 0 && lines[lines.length - 1].length === 0) {
-      lines.pop();
+    const linesWithoutTrailingEmpty = [...lines];
+    while (linesWithoutTrailingEmpty.length > 0 && linesWithoutTrailingEmpty[linesWithoutTrailingEmpty.length - 1].length === 0) {
+      linesWithoutTrailingEmpty.pop();
     }
     
     // Find which original line corresponds to the segment index
     let nonEmptyLineCount = 0;
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].length > 0) {
+    for (let i = 0; i < linesWithoutTrailingEmpty.length; i++) {
+      if (linesWithoutTrailingEmpty[i].length > 0) {
         if (nonEmptyLineCount === segmentIndex) {
-          return i; // Return 0-based line number
+          return i + 1; // Return 1-based line number for CodeMirror
         }
         nonEmptyLineCount++;
       }
     }
     
-    return 0; // Fallback
-  }, []);
+    return 1; // Fallback to first line
+  }, [content]);
 
-  // Handle clicking on invalid segment in preview
-  const handleInvalidSegmentClick = useCallback((segmentIndex: number) => {
-    // Switch to content tab
-    setActiveTab('content');
+  // Scroll to error segment in content editor
+  const scrollToErrorSegmentInContent = useCallback((index: number) => {
+    if (invalidIndices.length === 0) return;
     
-    // Wait for tab switch and editor to be visible
+    const segmentIndex = invalidIndices[index];
+    const view = cmRef.current?.view;
+    if (!view || !content) return;
+    
+    // Get line number from segment index
+    const lineNumber = getLineNumberFromSegmentIndex(segmentIndex);
+    
+    // Get the line from the document
+    const line = view.state.doc.line(lineNumber);
+    if (!line) return;
+    
+    // Scroll to center the line
+    const lineCenter = (line.from + line.to) / 2;
+    view.dispatch({
+      effects: EditorView.scrollIntoView(lineCenter, {
+        y: 'center',
+      }),
+    });
+    
+    // Highlight the line temporarily
+    view.dispatch({
+      effects: highlightLineEffect.of(lineNumber),
+    });
+    
+    // Clear highlight after 3 seconds
     setTimeout(() => {
-      const view = cmRef.current?.view;
-      if (!view || !content) return;
-      
-      // Get original line number (0-based)
-      const lineNumber = getOriginalLineNumber(segmentIndex, content);
-      
-      // Get the line from the document (CodeMirror uses 1-based line numbers)
-      const line = view.state.doc.line(lineNumber + 1);
-      
-      // Scroll to center the line
-      const lineCenter = (line.from + line.to) / 2;
-      view.dispatch({
-        effects: EditorView.scrollIntoView(lineCenter, {
-          y: 'center',
-        }),
-      });
-      
-      // Highlight the line temporarily
-      view.dispatch({
-        effects: highlightLineEffect.of(lineNumber + 1),
-      });
-      
-      // Clear highlight after 3 seconds
-      if (highlightTimeoutRef.current) {
-        clearTimeout(highlightTimeoutRef.current);
+      const currentView = cmRef.current?.view;
+      if (currentView) {
+        currentView.dispatch({
+          effects: highlightLineEffect.of(null),
+        });
       }
-      highlightTimeoutRef.current = window.setTimeout(() => {
-        const currentView = cmRef.current?.view;
-        if (currentView) {
-          currentView.dispatch({
-            effects: highlightLineEffect.of(null),
-          });
-        }
-      }, 3000);
-    }, 100);
-  }, [content, getOriginalLineNumber]);
+    }, 3000);
+  }, [invalidIndices, content, getLineNumberFromSegmentIndex]);
+
+
+  // Navigate to next error - scrolls directly in content tab
+  const handleNextError = useCallback(() => {
+    if (invalidIndices.length === 0) return;
+    
+    const nextIndex = (currentErrorIndex + 1) % invalidIndices.length;
+    setCurrentErrorIndex(nextIndex);
+    
+    // Switch to content tab and scroll to the error
+    if (activeTab !== 'content') {
+      setActiveTab('content');
+      // Wait for tab switch before scrolling
+      setTimeout(() => {
+        scrollToErrorSegmentInContent(nextIndex);
+      }, 150);
+    } else {
+      scrollToErrorSegmentInContent(nextIndex);
+    }
+  }, [invalidIndices, currentErrorIndex, activeTab, scrollToErrorSegmentInContent]);
+
+  // Navigate to previous error - scrolls directly in content tab
+  const handlePreviousError = useCallback(() => {
+    if (invalidIndices.length === 0) return;
+    
+    const prevIndex = (currentErrorIndex - 1 + invalidIndices.length) % invalidIndices.length;
+    setCurrentErrorIndex(prevIndex);
+    
+    // Switch to content tab and scroll to the error
+    if (activeTab !== 'content') {
+      setActiveTab('content');
+      // Wait for tab switch before scrolling
+      setTimeout(() => {
+        scrollToErrorSegmentInContent(prevIndex);
+      }, 150);
+    } else {
+      scrollToErrorSegmentInContent(prevIndex);
+    }
+  }, [invalidIndices, currentErrorIndex, activeTab, scrollToErrorSegmentInContent]);
+
+  // Handle clicking on invalid segment in preview - switches to content tab
+  const handleInvalidSegmentClick = useCallback((segmentIndex: number) => {
+    // Find the index in invalidIndices array
+    const errorIndex = invalidIndices.indexOf(segmentIndex);
+    if (errorIndex !== -1) {
+      setCurrentErrorIndex(errorIndex);
+      // Switch to content tab and scroll to the error
+      setActiveTab('content');
+      setTimeout(() => {
+        scrollToErrorSegmentInContent(errorIndex);
+      }, 150);
+    }
+  }, [invalidIndices, scrollToErrorSegmentInContent]);
   return (
     <div className="h-full flex flex-col">
       {/* Selection Menu */}
@@ -414,6 +479,31 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
             </button>
           </div>
           
+          {/* Previous/Next Navigation for Invalid Segments */}
+          {segmentValidation && segmentValidation.invalidCount > 0 && invalidIndices.length > 0 && (
+            <div className="flex items-center gap-2 ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePreviousError}
+                className="h-7 px-3 text-xs"
+              >
+                {t('common.previous')}
+              </Button>
+              <span className="text-xs text-gray-700 font-medium">
+                {currentErrorIndex + 1} / {invalidIndices.length}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextError}
+                className="h-7 px-3 text-xs"
+              >
+                {t('common.next')}
+              </Button>
+            </div>
+          )}
+          
           {/* Validation Error Message - Inline with tabs */}
           {validationError && (
             <div className="flex items-center gap-2 text-red-600 ml-auto py-3">
@@ -463,12 +553,14 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
         
         {activeTab === 'preview' && (
           /* Preview - Formatted Text Display */
-          <FormattedTextDisplay 
-            content={content} 
-            invalidSegments={segmentValidation?.invalidSegments}
-            invalidCount={segmentValidation?.invalidCount}
-            onInvalidSegmentClick={handleInvalidSegmentClick}
-          />
+          <div ref={previewContainerRef} className="h-full overflow-y-auto">
+            <FormattedTextDisplay 
+              content={content} 
+              invalidSegments={segmentValidation?.invalidSegments}
+              invalidCount={segmentValidation?.invalidCount}
+              onInvalidSegmentClick={handleInvalidSegmentClick}
+            />
+          </div>
         )}
         
         {activeTab === 'bibliography' && (

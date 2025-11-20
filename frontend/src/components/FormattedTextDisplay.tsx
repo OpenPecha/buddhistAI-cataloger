@@ -1,7 +1,6 @@
-import React, { memo, useEffect, useState, useRef } from 'react';
+import React, { memo } from 'react';
 import { SEGMENT_CHAR_LIMIT } from '@/utils/contentValidation';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
 
 interface SegmentValidation {
   index: number;
@@ -32,9 +31,6 @@ const FormattedTextDisplay: React.FC<FormattedTextDisplayProps> = ({
   onInvalidSegmentClick
 }) => {
   const { t } = useTranslation();
-  const [currentErrorIndex, setCurrentErrorIndex] = useState<number>(0);
-  const errorRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
-  const containerRef = useRef<HTMLDivElement>(null);
   
   // Process content to split into lines (same logic as annotation calculator)
   const getFormattedLines = () => {
@@ -63,60 +59,6 @@ const FormattedTextDisplay: React.FC<FormattedTextDisplayProps> = ({
   
   // Create a Set for quick lookup of invalid segment indices
   const invalidSegmentSet = new Set(invalidSegments.map(seg => seg.index));
-  
-  // Get sorted array of invalid segment indices for navigation
-  const invalidIndices = invalidSegments.map(seg => seg.index).sort((a, b) => a - b);
-  
-  // Reset current error index when invalid segments change
-  useEffect(() => {
-    if (invalidIndices.length > 0 && currentErrorIndex >= invalidIndices.length) {
-      setCurrentErrorIndex(0);
-    }
-  }, [invalidIndices.length, currentErrorIndex]);
-  
-  // Scroll to error function
-  const scrollToError = (index: number) => {
-    const errorIndex = invalidIndices[index];
-    const errorElement = errorRefs.current[errorIndex];
-    
-    if (errorElement && containerRef.current) {
-      const container = containerRef.current;
-      const elementTop = errorElement.offsetTop;
-      const elementHeight = errorElement.offsetHeight;
-      const containerTop = container.scrollTop;
-      const containerHeight = container.clientHeight;
-      
-      // Calculate scroll position to center the error element
-      const scrollTo = elementTop - containerTop - (containerHeight / 2) + (elementHeight / 2);
-      
-      container.scrollTo({
-        top: container.scrollTop + scrollTo,
-        behavior: 'smooth'
-      });
-      
-      // Highlight the error briefly
-      errorElement.classList.add('ring-2', 'ring-red-500');
-      setTimeout(() => {
-        errorElement.classList.remove('ring-2', 'ring-red-500');
-      }, 1000);
-    }
-  };
-  
-  // Navigate to next error
-  const handleNextError = () => {
-    if (invalidIndices.length === 0) return;
-    const nextIndex = (currentErrorIndex + 1) % invalidIndices.length;
-    setCurrentErrorIndex(nextIndex);
-    scrollToError(nextIndex);
-  };
-  
-  // Navigate to previous error
-  const handlePreviousError = () => {
-    if (invalidIndices.length === 0) return;
-    const prevIndex = (currentErrorIndex - 1 + invalidIndices.length) % invalidIndices.length;
-    setCurrentErrorIndex(prevIndex);
-    scrollToError(prevIndex);
-  };
   if (contentLines.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-gray-400">
@@ -126,40 +68,13 @@ const FormattedTextDisplay: React.FC<FormattedTextDisplayProps> = ({
   }
 
   return (
-    <div ref={containerRef} className="h-[80dvh] overflow-y-auto">
+    <div className="h-full">
       {/* Summary of invalid segments */}
       {invalidCount > 0 && (
         <div className="sticky top-0 z-10 bg-red-50 border-b-2 border-red-300 px-4 py-3 mb-2">
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-sm font-medium text-red-800">
-              {t('editor.segmentLimitExceeded', { count: invalidCount, limit: SEGMENT_CHAR_LIMIT })}
-            </p>
-            {invalidIndices.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePreviousError}
-                  disabled={invalidIndices.length === 0}
-                  className="h-7 px-3 text-xs"
-                >
-                  {t('common.previous')}
-                </Button>
-                <span className="text-xs text-red-700 font-medium">
-                  {currentErrorIndex + 1} / {invalidIndices.length}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleNextError}
-                  disabled={invalidIndices.length === 0}
-                  className="h-7 px-3 text-xs"
-                >
-                  {t('common.next')}
-                </Button>
-              </div>
-            )}
-          </div>
+          <p className="text-sm font-medium text-red-800">
+            {t('editor.segmentLimitExceeded', { count: invalidCount, limit: SEGMENT_CHAR_LIMIT })}
+          </p>
         </div>
       )}
       
@@ -183,11 +98,7 @@ const FormattedTextDisplay: React.FC<FormattedTextDisplayProps> = ({
         return (
           <div 
             key={`line-${index}`}
-            ref={(el) => {
-              if (isInvalid) {
-                errorRefs.current[index] = el;
-              }
-            }}
+            data-segment-index={index}
             onClick={handleClick}
             onKeyDown={handleKeyDown}
             tabIndex={isInvalid ? 0 : undefined}
