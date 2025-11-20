@@ -53,7 +53,7 @@ class CreateText(BaseModel):
         description="Title in multiple languages, keyed by language code"
     )
     language: str
-    contributions: Optional[List[Contribution]] = None
+    contributions:List[Contribution] = []
     target: Optional[str] = None
     date: Optional[str] = None
     bdrc: Optional[str] = None
@@ -144,25 +144,18 @@ class CreateInstanceResponse(BaseModel):
 async def search_texts_by_title(
     title: str
 ):
-    if not API_ENDPOINT:
-        raise HTTPException(
-            status_code=500, 
-            detail="OPENPECHA_ENDPOINT environment variable is not set"
-        )
-    
-    try:
-        params = {
+    params = {
             "title": title
-        }
-        params = {k: v for k, v in params.items() if v is not None}
+            }
+    params = {k: v for k, v in params.items() if v is not None}
         
-        url = f"{API_ENDPOINT}/texts/title-search"
-        response = requests.get(url, params=params)
-        
+    url = f"{API_ENDPOINT}/texts"
+    response = requests.get(url, params=params)
+    try:
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
         return response.json()
-    except requests.exceptions.Timeout:
+    except requests.exceptions.Timeout as e:
         raise HTTPException(
             status_code=504,
             detail="Request to OpenPecha API timed out after 30 seconds"
@@ -335,6 +328,8 @@ async def create_instance(id: str, instance: CreateInstance):
     
     try:
         payload = instance.model_dump(exclude_none=True)
+     
+        
         user = payload.pop("user", None)
         response = requests.post(f"{API_ENDPOINT}/texts/{id}/instances", json=payload,timeout=120)
         
