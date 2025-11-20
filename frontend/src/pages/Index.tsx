@@ -35,26 +35,26 @@ const Index = () => {
         <div className=" rounded-lg  pt-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 font-['jomo']">
             <Link to="/texts">
-              <div className=" flex gap-3 items-start border bg-white border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
-                  <BookOpen className="w-12 h-12 text-blue-600" />
+              <div className=" flex gap-3 items-center justify-center border bg-white border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow min-h-[140px]">
+                  <BookOpen className="w-16 h-16 text-blue-600 flex-shrink-0" />
                 <div className="flex flex-col gap-2 ml-2">
                   <h3 className="text-3xl flex items-center gap-3 font-semibold font-['noto']">
                     {t("text.texts")}
                   </h3>
-                  <p className="text-gray-500 mb-4  font-semibold">
+                  <p className="text-gray-500 font-semibold">
                     {t("home.description")}
                   </p>
                 </div>
               </div>
             </Link>
             <Link to="/persons">
-              <div className=" flex gap-3 items-start border bg-white border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
-                <PersonStanding className="w-12 h-12 text-purple-600" />
+              <div className=" flex gap-3 items-center justify-center border bg-white border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow min-h-[140px]">
+                <PersonStanding className="w-16 h-16 text-purple-600 flex-shrink-0" />
                 <div className="flex flex-col gap-2">
                   <h3 className="text-3xl flex items-center gap-3 font-semibold font-['noto']">
                     {t("person.persons")}
                   </h3> 
-                  <p className="text-gray-500 mb-4  font-semibold">
+                  <p className="text-gray-500 font-semibold">
                     {t("home.description")}
                   </p>
                 </div>

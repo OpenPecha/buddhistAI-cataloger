@@ -447,7 +447,7 @@ const InstanceCreationForm = forwardRef<
               value={source}
               onChange={(e) => setSource(e.target.value)}
               required
-              rows={3}
+              rows={1}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
               placeholder={t("instance.sourcePlaceholder")}
             />

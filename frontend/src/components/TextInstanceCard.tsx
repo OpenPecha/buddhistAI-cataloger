@@ -52,16 +52,16 @@ const TextInstanceCard: React.FC<TextInstanceCardProps> = ({ instance }) => {
   }
 
   return (
-    <Link to={`/texts/${text_id}/instances/${instance.id}`} className="bg-white rounded-lg shadow-md border border-gray-200 p-6 hover:shadow-lg transition-shadow duration-200">
+    <Link to={`/texts/${text_id}/instances/${instance.id}`} className="bg-white rounded-lg shadow-md border border-gray-200 p-4 sm:p-6 hover:shadow-lg transition-shadow duration-200">
       {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900 font-['noto']">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-0 mb-0 sm:mb-4">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 font-['noto'] break-words">
             {title}
           </h3>
         </div>
-        <div className="flex gap-2">
-          <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getTypeColor(instance.type || '')}`}>
+        <div className="flex gap-2 flex-shrink-0">
+          <span className={`px-2.5 sm:px-3 py-1 rounded-full text-xs font-medium border ${getTypeColor(instance.type || '')}`}>
             {instance.type}
           </span>
         </div>

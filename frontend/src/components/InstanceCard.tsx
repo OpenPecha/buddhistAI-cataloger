@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import type { OpenPechaTextInstance, SegmentationAnnotation } from '@/types/text';
-import { useAnnnotation, useText, useTexts } from '@/hooks/useTexts';
+import { useAnnnotation, useText } from '@/hooks/useTexts';
 import { Button } from './ui/button';
 import FormattedTextDisplay from './FormattedTextDisplay';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
-import { BookOpenText, PencilIcon } from 'lucide-react';
+import { BookOpenText } from 'lucide-react';
 
 interface InstanceCardProps {
   instance: OpenPechaTextInstance;
@@ -116,22 +116,22 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
   return (
     <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <BookOpenText className="w-6 h-6" />
-            <div>
-              <h3 className="text-xl font-bold text-gray-900 font-['monlam']">{title_text}</h3>
+      <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <BookOpenText className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
+            <div className="min-w-0">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 font-['monlam'] break-words">{title_text}</h3>
             </div>
           </div>
           
           {/* Translation, Commentary, and Formatter Buttons */}
-          <div className="flex items-center gap-3 font-['monlam']">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 font-['monlam']">
             <Button
               onClick={() => {
                 navigate(`/texts/${text_id}/instances/${instance_id}/translation`);
               }}
-              className="group relative px-5 py-2.5 bg-gradient-to-r from-sky-400 to-cyan-500 hover:from-sky-500 hover:to-cyan-600 text-white font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
+              className="group relative px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-sky-400 to-cyan-500 hover:from-sky-500 hover:to-cyan-600 text-white text-sm sm:text-base font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
@@ -143,7 +143,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
               onClick={() => {
                 navigate(`/texts/${text_id}/instances/${instance_id}/commentary`);
               }}
-              className="group relative px-5 py-2.5 bg-gradient-to-r from-emerald-400 to-green-500 hover:from-emerald-500 hover:to-green-600 text-white font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
+              className="group relative px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-emerald-400 to-green-500 hover:from-emerald-500 hover:to-green-600 text-white text-sm sm:text-base font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
@@ -157,7 +157,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
                 const formatterUrl = `${baseUrl}/formatter/${instance_id}`;
                 window.open(formatterUrl, '_blank', 'noopener,noreferrer');
               }}
-              className="group relative px-5 py-2.5 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
+              className="group relative px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white text-sm sm:text-base font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h12a1 1 0 010 2H6v12a1 1 0 11-2 0V6z" />
@@ -181,7 +181,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
 
       {/* Content Text with Line Breaks Applied */}
       {instance.content && (
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {/* Loading State for Annotation */}
           {segmentationAnnotationId && isLoadingAnnotation && (
             <div className="flex flex-col items-center justify-center py-16 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
@@ -214,7 +214,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
 
       {/* Dynamic Annotations - Only for old format with embedded annotation data */}
       {instance.annotations && !Array.isArray(instance.annotations) && Object.keys(instance.annotations).length > 0 && (
-        <div className="px-6 pb-6">
+        <div className="px-4 sm:px-6 pb-4 sm:pb-6">
           <div className="space-y-3">
           {Object.entries(instance.annotations).map(([annotationType, annotations]) => {
             if (!Array.isArray(annotations) || annotations.length === 0) return null;
