@@ -168,8 +168,13 @@ async def clean_annotation(request: CleanAnnotationRequest):
         text_content = request.text.replace('\n', '')
         #  use the annotation from sample text to generate the annotation for the new text 
         # sample text is the text thats being used to get the line breaks, base text is the text thats being annotated
-        annotation_list = generate_clean_annotation(text_content, request.sample_text)
-        
+        try:
+            annotation_list = generate_clean_annotation(text_content, request.sample_text)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error generating clean annotation: {str(e)}"
+            )
         #  return the annoation list
         return annotation_list
     except requests.exceptions.Timeout:
