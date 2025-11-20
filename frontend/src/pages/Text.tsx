@@ -214,11 +214,10 @@ const TextCRUD = () => {
                       {"Local Texts"}
                     </span>
                   </div>
-                  
                   {isLoadingLocalTexts ? (
                     <div className="px-4 py-4 flex items-center gap-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                      <div className="text-sm text-gray-500">{t("create.searchingLocalTexts") || "Searching..."}</div>
+                      <div className="text-sm text-gray-500">Searching...</div>
                     </div>
                   ) : localTextResults.length > 0 ? (
                     localTextResults.map((text) => (
@@ -234,7 +233,7 @@ const TextCRUD = () => {
                           </span>
                           <div className="flex-1">
                             <div className="font-medium text-sm">
-                              {text.title}
+                              {text.title.bo || text.title.en}
                             </div>
                             
                           </div>

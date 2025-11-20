@@ -245,9 +245,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       }
 
       // Build contributions array (only if contributors exist)
-      let contributionsArray;
-      if (contributors.length > 0) {
-        contributionsArray = contributors.map((contributor) => {
+      let contributionsArray = contributors?.map((contributor) => {
           // Use bdrc field if available, otherwise fall back to id
           const personBdrcId = contributor.person!.bdrc || contributor.person!.id;
           return {
@@ -255,7 +253,6 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
             role: contributor.role,
           };
         });
-      }
 
       // Build alt_titles array - transform from grouped structure to array of dictionaries
       const altTitlesArray = altTitles
