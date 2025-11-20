@@ -151,20 +151,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
               {t('textForm.commentary')}
             </Button>
 
-            <Button
-              onClick={() => {
-                const baseUrl = import.meta.env.VITE_FORMATTER_URL || 'http://localhost:5000';
-                const formatterUrl = `${baseUrl}/formatter/${instance_id}`;
-                window.open(formatterUrl, '_blank', 'noopener,noreferrer');
-              }}
-              className="group relative px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white text-sm sm:text-base font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2 w-full sm:w-auto"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h12a1 1 0 010 2H6v12a1 1 0 11-2 0V6z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 9h8a1 1 0 110 2H9a1 1 0 110-2zm0 4h6a1 1 0 110 2H9a1 1 0 110-2z" />
-              </svg>
-              {t('textForm.formatter')}
-            </Button>
+          
 
             {/* <Button
               onClick={() => {
