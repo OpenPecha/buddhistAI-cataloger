@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, X, Upload, ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { AlertCircle, X, Upload, ArrowLeft, Plus, Trash2, AlertTriangle } from 'lucide-react';
 import TextEditorView from '@/components/text-creation/TextEditorView';
 import { createTranslation } from '@/api/texts';
 import { calculateAnnotations } from '@/utils/annotationCalculator';
@@ -51,6 +52,7 @@ const CreateTranslation = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [createdInstanceId, setCreatedInstanceId] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Bibliography annotations
   const { clearAnnotations } = useBibliography();
@@ -179,8 +181,15 @@ const CreateTranslation = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Show confirmation modal before submitting
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmSubmit = async () => {
+    setShowConfirmModal(false);
     setError(null);
     setIsSubmitting(true);
 
@@ -252,14 +261,88 @@ const CreateTranslation = () => {
     }
   };
 
+  // Handle Escape key to close modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && showConfirmModal) {
+        setShowConfirmModal(false);
+      }
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [showConfirmModal]);
+
   // Handle modal close - navigate back to instance page
   const handleModalClose = () => {
     setSuccess(false);
     navigate(`/texts/${text_id}/instances/${instance_id}`);
   };
 
+  const modalContent = showConfirmModal ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={() => setShowConfirmModal(false)}
+      />
+      
+      {/* Modal */}
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in-95 duration-200 border-2 border-red-500">
+        {/* Header with warning styling */}
+        <div className="px-6 py-4 border-b border-red-200 bg-gradient-to-r from-red-50 to-orange-50">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-6 h-6 text-red-600 shrink-0" />
+            <h3 className="text-lg font-bold text-red-900">
+              {t("common.confirm")}
+            </h3>
+          </div>
+        </div>
+        
+        {/* Content */}
+        <div className="px-6 py-5">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+            <p className="text-gray-800 font-medium leading-relaxed">
+              {t("translation.confirmCreate")}
+            </p>
+          </div>
+        </div>
+        
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-red-200 bg-red-50/50 flex justify-end gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowConfirmModal(false)}
+            className="border-gray-300 hover:bg-gray-50"
+          >
+            {t("common.cancel")}
+          </Button>
+          <Button
+            type="button"
+            onClick={handleConfirmSubmit}
+            disabled={isSubmitting}
+            className="bg-red-600 hover:bg-red-700 text-white border-red-700"
+          >
+            {isSubmitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                {t("instance.creating")}
+              </>
+            ) : (
+              t("common.continue")
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <>
+      {/* Confirmation Modal - Rendered via Portal to document.body */}
+      {modalContent && createPortal(modalContent, document.body)}
+
       {/* Success Modal */}
       {success && (
         <TextCreationSuccessModal

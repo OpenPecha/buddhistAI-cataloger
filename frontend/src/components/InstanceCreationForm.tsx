@@ -1,6 +1,7 @@
 import { useState, forwardRef, useImperativeHandle, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
-import { Plus, X, Loader2 } from "lucide-react";
+import { Plus, X, Loader2, AlertTriangle } from "lucide-react";
 import { calculateAnnotations } from "@/utils/annotationCalculator";
 import { useBdrcSearch } from "@/hooks/useBdrcSearch";
 import { useBibliographyAPI } from "@/hooks/useBibliographyAPI";
@@ -90,6 +91,7 @@ const InstanceCreationForm = forwardRef<
   const [altIncipitTitles, setAltIncipitTitles] = useState<TitleEntry[][]>([]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // BDRC search hook
   const { results: bdrcResults, isLoading: bdrcLoading } = useBdrcSearch(bdrcSearch);
@@ -106,6 +108,17 @@ const InstanceCreationForm = forwardRef<
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
+
+  // Handle Escape key to close modal
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && showConfirmModal) {
+        setShowConfirmModal(false);
+      }
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [showConfirmModal]);
 
   // Expose methods to parent component
   useImperativeHandle(ref, () => ({
@@ -355,8 +368,14 @@ const InstanceCreationForm = forwardRef<
   };
 
   const handleSubmit = (e: React.FormEvent) => {
-    
     e.preventDefault();
+    
+    // Show confirmation modal before submitting
+    setShowConfirmModal(true);
+  };
+
+  const handleConfirmSubmit = () => {
+    setShowConfirmModal(false);
     setErrors({});
 
     // Validate required fields
@@ -407,8 +426,72 @@ const InstanceCreationForm = forwardRef<
     (t) => t.language && t.value.trim()
   );
 
+  const modalContent = showConfirmModal ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={() => setShowConfirmModal(false)}
+      />
+      
+      {/* Modal */}
+      <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in-95 duration-200 border-2 border-red-500">
+        {/* Header with warning styling */}
+        <div className="px-6 py-4 border-b border-red-200 bg-gradient-to-r from-red-50 to-orange-50">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0" />
+            <h3 className="text-lg font-bold text-red-900">
+              {t("common.confirm")}
+            </h3>
+          </div>
+        </div>
+        
+        {/* Content */}
+        <div className="px-6 py-5">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <p className="text-gray-800 font-medium leading-relaxed">
+              {t("instance.confirmCreate")}
+            </p>
+          </div>
+        </div>
+        
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-red-200 bg-red-50/50 flex justify-end gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowConfirmModal(false)}
+            className="border-gray-300 hover:bg-gray-50"
+          >
+            {t("common.cancel")}
+          </Button>
+          <Button
+            type="button"
+            onClick={handleConfirmSubmit}
+            disabled={isSubmitting}
+            className="bg-red-600 hover:bg-red-700 text-white border-red-700"
+          >
+            {isSubmitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                {t("instance.creating")}
+              </>
+            ) : (
+              t("common.continue")
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <>
+      {/* Confirmation Modal - Rendered via Portal to document.body */}
+      {modalContent && createPortal(modalContent, document.body)}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
       {/* Metadata Section */}
       <div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -844,6 +927,7 @@ const InstanceCreationForm = forwardRef<
         </Button>
       </div>
     </form>
+    </>
   );
 });
 

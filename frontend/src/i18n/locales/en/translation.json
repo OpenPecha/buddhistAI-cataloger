@@ -12,6 +12,7 @@
     "search": "Search",
     "close": "Close",
     "confirm": "Confirm",
+    "continue": "Continue",
     "back": "Back",
     "previous": "Previous",
     "next": "Next",
@@ -162,11 +163,11 @@
     "textFound": "✓ Text found: {{name}}",
     "creatingNewForBdrc": "Creating new text for BDRC: {{id}}",
     "failedToCheckBdrc": "Failed to check BDRC text. Please try again.",
-    "textAndInstanceCreated": "Text and instance created successfully!",
-    "instanceCreated": "Instance created successfully!",
-    "instanceCreationFailed": "Failed to create instance. Please try again.",
+    "textAndInstanceCreated": "Text created successfully!",
+    "instanceCreated": "Text created successfully!",
+    "instanceCreationFailed": "Failed to create Text. Please try again.",
     "success": "Success",
-    "viewInstance": "View Instance",
+    "viewInstance": "View Text",
     "textFormDataNotAvailable": "Text form data not available",
     "noTextSelected": "No text selected or created",
     "fileTooSmall": "File is too small (minimum 1KB required)",
@@ -180,7 +181,7 @@
     "checkingBdrc": "Checking BDRC...",
     "lookingForText": "Looking for existing text",
     "checkingLocal": "Checking if text exists in local catalog...",
-    "creatingTextAndInstance": "Creating Text and Instance...",
+    "creatingTextAndInstance": "Creating Text...",
     "pleaseWait": "Please wait while we process your request",
     "processingRequest": "Processing your request..."
   },
@@ -222,7 +223,7 @@
     "translation": "Translation",
     "commentary": "Commentary",
     "formatter": "Formatter",
-    "createCommentaryDescription": "Create a commentary for this instance",
+    "createCommentaryDescription": "Create a commentary for this Text",
     "createCommentaryFor": "Create commentary for",
     "createTranslationFor": "Create translation for",
     "targetTextId": "Target Text ID",
@@ -305,7 +306,7 @@
     "colophon": "Colophon",
     "colophonText": "Colophon text",
     "source": "Source",
-    "sourcePlaceholder": "Enter the source of this instance",
+    "sourcePlaceholder": "Enter the source of this Text",
     "sourceRequired": "Source is required",
     "incipitTitle": "Incipit Title",
     "addIncipitTitle": "Add Incipit Title",
@@ -320,6 +321,7 @@
     "bdrcIdRequired": "BDRC ID is required when type is Diplomatic",
     "altIncipitRequiresIncipit": "Alternative incipit titles can only be set when incipit title is also provided",
     "creating": "Creating...",
+    "confirmCreate": "Are you sure you want to create this text ? you will not be able to update it later. ",
     "searchBdrcEntries": "Search BDRC entries...",
     "noBdrcEntries": "No BDRC entries found"
   },
@@ -390,7 +392,8 @@
     "sourceRequired": "Source is required",
     "authorRequired": "Author is required",
     "copyright": "Copyright",
-    "license": "License"
+    "license": "License",
+    "confirmCreate": "Are you sure you want to create this text ? you will not be able to update it later."
   },
   "translation": {
     "source": "Source",
@@ -398,7 +401,8 @@
     "sourceRequired": "Source is required",
     "translatorRequired": "Translator is required",
     "copyright": "Copyright",
-    "license": "License"
+    "license": "License",
+    "confirmCreate": "Are you sure you want to create this text ? you will not be able to update it later."
   },
   "personsPage": {
     "title": "Person Management",
