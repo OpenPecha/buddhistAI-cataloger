@@ -370,9 +370,9 @@ const CreateTranslation = () => {
       )}
 
       {/* Main Split Layout */}
-      <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gray-50 flex font-['jomo']">
+      <div className="fixed inset-0 top-16 left-0 right-0 bottom-0  flex font-['jomo']">
         {/* LEFT PANEL: Translation Form */}
-        <div className="w-1/2 h-full overflow-y-auto bg-white border-r border-gray-200">
+        <div className="w-1/2 h-full overflow-y-auto bg-gradient-to-br from-blue-50 to-indigo-100 border-r border-gray-200">
           <div className="p-8">
             {/* Header with Back Button */}
             <div className="mb-6">

@@ -410,7 +410,7 @@ const CreateCommentary = () => {
       {/* Main Split Layout */}
       <div className="fixed inset-0 font-['jomo'] top-16 left-0 right-0 bottom-0 bg-gray-50 flex">
         {/* LEFT PANEL: Commentary Form */}
-        <div className="w-1/2 h-full overflow-y-auto bg-white border-r border-gray-200">
+        <div className="w-1/2 h-full overflow-y-auto bg-gradient-to-br from-blue-50 to-indigo-100 border-r border-gray-200">
           <div className="p-8">
             {/* Header with Back Button */}
             <div className="mb-6">
