@@ -349,6 +349,97 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       buildFormData,
       onDataChange,
     ]);
+
+    // Expose methods to parent component via ref
+    useImperativeHandle(ref, () => ({
+      addTitle: (text: string, language?: string) => {
+        const langToUse = language || "";
+        setTitles((prev) => {
+          // Check if there's already a title entry with this language
+          const existingIndex = prev.findIndex(
+            (title) => title.language === langToUse
+          );
+          
+          if (existingIndex !== -1) {
+            // Update existing title
+            const updated = [...prev];
+            updated[existingIndex].value = text;
+            return updated;
+          } else {
+            // Add new title
+            return [...prev, { language: langToUse, value: text }];
+          }
+        });
+      },
+      addAltTitle: (text: string, language?: string) => {
+        const langToUse = language || "";
+        setAltTitles((prev) => {
+          // Add to the last group, or create a new group if none exists
+          if (prev.length === 0) {
+            return [[{ language: langToUse, value: text }]];
+          }
+          const updated = [...prev];
+          const lastGroup = updated[updated.length - 1];
+          // Check if language already exists in last group
+          const existingIndex = lastGroup.findIndex(
+            (t) => t.language === langToUse
+          );
+          if (existingIndex !== -1) {
+            lastGroup[existingIndex].value = text;
+          } else {
+            lastGroup.push({ language: langToUse, value: text });
+          }
+          updated[updated.length - 1] = [...lastGroup];
+          return updated;
+        });
+      },
+      setPersonSearch: (text: string) => {
+        setPersonSearch(text);
+      },
+      openContributorForm: () => {
+        setShowAddContributor(true);
+      },
+      hasTitle: () => {
+        return titles.some((t) => t.value.trim() !== "");
+      },
+      setBdrcId: (bdrcId: string, label: string) => {
+        setBdrc(bdrcId);
+        setSelectedBdrc({ id: bdrcId, label });
+        setBdrcSearch("");
+      },
+      setFormLanguage: (lang: string) => {
+        setLanguage(lang);
+      },
+      getLanguage: () => {
+        return language;
+      },
+      addContributorFromBdrc: (personBdrcId: string, personName: string, role: "translator" | "author") => {
+        // Create a temporary Person object from BDRC data
+        const bdrcPerson: Person = {
+          id: personBdrcId,
+          name: { bo: personName },
+          alt_names: [],
+          bdrc: personBdrcId,
+          wiki: null
+        };
+        
+        // Add contributor directly
+        setContributors((prev) => [
+          ...prev,
+          {
+            person: bdrcPerson,
+            role: role as "translator" | "author",
+          },
+        ]);
+        
+        // Reset person search form
+        setShowAddContributor(false);
+        setSelectedPerson(null);
+        setPersonSearch("");
+        setErrors({});
+      },
+    }), [language, titles, altTitles, contributors]);
+
     return (
       <div className="space-y-6 font-['jomo'] text-lg">
         {/* Type and Language */}
