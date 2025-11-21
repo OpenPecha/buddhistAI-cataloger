@@ -525,15 +525,17 @@ const InstanceCreationForm = forwardRef<
             >
               {t("instance.source")} <span className="text-red-500">*</span>
             </label>
-            <textarea
+            <select
               id="source"
               value={source}
               onChange={(e) => setSource(e.target.value)}
               required
-              rows={1}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
-              placeholder={t("instance.sourcePlaceholder")}
-            />
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">{t("instance.sourcePlaceholder")}</option>
+              <option value="bdrc.io">bdrc.io</option>
+              <option value="unknown">unknown</option>
+            </select>
             {errors.source && (
               <p className="mt-1 text-sm text-red-600">{errors.source}</p>
             )}

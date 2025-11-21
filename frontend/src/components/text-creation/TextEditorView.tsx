@@ -419,13 +419,19 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
     const view = cmRef.current?.view;
     if (!view) return;
     const text = view.state.doc.sliceString(0, view.state.doc.length);
-    tokenizeMutation.mutate({ text: text, type: 'sentence' });
-    if (tokenizeMutation.isSuccess) {
-      const tokenizedText = tokenizeMutation.data;
-      onChange(tokenizedText.join('\n'));
-      console.log(tokenizedText);
-    }
-  }, []);
+    tokenizeMutation.mutate(
+      { text: text, type: 'sentence' },
+      {
+        onSuccess: (tokenizedText) => {
+          onChange?.(tokenizedText.join('\n'));
+          console.log(tokenizedText);
+        },
+        onError: (error) => {
+          console.error('Tokenization error:', error);
+        }
+      }
+    );
+  }, [tokenizeMutation, onChange]);
 
 
 
@@ -609,34 +615,32 @@ export default memo(TextEditorView);
 
 function TypingLoading() {
   return (
-    <div className="flex items-center justify-center rounded-lg p-8 flex-col w-full gap-4 bg-gradient-to-br from-blue-50 to-indigo-100 border border-blue-200 shadow-sm">
-      <div className="flex items-center gap-3">
-        <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+    <div className="flex items-center justify-center p-8 flex-col w-full gap-4 bg-black  shadow-sm">
+        <img src="https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExdzBiM3Z2YnB4bmYwZXB4ZHB0Mmo0ZnF2Ym1uZmd4OGlkZWU4dndtZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/wrmVCNbpOyqgJ9zQTn/giphy.gif" alt="cleaning" className="w-[20vh]" />
+      <div className="flex items-center gap-3 text-white">
+        
         <TypeAnimation
           sequence={[
             // Same substring at the start will only be typed out once, initially
-            'Getting ready to clean up the text',
-            1000, // wait 1s before replacing "Mice" with "Hamsters"
             'AI is scanning the text',
-            1000,
+            1000, // wait 1s before replacing "Mice" with "Hamsters"
+            'AI is analyzing the text',
+            3000,
             'AI is cleaning up the text',
-            1000,
-            'AI is cleaning up the text',
-            1000
+            2000,
+            'AI is fixing the text',
+            8000
           ]}
           wrapper="span"
-          speed={50}
+          speed={150}
           style={{ 
             fontSize: '1.5rem', 
-            display: 'inline-block',
             fontWeight: '600',
-            color: '#1e40af'
+            color: 'white',
+            fontFamily:"poppins"
           }}
           repeat={Infinity}
         />
-      </div>
-      <div className="text-sm text-blue-600/70 text-center max-w-md">
-        Our AI is processing your text to improve formatting and structure
       </div>
     </div>
   );
