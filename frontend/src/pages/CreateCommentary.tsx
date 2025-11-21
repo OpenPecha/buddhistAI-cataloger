@@ -12,7 +12,7 @@ import { MultilevelCategorySelector } from '@/components/MultilevelCategorySelec
 import type { Person } from '@/types/person';
 import { useInstance, useText } from '@/hooks/useTexts';
 import type { OpenPechaTextInstance } from '@/types/text';
-import { useBibliography } from '@/contexts/BibliographyContext';
+import { useBibliography } from '@/context/BibliographyContext';
 import { useBibliographyAPI } from '@/hooks/useBibliographyAPI';
 import TextCreationSuccessModal from '@/components/text-creation/TextCreationSuccessModal';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -260,7 +260,6 @@ const CreateCommentary = () => {
         license: copyright === "Unknown" ? "unknown" : license,
         category_id: categoryId && categoryId.trim() !== '' ? categoryId : null
       };
-
       // Add alt_titles if any exist
       if (altTitles.length > 0) {
         commentaryData.alt_titles = altTitles.filter(t => t.trim() !== '');

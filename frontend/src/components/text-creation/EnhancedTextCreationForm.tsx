@@ -15,7 +15,7 @@ import type { OpenPechaText } from "@/types/text";
 import { useBdrcSearch, type BdrcSearchResult } from "@/hooks/useBdrcSearch";
 import { fetchTextByBdrcId, fetchBdrcWorkInstance } from "@/api/texts";
 import { useTranslation } from "react-i18next";
-import { useBibliography } from "@/contexts/BibliographyContext";
+import { useBibliography } from "@/context/BibliographyContext";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { validateContentEndsWithTsheg, validateSegmentLimits } from "@/utils/contentValidation";

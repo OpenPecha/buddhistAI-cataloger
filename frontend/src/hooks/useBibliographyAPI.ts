@@ -1,4 +1,4 @@
-import { useBibliography,type BibliographyAnnotation } from '@/contexts/BibliographyContext';
+import { useBibliography,type BibliographyAnnotation } from '@/context/BibliographyContext';
 
 interface APIBibliographyAnnotation {
   span: {

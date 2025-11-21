@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { useBdrcSearch } from '@/hooks/useBdrcSearch';
 import type { Person } from '@/types/person';
 import { useInstance, useText } from '@/hooks/useTexts';
-import { useBibliography } from '@/contexts/BibliographyContext';
+import { useBibliography } from '@/context/BibliographyContext';
 import { useBibliographyAPI } from '@/hooks/useBibliographyAPI';
 import TextCreationSuccessModal from '@/components/text-creation/TextCreationSuccessModal';
 import { useAuth0 } from '@auth0/auth0-react';
