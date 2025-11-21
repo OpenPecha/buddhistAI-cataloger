@@ -1,7 +1,8 @@
 import { Decoration,type DecorationSet, EditorView, ViewPlugin, ViewUpdate } from "@codemirror/view";
 import { StateField, StateEffect } from "@codemirror/state";
-import type { BibliographyAnnotation } from "@/contexts/BibliographyContext";
+import type { BibliographyAnnotation } from "@/context/BibliographyContext";
 import i18n from "@/i18n/config";
+import { useTokenizer } from "@/hooks/useTokenizer";
 
 // Define effects for managing annotations
 export const addAnnotationEffect = StateEffect.define<Omit<BibliographyAnnotation, 'id' | 'timestamp'>>();
@@ -226,3 +227,36 @@ export const annotationTheme = EditorView.baseTheme({
   },
 });
 
+export const pasteTransformExtension: Extension = EditorView.domEventHandlers({
+  paste(event, view) {
+    event.preventDefault();
+    // Check if current URL contains '/commentary' and handle accordingly
+    if (window.location.pathname.includes('/commentary')) {
+      // Special handling for commentary pages
+      
+
+      // Add any commentary-specific paste logic here
+    }
+
+    // Get pasted text
+    const pasted = event.clipboardData?.getData("text/plain") ?? "";
+
+    // 🔥 TRANSFORM IT HERE
+    const transformed = cleanText(pasted);
+
+    // Insert transformed text into CM
+    view.dispatch({
+      changes: {
+        from: view.state.selection.main.from,
+        to: view.state.selection.main.to,
+        insert: transformed,
+      },
+    });
+  }
+});
+function cleanText(text: string) {
+  return text
+    .replace(/\r/g, "")          // Remove carriage returns
+    .replace(/\t/g, "  ")        // Convert tabs
+    .trim();                     // Trim
+}

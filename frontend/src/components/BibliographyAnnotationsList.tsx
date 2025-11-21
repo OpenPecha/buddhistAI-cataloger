@@ -1,10 +1,10 @@
-import { useBibliography } from '@/contexts/BibliographyContext';
+import { useBibliography } from '@/context/BibliographyContext';
 import { X, FileText, BookOpen, User, Scroll } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EditorView } from '@codemirror/view';
 import { annotationsField, removeAnnotationEffect } from '@/editor/textAnnotations';
 import { useState, useEffect } from 'react';
-import type { BibliographyAnnotation } from '@/contexts/BibliographyContext';
+import type { BibliographyAnnotation } from '@/context/BibliographyContext';
 
 const TYPE_ICONS = {
   title: <FileText className="h-4 w-4" />,

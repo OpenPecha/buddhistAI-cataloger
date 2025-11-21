@@ -12,7 +12,7 @@ import { MultilevelCategorySelector } from '@/components/MultilevelCategorySelec
 import type { Person } from '@/types/person';
 import { useInstance, useText } from '@/hooks/useTexts';
 import type { OpenPechaTextInstance } from '@/types/text';
-import { useBibliography } from '@/contexts/BibliographyContext';
+import { useBibliography } from '@/context/BibliographyContext';
 import { useBibliographyAPI } from '@/hooks/useBibliographyAPI';
 import TextCreationSuccessModal from '@/components/text-creation/TextCreationSuccessModal';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -260,7 +260,6 @@ const CreateCommentary = () => {
         license: copyright === "Unknown" ? "unknown" : license,
         category_id: categoryId && categoryId.trim() !== '' ? categoryId : null
       };
-
       // Add alt_titles if any exist
       if (altTitles.length > 0) {
         commentaryData.alt_titles = altTitles.filter(t => t.trim() !== '');
@@ -651,19 +650,16 @@ const CreateCommentary = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   {t('commentary.source')} <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
+                <select
                   value={source}
                   onChange={(e) => setSource(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                    }
-                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder={t('commentary.sourcePlaceholder')}
                   required
-                />
+                >
+                  <option value="">{t('commentary.sourcePlaceholder')}</option>
+                  <option value="bdrc.io">bdrc.io</option>
+                  <option value="unknown">unknown</option>
+                </select>
               </div>
 
               {/* Copyright Field */}

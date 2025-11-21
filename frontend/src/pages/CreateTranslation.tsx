@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { useBdrcSearch } from '@/hooks/useBdrcSearch';
 import type { Person } from '@/types/person';
 import { useInstance, useText } from '@/hooks/useTexts';
-import { useBibliography } from '@/contexts/BibliographyContext';
+import { useBibliography } from '@/context/BibliographyContext';
 import { useBibliographyAPI } from '@/hooks/useBibliographyAPI';
 import TextCreationSuccessModal from '@/components/text-creation/TextCreationSuccessModal';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -487,19 +487,16 @@ const CreateTranslation = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   {t('translation.source')} <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="text"
+                <select
                   value={source}
                   onChange={(e) => setSource(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                    }
-                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder={t('translation.sourcePlaceholder')}
                   required
-                />
+                >
+                  <option value="">{t('translation.sourcePlaceholder')}</option>
+                  <option value="bdrc.io">bdrc.io</option>
+                  <option value="unknown">unknown</option>
+                </select>
               </div>
 
               {/* Author/Translator Field */}

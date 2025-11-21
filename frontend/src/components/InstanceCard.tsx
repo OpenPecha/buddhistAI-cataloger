@@ -5,7 +5,7 @@ import { Button } from './ui/button';
 import FormattedTextDisplay from './FormattedTextDisplay';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router-dom';
-import { BookOpenText } from 'lucide-react';
+import { BookOpenText, PencilIcon } from 'lucide-react';
 
 interface InstanceCardProps {
   instance: OpenPechaTextInstance;
@@ -153,7 +153,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
 
           
 
-            {/* <Button
+            <Button
               onClick={() => {
                 navigate(`/texts/${text_id}/instances/${instance_id}/update-annotation`);
               }}
@@ -161,7 +161,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
             >
               <PencilIcon className="w-4 h-4" />
               Update Annotation
-            </Button> */}
+            </Button>
           </div>
         </div>
       </div>

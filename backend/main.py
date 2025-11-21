@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 import uvicorn
-from routers import person, text, translation, annotation, bdrc, category, enum
+from routers import person, text, translation, annotation, bdrc, category, enum, tokenize
 from dotenv import load_dotenv
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -52,6 +52,7 @@ app.include_router(translation.router, prefix="/instances", tags=["translation"]
 app.include_router(annotation.router, prefix="/v2/annotations", tags=["annotation"])
 app.include_router(category.router, prefix="/v2/categories", tags=["category"])
 app.include_router(enum.router, prefix="/v2/enum", tags=["enum"])
+app.include_router(tokenize.router, prefix="/tokenize", tags=["tokenize"])
 
 @app.get("/")
 def read_root():

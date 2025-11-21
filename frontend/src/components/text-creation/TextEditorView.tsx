@@ -3,15 +3,16 @@ import CodeMirror, { type ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { markdown } from '@codemirror/lang-markdown';
 import { EditorView, Decoration, type DecorationSet } from '@codemirror/view';
 import { StateEffect, StateField } from '@codemirror/state';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import SelectionMenu from './SelectionMenu';
 import FormattedTextDisplay from '../FormattedTextDisplay';
 import { BibliographyAnnotationsList } from '../BibliographyAnnotationsList';
-import { annotationsField, annotationPlugin, annotationTheme, addAnnotationEffect } from '@/editor/textAnnotations';
+import { annotationsField, annotationPlugin, annotationTheme, addAnnotationEffect, pasteTransformExtension } from '@/editor/textAnnotations';
 import { useTranslation } from 'react-i18next';
-import { useBibliography } from '@/contexts/BibliographyContext';
-
+import { useBibliography } from '@/context/BibliographyContext';
+import { useTokenizer } from '@/hooks/useTokenizer';
+import { TypeAnimation } from 'react-type-animation';
 interface TextEditorViewProps {
   content: string;
   filename?: string;
@@ -80,7 +81,8 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
   const [editorView, setEditorView] = useState<EditorView | null>(null);
   const { clearAnnotations, addAnnotation } = useBibliography();
   const previewContainerRef = useRef<HTMLDivElement>(null);
-
+  const tokenizeMutation = useTokenizer()
+  
   // Track editorView when CodeMirror initializes
   useEffect(() => {
     const checkView = () => {
@@ -412,6 +414,27 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
       }, 150);
     }
   }, [invalidIndices, scrollToErrorSegmentInContent]);
+
+  const handleTokenize = useCallback(() => {
+    const view = cmRef.current?.view;
+    if (!view) return;
+    const text = view.state.doc.sliceString(0, view.state.doc.length);
+    tokenizeMutation.mutate(
+      { text: text, type: 'sentence' },
+      {
+        onSuccess: (tokenizedText) => {
+          onChange?.(tokenizedText.join('\n'));
+          console.log(tokenizedText);
+        },
+        onError: (error) => {
+          console.error('Tokenization error:', error);
+        }
+      }
+    );
+  }, [tokenizeMutation, onChange]);
+
+
+
   return (
     <div className="h-full flex flex-col">
       {/* Selection Menu */}
@@ -501,6 +524,12 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
               >
                 {t('common.next')}
               </Button>
+              <Button variant="default" size="sm" onClick={handleTokenize} 
+              disabled={tokenizeMutation.isPending}
+              className="h-7 px-3 text-xs">
+                {console.log(tokenizeMutation.isPending)}
+                {tokenizeMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'fix it'}
+              </Button>
             </div>
           )}
           
@@ -517,6 +546,9 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
       {/* Content Area - Conditional Rendering */}
       <div className="flex-1 overflow-hidden" ref={editorRef} onMouseUp={handleMouseUp}>
         {/* Keep CodeMirror mounted but hidden when not on content tab to preserve state */}
+        {tokenizeMutation.isPending && <div className="absolute inset-0 bg-black/50 flex items-center justify-center z-50">
+            <TypingLoading/>
+        </div>}
         <div style={{ display: activeTab === 'content' ? 'block' : 'none', height: '100%' }}>
           <CodeMirror
             ref={cmRef}
@@ -536,8 +568,9 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
               annotationTheme,
               highlightLineField,
               highlightTheme,
+              pasteTransformExtension
             ], [])}
-            editable={editable}
+            editable={editable && !tokenizeMutation.isPending}
             onChange={onChange}
             basicSetup={useMemo(() => ({
               lineNumbers: true,
@@ -578,3 +611,37 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
 };
 
 export default memo(TextEditorView);
+
+
+function TypingLoading() {
+  return (
+    <div className="flex items-center justify-center p-8 flex-col w-full gap-4 bg-black  shadow-sm">
+        <img src="https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExdzBiM3Z2YnB4bmYwZXB4ZHB0Mmo0ZnF2Ym1uZmd4OGlkZWU4dndtZSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/wrmVCNbpOyqgJ9zQTn/giphy.gif" alt="cleaning" className="w-[20vh]" />
+      <div className="flex items-center gap-3 text-white">
+        
+        <TypeAnimation
+          sequence={[
+            // Same substring at the start will only be typed out once, initially
+            'AI is scanning the text',
+            1000, // wait 1s before replacing "Mice" with "Hamsters"
+            'AI is analyzing the text',
+            3000,
+            'AI is cleaning up the text',
+            2000,
+            'AI is fixing the text',
+            8000
+          ]}
+          wrapper="span"
+          speed={150}
+          style={{ 
+            fontSize: '1.5rem', 
+            fontWeight: '600',
+            color: 'white',
+            fontFamily:"poppins"
+          }}
+          repeat={Infinity}
+        />
+      </div>
+    </div>
+  );
+}

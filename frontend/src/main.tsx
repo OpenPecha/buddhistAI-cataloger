@@ -7,7 +7,7 @@ import './tailwind.css'
 import './i18n/config' // Initialize i18n
 import App from './App.tsx'
 import { UserbackProvider } from './context/UserbackProvider.tsx'
-import { BibliographyProvider } from './contexts/BibliographyContext'
+import { BibliographyProvider } from './context/BibliographyContext.tsx'
 import { Auth0Provider } from '@auth0/auth0-react';
 
 const queryClient = new QueryClient({
