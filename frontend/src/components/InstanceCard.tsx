@@ -29,7 +29,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
     error: annotationError
   } = useAnnnotation(segmentationAnnotationId);
   const {data:text} = useText(text_id || '');
-  const title_text = text?.title?.tib || text?.title?.bo || text?.title?.en || "Content";
+  const title_text = text?.title?.tib || text?.title?.bo || text?.title?.en || t('instance.content');
   const toggleAnnotation = (annotationType: string) => {
     setExpandedAnnotations(prev => 
       prev.includes(annotationType) 
@@ -73,7 +73,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
           <div key={segAnnotation.id} className="bg-gray-50 rounded border p-3">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-700">
-                Segment #{segAnnotation.index}
+                {t('instance.segmentLabel')} {segAnnotation.index}
               </span>
               <span className="text-xs text-gray-500 font-mono">
                 {segAnnotation.span?.start}-{segAnnotation.span?.end} ({segAnnotation.span ? segAnnotation.span.end - segAnnotation.span.start : 0})
@@ -99,7 +99,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
         <div key={(annotationObj.id as string) || index} className="bg-gray-50 rounded border p-3">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">
-              {annotationType} #{index + 1}
+              {annotationType} {t('instance.annotationLabel')} {index + 1}
             </span>
             <span className="text-xs text-gray-500 font-mono">
               {annotationObj.id as string}
@@ -173,8 +173,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
           {segmentationAnnotationId && isLoadingAnnotation && (
             <div className="flex flex-col items-center justify-center py-16 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
               <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mb-4"></div>
-              <span className="text-sm font-medium text-gray-700">Loading segmentation annotation...</span>
-              <span className="text-xs text-gray-500 mt-1">Applying spans to content</span>
+              <span className="text-sm font-medium text-gray-700">{t('instance.loadingContent')}</span>
             </div>
           )}
 
@@ -186,8 +185,8 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
                 <div>
-                  <p className="text-sm font-medium text-yellow-900">Could not load segmentation annotation</p>
-                  <p className="text-xs text-yellow-700 mt-1">Displaying raw content without line breaks</p>
+                  <p className="text-sm font-medium text-yellow-900">{t('instance.errorLoadingSegmentation')}</p>
+                  <p className="text-xs text-yellow-700 mt-1">{t('instance.displayingRawContent')}</p>
                 </div>
               </div>
             </div>

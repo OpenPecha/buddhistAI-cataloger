@@ -88,3 +88,29 @@ export interface CreateInstanceResponse {
   message: string;
   id: string;
 }
+
+// Related instance contribution
+export interface RelatedInstanceContribution {
+  person_id: string;
+  person_name?: string | null;
+  role: string;
+}
+
+// Related instance metadata
+export interface RelatedInstanceMetadata {
+  instance_type: string;
+  source?: string | null;
+  text_id: string;
+  title: Title;
+  alt_titles: AltTitle[];
+  language: string;
+  contributions: RelatedInstanceContribution[];
+}
+
+// Related instance response from GET /instances/{instance_id}/related
+export interface RelatedInstance {
+  instance_id: string;
+  metadata: RelatedInstanceMetadata;
+  annotation?: string | null;
+  relationship: string;
+}

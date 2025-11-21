@@ -323,7 +323,13 @@
     "creating": "Creating...",
     "confirmCreate": "Are you sure you want to create this text ? you will not be able to update it later. ",
     "searchBdrcEntries": "Search BDRC entries...",
-    "noBdrcEntries": "No BDRC entries found"
+    "noBdrcEntries": "No BDRC entries found",
+    "content": "Content",
+    "segmentLabel": "Segment #",
+    "annotationLabel": "#",
+    "loadingContent": "Loading Content...",
+    "errorLoadingSegmentation": "Could not load Content Separator.",
+    "displayingRawContent": "Displaying raw content without line breaks"
   },
   "bibliography": {
     "title": "Bibliography Annotations",
@@ -424,6 +430,19 @@
     "wikipediaLink": "Wikipedia Link",
     "alternativeNames": "Alternative Names:",
     "more": "+{{count}} more..."
+  },
+  "textInstances": {
+    "loadingTextDetails": "Loading text details...",
+    "errorLoading": "Error loading...",
+    "unknownError": "An unknown error occurred",
+    "tryAgain": "Try Again",
+    "noTextDetailsFound": "No Text Details Found",
+    "noTextDetailsDescription": "This text doesn't have any details yet.",
+    "untitled": "Untitled",
+    "relatedTexts": "Related Texts",
+    "loadingRelatedTexts": "Loading related texts...",
+    "errorLoadingRelatedTexts": "Error loading related texts",
+    "noRelatedTextsFound": "No Related Texts Found"  
   }
 }
 

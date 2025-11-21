@@ -76,13 +76,14 @@ const handleApiResponse = async (response: Response, customMessages?: { 400?: st
 };
 
 // Real API function for Texts
-export const fetchTexts = async (params?: { limit?: number; offset?: number; language?: string; author?: string }): Promise<OpenPechaText[]> => {
+export const fetchTexts = async (params?: { limit?: number; offset?: number; language?: string; author?: string; type?: string }): Promise<OpenPechaText[]> => {
   const queryParams = new URLSearchParams();
   
   if (params?.limit) queryParams.append('limit', params.limit.toString());
   if (params?.offset) queryParams.append('offset', params.offset.toString());
   if (params?.language) queryParams.append('language', params.language);
   if (params?.author) queryParams.append('author', params.author);
+  if (params?.type) queryParams.append('type', params.type);
   
   const queryString = queryParams.toString();
   const url = queryString ? `${API_URL}/text?${queryString}` : `${API_URL}/text`;
@@ -304,5 +305,19 @@ export const fetchEnums = async (type: string): Promise<any> => {
     if (error instanceof Error) {
       throw error;
     }
+  }
+};
+
+export const fetchRelatedInstances = async (instanceId: string): Promise<any[]> => {
+  try {
+    const response = await fetch(`${API_URL}/instances/${instanceId}/related`);
+    return await handleApiResponse(response, {
+      404: 'Related instances not found. The instance may not exist or has no related instances.'
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unable to load related instances. Please check your connection and try again.');
   }
 };

@@ -3,6 +3,7 @@ import {
   createTextInstance,
   fetchAnnotation,
   fetchInstance,
+  fetchRelatedInstances,
   fetchText,
   fetchTextInstances,
   fetchTexts,
@@ -27,6 +28,7 @@ export const useTexts = (params?: {
   offset?: number;
   language?: string;
   author?: string;
+  type?: string;
 }) => {
   return useQuery({
     queryKey: ["texts", params],
@@ -101,6 +103,16 @@ export const useCreateTextInstance = () => {
     onSuccess: (_, { textId }) => {
       queryClient.invalidateQueries({ queryKey: ["textInstance", textId] });
     }
+  });
+};
+
+export const useRelatedInstances = (instanceId: string | null) => {
+  return useQuery({
+    queryKey: ["relatedInstances", instanceId],
+    queryFn: () => fetchRelatedInstances(instanceId!),
+    enabled: !!instanceId, // Only fetch when instanceId exists
+    staleTime: 5 * 60 * 1000,
+    retry: 1,
   });
 };
  

@@ -1,6 +1,6 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Query
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
 import requests
 import os
 from dotenv import load_dotenv
@@ -174,6 +174,10 @@ async def get_texts(
     offset: int = 0,
     language: Optional[str] = None,
     author: Optional[str] = None,
+    type: Optional[Literal["root", "commentary", "translation", "translation_source", "none"]] = Query(
+        None,
+        description="Filter by text type"
+    ),
 ):
     if not API_ENDPOINT:
         raise HTTPException(
@@ -187,6 +191,7 @@ async def get_texts(
             "offset": offset,
             "language": language,
             "author": author,
+            "type": type,
         }
         params = {k: v for k, v in params.items() if v is not None}
         

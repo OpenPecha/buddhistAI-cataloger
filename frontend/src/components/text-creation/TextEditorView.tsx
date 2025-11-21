@@ -424,7 +424,6 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
       {
         onSuccess: (tokenizedText) => {
           onChange?.(tokenizedText.join('\n'));
-          console.log(tokenizedText);
         },
         onError: (error) => {
           console.error('Tokenization error:', error);
@@ -527,7 +526,6 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
               <Button variant="default" size="sm" onClick={handleTokenize} 
               disabled={tokenizeMutation.isPending}
               className="h-7 px-3 text-xs">
-                {console.log(tokenizeMutation.isPending)}
                 {tokenizeMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'fix it'}
               </Button>
             </div>
