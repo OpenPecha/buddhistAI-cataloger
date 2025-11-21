@@ -47,6 +47,28 @@ const TextCRUD = () => {
 
   const { data: texts = [], isLoading, error, refetch } = useTexts(paginationParams);
 
+  // Filter out commentary and translation types
+  const filteredTexts = useMemo(() => {
+    return texts.filter((text: OpenPechaText) => 
+      text.type !== 'commentary' && text.type !== 'translation'
+    );
+  }, [texts]);
+
+  const filteredLocalTextResults = useMemo(() => {
+    return localTextResults.filter((text: OpenPechaText) => 
+      text.type !== 'commentary' && text.type !== 'translation'
+    );
+  }, [localTextResults]);
+
+  // Filter foundText if it's commentary or translation
+  const filteredFoundText = useMemo(() => {
+    if (!foundText) return null;
+    if (foundText.type === 'commentary' || foundText.type === 'translation') {
+      return null;
+    }
+    return foundText;
+  }, [foundText]);
+
   const handleNextPage = () => {
     setOffset((prev) => prev + OFFSET_STEP);
   };
@@ -119,8 +141,8 @@ const TextCRUD = () => {
   };
 
   // Determine what to display
-  const displayTexts = foundText ? [foundText] : texts;
-  const showPagination = !foundText && !textNotFound;
+  const displayTexts = filteredFoundText ? [filteredFoundText] : filteredTexts;
+  const showPagination = !filteredFoundText && !textNotFound;
 
   return (
     <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
@@ -219,8 +241,8 @@ const TextCRUD = () => {
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                       <div className="text-sm text-gray-500">Searching...</div>
                     </div>
-                  ) : localTextResults.length > 0 ? (
-                    localTextResults.map((text) => (
+                  ) : filteredLocalTextResults.length > 0 ? (
+                    filteredLocalTextResults.map((text) => (
                       <Link
                       to={`/texts/${text.id}/instances`}
                         key={text.id+Math.random()}
@@ -296,12 +318,12 @@ const TextCRUD = () => {
               <span className="text-xs sm:text-sm text-gray-600 text-center font-['noto']">
                 {t('textsPage.showing', { 
                   start: offset + 1, 
-                  end: offset + texts.length 
+                  end: offset + filteredTexts.length 
                 })}
               </span>
               <Button
                 onClick={handleNextPage}
-                disabled={texts.length < LIMIT}
+                disabled={texts.length === 0}
                 variant="outline"
                 className="w-full sm:w-auto"
               >
@@ -312,7 +334,7 @@ const TextCRUD = () => {
         )}
 
         {/* Clear Search Button - Show when text is found */}
-        {foundText && (
+        {filteredFoundText && (
           <div className="bg-white rounded-lg shadow-md p-3 sm:p-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">

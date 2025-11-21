@@ -323,7 +323,13 @@
     "creating": "གསར་བཟོ་བྱེད་བཞིན་པ...",
     "confirmCreate": "ཁྱེད་ཀྱིས་དཔེ་དེབ་འདི་གསར་བཟོ་བྱེད་འདོད་པ་ཡིན་ནམ། བྱ་སྤྱོད་འདི་ཕྱིར་འདོན་མི་ཐུབ།",
     "searchBdrcEntries": "BDRC ཐོ་གཞུང་འཚོལ་བ...",
-    "noBdrcEntries": "BDRC ཐོ་གཞུང་མ་རྙེད།"
+    "noBdrcEntries": "BDRC ཐོ་གཞུང་མ་རྙེད།",
+    "content": "ནང་དོན།",
+    "segmentLabel": "ཡིག་ཚང་ #",
+    "annotationLabel": "#",
+    "loadingContent": "ནང་དོན་འགེལ་བཞིན་པ...",
+    "errorLoadingSegmentation": "ཡིག་ཚང་མཆན་བཀོད་འཐེན་མ་ཐུབ།",
+    "displayingRawContent": "ཐོག་མའི་ནང་དོན་ཁོ་ན་སྟོན་བཞིན་པ། ཐིག་བར་མེད།"
   },
   "bibliography": {
     "title": "དཔེ་མཛོད་མཆན་བཀོད།",
@@ -424,6 +430,19 @@
     "wikipediaLink": "ཝི་ཁི་འབྲེལ་ལམ།",
     "alternativeNames": "གཞན་མིང་།:",
     "more": "+{{count}} ད་དུང་།..."
+  },
+  "textInstances": {
+    "loadingTextDetails": "དཔེ་ཆའི་ཞིབ་ཕྲ་འགེལ་བཞིན་པ...",
+    "errorLoading": "འཐེན་སྐབས་ནོར་འཁྲུལ།...",
+    "unknownError": "མི་ཤེས་པའི་ནོར་འཁྲུལ་ཞིག་བྱུང་ཡོད།",
+    "tryAgain": "ཡང་བསྐྱར་ཚོད་ལྟ།",
+    "noTextDetailsFound": "དཔེ་ཆའི་ཞིབ་ཕྲ་མ་རྙེད།",
+    "noTextDetailsDescription": "དཔེ་ཆ་འདིར་ད་དུང་ཞིབ་ཕྲ་མེད།",
+    "untitled": "མཚན་མེད།",
+    "relatedTexts": "འབྲེལ་ཡོད་དཔེ་ཆ།",
+    "loadingRelatedTexts": "འབྲེལ་ཡོད་དཔེ་ཆ་འགེལ་བཞིན་པ...",
+    "errorLoadingRelatedTexts": "འབྲེལ་ཡོད་དཔེ་ཆ་འཐེན་སྐབས་ནོར་འཁྲུལ།",
+    "noRelatedTextsFound": "འབྲེལ་ཡོད་དཔེ་ཆ་མ་རྙེད།"
   }
 }
 
