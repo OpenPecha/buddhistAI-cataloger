@@ -48,7 +48,8 @@ def tokenize_text(text: str, type: Literal["word", "sentence"] = "word"):
             tokenizer = WordTokenizer(build_trie=True)
         else:
             raise
-    tokens = tokenizer.tokenize(text)
+    clean_text = text.replace("\n", "")
+    tokens = tokenizer.tokenize(clean_text)
     if type == "word":
         word_tokens = [token.text for token in tokens if hasattr(token, 'text') and token.text]
         return word_tokens
