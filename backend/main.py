@@ -8,6 +8,7 @@ from routers import person, text, translation, annotation, bdrc, category, enum,
 from dotenv import load_dotenv
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
+from starlette.middleware.base import BaseHTTPMiddleware
 # Add project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -29,12 +30,15 @@ app = FastAPI(
     ]
 )
 
+class PayloadSizeIncrease(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Only needed for routes that use form()/UploadFile via form-data
+        await request.form(max_part_size=50 * 1024 * 1024)  # 50 MB
+        return await call_next(request)
+
+app.add_middleware(PayloadSizeIncrease)
 # Add this middleware BEFORE CORS middleware
-@app.middleware("http")
-async def increase_max_request_size(request: Request, call_next):
-    # Starlette's default max request body size is ~1MB
-    # We need to allow larger bodies for instance creation with content
-    return await call_next(request)
+
 
 # CORS middleware
 app.add_middleware(
