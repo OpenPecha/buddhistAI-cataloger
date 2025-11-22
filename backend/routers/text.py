@@ -341,8 +341,9 @@ async def create_instance(id: str, instance: CreateInstance):
         )
 
 
-@router.put("/{id}/instances/{instance_id}", status_code=200)
+@router.put("/instances/{instance_id}", status_code=200)
 async def update_instance(instance_id: str, instance: UpdateInstance):
+    print('instance', instance)
     if not API_ENDPOINT:
         raise HTTPException(
             status_code=500, 
@@ -351,7 +352,7 @@ async def update_instance(instance_id: str, instance: UpdateInstance):
     
     try:
         payload = instance.model_dump(exclude_none=True)
-        response = requests.put(f"{API_ENDPOINT}/texts/{id}/instances/{instance_id}", json=payload)
+        response = requests.put(f"{API_ENDPOINT}/instances/{instance_id}", json=payload)
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
         return response.json()

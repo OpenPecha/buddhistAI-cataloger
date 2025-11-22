@@ -5,9 +5,11 @@ import {
   CircleXIcon,
   User,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getLanguageLabel } from "@/utils/getLanguageLabel";
+import { Link } from "react-router-dom";
+import { Button } from "./ui/button";
 
 interface TextCardProps {
   title: string;
@@ -18,6 +20,8 @@ interface TextCardProps {
   date?: string;
   bdrcId?: string;
   isAnnotationAvailable?: boolean;
+  instanceId: string;
+  sourceInstanceId: string;
 }
 
 const TextCard = ({
@@ -29,6 +33,8 @@ const TextCard = ({
   date,
   bdrcId,
   isAnnotationAvailable,
+  instanceId,
+  sourceInstanceId,
 }: TextCardProps) => {
   const typeColors: Record<string, string> = {
     root: "bg-primary/10 text-primary border-primary/20",
@@ -36,8 +42,9 @@ const TextCard = ({
     commentary: "bg-secondary/10 text-secondary-foreground border-secondary/20",
   };
 
+  const alignmentUrl = import.meta.env.VITE_FORMATTER_URL + `/aligner/${sourceInstanceId}/${instanceId}`;
   return (
-    <Card className="hover:shadow-elegant transition-smooth cursor-pointer group h-full justify-between">
+    <Card className="hover:shadow-elegant transition-smooth cursor-pointer group h-full justify-between pointer-events-auto">
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 font-['jomo']  ">
@@ -73,6 +80,15 @@ const TextCard = ({
           )}
         </div>
       </CardContent>
+      <CardFooter className="flex-col gap-2 items-end ">
+        <Button variant={!isAnnotationAvailable ? "default" : "outline"} className="w-fit cursor-pointer  pointer-events-auto" onClick={(e)=>{
+          e.preventDefault()
+          e.stopPropagation()
+          window.open(alignmentUrl, '_blank')
+        }}>
+          {!isAnnotationAvailable ? "Align Text" : "update Alignment"}
+        </Button>
+      </CardFooter>
     </Card>
   );
 };

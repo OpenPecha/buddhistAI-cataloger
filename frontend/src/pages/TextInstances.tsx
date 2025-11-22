@@ -214,11 +214,12 @@ function TextInstanceCRUD() {
                     const textId = metadata.text_id;
                     const instanceId = relatedInstance.instance_id;
                     const isAnnotationAvailable = !!relatedInstance.annotation;
+                    const sourceInstanceId = criticalInstance?.id;
                     return (
                       <Link
                         key={relatedInstance.instance_id}
                         to={`/texts/${textId}/instances/${instanceId}`}
-                        className="block"
+                        className="block pointer-events-auto"
                       >
                         <TextCard
                           title={getTitle(metadata.title)}
@@ -226,6 +227,8 @@ function TextInstanceCRUD() {
                           type={relatedInstance.relationship}
                           bdrcId={undefined}
                           isAnnotationAvailable={isAnnotationAvailable}
+                          instanceId={instanceId}
+                          sourceInstanceId={sourceInstanceId}
                         />
                       </Link>
                     );

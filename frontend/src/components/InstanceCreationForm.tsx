@@ -7,6 +7,7 @@ import { useBdrcSearch } from "@/hooks/useBdrcSearch";
 import { useBibliographyAPI } from "@/hooks/useBibliographyAPI";
 import { useTranslation } from "react-i18next";
 import FormsubmitSection from "./FormsubmitSection";
+import SourceSelection from "./SourceSelection";
 
 interface InstanceData {
   metadata: {
@@ -529,17 +530,7 @@ const InstanceCreationForm = forwardRef<
             >
               {t("instance.source")} <span className="text-red-500">*</span>
             </label>
-            <select
-              id="source"
-              value={source}
-              onChange={(e) => setSource(e.target.value)}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="" className="text-gray-300">{t("instance.sourcePlaceholder")}</option>
-              <option value="bdrc.io">bdrc.io</option>
-              <option value="unknown">unknown</option>
-            </select>
+         <SourceSelection source={source} setSource={setSource} />
             {errors.source && (
               <p className="mt-1 text-sm text-red-600">{errors.source}</p>
             )}

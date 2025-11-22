@@ -18,6 +18,7 @@ import TextCreationSuccessModal from '@/components/text-creation/TextCreationSuc
 import { useAuth0 } from '@auth0/auth0-react';
 import { validateContentEndsWithTsheg, validateSegmentLimits } from '@/utils/contentValidation';
 import LanguageSelectorForm from '@/components/LanguageSelectorForm';
+import SourceSelection from '@/components/SourceSelection';
 
 
 
@@ -650,16 +651,7 @@ const CreateCommentary = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   {t('commentary.source')} <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={source}
-                  onChange={(e) => setSource(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">{t('commentary.sourcePlaceholder')}</option>
-                  <option value="bdrc.io">bdrc.io</option>
-                  <option value="unknown">unknown</option>
-                </select>
+              <SourceSelection source={source} setSource={setSource} />
               </div>
 
               {/* Copyright Field */}

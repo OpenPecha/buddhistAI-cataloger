@@ -296,14 +296,19 @@ export const updateAnnotation = async (annotationId: string, annotationData: any
   }
 };
 
-export const updateInstance = async (textId: string, instanceId: string, instanceData: any, user: string): Promise<any> => {
+export const updateInstance = async (textId: string, instanceId: string, instanceData: any): Promise<any> => {
   try {
-    const response = await fetch(`${API_URL}/text/${textId}/instances/${instanceId}`, {
+    
+    if (instanceData.biblography_annotation.length===0) {
+      delete instanceData.biblography_annotation;
+    }
+    
+    const response = await fetch(`${API_URL}/text/instances/${instanceId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ ...instanceData, user }),
+      body: JSON.stringify({ ...instanceData }),
     });
     
     return await handleApiResponse(response, {

@@ -343,10 +343,10 @@ const UpdateAnnotation = () => {
               </div>
             </div>
             <h2 className="text-3xl font-bold text-gray-800 mb-3 animate-pulse">
-              {t("loading.updating") || "Updating..."}
+              { "Updating..."}
             </h2>
             <p className="text-lg text-gray-600 mb-6">
-              {t("loading.pleaseWait") || "Please wait"}
+              { "Please wait"}
             </p>
           </div>
         </div>

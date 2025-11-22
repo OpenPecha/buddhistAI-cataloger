@@ -6,6 +6,7 @@ import type { Person } from '@/types/person';
 import { Badge } from './ui/badge';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { useTranslation } from 'react-i18next';
+import { getLanguageLabel } from '@/utils/getLanguageLabel';
 
 interface TextListCardProps {
   text: OpenPechaText;
@@ -49,28 +50,14 @@ const TextListCard = ({ text }: TextListCardProps) => {
     return person.name?.bo || person.name?.en || t('textsPage.nameNotAvailable');
   };
   
-  const getLanguageLabel = (lang: string): string => {
-    const labels: Record<string, string> = {
-      bo: t('textsPage.tibetan'),
-      en: t('textsPage.english'),
-      sa: t('textsPage.sanskrit'),
-      zh: t('textsPage.chinese'),
-      fr: t('textsPage.french'),
-      mn: t('textsPage.mongolian'),
-      pi: t('textsPage.pali'),
-      cmg: t('textsPage.classicalMongolian'),
-      ja: t('textsPage.japanese'),
-      ru: t('textsPage.russian'),
-      lzh: t('textsPage.literaryChinese')
-    };
-    return labels[lang] || lang.toUpperCase();
-  };
+
 
   const getTypeLabel = (type: string): string => {
     const labels: Record<string, string> = {
       root: t('textsPage.rootText'),
       translation: t('textsPage.translation'),
-      commentary: t('textsPage.commentary')
+      commentary: t('textsPage.commentary'),
+      none:"No Aligned Text"
     };
     return labels[type] || type;
   };
@@ -111,10 +98,7 @@ const TextListCard = ({ text }: TextListCardProps) => {
       
       <CardContent className="space-y-3">
         <div className="flex flex-wrap gap-2">
-          <Badge className={`${getLanguageColor(text.language)} flex items-center gap-2`}>
-            <Globe className="w-4 h-4" />
-            <span className="font-medium">{getLanguageLabel(text.language)}</span>
-          </Badge>
+         
           
           <Badge className={`${getTypeColor(text.type)} flex items-center gap-2`}>
             <Book className="w-4 h-4" />
@@ -122,33 +106,22 @@ const TextListCard = ({ text }: TextListCardProps) => {
           </Badge>
         </div>
         
-        <div className="space-y-2 text-sm text-gray-600">
-          {text.bdrc && (
-            <div className="flex items-center gap-2">
-              <span className="font-medium">{t('textsPage.bdrcId')}</span>
-              <span className="font-mono text-xs">{text.bdrc}</span>
-            </div>
-          )}
-          
-          {text.date && (
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-400" />
-              <span className="font-medium">{t('textsPage.date')}</span>
-              <span className="text-xs">{text.date}</span>
-            </div>
-          )}
-        </div>
+       
         
         {/* Contributions */}
         {text.contributions && text.contributions.length > 0 && (
-          <div className="pt-3 border-t border-gray-100 relative">
+          <div className="pt-3 flex items-center justify-between gap-2 border-t border-gray-100 relative">
+             <Badge className={`${getLanguageColor(text.language)} flex items-center gap-2`}>
+            <Globe className="w-4 h-4" />
+            <span className="font-medium">{getLanguageLabel(text.language)}</span>
+          </Badge>
             <div 
               className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-md transition-colors"
               onClick={() => setShowContributors(!showContributors)}
             >
               <Users className="w-4 h-4 text-gray-500" />
               <span className="text-sm text-gray-600 font-medium">
-                {text.contributions.length} {t('textsPage.contributor', { count: text.contributions.length })}
+                {text.contributions.length} 
               </span>
             </div>
             

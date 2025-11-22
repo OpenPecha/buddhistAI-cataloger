@@ -4,7 +4,7 @@ import { useAnnnotation, useText } from '@/hooks/useTexts';
 import { Button } from './ui/button';
 import FormattedTextDisplay from './FormattedTextDisplay';
 import { useTranslation } from 'react-i18next';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BookOpenText, PencilIcon } from 'lucide-react';
 
 interface InstanceCardProps {
@@ -150,8 +150,8 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
               </svg>
               {t('textForm.commentary')}
             </Button>
-
-          
+                   
+         
 
             <Button
               onClick={() => {
