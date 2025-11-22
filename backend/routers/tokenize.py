@@ -6,8 +6,8 @@ import os
 import requests
 from botok.tokenizers.sentencetokenizer import sentence_tokenizer
 from botok.tokenizers.wordtokenizer import WordTokenizer
-
-
+from botok.config import Config
+from pathlib import Path
 load_dotenv(override=True)
 
 router = APIRouter()
@@ -37,6 +37,7 @@ async def tokenize(request: TokenizeRequest):
         )
     
 
+config = Config(dialect_name="general", base_path=Path("config_botok"))
 
 def tokenize_text(text: str, type: Literal["word", "sentence"] = "word"):
     try:
@@ -45,7 +46,7 @@ def tokenize_text(text: str, type: Literal["word", "sentence"] = "word"):
         # If pickle file is incompatible (e.g., missing 'third_party' module),
         # rebuild the trie by setting build_trie=True
         if 'third_party' in str(e) or 'No module named' in str(e):
-            tokenizer = WordTokenizer(build_trie=True)
+            tokenizer = WordTokenizer(build_trie=True,config=config)
         else:
             raise
     clean_text = text.replace("\n", "")
