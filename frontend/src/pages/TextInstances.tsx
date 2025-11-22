@@ -110,7 +110,7 @@ function TextInstanceCRUD() {
 
   const title = text?.title?.bo || text?.title?.en || text?.title?.sa || t('textInstances.untitled');
 
-
+  const textWithoutAlignmentExists = relatedInstances.some((relatedInstance: RelatedInstance) => !relatedInstance.annotation);
   // Helper function to get title - always get the first value from dictionary
   const getTitle = (titleObj: RelatedInstance["metadata"]["title"]) => {
     if (!titleObj || Object.keys(titleObj).length === 0) {
@@ -124,8 +124,31 @@ function TextInstanceCRUD() {
       {/* Breadcrumb */}
       <BreadCrumb textname={title} />
 
-      <div className="px-2 sm:px-0">
+      <div className=" flex justify-between items-center px-2 sm:px-0">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-900 text-center sm:text-left break-words">{title}</h2>
+        {textWithoutAlignmentExists && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
+            <div className="flex items-center">
+              <div className="text-red-400 mr-3">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path
+                    fillRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-yellow-800">
+                Warning: Some texts do not have alignment.
+                </h3>
+                <p className="text-sm text-yellow-700 mt-1">
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
 
       {/* Original Instances Layout */}

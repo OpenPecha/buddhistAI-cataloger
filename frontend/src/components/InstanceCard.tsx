@@ -157,6 +157,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
               onClick={() => {
                 navigate(`/texts/${text_id}/instances/${instance_id}/edit`);
               }}
+              disabled={!instance.content}
               className="group relative px-5 py-2.5 bg-gradient-to-r from-sky-400 to-cyan-500 hover:from-sky-500 hover:to-cyan-600 text-white font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
             >
               <PencilIcon className="w-4 h-4" />

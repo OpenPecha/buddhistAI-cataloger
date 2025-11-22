@@ -81,7 +81,9 @@ const TextCard = ({
         </div>
       </CardContent>
       <CardFooter className="flex-col gap-2 items-end ">
-        <Button variant={!isAnnotationAvailable ? "default" : "outline"} className="w-fit cursor-pointer  pointer-events-auto" onClick={(e)=>{
+        <Button variant={!isAnnotationAvailable ? "destructive" : "outline"} className={`w-fit cursor-pointer 
+        ${!isAnnotationAvailable ? "bg-[#025388] hover:bg-[#025388]/90 text-white" : ""}
+        pointer-events-auto`} onClick={(e)=>{
           e.preventDefault()
           e.stopPropagation()
           window.open(alignmentUrl, '_blank')
