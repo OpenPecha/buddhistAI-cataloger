@@ -37,6 +37,16 @@ export interface TextCreationFormRef {
   setFormLanguage: (language: string) => void;
   getLanguage: () => string;
   addContributorFromBdrc: (personBdrcId: string, personName: string, role: "translator" | "author") => void;
+  initializeForm?: (data: {
+    type?: string;
+    language?: string;
+    date?: string;
+    categoryId?: string;
+    copyright?: string;
+    license?: string;
+    bdrc?: string;
+    target?: string;
+  }) => void;
 }
 
 interface Contributor {
@@ -434,6 +444,28 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         setSelectedPerson(null);
         setPersonSearch("");
         setErrors({});
+      },
+      initializeForm: (data: {
+        type?: string;
+        language?: string;
+        date?: string;
+        categoryId?: string;
+        copyright?: string;
+        license?: string;
+        bdrc?: string;
+        target?: string;
+      }) => {
+        if (data.type) setSelectedType(data.type as any);
+        if (data.language) setLanguage(data.language);
+        if (data.date) setDate(data.date);
+        if (data.categoryId) setCategoryId(data.categoryId);
+        if (data.copyright) setCopyright(data.copyright);
+        if (data.license) setLicense(data.license);
+        if (data.bdrc) {
+          setBdrc(data.bdrc);
+          setSelectedBdrc({ id: data.bdrc, label: data.bdrc });
+        }
+        if (data.target) setTarget(data.target);
       },
     }), [language, titles, altTitles, contributors]);
 

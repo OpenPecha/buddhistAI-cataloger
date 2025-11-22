@@ -1,11 +1,10 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks, Query
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any, Literal
 import requests
 import os
 from dotenv import load_dotenv
 
-from utils.segmentor import create_segmentation_annotation
 
 load_dotenv( override=True)
 
@@ -131,6 +130,13 @@ class CreateInstance(BaseModel):
     biblography_annotation: Optional[List[BibliographyAnnotation]] = None
     content: str
     user: Optional[str] = None
+    
+class UpdateInstance(BaseModel):
+    metadata: Dict[str, Any]
+    annotation: List[Dict[str, Any]]
+    biblography_annotation: Optional[List[BibliographyAnnotation]] = None
+    content: str
+    user: Optional[str] = None
 
 class CreateInstanceResponse(BaseModel):
     message: str
@@ -214,6 +220,7 @@ async def get_texts(
 
 @router.post("", status_code=201)
 async def create_text(text: CreateText):
+    print('text', text)
     if not API_ENDPOINT:
         raise HTTPException(
             status_code=500, 
@@ -301,28 +308,6 @@ async def get_instances(id: str):
             detail=f"Error connecting to OpenPecha API: {str(e)}"
         )
 
-def create_annotation_background(text_id: str, instance_id: str, content: str,user: str):
-    """Background task to create segmentation annotation and temp annotation"""
-    try:
-        text_response = requests.get(f"{API_ENDPOINT}/texts/{text_id}")
-        language = text_response.json().get("language")
-        if instance_id and content and language:
-            annotation_response_id = create_segmentation_annotation(
-                instance_id, content, language
-            )
-            if annotation_response_id:
-                
-                temp_database_response = requests.post(f"{TRANSLATION_BACKEND_URL}/temp_annotation", json={
-                    "textId": text_id,
-                    "instanceId": instance_id,
-                    "annotationId": annotation_response_id,
-                    "createdBy": user
-                })
-                if temp_database_response.status_code != 201:
-                    print(f"Error creating temp annotation: {temp_database_response.text}")
-    except Exception as e:
-        print(e)
-
 @router.post("/{id}/instances",  status_code=201)
 async def create_instance(id: str, instance: CreateInstance):
     if not API_ENDPOINT:
@@ -343,6 +328,32 @@ async def create_instance(id: str, instance: CreateInstance):
         
     
         
+        return response.json()
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out after 30 seconds"
+        )
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error connecting to OpenPecha API: {str(e)}"
+        )
+
+
+@router.put("/{id}/instances/{instance_id}", status_code=200)
+async def update_instance(instance_id: str, instance: UpdateInstance):
+    if not API_ENDPOINT:
+        raise HTTPException(
+            status_code=500, 
+            detail="OPENPECHA_ENDPOINT environment variable is not set"
+        )
+    
+    try:
+        payload = instance.model_dump(exclude_none=True)
+        response = requests.put(f"{API_ENDPOINT}/texts/{id}/instances/{instance_id}", json=payload)
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
         return response.json()
     except requests.exceptions.Timeout:
         raise HTTPException(

@@ -1,25 +1,30 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, X, ArrowLeft, Save } from "lucide-react";
+import { AlertCircle, X, Upload, FileText, Code, ArrowLeft } from "lucide-react";
 import TextEditorView from "@/components/text-creation/TextEditorView";
-import { updateAnnotation } from "@/api/texts";
-import { calculateAnnotations } from "@/utils/annotationCalculator";
+import InstanceCreationForm from "@/components/InstanceCreationForm";
+import type { InstanceCreationFormRef } from "@/components/InstanceCreationForm";
+import { useText, useInstance, useUpdateInstance, useAnnnotation } from "@/hooks/useTexts";
 import { useTranslation } from "react-i18next";
-import { useInstance, useAnnnotation } from "@/hooks/useTexts";
-import type { OpenPechaTextInstance } from "@/types/text";
-import { useQueryClient } from "@tanstack/react-query";
+import { useAuth0 } from "@auth0/auth0-react";
+import { calculateAnnotations } from "@/utils/annotationCalculator";
+import { useBibliographyAPI } from "@/hooks/useBibliographyAPI";
+import { validateContentEndsWithTsheg, validateSegmentLimits } from "@/utils/contentValidation";
 
 const UpdateAnnotation = () => {
   const { text_id, instance_id } = useParams();
-  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { user } = useAuth0();
+  const instanceFormRef = useRef<InstanceCreationFormRef>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { clearAfterSubmission } = useBibliographyAPI();
 
-  // Fetch instance data
-  const { data: instance, isLoading: instanceLoading } = useInstance(
-    instance_id || ""
-  );
+  // Fetch text and instance data
+  const { data: text, isLoading: textLoading } = useText(text_id || "");
+  const { data: instance, isLoading: instanceLoading } = useInstance(instance_id || "");
+  const updateInstanceMutation = useUpdateInstance();
 
   // Find segmentation annotation ID from instance.annotations array
   const segmentationAnnotationRef =
@@ -33,98 +38,222 @@ const UpdateAnnotation = () => {
   const {
     data: annotationData,
     isLoading: annotationLoading,
-    error: annotationError,
   } = useAnnnotation(segmentationAnnotationId);
 
-  // State for editable segmentation content (with line breaks)
-  const [segmentedContent, setSegmentedContent] = useState("");
+  // State
+  const [editedContent, setEditedContent] = useState("");
+  const [uploadedFilename, setUploadedFilename] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [activePanel, setActivePanel] = useState<"form" | "editor">("form");
+  const [hasIncipitTitle, setHasIncipitTitle] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>("");
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Initialize segmented content from annotation when both instance and annotation are loaded
+  // Content validation - get language from text data
   useEffect(() => {
-    if (instance && annotationData && instance.content) {
-      const annotations = (annotationData as any)?.data;
-
-      if (annotations && Array.isArray(annotations) && annotations.length > 0) {
-        // Sort annotations by span start position
-        const sortedAnnotations = [...annotations].sort((a: any, b: any) => {
-          return (a.span?.start || 0) - (b.span?.start || 0);
-        });
-
-        // Extract each segment and join with newlines
-        const lines = sortedAnnotations.map((annotation: any) => {
-          if (!annotation.span) return "";
-          return instance.content.substring(
-            annotation.span.start,
-            annotation.span.end
-          );
-        });
-
-        setSegmentedContent(lines.join("\n"));
-      } else {
-        // No segmentation exists, show content as single line
-        setSegmentedContent(instance.content);
-      }
+    if (text?.language) {
+      setSelectedLanguage(text.language);
     }
-  }, [instance, annotationData]);
+  }, [text]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const contentValidationError = useState(() => {
+    if (!editedContent || editedContent.trim() === "") {
+      return null;
+    }
+    if (selectedLanguage !== "bo") {
+      return null;
+    }
+    const isValid = validateContentEndsWithTsheg(editedContent);
+    return isValid ? null : t("create.contentMustEndWithTsheg");
+  })[0];
+
+  const [segmentValidation, setSegmentValidation] = useState<{
+    invalidSegments: Array<{ index: number; length: number }>;
+    invalidCount: number;
+  }>({ invalidSegments: [], invalidCount: 0 });
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const validation = validateSegmentLimits(editedContent);
+      setSegmentValidation({
+        invalidSegments: validation.invalidSegments.map(seg => ({ index: seg.index, length: seg.length })),
+        invalidCount: validation.invalidCount,
+      });
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [editedContent]);
+
+  // Helper function to reconstruct content with segmentation line breaks
+  const reconstructContentWithSegmentation = (
+    content: string,
+    annotationData: any
+  ): string => {
+    if (!content) return "";
+
+    // Check if we have segmentation annotations
+    const segmentationAnnotations = annotationData?.data;
+    if (
+      !segmentationAnnotations ||
+      !Array.isArray(segmentationAnnotations) ||
+      segmentationAnnotations.length === 0
+    ) {
+      // No segmentation, return content as-is
+      return content;
+    }
+
+    // Sort annotations by span start position
+    const sortedAnnotations = [...segmentationAnnotations].sort(
+      (a: any, b: any) => {
+        return (a.span?.start || 0) - (b.span?.start || 0);
+      }
+    );
+
+    // Extract each segment and join with newlines
+    const lines = sortedAnnotations.map((annotation: any) => {
+      if (!annotation.span) return "";
+      return content.substring(annotation.span.start, annotation.span.end);
+    });
+
+    return lines.join("\n");
+  };
+
+  // Initialize forms with existing data
+  useEffect(() => {
+    if (
+      instance &&
+      !isInitialized &&
+      instanceFormRef.current &&
+      (annotationData || !segmentationAnnotationId) // Wait for annotation if it exists
+    ) {
+      // Initialize instance form and content with segmentation
+      if (instance.content) {
+        // Reconstruct content with line breaks from segmentation annotations
+        const formattedContent = reconstructContentWithSegmentation(
+          instance.content,
+          annotationData
+        );
+        setEditedContent(formattedContent);
+      }
+
+      // Set instance metadata
+      if (instance.metadata) {
+        const meta = instance.metadata;
+        
+        instanceFormRef.current.initializeForm?.({
+          type: meta.type,
+          source: (meta as any).source || undefined,
+          bdrc: meta.bdrc || undefined,
+          wiki: meta.wiki || undefined,
+          colophon: meta.colophon || undefined,
+        });
+
+        // Set colophon
+        if (meta.colophon) {
+          instanceFormRef.current.addColophon(meta.colophon);
+        }
+
+        // Set incipit titles
+        if (meta.incipit_title && typeof meta.incipit_title === "object") {
+          Object.entries(meta.incipit_title).forEach(([lang, value]) => {
+            instanceFormRef.current?.addIncipit(value as string, lang);
+          });
+          setHasIncipitTitle(true);
+        }
+
+        // Set alt incipit titles
+        if (meta.alt_incipit_titles && Array.isArray(meta.alt_incipit_titles)) {
+          meta.alt_incipit_titles.forEach((altGroup: Record<string, string>) => {
+            Object.entries(altGroup).forEach(([lang, value]) => {
+              instanceFormRef.current?.addAltIncipit(value, lang);
+            });
+          });
+        }
+      }
+
+      setIsInitialized(true);
+    }
+  }, [instance, isInitialized, annotationData, segmentationAnnotationId]);
+
+  // Handle file upload
+  const handleFileUpload = (content: string, filename: string) => {
+    let lines = content.split("\n");
+    lines = lines.filter(line => line.trim() !== "");
+    const cleanedContent = lines.join("\n");
+    setEditedContent(cleanedContent);
+    setUploadedFilename(filename);
+  };
+
+  // Handle text selection from editor (only instance-related types)
+  const handleEditorTextSelect = (
+    text: string,
+    type: "title" | "alt_title" | "colophon" | "incipit" | "alt_incipit" | "person"
+  ) => {
+    switch (type) {
+      case "colophon":
+        instanceFormRef.current?.addColophon(text);
+        break;
+      case "incipit":
+        instanceFormRef.current?.addIncipit(text);
+        setTimeout(() => {
+          setHasIncipitTitle(instanceFormRef.current?.hasIncipit() || false);
+        }, 100);
+        break;
+      case "alt_incipit":
+        instanceFormRef.current?.addAltIncipit(text);
+        break;
+      // Title, alt_title, and person are not handled in instance form
+      default:
+        break;
+    }
+  };
+
+  // Handle form submission
+  const handleSubmit = async () => {
     setError(null);
     setIsSubmitting(true);
 
     try {
-      if (!instance || !instance.content) {
-        throw new Error("Instance content not available");
+      if (!text_id || !instance_id || !instance) {
+        throw new Error("Missing required data");
       }
 
-      if (!segmentationAnnotationId) {
-        throw new Error("No segmentation annotation found for this instance");
+      if (!editedContent || editedContent.trim() === "") {
+        throw new Error("Content cannot be empty");
       }
 
-      if (!segmentedContent || segmentedContent.trim() === "") {
-        throw new Error("Segmentation content cannot be empty");
+      // Get instance form data
+      const instanceFormData = instanceFormRef.current?.getFormData();
+      if (!instanceFormData) {
+        throw new Error("Invalid instance form data");
       }
 
-      // Validate that base text content hasn't changed (only line breaks should differ)
-      // Remove all line breaks and compare with original content
-      const cleanedSegmented = segmentedContent.split("\n").join("");
-      const originalContent = instance.content;
-
-      if (cleanedSegmented !== originalContent) {
-        throw new Error(
-          "You can only modify segmentation (line breaks), not the base text content. Please restore the original text."
-        );
-      }
-
-      // Calculate new segmentation spans from the edited content
-      const { annotations } = calculateAnnotations(segmentedContent);
+      // Calculate annotations from content (this also cleans the content - removes line breaks)
+      const { annotations, cleanedContent } = calculateAnnotations(editedContent);
 
       // Prepare update payload
       const updatePayload = {
-        type: "segmentation",
-        data: {
-          annotations: annotations,
-        },
+        metadata: instanceFormData.metadata,
+        annotation: annotations,
+        biblography_annotation: instanceFormData.biblography_annotation || [],
+        content: cleanedContent, // Use cleaned content (without line breaks) for API
       };
 
-      // Update annotation
-      await updateAnnotation(segmentationAnnotationId, updatePayload);
+      // Update instance
+      await updateInstanceMutation.mutateAsync({
+        textId: text_id,
+        instanceId: instance_id,
+        instanceData: updatePayload,
+        user: JSON.stringify(user || {}),
+      });
 
-      // Invalidate all relevant queries
-      queryClient.invalidateQueries({ queryKey: ["annotation"] });
-      queryClient.invalidateQueries({ queryKey: ["instance", instance_id] });
-      if (text_id) {
-        queryClient.invalidateQueries({ queryKey: ["textInstance", text_id] });
-      }
+      clearAfterSubmission();
       setSuccess(true);
 
       // Navigate back after a short delay
       setTimeout(() => {
         navigate(`/texts/${text_id}/instances/${instance_id}`);
-        window.location.reload();
       }, 2000);
     } catch (err: any) {
       setError(err.message || t("messages.updateError"));
@@ -133,44 +262,32 @@ const UpdateAnnotation = () => {
     }
   };
 
-  const getInstanceTitle = (
-    instance: OpenPechaTextInstance | undefined
-  ): string => {
-    if (!instance || !instance.metadata) return t("header.instances");
-
-    let title = "";
-
-    if (
-      instance.metadata.incipit_title &&
-      typeof instance.metadata.incipit_title === "object"
-    ) {
-      const incipitObj = instance.metadata.incipit_title as Record<
-        string,
-        string
-      >;
-      if (incipitObj.bo) {
-        title = incipitObj.bo;
-      } else {
-        const firstLanguage = Object.keys(incipitObj)[0];
-        if (firstLanguage) {
-          title = incipitObj[firstLanguage];
-        }
-      }
-    }
-
-    if (!title) {
-      title = instance.metadata.colophon
-        ? `Text Instance (${instance.metadata.colophon})`
-        : "Text Instance";
-    }
-
-    return title;
+  const isLoading = textLoading || instanceLoading || annotationLoading;
+  const cn = (...classes: Array<string | false | null | undefined>) => {
+    return classes.filter(Boolean).join(" ");
   };
 
-  const isLoading = instanceLoading || annotationLoading;
-  const hasError =
-    annotationError ||
-    (!segmentationAnnotationId && instance && !instanceLoading);
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center z-40">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">{t("loading.loadingText")}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!text || !instance) {
+    return (
+      <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-600">Cannot load text or instance data</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -189,7 +306,7 @@ const UpdateAnnotation = () => {
               </svg>
             </div>
             <span className="text-sm font-medium text-gray-800">
-              Annotation updated successfully!
+              {t("messages.updateSuccess") || "Updated successfully!"}
             </span>
           </div>
         </div>
@@ -210,71 +327,184 @@ const UpdateAnnotation = () => {
           </div>
         </div>
       )}
-      {/* Main Split Layout */}
-      <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gray-50 flex ">
-        {/* LEFT PANEL: Info and Controls */}
 
-        {isLoading && (
-          <div className="h-full flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600"></div>
-          </div>
-        )}
-        {/* RIGHT PANEL: Text Editor */}
-        <div className="w-full  h-full overflow-hidden bg-gray-50 relative">
-          {hasError && (
-            <div className="h-full flex items-center justify-center p-8">
-              <div className="text-center">
-                <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">Cannot load annotation editor</p>
+      {/* Loading Screen - Show while submitting */}
+      {isSubmitting && (
+        <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 flex items-center justify-center z-50">
+          <div className="text-center max-w-md mx-auto px-6">
+            <div className="relative mb-8">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-32 h-32 bg-gradient-to-br from-emerald-400 to-green-500 rounded-full opacity-20 animate-ping"></div>
+              </div>
+              <div className="relative flex items-center justify-center">
+                <div className="w-24 h-24 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl shadow-2xl flex items-center justify-center">
+                  <FileText className="w-12 h-12 text-white" />
+                </div>
               </div>
             </div>
+            <h2 className="text-3xl font-bold text-gray-800 mb-3 animate-pulse">
+              {t("loading.updating") || "Updating..."}
+            </h2>
+            <p className="text-lg text-gray-600 mb-6">
+              {t("loading.pleaseWait") || "Please wait"}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Two-Panel Layout */}
+      <div className="fixed font-['jomo'] inset-0 top-16 left-0 right-0 bottom-0 bg-gradient-to-br from-blue-50 to-indigo-100 flex">
+        {/* Mobile Toggle Button */}
+        <button
+          onClick={() =>
+            setActivePanel(activePanel === "form" ? "editor" : "form")
+          }
+          className="md:hidden fixed bottom-6 right-6 z-30 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-200 flex items-center gap-2"
+        >
+          {activePanel === "form" ? (
+            <>
+              <Code className="w-5 h-5" />
+              <span className="text-sm font-medium">{t("editor.content")}</span>
+            </>
+          ) : (
+            <>
+              <FileText className="w-5 h-5" />
+              <span className="text-sm font-medium">{t("common.edit")}</span>
+            </>
           )}
+        </button>
 
-          <div className=" flex flex-col">
+        {/* LEFT PANEL: Forms */}
+        <div
+          className={cn(
+            "w-full md:w-1/2 h-full overflow-y-auto border-r border-gray-200",
+            "absolute md:relative",
+            "transition-transform duration-300 ease-in-out",
+            activePanel === "form"
+              ? "translate-x-0"
+              : "-translate-x-full md:translate-x-0"
+          )}
+        >
+          <div className="p-8">
+            {/* Header */}
+            <div className="mb-6 flex items-center gap-4">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/texts/${text_id}/instances/${instance_id}`)}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                {t("common.back")}
+              </Button>
+            
+            </div>
+
+            <div className="space-y-6 relative font-['monlam']">
+              {/* Instance Creation Form */}
+              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                <InstanceCreationForm
+                  ref={instanceFormRef}
+                  onSubmit={() => {
+                    // Prevent form submission, handle it manually
+                    handleSubmit();
+                  }}
+                  isSubmitting={isSubmitting}
+                  content={editedContent}
+                  disableSubmit={!!contentValidationError || segmentValidation.invalidCount > 0}
+                  onCancel={() => navigate(`/texts/${text_id}/instances/${instance_id}`)}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT PANEL: Editor */}
+        <div
+          className={cn(
+            "w-full md:w-1/2 h-full overflow-hidden bg-gray-50",
+            "absolute md:relative",
+            "transition-transform duration-300 ease-in-out",
+            activePanel === "editor"
+              ? "translate-x-0"
+              : "translate-x-full md:translate-x-0"
+          )}
+        >
+          <div className="h-full flex flex-col">
             {/* Editor Header */}
-            <div className="flex items-center justify-between px-2 py-1  ">
-                <div className="flex items-center gap-2" >
-<ArrowLeft className="w-4 h-4 ml-4" onClick={() => navigate(`/texts/${text_id}/instances/${instance_id}`)}/>
-              <p className="text-sm text-gray-600">
-                Edit segmentation by adding/removing line breaks
-              </p>
-                </div>
-               
-
-                <Button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={isSubmitting || !segmentedContent}
-                  variant="outline"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Updating...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="w-4 h-4 mr-2" />
-                      Update
-                    </>
-                  )}
-                </Button>
+            <div className="bg-blue-50 border-b border-blue-200 px-4 py-3 font-['jomo']">
+              <div className="flex items-center justify-between">
+                {!editedContent || editedContent?.trim() === "" ? (
+                  <>
+                    <p className="text-sm text-gray-600 font-['noto']">
+                      {t("create.startTyping")}
+                    </p>
+                    <div>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".txt"
+                        onChange={(e) => {
+                          const files = e.target.files;
+                          if (files && files.length > 0) {
+                            const file = files[0];
+                            if (file.size < 1024) {
+                              alert(t("create.fileTooSmall"));
+                              e.target.value = "";
+                              return;
+                            }
+                            if (!file.name.endsWith(".txt")) {
+                              alert(t("create.uploadTxtOnly"));
+                              e.target.value = "";
+                              return;
+                            }
+                            const reader = new FileReader();
+                            reader.onload = (event) => {
+                              const content = event.target?.result as string;
+                              handleFileUpload(content, file.name);
+                            };
+                            reader.readAsText(file);
+                          }
+                          e.target.value = "";
+                        }}
+                        className="hidden"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          fileInputRef.current?.click();
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                      >
+                        <Upload className="w-4 h-4" />
+                        {t("create.uploadFile")}
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <span className="text-xs text-gray-500">
+                    {editedContent?.length} {t("create.characters")}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Editor */}
             <div className="flex-1 overflow-hidden">
               <TextEditorView
-                content={segmentedContent || ""}
-                filename="Segmentation Editor"
+                content={editedContent || ""}
+                filename={editedContent ? uploadedFilename : t("editor.editingDocument")}
                 editable={true}
-                onChange={(value) => {
-                  setSegmentedContent(value);
-                }}
-                onTextSelect={undefined}
+                onChange={(value) => setEditedContent(value)}
+                onTextSelect={handleEditorTextSelect}
                 isCreatingNewText={false}
-                hasIncipit={false}
+                hasIncipit={hasIncipitTitle}
                 hasTitle={false}
-                allowedTypes={[]}
+                allowedTypes={["colophon", "incipit", "alt_incipit"]}
+                validationError={contentValidationError}
+                segmentValidation={segmentValidation}
               />
             </div>
           </div>

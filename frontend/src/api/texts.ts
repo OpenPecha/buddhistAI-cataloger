@@ -296,6 +296,28 @@ export const updateAnnotation = async (annotationId: string, annotationData: any
   }
 };
 
+export const updateInstance = async (textId: string, instanceId: string, instanceData: any, user: string): Promise<any> => {
+  try {
+    const response = await fetch(`${API_URL}/text/${textId}/instances/${instanceId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ...instanceData, user }),
+    });
+    
+    return await handleApiResponse(response, {
+      400: 'Invalid instance data. Please check all required fields and try again.',
+      404: 'Instance not found. It may have been deleted or the link is incorrect.'
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unable to update instance. Please check your connection and try again.');
+  }
+};
+
 
 export const fetchEnums = async (type: string): Promise<any> => {
   try {

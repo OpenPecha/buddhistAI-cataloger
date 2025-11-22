@@ -8,6 +8,7 @@ import {
   fetchTextInstances,
   fetchTexts,
   fetchTextsByTitle,
+  updateInstance,
 } from "@/api/texts";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -113,6 +114,29 @@ export const useRelatedInstances = (instanceId: string | null) => {
     enabled: !!instanceId, // Only fetch when instanceId exists
     staleTime: 5 * 60 * 1000,
     retry: 1,
+  });
+};
+
+export const useUpdateInstance = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      textId,
+      instanceId,
+      instanceData,
+      user
+    }: {
+      textId: string;
+      instanceId: string;
+      instanceData: any;
+      user: string;
+    }) => updateInstance(textId, instanceId, instanceData, user),
+    onSuccess: (_, { textId, instanceId }) => {
+      queryClient.invalidateQueries({ queryKey: ["instance", instanceId] });
+      queryClient.invalidateQueries({ queryKey: ["textInstance", textId] });
+      queryClient.invalidateQueries({ queryKey: ["annotation"] });
+    }
   });
 };
  

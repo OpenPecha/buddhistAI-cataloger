@@ -1,11 +1,10 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import requests
 import os
 from dotenv import load_dotenv
 
-from utils.segmentor import create_segmentation_annotation
 
 load_dotenv(override=True)
 
@@ -127,25 +126,6 @@ async def get_text_instances(text_id: str):
         raise HTTPException(status_code=response.status_code, detail=response.text)
     return response.json()
 
-
-def create_annotation_background(text_id: str, instance_id: str, content: str, language: str, user: Optional[str] = None):
-    """Background task to create segmentation annotation and temp annotation"""
-    try:
-        if instance_id and content and language:
-            annotation_response_id = create_segmentation_annotation(
-                instance_id, content, language
-            )
-            if annotation_response_id and user:
-                temp_database_response = requests.post(f"{TRANSLATION_BACKEND_URL}/temp_annotation", json={
-                    "textId": text_id,
-                    "instanceId": instance_id,
-                    "annotationId": annotation_response_id,
-                    "createdBy": user
-                })
-                if temp_database_response.status_code != 201:
-                    print(f"Error creating temp annotation: {temp_database_response.text}")
-    except Exception as e:
-        print(e)
 
 
 @router.post("/{instance_id}/translation", status_code=201)

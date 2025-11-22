@@ -139,7 +139,7 @@ function TextInstanceCRUD() {
       {criticalInstance && (
         <div className="space-y-4 mt-8">
           <div className="px-2 sm:px-0">
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-900">{t('textInstances.relatedTexts')}</h3>
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-600">{t('textInstances.relatedTexts')}</h3>
           </div>
 
           {/* Loading state for related instances */}
@@ -213,6 +213,7 @@ function TextInstanceCRUD() {
                     const metadata = relatedInstance.metadata;
                     const textId = metadata.text_id;
                     const instanceId = relatedInstance.instance_id;
+                    const isAnnotationAvailable = !!relatedInstance.annotation;
                     return (
                       <Link
                         key={relatedInstance.instance_id}
@@ -224,6 +225,7 @@ function TextInstanceCRUD() {
                           language={metadata.language}
                           type={relatedInstance.relationship}
                           bdrcId={undefined}
+                          isAnnotationAvailable={isAnnotationAvailable}
                         />
                       </Link>
                     );

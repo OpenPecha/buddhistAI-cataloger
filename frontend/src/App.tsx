@@ -62,7 +62,7 @@ function App() {
               <CreateCommentary />
             </ProtectedRoute>
           } />
-          <Route path="/texts/:text_id/instances/:instance_id/update-annotation" element={
+          <Route path="/texts/:text_id/instances/:instance_id/edit" element={
             <ProtectedRoute>
               <UpdateAnnotation />
             </ProtectedRoute>

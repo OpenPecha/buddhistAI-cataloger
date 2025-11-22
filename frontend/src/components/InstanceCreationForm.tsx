@@ -6,6 +6,7 @@ import { calculateAnnotations } from "@/utils/annotationCalculator";
 import { useBdrcSearch } from "@/hooks/useBdrcSearch";
 import { useBibliographyAPI } from "@/hooks/useBibliographyAPI";
 import { useTranslation } from "react-i18next";
+import FormsubmitSection from "./FormsubmitSection";
 
 interface InstanceData {
   metadata: {
@@ -42,6 +43,13 @@ export interface InstanceCreationFormRef {
   addAltIncipit: (text: string, language?: string) => void;
   hasIncipit: () => boolean;
   getFormData: () => InstanceData | null;
+  initializeForm?: (data: {
+    type?: string;
+    source?: string;
+    bdrc?: string;
+    wiki?: string;
+    colophon?: string;
+  }) => void;
 }
 
 interface TitleEntry {
@@ -204,6 +212,22 @@ const InstanceCreationForm = forwardRef<
         return null;
       }
       return cleanFormData();
+    },
+    initializeForm: (data: {
+      type?: string;
+      source?: string;
+      bdrc?: string;
+      wiki?: string;
+      colophon?: string;
+    }) => {
+      if (data.type) setType(data.type as "diplomatic" | "critical");
+      if (data.source) setSource(data.source);
+      if (data.bdrc) {
+        setBdrc(data.bdrc);
+        setSelectedBdrc({ id: data.bdrc, label: data.bdrc });
+      }
+      if (data.wiki) setWiki(data.wiki);
+      if (data.colophon) setColophon(data.colophon);
     },
   }));
 
@@ -495,27 +519,7 @@ const InstanceCreationForm = forwardRef<
       {/* Metadata Section */}
       <div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Type */}
-          {/* <div>
-            <label
-              htmlFor="type"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Type <span className="text-red-500">*</span>
-            </label>
-            <select
-              id="type"
-              value={type}
-              onChange={(e) => setType(e.target.value as "critical" | "diplomatic")}
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="critical">Critical</option>
-            </select>
-            {errors.type && (
-              <p className="mt-1 text-sm text-red-600">{errors.type}</p>
-            )}
-          </div> */}
+       
 
           {/* Source */}
           <div className="md:col-span-2">
@@ -532,7 +536,7 @@ const InstanceCreationForm = forwardRef<
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">{t("instance.sourcePlaceholder")}</option>
+              <option value="" className="text-gray-300">{t("instance.sourcePlaceholder")}</option>
               <option value="bdrc.io">bdrc.io</option>
               <option value="unknown">unknown</option>
             </select>
@@ -911,23 +915,7 @@ const InstanceCreationForm = forwardRef<
 
 
       {/* Form Actions */}
-      <div className="flex justify-center space-x-3 pt-4">
-        {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel}>
-            {t("common.cancel")}
-          </Button>
-        )}
-        <Button type="submit" disabled={isSubmitting || disableSubmit}>
-          {isSubmitting ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              {t("instance.creating")}
-            </>
-          ) : (
-            t("common.create")
-          )}
-        </Button>
-      </div>
+    <FormsubmitSection onSubmit={handleSubmit} onCancel={onCancel} isSubmitting={isSubmitting} disableSubmit={disableSubmit} />
     </form>
     </>
   );

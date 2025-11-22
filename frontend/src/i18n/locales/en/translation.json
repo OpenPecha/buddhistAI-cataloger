@@ -439,7 +439,7 @@
     "noTextDetailsFound": "No Text Details Found",
     "noTextDetailsDescription": "This text doesn't have any details yet.",
     "untitled": "Untitled",
-    "relatedTexts": "Related Texts",
+    "relatedTexts": "Alignment",
     "loadingRelatedTexts": "Loading related texts...",
     "errorLoadingRelatedTexts": "Error loading related texts",
     "noRelatedTextsFound": "No Related Texts Found"  
