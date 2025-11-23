@@ -74,7 +74,7 @@ const CreateCommentary = () => {
   }, [content, language]);
   useEffect(() => {
     if(isTextFetched){
-      setTitle(text_title);
+      setTitle(text_title+" (Commentary)");
     }
   }, [isTextFetched]);
   // Segment character limit validation with debouncing (1000ms)
@@ -191,7 +191,8 @@ const CreateCommentary = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if(title.trim() === text_title.trim()){
-    toast.error(t('textForm.titleCannotBeSameAsTextTitle'));
+    toast.error("Title cannot be the same as the text title");
+    return;
     }
     // Show confirmation modal before submitting
     setShowConfirmModal(true);

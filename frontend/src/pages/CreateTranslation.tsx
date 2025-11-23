@@ -19,7 +19,7 @@ import LanguageSelectorForm from '@/components/formComponent/LanguageSelectorFor
 import SourceSelection from '@/components/formComponent/SourceSelection';
 import Copyright from '@/components/formComponent/Copyright';
 import { Input } from '@/components/ui/input';
-
+import { toast } from "sonner"
 
 
 const CreateTranslation = () => {
@@ -64,7 +64,7 @@ const CreateTranslation = () => {
   const text_title = text?.title.bo || text?.title.en ;
   useEffect(() => {
     if(isTextFetched){
-      setTitle(text_title);
+      setTitle(text_title+" (Translation)");
     }
   }, [isTextFetched]);
   // Content validation - check if content ends with appropriate punctuation based on language
@@ -181,7 +181,10 @@ const CreateTranslation = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+    if(title.trim() === text_title?.trim()){
+    toast.error("Title cannot be the same as the text title");
+    return;
+    }
     // Show confirmation modal before submitting
     setShowConfirmModal(true);
   };
