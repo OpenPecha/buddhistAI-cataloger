@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, X, Upload, FileText, Code, ArrowLeft } from "lucide-react";
+import { AlertCircle, X, Upload, FileText, Code, ArrowLeft, Loader2 } from "lucide-react";
 import TextEditorView from "@/components/text-creation/TextEditorView";
 import InstanceCreationForm from "@/components/InstanceCreationForm";
 import type { InstanceCreationFormRef } from "@/components/InstanceCreationForm";
@@ -337,11 +337,8 @@ const UpdateAnnotation = () => {
               </div>
             </div>
             <h2 className="text-3xl font-bold text-gray-800 mb-3 animate-pulse">
-              { "Updating..."}
+              Please Wait while we update the text
             </h2>
-            <p className="text-lg text-gray-600 mb-6">
-              { "Please wait"}
-            </p>
           </div>
         </div>
       )}

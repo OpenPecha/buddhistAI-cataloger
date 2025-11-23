@@ -25,7 +25,7 @@ const disabled = isSubmitting || disableSubmit;
         {t("common.cancel")}
       </Button>
     )}
-    <Button type="button" onClick={onSubmit} disabled={disabled} variant="default" >
+    <Button type="button" onClick={onSubmit} disabled={disabled} variant="default" className="cursor-pointer bg-gradient-to-r from-blue-400 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white py-3" >
       {isSubmitting ? (
         <>
           <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
