@@ -60,21 +60,11 @@ const CreateTranslation = () => {
   const { getAPIAnnotations, hasAnnotations } = useBibliographyAPI();
   const { data: text } = useText(text_id || '');
   const text_title = text?.title.bo || text?.title.en ;
-  // Content validation - check if content ends with ། (only for Tibetan language)
+  // Content validation - check if content ends with appropriate punctuation based on language
   const contentValidationError = useMemo(() => {
-    // Only validate if content is not empty
-    if (!content || content.trim() === '') {
-      return null; // No validation needed for empty content
-    }
-    
-    // Only validate when language is explicitly "bo" (Tibetan)
-    if (language !== 'bo') {
-      return null; // No validation needed for non-Tibetan languages
-    }
-    
-    const isValid = validateContentEndsWithTsheg(content);
-    return isValid ? null : t("create.contentMustEndWithTsheg");
-  }, [content, language, t]);
+    const isValidMessage = validateContentEndsWithTsheg(language, content);
+    return isValidMessage;
+  }, [content, language]);
 
   // Segment character limit validation with debouncing (1000ms)
   const [segmentValidation, setSegmentValidation] = useState<{

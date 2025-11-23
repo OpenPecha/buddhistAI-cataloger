@@ -1,20 +1,54 @@
 import { calculateAnnotations } from './annotationCalculator';
 
 /**
- * Validates that content ends with Tibetan tsheg (།)
+ * Validates that content ends with appropriate punctuation based on language
+ * @param language - The language code (bo, en, zh, lzh, etc.)
  * @param content - The content to validate
- * @returns true if content is empty or ends with །, false otherwise
+ * @returns null if valid, or error message string if invalid
  */
-export function validateContentEndsWithTsheg(content: string): boolean {
+export function validateContentEndsWithTsheg(language: string, content: string): string | null {
   // If content is empty, no validation needed
   if (!content || content.trim() === '') {
-    return true;
+    return null;
   }
-  
-  // Trim trailing whitespace and check if it ends with །
+
+  // Trim trailing whitespace
   const trimmedContent = content.trimEnd();
-  return trimmedContent.endsWith('།');
+
+  // Tibetan (bo): validate that text ends with ("།", "༔", "༎")
+  if (language === 'bo') {
+    const isValid = trimmedContent.endsWith('།') || 
+           trimmedContent.endsWith('༔') || 
+           trimmedContent.endsWith('༎');
+    return isValid ? null : "Content must end with །, ༔, or ༎";
+  }
+
+  // English (en): validate that text ends with (".", "!", "?", ";", ":")
+  if (language === 'en') {
+    const isValid = trimmedContent.endsWith('.') || 
+           trimmedContent.endsWith('!') || 
+           trimmedContent.endsWith('?') || 
+           trimmedContent.endsWith(';') || 
+           trimmedContent.endsWith(':');
+    return isValid ? null : "Content must end with ., !, ?, ;, or :";
+  }
+
+  // Chinese (zh, lzh): validate that text ends with ("。", "！", "？", "；", "、")
+  if (language === 'zh' || language === 'lzh') {
+    const isValid = trimmedContent.endsWith('。') || 
+           trimmedContent.endsWith('！') || 
+           trimmedContent.endsWith('？') || 
+           trimmedContent.endsWith('；') || 
+           trimmedContent.endsWith('、');
+    return isValid ? null : "Content must end with 。, ！, ？, ；, or 、";
+  }
+
+  // For other languages, no validation required (return null)
+  return null;
 }
+
+
+
 
 /**
  * Character limit per segment (can be easily changed)

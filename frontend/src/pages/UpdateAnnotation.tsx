@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, X, Upload, FileText, Code, ArrowLeft } from "lucide-react";
@@ -58,16 +58,10 @@ const UpdateAnnotation = () => {
     }
   }, [text]);
 
-  const contentValidationError = useState(() => {
-    if (!editedContent || editedContent.trim() === "") {
-      return null;
-    }
-    if (selectedLanguage !== "bo") {
-      return null;
-    }
-    const isValid = validateContentEndsWithTsheg(editedContent);
-    return isValid ? null : t("create.contentMustEndWithTsheg");
-  })[0];
+  const contentValidationError = useMemo(() => {
+    const isValidMessage = validateContentEndsWithTsheg(selectedLanguage, editedContent);
+    return isValidMessage;
+  }, [selectedLanguage, editedContent]);
 
   const [segmentValidation, setSegmentValidation] = useState<{
     invalidSegments: Array<{ index: number; length: number }>;

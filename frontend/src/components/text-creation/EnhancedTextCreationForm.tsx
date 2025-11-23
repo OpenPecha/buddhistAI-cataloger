@@ -122,21 +122,11 @@ const EnhancedTextCreationForm = () => {
     return () => clearInterval(interval);
   }, [selectedLanguage]);
 
-  // Content validation - check if content ends with ། (only for Tibetan language)
+  // Content validation - check if content ends with appropriate punctuation based on language
   const contentValidationError = useMemo(() => {
-    // Only validate if content is not empty
-    if (!editedContent || editedContent.trim() === '') {
-      return null; // No validation needed for empty content
-    }
-    
-    // Only validate when language is explicitly "bo" (Tibetan)
-    if (selectedLanguage !== 'bo') {
-      return null; // No validation needed for non-Tibetan languages
-    }
-    
-    const isValid = validateContentEndsWithTsheg(editedContent);
-    return isValid ? null : t("create.contentMustEndWithTsheg");
-  }, [editedContent, selectedLanguage, t]);
+    const isValidMessage = validateContentEndsWithTsheg(selectedLanguage, editedContent);
+    return isValidMessage;
+  }, [editedContent, selectedLanguage]);
 
   // Segment character limit validation with debouncing (1000ms)
   const [segmentValidation, setSegmentValidation] = useState<{
