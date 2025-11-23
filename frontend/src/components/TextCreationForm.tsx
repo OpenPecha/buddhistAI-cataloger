@@ -83,8 +83,8 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     const [bdrc, setBdrc] = useState("");
     const [categoryId, setCategoryId] = useState<string>("");
     const [categoryError, setCategoryError] = useState<boolean>(false);
-    const [copyright, setCopyright] = useState<string>("Public domain");
-    const [license, setLicense] = useState<string>("CC0");
+    const [copyright, setCopyright] = useState<string>("Unknown");
+    const [license, setLicense] = useState<string>("Unknown");
     // BDRC search state
     const [bdrcSearch, setBdrcSearch] = useState("");
     const [showBdrcDropdown, setShowBdrcDropdown] = useState(false);

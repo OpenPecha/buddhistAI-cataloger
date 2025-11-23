@@ -36,8 +36,8 @@ const CreateTranslation = () => {
   const [title, setTitle] = useState('');
   const [altTitles, setAltTitles] = useState<string[]>([]);
   const [source, setSource] = useState('');
-  const [copyright, setCopyright] = useState<string>('Public domain');
-  const [license, setLicense] = useState<string>('CC0');
+  const [copyright, setCopyright] = useState<string>('Unknown');
+  const [license, setLicense] = useState<string>('Unknown');
   const [content, setContent] = useState('');
   const [uploadedFilename, setUploadedFilename] = useState('');
 

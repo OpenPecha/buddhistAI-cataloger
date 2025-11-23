@@ -41,8 +41,8 @@ const CreateCommentary = () => {
   const [title, setTitle] = useState(text_title??"");
   const [source, setSource] = useState('');
   const [altTitles, setAltTitles] = useState<string[]>([]);
-  const [copyright, setCopyright] = useState<string>('Public domain');
-  const [license, setLicense] = useState<string>('CC0');
+  const [copyright, setCopyright] = useState<string>('Unknown');
+  const [license, setLicense] = useState<string>('Unknown');
   const [categoryId, setCategoryId] = useState<string>('');
   const [content, setContent] = useState('');
   const [uploadedFilename, setUploadedFilename] = useState('');
