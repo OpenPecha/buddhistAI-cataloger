@@ -160,26 +160,6 @@ const TextCreationSuccessModal = ({ message, onClose, instanceId, parentInstance
                   onClick={handleAlignerClick}
                 />
 
-                {/* Formatter Card */}
-                <ActionCard
-                  title="Formatter"
-                  subtitle={t('successModal.formatterSubtitle')}
-                  icon={
-                    <div className="bg-yellow-500 rounded-xl p-2 ring-1 ring-white/40">
-                      {/* Inline SVG icon to avoid extra deps */}
-                      <svg
-                        className="w-[22px] h-[22px] text-white"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        aria-hidden
-                      >
-                        <path d="M4 6a2 2 0 012-2h12a1 1 0 010 2H6v12a1 1 0 11-2 0V6z" />
-                        <path d="M9 9h8a1 1 0 110 2H9a1 1 0 110-2zm0 4h6a1 1 0 110 2H9a1 1 0 110-2z" />
-                      </svg>
-                    </div>
-                  }
-                  onClick={handleFormatterClick}
-                />
               </div>
             </div>
           </motion.div>

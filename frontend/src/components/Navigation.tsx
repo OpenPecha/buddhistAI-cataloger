@@ -87,7 +87,7 @@ function Navigation() {
               >
                 Persons
               </Link>
-              <a
+              {/* <a
                 href="https://formatter.buddhistai.tools/formatter"
                 className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   isActive('/formatter')
@@ -96,7 +96,7 @@ function Navigation() {
                 }`}
               >
                 Formatter
-              </a>
+              </a> */}
               <a
                 href="https://formatter.buddhistai.tools/aligner"
                 className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
