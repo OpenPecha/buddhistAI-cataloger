@@ -67,8 +67,8 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     const {data: LANGUAGE_OPTIONS,isLoading: isLoadingLanguageOptions} = useLanguage();
     // State declarations
     const [selectedType, setSelectedType] = useState<
-      "root" | "commentary" | "translation" | ""
-    >("");
+      "root" | "translation" | ""
+    >("root");
     const [titles, setTitles] = useState<TitleEntry[]>([]);
     const [altTitles, setAltTitles] = useState<TitleEntry[][]>([]);
     const [language, setLanguage] = useState("");
@@ -483,8 +483,9 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
             <select
               id="type"
               value={selectedType}
+              disabled={true}
               onChange={(e) => setSelectedType(e.target.value as any)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500 disabled:cursor-not-allowed"
             >
               <option value="">{t("textForm.selectType")}</option>
               <option value="root">{t("textForm.root")}</option>

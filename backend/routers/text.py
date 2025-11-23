@@ -319,7 +319,7 @@ async def create_instance(id: str, instance: CreateInstance):
         payload = instance.model_dump(exclude_none=True)
      
         
-        user = payload.pop("user", None)
+        payload.pop("user", None)
         response = requests.post(f"{API_ENDPOINT}/texts/{id}/instances", json=payload,timeout=120)
         
         if response.status_code != 201:
