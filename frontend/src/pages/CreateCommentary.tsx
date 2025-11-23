@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, X, Upload, ArrowLeft, Plus, Trash2, AlertTriangle } from 'lucide-react';
-import TextEditorView from '@/components/text-creation/TextEditorView';
+import TextEditorView from '@/components/textCreation/TextEditorView';
 import { createCommentary } from '@/api/texts';
 import { calculateAnnotations } from '@/utils/annotationCalculator';
 import { useTranslation } from 'react-i18next';
@@ -14,11 +14,13 @@ import { useInstance, useText } from '@/hooks/useTexts';
 import type { OpenPechaTextInstance } from '@/types/text';
 import { useBibliography } from '@/context/BibliographyContext';
 import { useBibliographyAPI } from '@/hooks/useBibliographyAPI';
-import TextCreationSuccessModal from '@/components/text-creation/TextCreationSuccessModal';
+import TextCreationSuccessModal from '@/components/textCreation/TextCreationSuccessModal';
 import { useAuth0 } from '@auth0/auth0-react';
 import { validateContentEndsWithTsheg, validateSegmentLimits } from '@/utils/contentValidation';
-import LanguageSelectorForm from '@/components/LanguageSelectorForm';
-import SourceSelection from '@/components/SourceSelection';
+import LanguageSelectorForm from '@/components/formComponent/LanguageSelectorForm';
+import SourceSelection from '@/components/formComponent/SourceSelection';
+import Copyright from '@/components/formComponent/Copyright';
+import { Input } from '@/components/ui/input';
 
 
 
@@ -444,7 +446,7 @@ const CreateCommentary = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   {t('textForm.title')} <span className="text-red-500">*</span>
                 </label>
-                <input
+                <Input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -453,7 +455,6 @@ const CreateCommentary = () => {
                       e.preventDefault(); // Prevent form submission on Enter
                     }
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder={t('textForm.enterTitle')}
                   required
                 />
@@ -516,7 +517,7 @@ const CreateCommentary = () => {
                   {t('textForm.author')}
                 </label>
                 <div className="relative">
-                  <input
+                  <Input
                     type="text"
                     value={personSearch}
                     onChange={handlePersonSearchChange}
@@ -527,7 +528,6 @@ const CreateCommentary = () => {
                         e.preventDefault(); // Prevent form submission on Enter
                       }
                     }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder={t('textForm.searchForPerson')}
                   />
 
@@ -644,50 +644,16 @@ const CreateCommentary = () => {
               <SourceSelection source={source} setSource={setSource} />
               </div>
 
-              {/* Copyright Field */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('commentary.copyright')} <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={copyright}
-                  onChange={(e) => setCopyright(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="Unknown">{t("textForm.copyrightUnknown")}</option>
-                  <option value="In copyright">{t("textForm.copyrightInCopyright")}</option>
-                  <option value="Public domain">{t("textForm.copyrightPublicDomain")}</option>
-                </select>
-              </div>
-
-              {/* License Field */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  {t('commentary.license')} <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={license}
-                  onChange={(e) => setLicense(e.target.value)}
-                  disabled={copyright === "Unknown" || copyright === "Public domain"}
-                  className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    copyright === "Unknown" ? "bg-gray-100 cursor-not-allowed opacity-60" : ""}
-                    ${copyright === "Public domain" ? "bg-gray-100 cursor-not-allowed opacity-60" : ""}
-                  }`}
-                  required
-                >
-                  <option value="unknown">{t("textForm.licenseUnknown")}</option>
-                  <option value="CC0">{t("textForm.licenseCC0")}</option>
-                  <option value="Public Domain Mark">{t("textForm.licensePublicDomainMark")}</option>
-                  <option value="CC BY">{t("textForm.licenseCCBY")}</option>
-                  <option value="CC BY-SA">{t("textForm.licenseCCBYSA")}</option>
-                  <option value="CC BY-ND">{t("textForm.licenseCCBYND")}</option>
-                  <option value="CC BY-NC">{t("textForm.licenseCCBYNC")}</option>
-                  <option value="CC BY-NC-SA">{t("textForm.licenseCCBYNCSA")}</option>
-                  <option value="CC BY-NC-ND">{t("textForm.licenseCCBYNCND")}</option>
-                  <option value="under copyright">{t("textForm.licenseUnderCopyright")}</option>
-                </select>
-              </div>
+              {/* Copyright and License Fields */}
+              <Copyright
+                copyright={copyright}
+                setCopyright={setCopyright}
+                license={license}
+                setLicense={setLicense}
+                copyrightLabelKey="commentary.copyright"
+                licenseLabelKey="commentary.license"
+                required={true}
+              />
 
               {/* Submit Button */}
               <div className="pt-4 border-t border-gray-200">

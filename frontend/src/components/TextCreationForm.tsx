@@ -18,8 +18,10 @@ import { MultilevelCategorySelector } from "@/components/MultilevelCategorySelec
 import { fetchTextByBdrcId } from "@/api/texts";
 import { useTranslation } from "react-i18next";
 import { useLanguage } from "@/hooks/useEnum";
-import LanguageSelectorForm from "./LanguageSelectorForm";
-import RoleSelectionForm from "./RoleSelectionForm";
+import LanguageSelectorForm from "./formComponent/LanguageSelectorForm";
+import RoleSelectionForm from "./formComponent/RoleSelectionForm";
+import Copyright from "./formComponent/Copyright";
+import { Input } from "./ui/input";
 
 interface TextCreationFormProps {
   onDataChange?: (textData: any) => void;
@@ -473,7 +475,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       <div className="space-y-6 font-['jomo'] text-lg">
         {/* Type and Language */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
+          <div className="hidden">
             <label
               htmlFor="type"
               className="block text-sm font-medium text-gray-700 mb-1"
@@ -490,7 +492,6 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
               <option value="">{t("textForm.selectType")}</option>
               <option value="root">{t("textForm.root")}</option>
               <option value="translation">{t("textForm.translation")}</option>
-              {/* <option value="commentary">{t("textForm.commentary")}</option> */}
             </select>
             {errors.type && (
               <p className="mt-1 text-sm text-red-600">{errors.type}</p>
@@ -512,7 +513,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         </div>
 
         {/* Target field - only for commentary/translation */}
-        {(selectedType === "commentary" || selectedType === "translation") && (
+        {selectedType === "translation"&& (
           <div>
             <label
               htmlFor="target"
@@ -520,12 +521,11 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
             >
               {t("textForm.targetTextId")}
             </label>
-            <input
+            <Input
               id="target"
               type="text"
               value={target}
               onChange={(e) => setTarget(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder={t("textForm.leaveEmptyNA")}
             />
 
@@ -951,12 +951,11 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
             >
               {t("textForm.date")}
             </label>
-            <input
+            <Input
               id="date"
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -985,7 +984,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
               ) : (
                 // Search input
                 <>
-                  <input
+                  <Input
                     id="bdrc"
                     type="text"
                     value={bdrcSearch}
@@ -994,7 +993,6 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                       setShowBdrcDropdown(true);
                     }}
                    
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder={t("textForm.searchBdrcEntries")}
                   />
                   {/* BDRC Dropdown */}
@@ -1089,49 +1087,16 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
           )}
         </div>
 
-        {/* Copyright Field */}
-        <div>
-          <label htmlFor="copyright" className="block text-sm font-medium text-gray-700 mb-2">
-            {t("textForm.copyright")}
-          </label>
-          <select
-            id="copyright"
-            value={copyright}
-            onChange={(e) => setCopyright(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-          >
-            <option value="Unknown">{t("textForm.copyrightUnknown")}</option>
-            <option value="In copyright">{t("textForm.copyrightInCopyright")}</option>
-            <option value="Public domain">{t("textForm.copyrightPublicDomain")}</option>
-          </select>
-        </div>
-
-        {/* License Field */}
-        <div>
-          <label htmlFor="license" className="block text-sm font-medium text-gray-700 mb-2">
-            {t("textForm.license")}
-          </label>
-          <select
-            id="license"
-            value={license}
-            onChange={(e) => setLicense(e.target.value)}
-            disabled={copyright === "Unknown" || copyright === "Public domain"}
-            className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm ${
-              copyright === "Unknown" ? "bg-gray-100 cursor-not-allowed opacity-60" : ""}
-              ${copyright === "Public domain" ? "bg-gray-100 cursor-not-allowed opacity-60" : ""}`}
-          >
-            <option value="unknown">{t("textForm.licenseUnknown")}</option>
-            <option value="CC0">{t("textForm.licenseCC0")}</option>
-            <option value="Public Domain Mark">{t("textForm.licensePublicDomainMark")}</option>
-            <option value="CC BY">{t("textForm.licenseCCBY")}</option>
-            <option value="CC BY-SA">{t("textForm.licenseCCBYSA")}</option>
-            <option value="CC BY-ND">{t("textForm.licenseCCBYND")}</option>
-            <option value="CC BY-NC">{t("textForm.licenseCCBYNC")}</option>
-            <option value="CC BY-NC-SA">{t("textForm.licenseCCBYNCSA")}</option>
-            <option value="CC BY-NC-ND">{t("textForm.licenseCCBYNCND")}</option>
-            <option value="under copyright">{t("textForm.licenseUnderCopyright")}</option>
-          </select>
-        </div>
+        {/* Copyright and License Fields */}
+        <Copyright
+          copyright={copyright}
+          setCopyright={setCopyright}
+          license={license}
+          setLicense={setLicense}
+          copyrightLabelKey="textForm.copyright"
+          licenseLabelKey="textForm.license"
+          required={false}
+        />
 
         {/* Person Creation Modal */}
         <PersonFormModal

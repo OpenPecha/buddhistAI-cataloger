@@ -1,7 +1,7 @@
 import { useAuth0 } from '@auth0/auth0-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
-import LanguageSelector from './LanguageSelector';
+import LanguageSelector from './formComponent/LanguageSelector';
 
 function Navigation() {
   const { user, logout, isAuthenticated, isLoading } = useAuth0();

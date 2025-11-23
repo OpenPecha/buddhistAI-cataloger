@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, X, Upload, FileText, Code, ArrowLeft, Loader2 } from "lucide-react";
-import TextEditorView from "@/components/text-creation/TextEditorView";
+import TextEditorView from "@/components/textCreation/TextEditorView";
 import InstanceCreationForm from "@/components/InstanceCreationForm";
 import type { InstanceCreationFormRef } from "@/components/InstanceCreationForm";
 import { useText, useInstance, useUpdateInstance, useAnnnotation } from "@/hooks/useTexts";

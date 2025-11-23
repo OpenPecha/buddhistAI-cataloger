@@ -306,7 +306,7 @@
     "colophon": "Colophon",
     "colophonText": "Colophon text",
     "source": "Source",
-    "sourcePlaceholder": "Enter the source of this Text",
+    "sourcePlaceholder": "Select the source of this Text",
     "sourceRequired": "Source is required",
     "incipitTitle": "Incipit Title",
     "addIncipitTitle": "Add Incipit Title",
@@ -394,7 +394,7 @@
   },
   "commentary": {
     "source": "Source",
-    "sourcePlaceholder": "Enter the source of this commentary",
+    "sourcePlaceholder": "Select the source of this Text",
     "sourceRequired": "Source is required",
     "authorRequired": "Author is required",
     "copyright": "Copyright",
@@ -403,7 +403,7 @@
   },
   "translation": {
     "source": "Source",
-    "sourcePlaceholder": "Enter the source of this translation",
+    "sourcePlaceholder": "Select the source of this Text",
     "sourceRequired": "Source is required",
     "translatorRequired": "Translator is required",
     "copyright": "Copyright",

@@ -2,7 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Book, Users, Home, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
-import LanguageSwitcher from "../LanguageSelector";
+import LanguageSwitcher from "../formComponent/LanguageSelector";
 
 const Navigation = () => {
   const location = useLocation();

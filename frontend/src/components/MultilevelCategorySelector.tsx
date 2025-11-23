@@ -109,48 +109,27 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
         <div className={`rounded-md bg-white max-h-[400px] overflow-y-auto p-3 border ${
           error ? 'border-red-300 bg-red-50' : 'border-gray-200'
         }`}>
-          {loading ? (
+          {loading && (
             <div className="flex items-center justify-center gap-2 py-8 text-sm text-gray-500">
               <Loader2 className="h-5 w-5 animate-spin" />
               <span>{t('category.loadingCategories')}</span>
             </div>
-          ) : error ? (
+          )}
+          { error && (
             <div className="py-8 text-center text-sm text-red-600">
               {t('category.errorLoadingCategories')} {error}
             </div>
-          ) : categories.length === 0 ? (
+          )}
+          {categories.length === 0 && (
             <div className="py-8 text-center text-sm text-gray-500">
               {t('category.noCategoriesAvailable')}
             </div>
-          ) : (
+          )}
+          {categories.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {categories.map((category) => {
-                // Only leaf nodes (categories without children) can be selected
-                const isSelected = !category.has_child && selectedCategory?.category.id === category.id;
-                const isSelectable = !category.has_child;
                 return (
-                  <button
-                    type="button"
-                    key={category.id}
-                    onClick={() => handleCategoryClick(category)}
-                    className={`
-                      inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium
-                      transition-all duration-200
-                      ${isSelected 
-                        ? 'bg-blue-600 text-white shadow-md' 
-                        : isSelectable
-                        ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-sm'
-                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:shadow-sm cursor-pointer'
-                      }
-                      ${category.has_child ? 'pr-3' : ''}
-                    `}
-                  >
-                    <span>{category.title}</span>
-                    {isSelected && <Check className="h-4 w-4" />}
-                    {category.has_child && (
-                      <ChevronRight className="h-4 w-4 text-gray-500" />
-                    )}
-                  </button>
+                  <CategoryBadge key={category.id} category={category} selectedCategory={selectedCategory} handleCategoryClick={handleCategoryClick} />
                 );
               })}
             </div>
@@ -163,3 +142,33 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
   );
 };
 
+
+
+function CategoryBadge({ category, selectedCategory, handleCategoryClick }: { category: Category, selectedCategory: { category: Category; path: CategoryLevel[] } | null, handleCategoryClick: (category: Category) => void }) {
+  const isSelected = !category.has_child && selectedCategory?.category.id === category.id;
+  const isSelectable = !category.has_child;
+  return (
+    <button
+    type="button"
+    key={category.id}
+    onClick={() => handleCategoryClick(category)}
+    className={`
+      inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm cursor-pointer font-medium
+      transition-all duration-200
+      ${isSelected 
+        ? 'bg-blue-600 text-white shadow-md' 
+        : isSelectable
+        ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-sm'
+        : 'bg-gray-50 text-gray-600 hover:bg-gray-100 hover:shadow-sm cursor-pointer'
+      }
+      ${category.has_child ? 'pr-3' : ''}
+    `}
+  >
+    <span>{category.title}</span>
+    {isSelected && <Check className="h-4 w-4" />}
+    {category.has_child && (
+      <ChevronRight className="h-4 w-4 text-gray-500" />
+    )}
+  </button>
+  );
+}

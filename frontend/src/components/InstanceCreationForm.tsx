@@ -7,7 +7,8 @@ import { useBdrcSearch } from "@/hooks/useBdrcSearch";
 import { useBibliographyAPI } from "@/hooks/useBibliographyAPI";
 import { useTranslation } from "react-i18next";
 import FormsubmitSection from "./FormsubmitSection";
-import SourceSelection from "./SourceSelection";
+import SourceSelection from "./formComponent/SourceSelection";
+import { Input } from "./ui/input";
 
 interface InstanceData {
   metadata: {
@@ -563,7 +564,7 @@ const InstanceCreationForm = forwardRef<
                 ) : (
                   // Search input
                   <>
-                    <input
+                    <Input
                       id="bdrc"
                       type="text"
                       value={bdrcSearch}
@@ -582,7 +583,6 @@ const InstanceCreationForm = forwardRef<
                         }, 200);
                       }}
                       required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder={t("instance.searchBdrcEntries")}
                     />
                     {/* BDRC Dropdown */}
@@ -632,23 +632,7 @@ const InstanceCreationForm = forwardRef<
             </div>
           )}
 
-          {/* Wiki */}
-          {/* <div>
-            <label
-              htmlFor="wiki"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              Wiki
-            </label>
-            <input
-              id="wiki"
-              type="text"
-              value={wiki}
-              onChange={(e) => setWiki(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Wiki reference"
-            />
-          </div> */}
+  
 
           {/* Colophon */}
           <div className="md:col-span-2">
@@ -658,12 +642,11 @@ const InstanceCreationForm = forwardRef<
             >
               {t("instance.colophon")}
             </label>
-            <input
+            <Input
               id="colophon"
               type="text"
               value={colophon}
               onChange={(e) => setColophon(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder={t("instance.colophonText")}
             />
           </div>
