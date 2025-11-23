@@ -9,7 +9,7 @@ import App from './App.tsx'
 import { UserbackProvider } from './context/UserbackProvider.tsx'
 import { BibliographyProvider } from './context/BibliographyContext.tsx'
 import { Auth0Provider } from '@auth0/auth0-react';
-
+import { Toaster } from "@/components/ui/sonner"
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -38,6 +38,7 @@ createRoot(document.getElementById('root')!).render(
           </BrowserRouter>
         </UserbackProvider>
       </BibliographyProvider>
+      <Toaster />
     </QueryClientProvider>
     </Auth0Provider>
   </StrictMode>,

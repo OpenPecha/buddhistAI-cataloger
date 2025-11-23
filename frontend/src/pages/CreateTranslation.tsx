@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, X, Upload, ArrowLeft, Plus, Trash2, AlertTriangle } from 'lucide-react';
+import { AlertCircle, X, Upload, ArrowLeft, Plus, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import TextEditorView from '@/components/textCreation/TextEditorView';
 import { createTranslation } from '@/api/texts';
 import { calculateAnnotations } from '@/utils/annotationCalculator';
@@ -60,8 +60,13 @@ const CreateTranslation = () => {
   // Bibliography annotations
   const { clearAnnotations } = useBibliography();
   const { getAPIAnnotations, hasAnnotations } = useBibliographyAPI();
-  const { data: text } = useText(text_id || '');
+  const { data: text ,isFetched: isTextFetched } = useText(text_id || '');
   const text_title = text?.title.bo || text?.title.en ;
+  useEffect(() => {
+    if(isTextFetched){
+      setTitle(text_title);
+    }
+  }, [isTextFetched]);
   // Content validation - check if content ends with appropriate punctuation based on language
   const contentValidationError = useMemo(() => {
     const isValidMessage = validateContentEndsWithTsheg(language, content);
@@ -333,6 +338,40 @@ const CreateTranslation = () => {
 
   return (
     <>
+      {/* Loading Overlay - Show when submitting */}
+      {isSubmitting && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 p-8 animate-in fade-in zoom-in-95 duration-200">
+            <div className="text-center">
+              {/* Animated Icon */}
+              <div className="relative mb-6">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-20 h-20 bg-gradient-to-br from-sky-400 to-cyan-500 rounded-full opacity-20 animate-ping"></div>
+                </div>
+                <div className="relative flex items-center justify-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-sky-500 to-cyan-600 rounded-2xl shadow-2xl flex items-center justify-center">
+                    <Loader2 className="w-8 h-8 text-white animate-spin" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Loading Text */}
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                {t('instance.creating')}
+              </h3>
+              <p className="text-sm text-gray-600">
+                {t('textForm.translation')} {t('messages.creating') || 'is being created...'}
+              </p>
+
+              {/* Progress Bar */}
+              <div className="relative w-full h-1.5 bg-gray-200 rounded-full overflow-hidden mt-6">
+                <div className="absolute inset-0 bg-gradient-to-r from-sky-500 via-cyan-500 to-blue-500 rounded-full animate-[loading_1.5s_ease-in-out_infinite]"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Confirmation Modal - Rendered via Portal to document.body */}
       {modalContent && createPortal(modalContent, document.body)}
 
@@ -412,6 +451,7 @@ const CreateTranslation = () => {
                 <Input
                   type="text"
                   value={title}
+                  disabled={!isTextFetched}
                   onChange={(e) => setTitle(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
@@ -431,7 +471,7 @@ const CreateTranslation = () => {
                 <div className="space-y-2">
                   {altTitles.map((altTitle, index) => (
                     <div key={index} className="flex items-center gap-2">
-                      <input
+                      <Input
                         type="text"
                         value={altTitle}
                         onChange={(e) => {
@@ -444,7 +484,6 @@ const CreateTranslation = () => {
                             e.preventDefault(); // Prevent form submission on Enter
                           }
                         }}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder={t('textForm.enterAltTitle')}
                       />
                       <Button

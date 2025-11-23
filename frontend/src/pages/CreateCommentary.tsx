@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, X, Upload, ArrowLeft, Plus, Trash2, AlertTriangle } from 'lucide-react';
+import { AlertCircle, X, Upload, ArrowLeft, Plus, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import TextEditorView from '@/components/textCreation/TextEditorView';
 import { createCommentary } from '@/api/texts';
 import { calculateAnnotations } from '@/utils/annotationCalculator';
@@ -21,7 +21,7 @@ import LanguageSelectorForm from '@/components/formComponent/LanguageSelectorFor
 import SourceSelection from '@/components/formComponent/SourceSelection';
 import Copyright from '@/components/formComponent/Copyright';
 import { Input } from '@/components/ui/input';
-
+import { toast } from "sonner"
 
 
 
@@ -34,11 +34,11 @@ const CreateCommentary = () => {
 
   // Fetch instance data
   const { data: instance, isLoading: instanceLoading } = useInstance(instance_id || '');
-  const { data: text } = useText(text_id || '');
+  const { data: text,isFetched: isTextFetched } = useText(text_id || '');
   const text_title = text?.title.tib || text?.title.bo || text?.title.en || "Content";
   // Form state
   const [language, setLanguage] = useState('');
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState(text_title??"");
   const [source, setSource] = useState('');
   const [altTitles, setAltTitles] = useState<string[]>([]);
   const [copyright, setCopyright] = useState<string>('Public domain');
@@ -72,7 +72,11 @@ const CreateCommentary = () => {
     const isValidMessage = validateContentEndsWithTsheg(language, content);
     return isValidMessage;
   }, [content, language]);
-
+  useEffect(() => {
+    if(isTextFetched){
+      setTitle(text_title);
+    }
+  }, [isTextFetched]);
   // Segment character limit validation with debouncing (1000ms)
   const [segmentValidation, setSegmentValidation] = useState<{
     invalidSegments: Array<{ index: number; length: number }>;
@@ -115,34 +119,7 @@ const CreateCommentary = () => {
     }
   }, [copyright]);
 
-  // Extract instance title with fallback logic (same as TextInstanceCard)
-  const getInstanceTitle = (instance: OpenPechaTextInstance | undefined): string => {
-    if (!instance || !instance.metadata) return t('header.instances');
-
-    let title = "";
-    
-    if (instance.metadata.incipit_title && typeof instance.metadata.incipit_title === 'object') {
-      const incipitObj = instance.metadata.incipit_title as Record<string, string>;
-      if (incipitObj.bo) {
-        title = incipitObj.bo;
-      } else {
-        // Get first available language from incipit_title
-        const firstLanguage = Object.keys(incipitObj)[0];
-        if (firstLanguage) {
-          title = incipitObj[firstLanguage];
-        }
-      }
-    }
-    
-    // If no incipit_title, format with colophon
-    if (!title) {
-      title = instance.metadata.colophon 
-        ? `Text Instance (${instance.metadata.colophon})` 
-        : "Text Instance";
-    }
-
-    return title;
-  };
+ 
 
   const getPersonDisplayName = (person: Person): string => {
     if (!person.name) {
@@ -213,7 +190,9 @@ const CreateCommentary = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+    if(title.trim() === text_title.trim()){
+    toast.error(t('textForm.titleCannotBeSameAsTextTitle'));
+    }
     // Show confirmation modal before submitting
     setShowConfirmModal(true);
   };
@@ -370,6 +349,40 @@ const CreateCommentary = () => {
 
   return (
     <>
+      {/* Loading Overlay - Show when submitting */}
+      {isSubmitting && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 p-8 animate-in fade-in zoom-in-95 duration-200">
+            <div className="text-center">
+              {/* Animated Icon */}
+              <div className="relative mb-6">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-20 h-20 bg-gradient-to-br from-emerald-400 to-green-500 rounded-full opacity-20 animate-ping"></div>
+                </div>
+                <div className="relative flex items-center justify-center">
+                  <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl shadow-2xl flex items-center justify-center">
+                    <Loader2 className="w-8 h-8 text-white animate-spin" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Loading Text */}
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                {t('instance.creating')}
+              </h3>
+              <p className="text-sm text-gray-600">
+                {t('textForm.commentary')} {t('messages.creating') || 'is being created...'}
+              </p>
+
+              {/* Progress Bar */}
+              <div className="relative w-full h-1.5 bg-gray-200 rounded-full overflow-hidden mt-6">
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 rounded-full animate-[loading_1.5s_ease-in-out_infinite]"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Confirmation Modal - Rendered via Portal to document.body */}
       {modalContent && createPortal(modalContent, document.body)}
 
@@ -449,6 +462,7 @@ const CreateCommentary = () => {
                 <Input
                   type="text"
                   value={title}
+                  disabled={!isTextFetched}
                   onChange={(e) => setTitle(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
@@ -468,7 +482,7 @@ const CreateCommentary = () => {
                 <div className="space-y-2">
                   {altTitles.map((altTitle, index) => (
                     <div key={index} className="flex items-center gap-2">
-                      <input
+                      <Input
                         type="text"
                         value={altTitle}
                         onChange={(e) => {
@@ -481,7 +495,6 @@ const CreateCommentary = () => {
                             e.preventDefault();
                           }
                         }}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder={t('textForm.enterAltTitle')}
                       />
                       <Button
