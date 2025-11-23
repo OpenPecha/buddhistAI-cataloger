@@ -220,7 +220,6 @@ async def get_texts(
 
 @router.post("", status_code=201)
 async def create_text(text: CreateText):
-    print('text', text)
     if not API_ENDPOINT:
         raise HTTPException(
             status_code=500, 
@@ -343,7 +342,6 @@ async def create_instance(id: str, instance: CreateInstance):
 
 @router.put("/instances/{instance_id}", status_code=200)
 async def update_instance(instance_id: str, instance: UpdateInstance):
-    print('instance', instance)
     if not API_ENDPOINT:
         raise HTTPException(
             status_code=500, 
