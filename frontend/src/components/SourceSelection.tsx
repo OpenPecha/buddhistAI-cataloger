@@ -5,8 +5,8 @@ function SourceSelection({ source, setSource }: { source: string, setSource: (so
 
   const sourceOptions = [
     { value: 'bdrc.io', label: 'bdrc.io' },
-    { value: 'wiki', label: 'wiki' },
     { value: 'openpecha.org', label: 'openpecha.org' },
+    {value:'lotsawahouse.org', label: 'lotsawahouse.org'},
     { value: 'unknown', label: 'unknown' },
   ]
 
