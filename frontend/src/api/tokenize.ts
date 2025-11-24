@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8000';
+import { API_URL } from '@/config/api';
 
 export interface TokenizeRequest {
   text: string;

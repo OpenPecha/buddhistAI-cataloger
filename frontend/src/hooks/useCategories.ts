@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { API_URL } from '@/config/api';
 
 export interface Category {
   id: string;
@@ -14,8 +15,6 @@ interface UseCategoriesResult {
   refetch: () => void;
 }
 
-const API_BASE_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8000';
-
 // Fetch function for categories
 const fetchCategories = async (parentId: string | null): Promise<Category[]> => {
   const params = new URLSearchParams();
@@ -25,7 +24,7 @@ const fetchCategories = async (parentId: string | null): Promise<Category[]> => 
     params.append('parent_id', parentId);
   }
 
-  const url = `${API_BASE_URL}/v2/categories?${params.toString()}`;
+  const url = `${API_URL}/v2/categories?${params.toString()}`;
   const response = await fetch(url);
 
   if (!response.ok) {

@@ -12,7 +12,7 @@ interface TextListCardProps {
   text: OpenPechaText;
 }
 
-const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8000';
+import { API_URL } from '@/config/api';
 
 const TextListCard = ({ text }: TextListCardProps) => {
   const { t } = useTranslation();

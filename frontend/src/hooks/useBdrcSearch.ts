@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-
-const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8000';
+import { API_URL } from '@/config/api';
 
 export interface BdrcContributor {
   creator?: string;

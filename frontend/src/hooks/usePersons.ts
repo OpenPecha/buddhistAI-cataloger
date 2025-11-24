@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Person, CreatePersonData, UpdatePersonData } from '../types/person';
-
-const API_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:8000';
+import { API_URL } from '@/config/api';
 
 // Helper function to handle API responses with better error messages
 const handleApiResponse = async (response: Response, customMessages?: { 400?: string; 404?: string; 500?: string }) => {
