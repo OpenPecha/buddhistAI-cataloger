@@ -156,12 +156,16 @@ async def search_texts_by_title(
     params = {k: v for k, v in params.items() if v is not None}
         
     url = f"{API_ENDPOINT}/texts"
-    response = requests.get(url, params=params, timeout=60)
+    print("time")
+    response = requests.get(url, params=params, timeout=120)
+    print("out")
     try:
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
+            print('success')
         return response.json()
     except requests.exceptions.Timeout as e:
+        print('fail')
         raise HTTPException(
             status_code=504,
             detail="Request to OpenPecha API timed out after 30 seconds"
