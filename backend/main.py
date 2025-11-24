@@ -24,7 +24,7 @@ app = FastAPI(
             "description": "Development server"
         },
         {
-            "url": "https://api-aq25662yyq-uc.a.run.app/v2",
+            "url": os.getenv("API_ENDPOINT"),
             "description": "Production server"
         }
     ]
