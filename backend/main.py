@@ -70,4 +70,5 @@ if __name__ == "__main__":
         port=int(os.getenv("PORT", 8000)), 
         reload=True,
         limit_max_requests=32*1024*1024,
+        timeout_keep_alive=600
     )
