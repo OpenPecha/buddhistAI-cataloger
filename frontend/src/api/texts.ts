@@ -114,14 +114,23 @@ export const fetchText = async (id: string): Promise<OpenPechaText> => {
   }
 };
 
-export const fetchTextsByTitle = async (title: string): Promise<OpenPechaText[]> => {
+export const fetchTextsByTitle = async (title: string, signal?: AbortSignal): Promise<OpenPechaText[]> => {
   try {
-    const response = await fetch(`${API_URL}/text/title-search?title=${title}`);
+    const response = await fetch(`${API_URL}/text/title-search?title=${title}`, {
+      signal,
+    });
     return await handleApiResponse(response);
   } catch (error) {
+    // Re-throw AbortError - React Query handles this gracefully
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw error;
+    }
+    // Re-throw other errors
     if (error instanceof Error) {
       throw error;
     }
+    // Fallback for unknown errors
+    throw new Error('Unable to search texts. Please check your connection and try again.');
   }
 };
 
