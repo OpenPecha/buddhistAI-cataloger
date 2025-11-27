@@ -9,6 +9,7 @@ import {
   fetchTexts,
   fetchTextsByTitle,
   updateInstance,
+  updateTitleAndLicense,
 } from "@/api/texts";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -136,6 +137,17 @@ export const useUpdateInstance = () => {
       queryClient.invalidateQueries({ queryKey: ["instance", instanceId] });
       queryClient.invalidateQueries({ queryKey: ["textInstance", textId] });
       queryClient.invalidateQueries({ queryKey: ["annotation"] });
+    }
+  });
+};
+
+export const useUpdateTitleAndLicense = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ textId, title, license }: { textId: string, title: { [key: string]: string }, license: string }) => updateTitleAndLicense(textId, title, license),
+    onSuccess: (_, { textId }) => {
+      queryClient.invalidateQueries({ queryKey: ["text", textId] });
     }
   });
 };

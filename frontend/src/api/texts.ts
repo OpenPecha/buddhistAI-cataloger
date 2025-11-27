@@ -332,6 +332,11 @@ export const updateInstance = async (textId: string, instanceId: string, instanc
   }
 };
 
+export const updateTitleAndLicense = async (textId: string, title:{[key: string]: string}, license:string): Promise<any> => {
+  console.log("test id ",textId)
+  console.log("test title ",title)
+  console.log("test license ",license)
+};
 
 export const fetchEnums = async (type: string): Promise<any> => {
   try {

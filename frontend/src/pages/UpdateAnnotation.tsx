@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, X, Upload, FileText, Code, ArrowLeft, Loader2 } from "lucide-react";
 import TextEditorView from "@/components/textCreation/TextEditorView";
 import InstanceCreationForm from "@/components/InstanceCreationForm";
+import TextMetadataForm from "@/components/TextMetadataForm";
 import type { InstanceCreationFormRef } from "@/components/InstanceCreationForm";
 import { useText, useInstance, useUpdateInstance, useAnnnotation } from "@/hooks/useTexts";
 import { useTranslation } from "react-i18next";
@@ -407,6 +408,13 @@ const UpdateAnnotation = () => {
                   onCancel={() => navigate(`/texts/${text_id}/instances/${instance_id}`)}
                 />
               </div>
+
+              {/* Text Metadata Form (Title & License) */}
+              <TextMetadataForm
+                textId={text_id || ""}
+                initialTitle={text?.title || {}}
+                initialLicense={(text as any)?.license || ""}
+              />
             </div>
           </div>
         </div>
