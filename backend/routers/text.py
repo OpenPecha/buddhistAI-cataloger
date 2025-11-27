@@ -6,6 +6,7 @@ import os
 from dotenv import load_dotenv
 
 
+
 load_dotenv( override=True)
 
 router = APIRouter()
@@ -397,3 +398,66 @@ async def get_instance(instance_id: str, annotation: bool = True):
 
 
 
+class UpdateTextTitle(BaseModel):
+    title: Dict[str, str] = Field(
+        ...,
+        example={"bo": "དཔེ་མཚོན་ཞིག", "en": "Example Text"},
+        description="Dictionary with language code as key and title text as value"
+    )
+
+@router.put("/{text_id}/title", status_code=200)
+async def update_text_title(text_id: str, request: UpdateTextTitle):
+    if not API_ENDPOINT:
+        raise HTTPException(
+            status_code=500, 
+            detail="OPENPECHA_ENDPOINT environment variable is not set"
+        )
+    
+    try:
+        payload = request.model_dump()
+        response = requests.put(f"{API_ENDPOINT}/texts/{text_id}/title", json=payload, timeout=30)
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out after 30 seconds"
+        )
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error connecting to OpenPecha API: {str(e)}"
+        )
+
+class UpdateLicenseRequest(BaseModel):
+    license:str = Field(
+        ...,
+        example="CC BY-NC-SA 4.0",
+        description="License string"
+    )
+
+@router.put("/{text_id}/license", status_code=200)
+async def update_text_license(text_id: str, request: UpdateLicenseRequest):
+    if not API_ENDPOINT:
+        raise HTTPException(
+            status_code=500, 
+            detail="OPENPECHA_ENDPOINT environment variable is not set"
+        )
+    
+    try:
+        payload = request.model_dump()
+        response = requests.put(f"{API_ENDPOINT}/texts/{text_id}/license", json=payload, timeout=30)
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out after 30 seconds"
+        )
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error connecting to OpenPecha API: {str(e)}"
+        )
