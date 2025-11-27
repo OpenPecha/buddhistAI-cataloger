@@ -9,6 +9,7 @@
     "edit": "Edit",
     "create": "Create",
     "update": "Update",
+    "updating": "Updating...",
     "search": "Search",
     "close": "Close",
     "confirm": "Confirm",
@@ -446,7 +447,8 @@
     "relatedTexts": "Alignment",
     "loadingRelatedTexts": "Loading related texts...",
     "errorLoadingRelatedTexts": "Error loading related texts",
-    "noRelatedTextsFound": "No Related Texts Found"  
+    "noRelatedTextsFound": "No Related Texts Found",
+    "editMetadata": "Edit Text Metadata"
   }
 }
 

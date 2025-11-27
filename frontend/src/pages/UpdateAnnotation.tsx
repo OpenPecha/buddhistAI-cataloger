@@ -23,7 +23,7 @@ const UpdateAnnotation = () => {
   const { clearAfterSubmission } = useBibliographyAPI();
 
   // Fetch text and instance data
-  const { data: text, isLoading: textLoading } = useText(text_id || "");
+  const { data: text, isLoading: textLoading, refetch: refetchText } = useText(text_id || "");
   const { data: instance, isLoading: instanceLoading } = useInstance(instance_id || "");
   const updateInstanceMutation = useUpdateInstance();
 
@@ -412,8 +412,12 @@ const UpdateAnnotation = () => {
               {/* Text Metadata Form (Title & License) */}
               <TextMetadataForm
                 textId={text_id || ""}
-                initialTitle={text?.title || {}}
+                textLanguage={text.language}
+                initialTitle={text.title[text.language] || ""}
                 initialLicense={(text as any)?.license || ""}
+                onSuccess={() => {
+                  refetchText();
+                }}
               />
             </div>
           </div>

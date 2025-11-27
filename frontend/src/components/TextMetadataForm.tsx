@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, X, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,7 +15,8 @@ import { useUpdateTitleAndLicense } from "@/hooks/useTexts";
 
 interface TextMetadataFormProps {
   textId: string;
-  initialTitle: { [key: string]: string };
+  textLanguage: string; // The text's primary language - only this title can be edited
+  initialTitle: string; // Initial title value for the text's language
   initialLicense?: string;
   onSuccess?: () => void;
 }
@@ -35,6 +36,7 @@ const LICENSE_OPTIONS = [
 
 function TextMetadataForm({
   textId,
+  textLanguage,
   initialTitle,
   initialLicense = "",
   onSuccess,
@@ -43,116 +45,50 @@ function TextMetadataForm({
   const { data: languages, isLoading: languagesLoading } = useLanguage();
   const updateMutation = useUpdateTitleAndLicense();
 
-  // State for titles (array of {lang, value} for easier manipulation)
-  const [titleEntries, setTitleEntries] = useState<
-    Array<{ lang: string; value: string }>
-  >([]);
+  // State for the single title (only text's language is editable)
+  const [titleValue, setTitleValue] = useState<string>(initialTitle);
   const [license, setLicense] = useState<string>(initialLicense);
-  const [selectedNewLang, setSelectedNewLang] = useState<string>("");
 
-  // Initialize title entries from initialTitle
+  // Initialize from props
   useEffect(() => {
-    if (initialTitle && Object.keys(initialTitle).length > 0) {
-      const entries = Object.entries(initialTitle).map(([lang, value]) => ({
-        lang,
-        value,
-      }));
-      setTitleEntries(entries);
-    }
+    setTitleValue(initialTitle || "");
     setLicense(initialLicense || "");
   }, [initialTitle, initialLicense]);
 
-  // Get used languages to prevent duplicates
-  const usedLanguages = useMemo(() => {
-    return new Set(titleEntries.map((entry) => entry.lang));
-  }, [titleEntries]);
-
-  // Filter available languages (exclude already used ones)
-  const availableLanguages = useMemo(() => {
-    if (!languages || !Array.isArray(languages)) return [];
-    return languages.filter(
-      (lang: { code: string }) => !usedLanguages.has(lang.code)
-    );
-  }, [languages, usedLanguages]);
   // Check if form has valid data for submission
   const hasValidData = useMemo(() => {
-    const hasNonEmptyTitle = titleEntries.some(
-      (entry) => entry.value.trim() !== ""
-    );
+    const hasNonEmptyTitle = titleValue.trim() !== "";
     const hasLicense = license && license !== "";
     return hasNonEmptyTitle || hasLicense;
-  }, [titleEntries, license]);
+  }, [titleValue, license]);
 
   // Check if form is dirty (changed from initial values)
   const isDirty = useMemo(() => {
     // Check if license changed
     if (license !== (initialLicense || "")) return true;
-
-    // Check if titles changed
-    const currentTitleObj: { [key: string]: string } = {};
-    titleEntries.forEach((entry) => {
-      if (entry.value.trim()) {
-        currentTitleObj[entry.lang] = entry.value;
-      }
-    });
-
-    const initialKeys = Object.keys(initialTitle || {});
-    const currentKeys = Object.keys(currentTitleObj);
-
-    if (initialKeys.length !== currentKeys.length) return true;
-
-    for (const key of initialKeys) {
-      if (currentTitleObj[key] !== initialTitle[key]) return true;
-    }
-
+    // Check if title changed
+    if (titleValue.trim() !== (initialTitle || "").trim()) return true;
     return false;
-  }, [titleEntries, license, initialTitle, initialLicense]);
+  }, [titleValue, license, initialTitle, initialLicense]);
 
   // Handle title value change
-  const handleTitleChange = (index: number, value: string) => {
-    setTitleEntries((prev) => {
-      const updated = [...prev];
-      updated[index] = { ...updated[index], value };
-      return updated;
-    });
-  };
-
-  // Handle remove title entry
-  const handleRemoveTitle = (index: number) => {
-    setTitleEntries((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  // Handle add new title entry
-  const handleAddTitle = () => {
-    if (!selectedNewLang) return;
-    setTitleEntries((prev) => [...prev, { lang: selectedNewLang, value: "" }]);
-    setSelectedNewLang("");
+  const handleTitleChange = (value: string) => {
+    setTitleValue(value);
   };
 
   // Handle cancel - reset to initial values
   const handleCancel = () => {
-    if (initialTitle && Object.keys(initialTitle).length > 0) {
-      const entries = Object.entries(initialTitle).map(([lang, value]) => ({
-        lang,
-        value,
-      }));
-      setTitleEntries(entries);
-    } else {
-      setTitleEntries([]);
-    }
+    setTitleValue(initialTitle || "");
     setLicense(initialLicense || "");
-    setSelectedNewLang("");
   };
 
   // Handle update submission
   const handleUpdate = async () => {
-    // Build title object, filtering out empty entries
+    // Build title object with only the text's language
     const titleObj: { [key: string]: string } = {};
-    titleEntries.forEach((entry) => {
-      if (entry.value.trim()) {
-        titleObj[entry.lang] = entry.value.trim();
-      }
-    });
+    if (titleValue.trim()) {
+      titleObj[textLanguage] = titleValue.trim();
+    }
 
     try {
       await updateMutation.mutateAsync({
@@ -167,13 +103,13 @@ function TextMetadataForm({
     }
   };
 
-  // Get language label from language code
-  const getLanguageLabel = (langCode: string) => {
+  // Get language name from language code
+  const getLanguageName = (langCode: string): string => {
     if (!languages || !Array.isArray(languages)) return langCode;
     const lang = languages.find(
-      (l: { value: string; label: string }) => l.value === langCode
+      (l: { code: string; name: string }) => l.code === langCode
     );
-    return lang?.label || langCode;
+    return lang?.name || langCode;
   };
 
   return (
@@ -189,86 +125,29 @@ function TextMetadataForm({
           {t("textForm.title") || "Title"}
         </label>
 
-        {/* Existing Title Entries */}
-        <div className="space-y-2 mb-3">
-          {titleEntries.map((entry, index) => (
-            <div key={`${entry.lang}-${index}`} className="flex items-center gap-2">
-              {/* Language Label */}
-              <div className="w-24 px-3 py-2 bg-gray-100 rounded-md text-sm text-gray-600 font-['noto']">
-                {getLanguageLabel(entry.lang)}
+        {/* Single Title Entry - Only text's language is editable */}
+        <div className="flex items-center gap-2">
+          {/* Language Label - Shows language name */}
+          <div className="w-28 px-3 py-2 bg-gray-100 rounded-md text-sm text-gray-600 font-['noto']">
+            {languagesLoading ? (
+              <div className="flex items-center gap-1">
+                <Loader2 className="w-3 h-3 animate-spin" />
               </div>
+            ) : (
+              getLanguageName(textLanguage)
+            )}
+          </div>
 
-              {/* Title Input */}
-              <Input
-                value={entry.value}
-                onChange={(e) => handleTitleChange(index, e.target.value)}
-                placeholder={t("textForm.enterTitle") || "Enter title..."}
-                className="flex-1"
-              />
-
-              {/* Remove Button */}
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => handleRemoveTitle(index)}
-                className="text-gray-400 hover:text-red-500 p-1"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          ))}
+          {/* Title Input */}
+          <Input
+            value={titleValue}
+            onChange={(e) => handleTitleChange(e.target.value)}
+            placeholder={t("textForm.enterTitle") || "Enter title..."}
+            className="flex-1"
+          />
         </div>
 
-        {/* languages loading */}
-        {languagesLoading && (
-          <div className="flex items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            {t("common.loading") || "Loading..."}
-          </div>
-        )}
-        {/* Add New Title */}
-        {availableLanguages.length > 0 && (
-          <div className="flex items-center gap-2">
-            <Select value={selectedNewLang} onValueChange={setSelectedNewLang}>
-              <SelectTrigger className="w-40">
-                <SelectValue
-                  placeholder={
-                    languagesLoading
-                      ? t("common.loading") || "Loading..."
-                      : t("textForm.selectLanguage") || "Select language"
-                  }
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {availableLanguages.map((lang: { code: string; name: string }) => (
-                  <SelectItem key={lang.code} value={lang.code}>
-                    {lang.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleAddTitle}
-              disabled={!selectedNewLang}
-              className="flex items-center gap-1"
-            >
-              <Plus className="w-4 h-4" />
-              {t("textForm.addTitle") || "Add Title"}
-            </Button>
-          </div>
-        )}
-
-        {/* Empty state */}
-        {titleEntries.length === 0 && availableLanguages.length === 0 && (
-          <p className="text-sm text-gray-500 italic font-['noto']">
-            {t("textForm.noLanguagesAvailable") || "No languages available"}
-          </p>
-        )}
+       
       </div>
 
       {/* License Section */}

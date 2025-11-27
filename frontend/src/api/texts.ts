@@ -332,10 +332,91 @@ export const updateInstance = async (textId: string, instanceId: string, instanc
   }
 };
 
-export const updateTitleAndLicense = async (textId: string, title:{[key: string]: string}, license:string): Promise<any> => {
-  console.log("test id ",textId)
-  console.log("test title ",title)
-  console.log("test license ",license)
+export const updateTitleAndLicense = async (textId: string, title: {[key: string]: string}, license: string): Promise<{ title: any; license: any }> => {
+  const hasTitle = title && Object.keys(title).length > 0;
+  const hasLicense = license && license.trim().length > 0;
+  // If neither has a value, return early
+  if (!hasTitle && !hasLicense) {
+    return { title: null, license: null };
+  }
+
+  const errors: string[] = [];
+  let titleResult = null;
+  let licenseResult = null;
+
+  // Build promises array for only the fields that have values
+  const promises: Promise<Response>[] = [];
+  const promiseKeys: ('title' | 'license')[] = [];
+
+  if (hasTitle) {
+    promises.push(
+      fetch(`${API_URL}/text/${textId}/title`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title }),
+      })
+    );
+    promiseKeys.push('title');
+  }
+
+  if (hasLicense) {
+    promises.push(
+      fetch(`${API_URL}/text/${textId}/license`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ license }),
+      })
+    );
+    promiseKeys.push('license');
+  }
+
+  // Call APIs simultaneously using Promise.allSettled for graceful error handling
+  const results = await Promise.allSettled(promises);
+
+  // Process results based on which promises were made
+  for (let i = 0; i < results.length; i++) {
+    const key = promiseKeys[i];
+    const result = results[i];
+
+    if (key === 'title') {
+      if (result.status === 'fulfilled') {
+        try {
+          titleResult = await handleApiResponse(result.value, {
+            400: 'Invalid title data. Please check and try again.',
+            404: 'Text not found. It may have been deleted or the link is incorrect.'
+          });
+        } catch (error) {
+          errors.push(`Title update failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      } else {
+        errors.push(`Title update failed: ${result.reason?.message || 'Network error'}`);
+      }
+    } else if (key === 'license') {
+      if (result.status === 'fulfilled') {
+        try {
+          licenseResult = await handleApiResponse(result.value, {
+            400: 'Invalid license data. Please check and try again.',
+            404: 'Text not found. It may have been deleted or the link is incorrect.'
+          });
+        } catch (error) {
+          errors.push(`License update failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      } else {
+        errors.push(`License update failed: ${result.reason?.message || 'Network error'}`);
+      }
+    }
+  }
+
+  // If there were any errors, throw with all error messages combined
+  if (errors.length > 0) {
+    throw new Error(errors.join(' | '));
+  }
+
+  return { title: titleResult, license: licenseResult };
 };
 
 export const fetchEnums = async (type: string): Promise<any> => {
