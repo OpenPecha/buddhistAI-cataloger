@@ -1,58 +1,25 @@
-name: Deploy to AWS Lambda
+name: Deploy to EC2
 
 on:
   push:
-    branches: [ main, dev ]
-  pull_request:
-    branches: [ main, dev ]
+    branches: [main]  # Update if using another branch
 
 jobs:
-  CI:
+  deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Free Disk Space
-        uses: jlumbroso/free-disk-space@main
-        with:
-          tool-cache: false
-          android: true
-          dotnet: true
-          haskell: true
-          swift: true
-          
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: SSH & Deploy
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          python-version: 3.12
-
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        id: cache-venv
-        with:
-          path: venv
-          key: ${{ runner.os }}-venv-${{ hashFiles('**/backend/requirements.txt') }}
-
-      - name: Install dependencies
-        run: |
-          python -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install -r backend/requirements.txt
-        if: steps.cache-venv.outputs.cache-hit != 'true'
-      
-      - name: Create archive of dependencies
-        run: |
-          cd ./venv/lib/python3.12/site-packages
-          zip -r9 ../../../../api.zip .
-      
-      - name: Add API files to Zip file
-        run: |
-          cd ./backend
-          zip -g ../api.zip -r .
-
-      - name: Upload zip file artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: api
-          path: api.zip
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ubuntu/cataloger
+            git pull origin main
+            docker-compose down
+            docker-compose up -d --build
