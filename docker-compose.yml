@@ -1,0 +1,35 @@
+version: '3.8'
+services:
+  backend:
+    build:
+      context: .
+      target: backend-stage
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app/backend
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    develop:
+      watch:
+        - action: sync
+          path: ./backend
+          target: /app/backend
+
+  frontend:
+    build:
+      context: .
+      target: frontend-stage
+    ports:
+      - "10000:10000"
+    volumes:
+      - ./frontend:/app/frontend
+    command: npm run preview -- --host 0.0.0.0
+    develop:
+      watch:
+        - action: sync
+          path: ./frontend
+          target: /app/frontend
+
+networks:
+  default:
+    name: cataloger-net

@@ -1,5 +1,5 @@
 # Base image
-FROM python:3.11-slim
+FROM python:3.11-slim as base
 
 # Install Node.js and npm
 RUN apt-get update && \
@@ -10,18 +10,24 @@ RUN apt-get update && \
 # Set working directory
 WORKDIR /app
 
-# Backend setup
+# Backend stage
+FROM base as backend-stage
 COPY backend/requirements.txt ./backend/
 RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY backend/ ./backend/
 
-# Frontend setup
+# Frontend stage
+FROM base as frontend-stage
 COPY frontend/package.json frontend/package-lock.json ./frontend/
 RUN npm install --prefix ./frontend
 COPY frontend/ ./frontend/
 RUN npm run build --prefix ./frontend
 
-# Expose ports
+# Final image (can be used if not using compose)
+FROM base as final
+COPY --from=backend-stage /app/backend /app/backend
+COPY --from=frontend-stage /app/frontend /app/frontend
+
 EXPOSE 8000 10000
 
 # Start both services
