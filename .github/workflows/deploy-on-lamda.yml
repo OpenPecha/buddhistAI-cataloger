@@ -10,6 +10,15 @@ jobs:
   CI:
     runs-on: ubuntu-latest
     steps:
+      - name: Free Disk Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: false
+          android: true
+          dotnet: true
+          haskell: true
+          swift: true
+          
       - uses: actions/checkout@v4
 
       - name: Set up Python
@@ -17,37 +26,31 @@ jobs:
         with:
           python-version: 3.12
 
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        id: cache-venv
+        with:
+          path: venv
+          key: ${{ runner.os }}-venv-${{ hashFiles('**/backend/requirements.txt') }}
+
       - name: Install dependencies
         run: |
           python -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
           pip install -r backend/requirements.txt
-
-      - name: Virtual ENV
-        uses: actions/cache@v4
-        id: cache-venv
-        with:
-          path: venv
-          key: ${{ runner.os }}-venv-${{ hashFiles('**/backend/requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-venv-
-
-      - name: Activate Virtual ENV
-        run: python -m venv venv && source venv/bin/activate && pip3 install -r backend/requirements.txt
         if: steps.cache-venv.outputs.cache-hit != 'true'
-      
-      - name: Run Tests
-        run: . venv/bin/activate 
       
       - name: Create archive of dependencies
         run: |
           cd ./venv/lib/python3.12/site-packages
-          zip -r9 ../api.zip .
+          zip -r9 ../../../../api.zip .
       
       - name: Add API files to Zip file
-        run: cd ./api && zip -g ../api.zip -r .
-      
+        run: |
+          cd ./backend
+          zip -g ../api.zip -r .
+
       - name: Upload zip file artifact
         uses: actions/upload-artifact@v4
         with:
