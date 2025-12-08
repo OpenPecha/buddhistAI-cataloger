@@ -9,6 +9,9 @@ from dotenv import load_dotenv
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from mangum import Mangum
+
 # Add project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -29,6 +32,7 @@ app = FastAPI(
         }
     ]
 )
+
 
 class PayloadSizeIncrease(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -72,3 +76,7 @@ if __name__ == "__main__":
         limit_max_requests=32*1024*1024,
         timeout_keep_alive=600
     )
+
+
+
+handler = Mangum(app)

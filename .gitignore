@@ -5,3 +5,5 @@ backend/routers/__pycache__
 .venv
 
 __pycache__
+dependencies
+backend/dependencies
