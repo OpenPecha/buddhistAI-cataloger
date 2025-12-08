@@ -27,9 +27,7 @@ services:
     volumes:
       - ./frontend:/app/frontend
       - /app/frontend/node_modules
-    command: npm run dev -- --host --port 3000
-    environment:
-      - VITE_SERVER_URL= backend
+    command: npm run dev
     develop:
       watch:
         - action: sync

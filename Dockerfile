@@ -29,7 +29,7 @@ FROM base as final
 COPY --from=backend-stage /app/backend /app/backend
 COPY --from=frontend-stage /app/frontend /app/frontend
 
-EXPOSE 8000 10000
+EXPOSE 8000 3000
 
 # Start both services
 CMD ["/bin/bash", "-c", "cd backend && uvicorn main:app --host 0.0.0.0 --port 8000 & cd ../frontend && npm run preview"]
