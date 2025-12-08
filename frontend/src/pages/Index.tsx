@@ -12,7 +12,7 @@ const Index = () => {
     ""
   );
   return (
-    <div className="container mx-auto px-4 py-8 space-y-6">
+    <div className="container mx-auto py-16  px-4  space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-['noto'] font-bold ">

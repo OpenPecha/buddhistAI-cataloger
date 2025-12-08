@@ -5,7 +5,7 @@ import { Button } from './ui/button';
 import FormattedTextDisplay from './FormattedTextDisplay';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { BookOpenText, PencilIcon } from 'lucide-react';
+import { BookOpenText, PencilIcon, TextWrap } from 'lucide-react';
 
 interface InstanceCardProps {
   instance: OpenPechaTextInstance;

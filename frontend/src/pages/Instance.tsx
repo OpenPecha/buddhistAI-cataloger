@@ -65,7 +65,7 @@ function Instance() {
   }
   const title = instance.metadata?.colophon || t('header.instances');
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 container mx-auto py-16 ">
       {/* Breadcrumb */}
       <BreadCrumb instancename={title}/>
       <InstanceCard instance={instance as OpenPechaTextInstance} />

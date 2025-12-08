@@ -11,6 +11,7 @@ import CreateCommentary from './pages/CreateCommentary';
 import UpdateAnnotation from './pages/UpdateAnnotation';
 import LoginPage from './pages/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import AlignmentWorkstation from './components/Aligner/components/AlignmentWorkstation';
 
 function App() {
   const location = useLocation();
@@ -19,7 +20,7 @@ function App() {
   return (
     <div className="h-screen overflow-auto  text-xl bg-gradient-to-br from-blue-50 to-indigo-100">
       {!isLoginPage && <Navigation/>}
-      <div className={isLoginPage ? '' : 'container mx-auto py-16 '}>
+      <div className={isLoginPage ? '' : ''}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={
@@ -30,6 +31,11 @@ function App() {
           <Route path="/create" element={
             <ProtectedRoute>
               <Create />
+            </ProtectedRoute>
+          }  />
+          <Route path="/align/:sourceInstanceId/:targetInstanceId" element={
+            <ProtectedRoute>
+            <AlignmentWorkstation/>
             </ProtectedRoute>
           } />
           <Route path="/texts" element={

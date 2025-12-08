@@ -1,0 +1,1 @@
+export const CATALOGER_URL = 'https://cataloger.buddhistai.tools';

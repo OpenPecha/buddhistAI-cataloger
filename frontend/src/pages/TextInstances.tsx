@@ -120,7 +120,7 @@ function TextInstanceCRUD() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto py-16  space-y-6">
       {/* Breadcrumb */}
       <BreadCrumb textname={title} />
 

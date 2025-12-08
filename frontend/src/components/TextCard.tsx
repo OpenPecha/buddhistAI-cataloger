@@ -8,7 +8,7 @@ import {
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getLanguageLabel } from "@/utils/getLanguageLabel";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 
 interface TextCardProps {
@@ -41,8 +41,8 @@ const TextCard = ({
     translation: "bg-accent/10 text-accent-foreground border-accent/20",
     commentary: "bg-secondary/10 text-secondary-foreground border-secondary/20",
   };
+  const navigate = useNavigate();
 
-  const alignmentUrl = import.meta.env.VITE_FORMATTER_URL + `/aligner/${sourceInstanceId}/${instanceId}`;
   return (
     <Card className="hover:shadow-elegant transition-smooth cursor-pointer group h-full justify-between pointer-events-auto">
       <CardHeader>
@@ -86,7 +86,7 @@ const TextCard = ({
         pointer-events-auto`} onClick={(e)=>{
           e.preventDefault()
           e.stopPropagation()
-          window.open(alignmentUrl, '_blank')
+          navigate(`/align/${sourceInstanceId}/${instanceId}`)
         }}>
           {!isAnnotationAvailable ? "Align Text" : "update Alignment"}
         </Button>

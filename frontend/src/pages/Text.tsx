@@ -145,7 +145,7 @@ const TextCRUD = () => {
   const showPagination = !filteredFoundText && !textNotFound;
 
   return (
-    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+    <div className="container mx-auto py-16  space-y-4 sm:space-y-6 px-2 sm:px-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-center sm:items-center gap-3 sm:gap-0 font-['jomo']">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-800 text-center sm:text-left">{t('textsPage.title')}</h2>

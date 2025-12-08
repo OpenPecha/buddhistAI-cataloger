@@ -31,7 +31,7 @@ const PersonCRUD = () => {
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
+    <div className="container mx-auto py-16  space-y-4 sm:space-y-6 px-2 sm:px-0">
       {/* Breadcrumb */}
       
       {/* Header */}
