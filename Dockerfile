@@ -13,6 +13,7 @@ WORKDIR /app
 # Backend stage
 FROM base as backend-stage
 COPY backend/requirements.txt ./backend/
+RUN apt-get update && apt-get install -y git
 RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY backend/ ./backend/
 

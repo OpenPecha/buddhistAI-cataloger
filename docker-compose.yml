@@ -1,9 +1,11 @@
 version: '3.8'
 services:
   backend:
+    network_mode: backend
     build:
       context: .
       target: backend-stage
+    working_dir: /app/backend
     ports:
       - "8000:8000"
     volumes:
@@ -19,11 +21,15 @@ services:
     build:
       context: .
       target: frontend-stage
+    working_dir: /app/frontend
     ports:
-      - "10000:10000"
+      - "3000:3000"
     volumes:
       - ./frontend:/app/frontend
-    command: npm run preview -- --host 0.0.0.0
+      - /app/frontend/node_modules
+    command: npm run dev -- --host --port 3000
+    environment:
+      - VITE_SERVER_URL= backend
     develop:
       watch:
         - action: sync
