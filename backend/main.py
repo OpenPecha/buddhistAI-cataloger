@@ -27,7 +27,7 @@ app = FastAPI(
             "description": "Development server"
         },
         {
-            "url": os.getenv("API_ENDPOINT"),
+            "url": "https://api.buddhistai.tools",
             "description": "Production server"
         }
     ]

@@ -346,7 +346,7 @@ const AlignmentMappingView: React.FC = () => {
                   value={targetContent}
                   height="100%"
                   width="100%"
-                  className=" h-full"
+                  className="h-full"
                   editable={false}
                   basicSetup={{
                     lineNumbers: true,
