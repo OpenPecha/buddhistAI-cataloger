@@ -651,7 +651,7 @@ const EnhancedTextCreationForm = () => {
           >
             {/* Transparent backdrop */}
             <motion.div
-              className="absolute inset-0 h-full font-['jomo'] w-full bg-black/20 backdrop-blur-sm"
+              className="absolute inset-0 h-full w-full bg-black/20 backdrop-blur-sm"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -902,7 +902,7 @@ const EnhancedTextCreationForm = () => {
 
       {/* Single Full-Page Message when text exists in cataloger */}
       {selectedText && !isCreatingNewText ? (
-        <div className="fixed font-['jomo'] inset-0 top-16 left-0 right-0 bottom-0 bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-8">
+        <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-8">
           <div className="max-w-md w-full bg-white rounded-lg shadow-lg border border-gray-200 p-8 text-center">
             <div className="mb-6">
               <FileText className="w-16 h-16 text-blue-500 mx-auto mb-4" />
@@ -939,7 +939,7 @@ const EnhancedTextCreationForm = () => {
       ) : (
         <>
           {/* Two-Panel Layout - Show when creating new text or no text selected */}
-          <div className="fixed font-['jomo'] inset-0 top-16 left-0 right-0 bottom-0 bg-gradient-to-br from-blue-50 to-indigo-100 flex">
+          <div className="fixed  inset-0 top-16 left-0 right-0 bottom-0 bg-gradient-to-br from-blue-50 to-indigo-100 flex">
             {/* Mobile Toggle Button */}
             <button
               onClick={() =>
@@ -1126,7 +1126,7 @@ const EnhancedTextCreationForm = () => {
 
                 {/* Creating New Text Info */}
                 {isCreatingNewText && (
-                  <div className="bg-green-50 border font-['jomo'] border-green-200 px-4 py-3 rounded-md">
+                  <div className="bg-green-50 border  border-green-200 px-4 py-3 rounded-md">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-green-900">
                         {t("create.creatingNewText")}
@@ -1147,7 +1147,7 @@ const EnhancedTextCreationForm = () => {
 
             {/* Forms Section - Show if in creation mode OR if text is selected */}
             {canUpload && (
-              <div className="space-y-6 relative font-['monlam']">
+              <div className="space-y-6 relative ">
                 {/* Text Creation Form - Only show when creating new text */}
                  {isCreatingNewText && (
                    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mb-6">
@@ -1305,11 +1305,11 @@ const EnhancedTextCreationForm = () => {
               {/* Editor View */}
               <div className="h-full flex flex-col">
                 {/* Upload Button in Header */}
-                <div className="bg-blue-50 border-b border-blue-200 px-4 py-3 font-['jomo']">
+                <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
                   <div className="flex items-center justify-between">
                     {!editedContent || editedContent?.trim() === "" ? (
                       <>
-                        <p className="text-sm text-gray-600 font-['noto']">
+                        <p className="text-sm text-gray-600 ">
                           {t("create.startTyping")}
                         </p>
                         <div>

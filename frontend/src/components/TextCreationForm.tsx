@@ -472,7 +472,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     }), [language, titles, altTitles, contributors]);
 
     return (
-      <div className="space-y-6 font-['jomo'] text-lg">
+      <div className="space-y-6 text-lg">
         {/* Type and Language */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="hidden">
@@ -639,7 +639,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                         setAltTitles([]);
                       }
                     }}
-                    className="flex-1 font-['noto'] min-w-0 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="flex-1  min-w-0 px-2 sm:px-3 py-2 h-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
                     placeholder={t("textForm.enterTitle")}
                   />
                   <Button
@@ -1153,7 +1153,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
                   <AlertTriangle className="w-6 h-6 text-yellow-600" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1 font-['noto']">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
                     {t("textForm.textAlreadyExists")}
                   </h3>
                   <p className="text-sm text-gray-600">

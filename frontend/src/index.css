@@ -26,6 +26,13 @@
 	font-style: normal;
 }
 
+html[lang="bo"] * {
+  font-family: 'jomo', sans-serif !important;
+}
+
+html[lang="en"] * {
+  font-family: 'poppins', 'Noto', sans-serif !important;
+}
 
   @keyframes loading {
     0% {

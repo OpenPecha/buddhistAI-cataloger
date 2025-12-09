@@ -344,7 +344,7 @@ const UpdateAnnotation = () => {
       )}
 
       {/* Two-Panel Layout */}
-      <div className="fixed font-['jomo'] inset-0 top-16 left-0 right-0 bottom-0 bg-gradient-to-br from-blue-50 to-indigo-100 flex">
+      <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gradient-to-br from-blue-50 to-indigo-100 flex">
         {/* Mobile Toggle Button */}
         <button
           onClick={() =>
@@ -392,7 +392,7 @@ const UpdateAnnotation = () => {
             
             </div>
 
-            <div className="space-y-6 relative font-['monlam']">
+            <div className="space-y-6 relative ">
               {/* Instance Creation Form */}
               <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                 <InstanceCreationForm
@@ -424,11 +424,11 @@ const UpdateAnnotation = () => {
         >
           <div className="h-full flex flex-col">
             {/* Editor Header */}
-            <div className="bg-blue-50 border-b border-blue-200 px-4 py-3 font-['jomo']">
+            <div className="bg-blue-50 border-b border-blue-200 px-4 py-3 ">
               <div className="flex items-center justify-between">
                 {!editedContent || editedContent?.trim() === "" ? (
                   <>
-                    <p className="text-sm text-gray-600 font-['noto']">
+                    <p className="text-sm text-gray-600 ">
                       {t("create.startTyping")}
                     </p>
                     <div>

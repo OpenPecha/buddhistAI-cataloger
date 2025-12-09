@@ -457,7 +457,7 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
        
 
         {/* Tabs */}
-        <div className="flex items-center px-4 flex-wrap gap-2 font-['jomo']">
+        <div className="flex items-center px-4 flex-wrap gap-2 ">
           <div className="flex items-center">
             <button
               onClick={() => setActiveTab('content')}
@@ -596,7 +596,7 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
         
         {activeTab === 'bibliography' && (
           /* Bibliography - Annotations List */
-          <div className="h-full overflow-y-auto p-6 bg-gray-50 font-['noto'] ">
+          <div className="h-full overflow-y-auto p-6 bg-gray-50  ">
             <BibliographyAnnotationsList 
               className="bg-white rounded-lg shadow-sm" 
               editorView={editorView || cmRef.current?.view || null}

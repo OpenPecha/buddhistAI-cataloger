@@ -71,7 +71,7 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
   // Reset selection
 
   return (
-    <div className="space-y-3 font-['jomo']">
+    <div className="space-y-3 ">
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">
           {t('category.category')} <span className="text-red-500">*</span>

@@ -6,7 +6,7 @@ import type { Person } from '@/types/person';
 import { Badge } from './ui/badge';
 import { Card, CardHeader, CardTitle, CardContent } from './ui/card';
 import { useTranslation } from 'react-i18next';
-import { getLanguageLabel } from '@/utils/getLanguageLabel';
+import { getLanguageColor, getLanguageLabel } from '@/utils/getLanguageLabel';
 
 interface TextListCardProps {
   text: OpenPechaText;
@@ -62,14 +62,7 @@ const TextListCard = ({ text }: TextListCardProps) => {
     return labels[type] || type;
   };
 
-  const getLanguageColor = (lang: string): string => {
-    const colors: Record<string, string> = {
-      bo: 'bg-red-100 text-red-800',
-      en: 'bg-blue-100 text-blue-800',
-      sa: 'bg-orange-100 text-orange-800'
-    };
-    return colors[lang] || 'bg-gray-100 text-gray-800';
-  };
+  
 
   const getTypeColor = (type: string): string => {
     const colors: Record<string, string> = {
@@ -79,16 +72,15 @@ const TextListCard = ({ text }: TextListCardProps) => {
     };
     return colors[type] || 'bg-gray-100 text-gray-800';
   };
-
   return (
-    <Card className="hover:shadow-lg transition-shadow duration-200 gap-2 font-['jomo']">
+    <Card className="hover:shadow-lg transition-shadow duration-200 gap-2 ">
       <CardHeader>
         <div className="flex items-center gap-2 overflow-hidden">
           <Book className="w-5 h-5 text-gray-500  flex-shrink-0" />
           <CardTitle className="text-lg w-full ">
             <Link 
               to={`/texts/${text.id}/instances`} 
-              className="w-full transition-colors duration-200 truncate font-['jomo']"
+              className="w-full transition-colors duration-200 truncate text-2xl text-neutral-700 hover:text-blue-500 "
             >
               {text.title?.[text.language] || t('textsPage.untitled')}
             </Link>
@@ -109,21 +101,22 @@ const TextListCard = ({ text }: TextListCardProps) => {
        
         
         {/* Contributions */}
-        {text.contributions && text.contributions.length > 0 && (
+        {text.language && (
           <div className="pt-3 flex items-center justify-between gap-2 border-t border-gray-100 relative">
              <Badge className={`${getLanguageColor(text.language)} flex items-center gap-2`}>
             <Globe className="w-4 h-4" />
             <span className="font-medium">{getLanguageLabel(text.language)}</span>
           </Badge>
-            <div 
+            <button 
+            hidden={text.contributions?.length === 0}
               className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-md transition-colors"
               onClick={() => setShowContributors(!showContributors)}
             >
               <Users className="w-4 h-4 text-gray-500" />
               <span className="text-sm text-gray-600 font-medium">
-                {text.contributions.length} 
+                {text.contributions?.length || 0} 
               </span>
-            </div>
+            </button>
             
             {/* Contributors Popover */}
             {showContributors && (

@@ -103,7 +103,7 @@ const FormattedTextDisplay: React.FC<FormattedTextDisplayProps> = ({
             onKeyDown={handleKeyDown}
             tabIndex={isInvalid ? 0 : undefined}
             role={isInvalid ? 'button' : undefined}
-            className={`py-3 px-4 border-b font-['noto'] last:border-0 text-base leading-relaxed transition-all ${
+            className={`py-3 px-4 border-b last:border-0 text-base leading-relaxed transition-all ${
               isInvalid 
                 ? 'bg-red-50 border-red-300 border-l-4 border-l-red-500 cursor-pointer hover:bg-red-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2' 
                 : 'border-gray-200 text-gray-900'

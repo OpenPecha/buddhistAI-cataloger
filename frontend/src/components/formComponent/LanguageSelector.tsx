@@ -14,6 +14,8 @@ function LanguageSelector() {
   const currentLanguage = languages.find(lang => lang.code === i18n.language) || languages[0];
 
   const handleLanguageChange = (langCode: string) => {
+    //set html lang attribute
+    document.documentElement.lang = langCode;
     i18n.changeLanguage(langCode);
     setIsOpen(false);
   };
@@ -26,7 +28,7 @@ function LanguageSelector() {
         aria-label="Select language"
       >
         <Globe className="w-4 h-4" />
-        <span className="font-['monlam']">{currentLanguage.nativeName}</span>
+        <span className="">{currentLanguage.nativeName}</span>
         <svg
           className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
@@ -50,7 +52,7 @@ function LanguageSelector() {
                   key={lang.code}
                   onClick={() => handleLanguageChange(lang.code)}
                   className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors
-                    font-['noto']
+                    
                     ${
                     i18n.language === lang.code
                       ? 'bg-blue-50 text-blue-700 font-medium'

@@ -11,6 +11,27 @@ import FontSizeSelector from './FontSizeSelector';
 import { prepareData } from '../utils/prepare_data';
 import { reconstructSegments } from '../utils/generateAnnotation';
 import { applySegmentation } from '../../../lib/annotation';
+import { useQuery } from '@tanstack/react-query';
+
+type AnnotationFromBackend = {
+  id?: string | null;
+  span: { start: number; end: number };
+  index?: string | number;
+  aligned_segments?: string[];
+};
+
+type PreparedData = {
+  source_text: string;
+  target_text: string;
+  has_alignment: boolean;
+  annotation?: {
+      target_annotation: (AnnotationFromBackend | null)[];
+      alignment_annotation: (AnnotationFromBackend | null)[];
+  } | null;
+  annotation_id?: string | null;
+  source_segmentation?: Array<{ span: { start: number; end: number } }> | null;
+  target_segmentation?: Array<{ span: { start: number; end: number } }> | null;
+};
 
 function AlignmentWorkstationContent() {
   const { sourceEditorRef, targetEditorRef } = useEditorContext();
@@ -37,109 +58,140 @@ function AlignmentWorkstationContent() {
     sourceTextId,
   } = useTextSelectionStore();
 
-  // Load texts from URL parameters on mount
-  React.useEffect(() => {
-    const loadFromUrl = async (sid: string, tid: string) => {
-      try {
-        setLoadingAnnotations(true, "Initializing...");
-        const preparedData = await prepareData(sid, tid);
-        const sourceText = preparedData.source_text;
-        const targetText = preparedData.target_text;
-        
-        if (preparedData.has_alignment) {
-          const annotationData = preparedData.annotation;
-          
-          if (
-            annotationData?.target_annotation &&
-            annotationData?.alignment_annotation
-          ) {
-            setLoadingAnnotations(true, "Reconstructing segments...");
-            setHasAlignment(true);
-            // Store annotation ID if available
-            if ('annotation_id' in preparedData && preparedData.annotation_id) {
-              setAnnotationId(preparedData.annotation_id);
-            }
-            // Store annotation data with content for mapping visualization
-            setAnnotationData({
-              target_annotation: annotationData.target_annotation,
-              alignment_annotation: annotationData.alignment_annotation,
-            });
-            const { source, target } = reconstructSegments(
-              annotationData.target_annotation,
-              annotationData.alignment_annotation,
-              sourceText,
-              targetText
-            );
-            setLoadingAnnotations(true, "Finalizing text display...");
-            const segmentedSourceText = source.join("\n");
-            const segmentedTargetText = target.join("\n");
-            setSourceText(
-              sourceTextId || '',
-              sid,
-              segmentedSourceText,
-              "database"
-            );
-            setTargetText(
-              `related-${tid}`,
-              tid,
-              segmentedTargetText,
-              "database"
-            );
-            setAnnotationsApplied(true);
-            setLoadingAnnotations(false);
-            
-          
-          }
-        } else {
-          setLoadingAnnotations(true, "Applying segmentation...");
-          const sourceSegmentation = preparedData.source_segmentation as Array<{ span: { start: number; end: number } }> | undefined;
-          const targetSegmentation = preparedData.target_segmentation as Array<{ span: { start: number; end: number } }> | undefined;
-          
-          let segmentedSourceText = sourceText;
-          let segmentedTargetText = targetText;
-          
-          if (sourceSegmentation && Array.isArray(sourceSegmentation) && sourceSegmentation.length > 0) {
-            segmentedSourceText = applySegmentation(sourceText, sourceSegmentation);
-          }
-          
-          if (targetSegmentation && Array.isArray(targetSegmentation) && targetSegmentation.length > 0) {
-            segmentedTargetText = applySegmentation(targetText, targetSegmentation);
-          }
-          
-          setHasAlignment(false);
-          setSourceText(
-            sourceTextId || '',
-            sid,
-            segmentedSourceText,
-            "database"
-          );
-          setTargetText(
-            `related-${tid}`,
-            tid,
-            segmentedTargetText,
-            "database"
-          );
-          setAnnotationsApplied(true);
-          setLoadingAnnotations(false);
-        
-         
-        }
-      } catch (error) {
-        console.error("Error loading source from URL parameters:", error);
-        setLoadingAnnotations(false);
+  const {
+    data: preparedData,
+    isLoading: isFetchingPreparedData,
+    isError,
+    error,
+  } = useQuery({
+    queryKey: ['preparedData', sourceInstanceId, targetInstanceId],
+    queryFn: () => {
+      if (!sourceInstanceId || !targetInstanceId) {
+        return Promise.reject(new Error("Source or target instance ID is missing"));
       }
-    };
-    
-    if (sourceInstanceId && targetInstanceId) {
-      loadFromUrl(sourceInstanceId, targetInstanceId);
+      return prepareData(sourceInstanceId, targetInstanceId);
+    },
+    enabled: !!sourceInstanceId && !!targetInstanceId,
+  });
+
+  const processAlignedData = React.useCallback((data: PreparedData) => {
+    const sourceText = data.source_text;
+    const targetText = data.target_text;
+    const annotationData = data.annotation;
+
+    if (annotationData?.target_annotation && annotationData?.alignment_annotation) {
+      setLoadingAnnotations(true, "Reconstructing segments...");
+      setHasAlignment(true);
+      if ('annotation_id' in data && data.annotation_id) {
+        setAnnotationId(data.annotation_id);
+      }
+      setAnnotationData({
+        target_annotation: annotationData.target_annotation,
+        alignment_annotation: annotationData.alignment_annotation,
+      });
+
+      const targetAnnotationForReconstruction = (annotationData.target_annotation || []).map(
+        (ann: AnnotationFromBackend | null) => ann ? { ...ann, index: ann.index == null ? undefined : String(ann.index) } : null
+      );
+      const alignmentAnnotationForReconstruction = (annotationData.alignment_annotation || []).map(
+        (ann: AnnotationFromBackend | null) => ann ? { ...ann, index: ann.index == null ? undefined : String(ann.index) } : null
+      );
+
+      const { source, target } = reconstructSegments(
+        targetAnnotationForReconstruction,
+        alignmentAnnotationForReconstruction,
+        sourceText,
+        targetText
+      );
+      setLoadingAnnotations(true, "Finalizing text display...");
+      const segmentedSourceText = source.join("\n");
+      const segmentedTargetText = target.join("\n");
+      setSourceText(
+        sourceTextId || '',
+        sourceInstanceId!,
+        segmentedSourceText,
+        "database"
+      );
+      setTargetText(
+        `related-${targetInstanceId!}`,
+        targetInstanceId!,
+        segmentedTargetText,
+        "database"
+      );
+      setAnnotationsApplied(true);
+      setLoadingAnnotations(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sourceInstanceId, targetInstanceId]);
+  }, [setLoadingAnnotations, setHasAlignment, setAnnotationId, setAnnotationData, setSourceText, sourceTextId, sourceInstanceId, setTargetText, targetInstanceId, setAnnotationsApplied]);
+
+  const processUnalignedData = React.useCallback((data: PreparedData) => {
+    const sourceText = data.source_text;
+    const targetText = data.target_text;
+    setLoadingAnnotations(true, "Applying segmentation...");
+    const sourceSegmentation = data.source_segmentation as Array<{ span: { start: number; end: number } }> | undefined;
+    const targetSegmentation = data.target_segmentation as Array<{ span: { start: number; end: number } }> | undefined;
+
+    let segmentedSourceText = sourceText;
+    let segmentedTargetText = targetText;
+
+    if (sourceSegmentation && Array.isArray(sourceSegmentation) && sourceSegmentation.length > 0) {
+      segmentedSourceText = applySegmentation(sourceText, sourceSegmentation);
+    }
+
+    if (targetSegmentation && Array.isArray(targetSegmentation) && targetSegmentation.length > 0) {
+      segmentedTargetText = applySegmentation(targetText, targetSegmentation);
+    }
+
+    setHasAlignment(false);
+    setSourceText(
+      sourceTextId || '',
+      sourceInstanceId!,
+      segmentedSourceText,
+      "database"
+    );
+    setTargetText(
+      `related-${targetInstanceId!}`,
+      targetInstanceId!,
+      segmentedTargetText,
+      "database"
+    );
+    setAnnotationsApplied(true);
+    setLoadingAnnotations(false);
+  }, [setLoadingAnnotations, setHasAlignment, setSourceText, sourceTextId, sourceInstanceId, setTargetText, targetInstanceId, setAnnotationsApplied]);
+
+  React.useEffect(() => {
+    if (isFetchingPreparedData) {
+      setLoadingAnnotations(true, "Initializing...");
+      return;
+    }
+
+    if (isError) {
+      console.error("Error loading data:", error);
+      setLoadingAnnotations(false);
+      return;
+    }
+
+    if (preparedData) {
+      if (preparedData.has_alignment) {
+        processAlignedData(preparedData);
+      } else {
+        processUnalignedData(preparedData);
+      }
+    }
+  }, [preparedData, isFetchingPreparedData, isError, error, processAlignedData, processUnalignedData, setLoadingAnnotations]);
 
   const bothTextLoaded = isSourceLoaded && isTargetLoaded;
 
   // Render main content - always show editor view
   const renderMainContent = () => {
+    if (isError){
+      return (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="text-red-500 text-lg font-medium">Error loading data</div>
+          </div>
+        </div>
+      );
+    }
     if (!bothTextLoaded) {
       return (
         <div className="flex-1 flex items-center justify-center">

@@ -47,7 +47,7 @@ const TextCard = ({
     <Card className="hover:shadow-elegant transition-smooth cursor-pointer group h-full justify-between pointer-events-auto">
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 font-['jomo']  ">
+          <div className="flex-1  ">
             <CardTitle className="text-lg mb-2 group-hover:text-blue-500 transition-smooth">
               {title}
             </CardTitle>

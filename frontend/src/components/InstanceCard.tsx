@@ -121,12 +121,12 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
           <div className="flex items-center gap-3 min-w-0">
             <BookOpenText className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
             <div className="min-w-0">
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900 font-['monlam'] break-words">{title_text}</h3>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900  break-words">{title_text}</h3>
             </div>
           </div>
           
           {/* Translation, Commentary, and Formatter Buttons */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 font-['monlam']">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 ">
             <Button
               onClick={() => {
                 navigate(`/texts/${text_id}/instances/${instance_id}/translation`);

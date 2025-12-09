@@ -37,7 +37,7 @@ const PersonCard = ({ person }: PersonCardProps) => {
   return (
     <Card className="hover:shadow-lg transition-shadow duration-200 gap-2">
       <CardHeader>
-        <div className="flex w-full justify-between items-center gap-2 font-['noto']">
+        <div className="flex w-full justify-between items-center gap-2 ">
           <CardTitle className="text-lg">{getMainName(person)}</CardTitle>
           <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center group-hover:bg-primary/10 transition-smooth">
           <User className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-smooth" />

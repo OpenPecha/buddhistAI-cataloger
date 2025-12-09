@@ -147,7 +147,7 @@ const TextCRUD = () => {
   return (
     <div className="container mx-auto py-16  space-y-4 sm:space-y-6 px-2 sm:px-0">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-center sm:items-center gap-3 sm:gap-0 font-['jomo']">
+      <div className={`flex flex-col sm:flex-row justify-between items-center sm:items-center gap-3 sm:gap-0`}>
         <h2 className="text-xl sm:text-2xl font-bold text-gray-800 text-center sm:text-left">{t('textsPage.title')}</h2>
         
         {/* Search Input */}
@@ -182,7 +182,7 @@ const TextCRUD = () => {
 
           {/* Text Dropdown */}
           {showTextDropdown && textSearch && (
-            <div className="absolute z-10 w-full font-['noto'] mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-96 overflow-y-auto">
+            <div className="absolute z-10 w-full  mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-96 overflow-y-auto">
               {debouncedTextSearch.trim() && (
                 <>
                   {/* BDRC Results Section */}
@@ -305,7 +305,7 @@ const TextCRUD = () => {
 
         {/* Pagination Controls - Only show when not searching */}
         {showPagination && (
-          <div className="bg-white rounded-lg shadow-md p-3 sm:p-4 font-['jomo']">
+          <div className="bg-white rounded-lg shadow-md p-3 sm:p-4 ">
             <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
               <Button
                 onClick={handlePrevPage}
@@ -315,7 +315,7 @@ const TextCRUD = () => {
               >
                 {t('textsPage.previous')}
               </Button>
-              <span className="text-xs sm:text-sm text-gray-600 text-center font-['noto']">
+              <span className="text-xs sm:text-sm text-gray-600 text-center ">
                 {t('textsPage.showing', { 
                   start: offset + 1, 
                   end: offset + filteredTexts.length 
@@ -378,7 +378,7 @@ const TextCRUD = () => {
             </div>
           </div>
         ) : !isCheckingText && !textNotFound ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 font-['noto']">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 ">
             {displayTexts.map((text: OpenPechaText) => (
               <TextListCard key={text.id} text={text} />
             ))}
