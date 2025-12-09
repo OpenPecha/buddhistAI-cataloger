@@ -977,7 +977,7 @@ const EnhancedTextCreationForm = () => {
           <div className="p-8">
             {/* Text Search/Selection Section */}
             <div className="mb-8">
-              <h2 className="!text-[1.5rem] font-bold mb-6 text-gray-800">
+              <h2 className="text-[1.5rem]! font-bold mb-6 text-gray-800">
                 {t("create.pageTitle")}
               </h2>
               

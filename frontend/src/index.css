@@ -26,14 +26,25 @@
 	font-style: normal;
 }
 
-html[lang="bo"] * {
+html[lang="bo"] div {
   font-family: 'jomo', sans-serif !important;
-  font-size: 16px !important;
+  font-size: 16px ;
 }
 
-html[lang="en"] * {
+html[lang="en"] div {
   font-family: 'poppins', 'Noto', sans-serif !important;
-  font-size: 14px !important;
+  font-size: 14px ;
+}
+
+html[lang="bo"] label {
+  font-family: 'jomo', sans-serif !important;
+  font-size: 18px ;
+  margin-bottom: 0.5rem !important;
+}
+
+html[lang="en"] label {
+  font-family: 'poppins', 'Noto', sans-serif !important;
+  font-size: 14px ;
 }
 
   @keyframes loading {
