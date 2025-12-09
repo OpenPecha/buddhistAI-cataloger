@@ -6,6 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Label } from '../ui/label';
 
 interface CopyrightProps {
   copyright: string;
@@ -36,10 +37,10 @@ function Copyright({
     <div className={className}>
       {/* Copyright Field */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <Label htmlFor="copyright">
           {t(copyrightLabelKey)} {required && <span className="text-red-500">*</span>}
-        </label>
-        <Select value={copyright} onValueChange={setCopyright}>
+        </Label>
+        <Select name="copyright" value={copyright} onValueChange={setCopyright}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder={t("textForm.copyrightUnknown")} />
           </SelectTrigger>
@@ -53,10 +54,11 @@ function Copyright({
 
       {/* License Field */}
       <div className="mt-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <Label htmlFor="license">
           {t(licenseLabelKey)} {required && <span className="text-red-500">*</span>}
-        </label>
+        </Label>
         <Select 
+        name="license"
           value={license} 
           onValueChange={setLicense}
         >

@@ -8,6 +8,7 @@ import { useBdrcSearch, type BdrcSearchResult } from "@/hooks/useBdrcSearch";
 import { fetchTextByBdrcId } from "@/api/texts";
 import { Link, useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
+import { Label } from "@/components/ui/label";
 
 const TextCRUD = () => {
   const { t } = useTranslation();
@@ -152,12 +153,11 @@ const TextCRUD = () => {
         
         {/* Search Input */}
         <div className="relative w-full sm:w-auto sm:min-w-[300px]">
-          <label
+          <Label
             htmlFor="text-search"
-            className="block text-sm font-medium text-gray-700 mb-2"
           >
             {t("create.searchExistingText")}
-          </label>
+          </Label>
           <div className="relative">
             <input
               id="text-search"

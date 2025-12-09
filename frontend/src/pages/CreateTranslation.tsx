@@ -20,6 +20,7 @@ import SourceSelection from '@/components/formComponent/SourceSelection';
 import Copyright from '@/components/formComponent/Copyright';
 import { Input } from '@/components/ui/input';
 import { toast } from "sonner"
+import { Label } from '@/components/ui/label';
 
 
 const CreateTranslation = () => {
@@ -440,17 +441,17 @@ const CreateTranslation = () => {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Language Field */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Label>
                   {t('textForm.language')} <span className="text-red-500">*</span>
-                </label>
+                </Label>
                 <LanguageSelectorForm language={language} setLanguage={setLanguage} />
               </div>
 
               {/* Title Field (REQUIRED) */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Label>
                   {t('textForm.title')} <span className="text-red-500">*</span>
-                </label>
+                </Label>
                 <Input
                   type="text"
                   value={title}
@@ -468,9 +469,9 @@ const CreateTranslation = () => {
 
               {/* Alternative Titles Field */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Label>
                   {t('textForm.altTitles')}
-                </label>
+                </Label>
                 <div className="space-y-2">
                   {altTitles.map((altTitle, index) => (
                     <div key={index} className="flex items-center gap-2">
@@ -518,17 +519,17 @@ const CreateTranslation = () => {
 
               {/* Source Field */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Label>
                   {t('translation.source')} <span className="text-red-500">*</span>
-                </label>
+                </Label>
               <SourceSelection source={source} setSource={setSource} />
               </div>
 
               {/* Author/Translator Field */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <Label>
                   {t('textForm.translator')}
-                </label>
+                </Label>
                 <div className="relative">
                   <Input
                     type="text"

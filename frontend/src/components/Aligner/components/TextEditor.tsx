@@ -7,6 +7,7 @@ import { useTextSelectionStore } from '../../../stores/textSelectionStore';
 import { useEditorContext } from '../context';
 import { cleanAnnotation } from '../../../api/text';
 import { toast } from "sonner"
+import { Label } from '@/components/ui/label';
 
 interface TextEditorProps {
   readonly ref: React.RefObject<ReactCodeMirrorRef | null> | null;
@@ -609,9 +610,9 @@ function TextEditor({
               <div className="px-6 py-4 flex-1 overflow-auto">
                 <div className="space-y-4">
                   <div>
-                    <label htmlFor="sample-text" className="block text-sm font-medium text-gray-700 mb-2">
+                    <Label htmlFor="sample-text">
                       Sample Text *
-                    </label>
+                    </Label>
                     <textarea
                       id="sample-text"
                       value={sampleText}

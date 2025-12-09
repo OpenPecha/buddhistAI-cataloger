@@ -28,10 +28,12 @@
 
 html[lang="bo"] * {
   font-family: 'jomo', sans-serif !important;
+  font-size: 16px !important;
 }
 
 html[lang="en"] * {
   font-family: 'poppins', 'Noto', sans-serif !important;
+  font-size: 14px !important;
 }
 
   @keyframes loading {

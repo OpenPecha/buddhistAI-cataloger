@@ -28,7 +28,7 @@ function LanguageSelector() {
         aria-label="Select language"
       >
         <Globe className="w-4 h-4" />
-        <span className="">{currentLanguage.nativeName}</span>
+        <span className="!font-['monlam']">{currentLanguage.nativeName}</span>
         <svg
           className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
@@ -60,7 +60,7 @@ function LanguageSelector() {
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span>{lang.nativeName}</span>
+                    <span >{lang.nativeName}</span>
                     <span className="text-xs text-gray-500">{lang.name}</span>
                   </div>
                 </button>

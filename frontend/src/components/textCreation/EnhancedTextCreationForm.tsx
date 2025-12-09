@@ -19,6 +19,7 @@ import { useBibliography } from "@/context/BibliographyContext";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { validateContentEndsWithTsheg, validateSegmentLimits } from "@/utils/contentValidation";
+import { Label } from "../ui/label";
 
 const EnhancedTextCreationForm = () => {
   const navigate = useNavigate();
@@ -976,7 +977,7 @@ const EnhancedTextCreationForm = () => {
           <div className="p-8">
             {/* Text Search/Selection Section */}
             <div className="mb-8">
-              <h2 className="text-2xl font-bold mb-6 text-gray-800">
+              <h2 className="!text-[1.5rem] font-bold mb-6 text-gray-800">
                 {t("create.pageTitle")}
               </h2>
               
@@ -984,12 +985,11 @@ const EnhancedTextCreationForm = () => {
                 {/* Search Input - Only show when no text is selected and not creating new */}
                 {!selectedText && !isCreatingNewText && (
                   <div className="relative">
-                    <label
+                    <Label
                       htmlFor="text-search"
-                      className="block text-sm font-medium text-gray-700 mb-2"
                     >
                       {t("create.searchExistingText")}
-                    </label>
+                    </Label>
                     <input
                       id="text-search"
                       type="text"
