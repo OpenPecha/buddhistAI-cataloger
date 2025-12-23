@@ -27,7 +27,7 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
     category: Category;
     path: CategoryLevel[];
   } | null>(null);
-  const { categories, loading, error, isLoading } = useCategories(currentParentId);
+  const { categories, isLoading, error } = useCategories(currentParentId);
   // Handle category badge click
   const handleCategoryClick = (category: Category) => {
     if (category.has_child) {
@@ -109,7 +109,7 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
         <div className={`rounded-md bg-white max-h-[400px] overflow-y-auto p-3 border ${
           error ? 'border-red-300 bg-red-50' : 'border-gray-200'
         }`}>
-          {loading && (
+          {isLoading && (
             <div className="flex items-center justify-center gap-2 py-8 text-sm text-gray-500">
               <Loader2 className="h-5 w-5 animate-spin" />
               <span>{t('category.loadingCategories')}</span>
