@@ -17,8 +17,31 @@ function App() {
   const location = useLocation();
   const isLoginPage = location.pathname === '/login';
 
+
+
   return (
-    <div className="h-screen overflow-auto  text-xl bg-gradient-to-br from-blue-50 to-indigo-100">
+
+    <div className="min-h-screen w-full  relative text-gray-900">
+    {/* Diagonal Grid with Light */}
+    
+      <div
+    className="absolute inset-0 pointer-events-none -z-10"
+    style={{
+      backgroundImage: `
+        linear-gradient(45deg, transparent 49%, #e5e7eb 49%, #e5e7eb 51%, transparent 51%),
+        linear-gradient(-45deg, transparent 49%, #e5e7eb 49%, #e5e7eb 51%, transparent 51%)
+      `,
+      backgroundSize: "40px 40px",
+       WebkitMaskImage:
+            "radial-gradient(ellipse 100% 80% at 50% 100%, #000 50%, transparent 90%)",
+          maskImage:
+            "radial-gradient(ellipse 100% 80% at 50% 100%, #000 50%, transparent 90%)",
+    }}
+  />
+    <div className="h-screen overflow-auto  text-xl z-10"
+      >
+
+        
       {!isLoginPage && <Navigation/>}
       <div className={isLoginPage ? '' : ''}>
         <Routes>
@@ -76,7 +99,26 @@ function App() {
         </Routes>
         </div>
     </div>
+    
+   
+  </div>
+
   );
 }
 
+<div className="min-h-screen w-full bg-black relative">
+  {/* Dark White Dotted Grid Background */}
+  <div
+    className="absolute inset-0 z-0"
+    style={{
+      background: "#000000",
+      backgroundImage: `
+        radial-gradient(circle, rgba(255, 255, 255, 0.2) 1.5px, transparent 1.5px)
+      `,
+      backgroundSize: "30px 30px",
+      backgroundPosition: "0 0",
+    }}
+  />
+     {/* Your Content/Components */}
+</div>
 export default App;
