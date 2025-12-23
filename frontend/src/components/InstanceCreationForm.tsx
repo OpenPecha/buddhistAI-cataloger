@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import FormsubmitSection from "./FormsubmitSection";
 import SourceSelection from "./formComponent/SourceSelection";
 import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 
 interface InstanceData {
   metadata: {
@@ -525,12 +526,12 @@ const InstanceCreationForm = forwardRef<
 
           {/* Source */}
           <div className="md:col-span-2">
-            <label
+            <Label
               htmlFor="source"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="mb-2"
             >
               {t("instance.source")} <span className="text-red-500">*</span>
-            </label>
+            </Label>
          <SourceSelection source={source} setSource={setSource} />
             {errors.source && (
               <p className="mt-1 text-sm text-red-600">{errors.source}</p>
@@ -540,12 +541,12 @@ const InstanceCreationForm = forwardRef<
           {/* BDRC ID - Only shown for diplomatic type */}
           {type === "diplomatic" && (
             <div>
-              <label
+              <Label
                 htmlFor="bdrc"
-                className="block text-sm font-medium text-gray-700 mb-1"
+                className="mb-2"
               >
                 {t("instance.bdrcInstanceId")} <span className="text-red-500">*</span>
-              </label>
+              </Label>
               <div className="relative">
                 {selectedBdrc ? (
                   // Display selected BDRC (read-only, click to change)
@@ -636,12 +637,12 @@ const InstanceCreationForm = forwardRef<
 
           {/* Colophon */}
           <div className="md:col-span-2">
-            <label
+            <Label
               htmlFor="colophon"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="mb-2"
             >
               {t("instance.colophon")}
-            </label>
+            </Label>
             <Input
               id="colophon"
               type="text"
@@ -668,9 +669,9 @@ const InstanceCreationForm = forwardRef<
           ) : (
             <div>
               <div className="flex items-center justify-between mb-3">
-                <label className="block text-sm font-medium text-gray-700">
+                <Label htmlFor="incipitTitle" className="mb-2">
                   {t("instance.incipitTitle")}
-                </label>
+                </Label>
                 <Button
                   type="button"
                   onClick={removeIncipitTitleSection}

@@ -155,6 +155,7 @@ const TextCRUD = () => {
         <div className="relative w-full sm:w-auto sm:min-w-[300px]">
           <Label
             htmlFor="text-search"
+            className="mb-2"
           >
             {t("create.searchExistingText")}
           </Label>

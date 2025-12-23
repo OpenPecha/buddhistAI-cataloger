@@ -22,6 +22,7 @@ import LanguageSelectorForm from "./formComponent/LanguageSelectorForm";
 import RoleSelectionForm from "./formComponent/RoleSelectionForm";
 import Copyright from "./formComponent/Copyright";
 import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 
 interface TextCreationFormProps {
   onDataChange?: (textData: any) => void;
@@ -499,12 +500,12 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
           </div>
 
           <div>
-            <label
+            <Label
               htmlFor="language"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="mb-2"
             >
               {t("textForm.language")} <span className="text-red-500">*</span>
-            </label>
+            </Label>
            <LanguageSelectorForm language={language} setLanguage={setLanguage} />
             {errors.language && (
               <p className="mt-1 text-sm text-red-600">{errors.language}</p>
@@ -515,12 +516,12 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         {/* Target field - only for commentary/translation */}
         {selectedType === "translation"&& (
           <div>
-            <label
+            <Label
               htmlFor="target"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="mb-2"
             >
               {t("textForm.targetTextId")}
-            </label>
+            </Label>
             <Input
               id="target"
               type="text"
@@ -538,9 +539,12 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         {/* Titles Section */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-gray-700 ">
+            <Label
+              htmlFor="title"
+              className="mb-2"
+            >
               {t("textForm.title")} <span className="text-red-500">*</span> ({t("textForm.atLeastOneRequired")})
-            </label>
+            </Label>
             <Button
               type="button"
               onClick={() =>
@@ -675,9 +679,9 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         {/* Alternative Titles Section */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-gray-700">
+            <Label htmlFor="alternativeTitle" className="mb-2">
               {t("textForm.alternativeTitle")}
-            </label>
+            </Label>
             <Button
               type="button"
               onClick={() => setAltTitles([...altTitles, [{ language: "", value: "" }]])}
@@ -804,9 +808,9 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         {/* Contributors Section */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-gray-700">
+            <Label htmlFor="contributors" className="mb-2">
               {t("textForm.contributors")}
-            </label>
+            </Label>
             <Button
               type="button"
               onClick={() => setShowAddContributor(!showAddContributor)}
@@ -945,12 +949,12 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         {/* Optional Fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 " >
           <div className="hidden">
-            <label
+            <Label
               htmlFor="date"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="mb-2"
             >
               {t("textForm.date")}
-            </label>
+            </Label>
             <Input
               id="date"
               type="date"
@@ -960,12 +964,12 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
           </div>
 
           <div >
-            <label
+            <Label
               htmlFor="bdrc"
-              className="block text-sm font-medium text-gray-700 mb-1"
+              className="mb-2"
             >
               {t("textForm.bdrcWorkId")}
-            </label>
+            </Label>
             <div className="relative">
               {selectedBdrc ? (
                 // Display selected BDRC (read-only, click to change)

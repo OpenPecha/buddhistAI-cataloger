@@ -37,7 +37,9 @@ function Copyright({
     <div className={className}>
       {/* Copyright Field */}
       <div>
-        <Label htmlFor="copyright">
+        <Label htmlFor="copyright"
+        className="mb-2"
+        >
           {t(copyrightLabelKey)} {required && <span className="text-red-500">*</span>}
         </Label>
         <Select name="copyright" value={copyright} onValueChange={setCopyright}>
@@ -54,7 +56,10 @@ function Copyright({
 
       {/* License Field */}
       <div className="mt-4">
-        <Label htmlFor="license">
+        <Label htmlFor="license"
+        className="mb-2"
+        >
+
           {t(licenseLabelKey)} {required && <span className="text-red-500">*</span>}
         </Label>
         <Select 
