@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useCategories } from '../../../hooks/useCategories';
 import type { Category } from '../../../hooks/useCategories';
 import { ChevronRight, Loader2, Check, Home } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface CategoryLevel {
   id: string;

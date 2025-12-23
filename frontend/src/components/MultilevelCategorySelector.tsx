@@ -26,7 +26,6 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
     category: Category;
     path: CategoryLevel[];
   } | null>(null);
-
   const { categories, loading, error } = useCategories(currentParentId);
   // Handle category badge click
   const handleCategoryClick = (category: Category) => {

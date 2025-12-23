@@ -3,6 +3,7 @@ import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
 import enTranslations from './locales/en/translation.json';
 import boTranslations from './locales/bo/translation.json';
+import zhTranslations from './locales/zh/translation.json';
 
 i18n
   .use(LanguageDetector) // Detects user language
@@ -15,6 +16,9 @@ i18n
       bo: {
         translation: boTranslations,
       },
+      zh:{
+        translation: zhTranslations,
+      }
     },
     fallbackLng: 'en',
     debug: false,

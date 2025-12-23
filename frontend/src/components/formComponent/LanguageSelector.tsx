@@ -5,6 +5,7 @@ import { Globe } from 'lucide-react';
 const languages = [
   { code: 'en', name: 'English', nativeName: 'English' },
   { code: 'bo', name: 'Tibetan', nativeName: 'བོད་སྐད་' },
+  { code: 'zh', name: 'Chinese', nativeName: '中文' },
 ];
 
 function LanguageSelector() {

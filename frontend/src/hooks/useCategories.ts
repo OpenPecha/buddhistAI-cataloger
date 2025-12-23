@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { API_URL } from '@/config/api';
+import { useTranslation } from 'react-i18next';
 
 export interface Category {
   id: string;
@@ -16,10 +17,10 @@ interface UseCategoriesResult {
 }
 
 // Fetch function for categories
-const fetchCategories = async (parentId: string | null): Promise<Category[]> => {
+const fetchCategories = async (parentId: string | null, language: string = 'bo'): Promise<Category[]> => {
   const params = new URLSearchParams();
   params.append('application', 'webuddhist');
-  params.append('language', 'bo');
+  params.append('language', language);
   if (parentId) {
     params.append('parent_id', parentId);
   }
@@ -35,14 +36,17 @@ const fetchCategories = async (parentId: string | null): Promise<Category[]> => 
 };
 
 export const useCategories = (parentId: string | null = null): UseCategoriesResult => {
+  const { i18n } = useTranslation();
+  const language = i18n.language;
+
   const {
     data: categories = [],
     isLoading: loading,
     error,
     refetch,
   } = useQuery({
-    queryKey: ['categories', parentId || 'root'],
-    queryFn: () => fetchCategories(parentId),
+    queryKey: ['categories', parentId || 'root', language],
+    queryFn: () => fetchCategories(parentId, language),
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     gcTime: 10 * 60 * 1000, // Keep unused data in cache for 10 minutes
   });
