@@ -44,7 +44,6 @@ function SourceSelectionPanel() {
 
   // Handle instance selection from dropdown (second step)
   const handleInstanceSelection = React.useCallback((instanceId: string) => {
-    console.log('🔗 Instance selection:', instanceId);
     if (!instanceId || !selectedTextId) return;
     
     setSelectedInstanceId(instanceId);

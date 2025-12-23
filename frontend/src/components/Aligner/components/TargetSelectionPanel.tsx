@@ -164,7 +164,6 @@ function TargetSelectionPanel() {
   React.useEffect(() => {
     // Wait for both instance data to be fully loaded before processing
     if (!sourceInstanceData || !targetInstanceData || isLoadingSourceInstance || isLoadingTargetInstance) {
-      console.log('⚠️ Missing instance data or still loading, skipping annotation application');
       return;
     }
   
@@ -174,55 +173,28 @@ function TargetSelectionPanel() {
       ? 'Applying alignment annotations...' 
       : 'Applying instance segmentation...';
     
-    console.log('🔄 Setting loading state for annotation application');
     setLoadingAnnotations(true, loadingMessage);
     
     try {
       let segmentedSourceText: string;
       let segmentedTargetText: string;
       
-      console.log('🔍 Checking for alignment annotation data...');
       // Try to apply alignment annotation if available
       if (alignmentAnnotation) {
-        console.log('✅ Alignment annotation found, processing...');
         const alignmentData = alignmentAnnotation as unknown as AlignmentAnnotationResponse;
         const annotationData = alignmentData.data;
         
-        console.log('📋 Alignment annotation structure:', {
-          id: alignmentData.id,
-          type: alignmentData.type,
-          hasTargetAnnotation: !!annotationData?.target_annotation,
-          targetAnnotationCount: annotationData?.target_annotation?.length || 0,
-          hasAlignmentAnnotation: !!annotationData?.alignment_annotation,
-          alignmentAnnotationCount: annotationData?.alignment_annotation?.length || 0
-        });
-        
+  
         // Validate alignment data structure
         if (annotationData?.target_annotation && Array.isArray(annotationData.target_annotation) &&
             annotationData?.alignment_annotation && Array.isArray(annotationData.alignment_annotation)) {
           
-          console.log('✅ Alignment data structure validated successfully');
-          console.log('📝 Target annotations:', annotationData.target_annotation.map((ann, i) => ({
-            index: i,
-            id: ann.id,
-            span: ann.span,
-            annotationIndex: ann.index
-          })));
-          console.log('🔗 Alignment annotations:', annotationData.alignment_annotation.map((ann, i) => ({
-            index: i,
-            id: ann.id,
-            span: ann.span,
-            annotationIndex: ann.index,
-            alignmentIndex: ann.alignment_index
-          })));
-          
+      
           // Reconstruct segments from alignment annotations
           const sourceContent = sourceInstanceData.content || '';
           const targetContent = targetInstanceData.content || '';
           
-          console.log('🎯 Reconstructing segments from alignment annotations');
-          console.log('📝 Source content length:', sourceContent.length);
-          console.log('📝 Target content length:', targetContent.length);
+       
           
           const { source, target } = reconstructSegments(
             annotationData.target_annotation,
@@ -235,24 +207,14 @@ function TargetSelectionPanel() {
           segmentedSourceText = source.join('\n');
           segmentedTargetText = target.join('\n');
           
-          console.log('✅ Segments reconstructed:', {
-            sourceSegments: source.length,
-            targetSegments: target.length
-          });
+       
         } else {
-          console.log('❌ Invalid alignment data structure, using fallback');
-          console.log('🔍 Validation details:', {
-            hasTargetAnnotation: !!annotationData?.target_annotation,
-            isTargetAnnotationArray: Array.isArray(annotationData?.target_annotation),
-            hasAlignmentAnnotation: !!annotationData?.alignment_annotation,
-            isAlignmentAnnotationArray: Array.isArray(annotationData?.alignment_annotation)
-          });
+      
           // Fallback to plain text if annotation data is invalid
           segmentedSourceText = sourceInstanceData.content || '';
           segmentedTargetText = targetInstanceData.content || '';
         }
       } else {
-        console.log('⚠️ No alignment annotation available, using instance segmentation if available');
         // Third case: No alignment annotation available, use instance segmentation if available
         const sourceContent = sourceInstanceData.content || '';
         const targetContent = targetInstanceData.content || '';
@@ -260,10 +222,8 @@ function TargetSelectionPanel() {
         // Try to extract segmentation from source instance annotations
         const sourceInstanceSegmentation = extractInstanceSegmentation(sourceInstanceData.annotations);
         if (sourceInstanceSegmentation) {
-          console.log('📝 Using source instance segmentation');
           segmentedSourceText = applySegmentation(sourceContent, sourceInstanceSegmentation);
         } else {
-          console.log('📝 No source instance segmentation, using file segmentation fallback');
           const sourceSegmentations = generateFileSegmentation(sourceContent);
           segmentedSourceText = applySegmentation(sourceContent, sourceSegmentations);
         }
@@ -271,32 +231,18 @@ function TargetSelectionPanel() {
         // Try to extract segmentation from target instance annotations
         const targetInstanceSegmentation = extractInstanceSegmentation(targetInstanceData.annotations);
         if (targetInstanceSegmentation) {
-          console.log('📝 Using target instance segmentation');
           segmentedTargetText = applySegmentation(targetContent, targetInstanceSegmentation);
         } else {
-          console.log('📝 No target instance segmentation, using file segmentation fallback');
           const targetSegmentations = generateFileSegmentation(targetContent);
           segmentedTargetText = applySegmentation(targetContent, targetSegmentations);
         }
         
-        console.log('📊 Segmentation results:', {
-          sourceHasInstanceSegmentation: !!sourceInstanceSegmentation,
-          targetHasInstanceSegmentation: !!targetInstanceSegmentation,
-          sourceLinesAfterSegmentation: segmentedSourceText.split('\n').length,
-          targetLinesAfterSegmentation: segmentedTargetText.split('\n').length
-        });
+   
       }
       
-      console.log('💾 Updating text store with segmented content...');
-      console.log('📊 Final segmentation results:', {
-        sourceTextLength: segmentedSourceText.length,
-        targetTextLength: segmentedTargetText.length,
-        sourceLinesCount: segmentedSourceText.split('\n').length,
-        targetLinesCount: segmentedTargetText.split('\n').length
-      });
+    
       
       // Update the store with texts (preserve original sourceTextId)
-      console.log('🔄 Setting source text in store');
       setSourceText(
         sourceTextId || sourceInstanceData.id || 'source-instance',
         sourceInstanceId!,
@@ -304,7 +250,6 @@ function TargetSelectionPanel() {
         'database'
       );
       
-      console.log('🔄 Setting target text in store');
       setTargetText(
         `related-${selectedInstanceId}`,
         selectedInstanceId!,
@@ -317,11 +262,9 @@ function TargetSelectionPanel() {
         (instance.instance_id || instance.id) === selectedInstanceId
       );
       const targetType = determineTargetType(selectedInstance || null);
-      console.log('🏷️ Determined target type:', targetType);
       setTargetType(targetType);
       
       // Update URL parameters for target selection - only use t_id
-      console.log('🔗 Updating URL parameters');
       setSearchParams((prev) => {
         prev.set('t_id', selectedInstanceId!);
         // Remove old params if they exist
@@ -331,10 +274,8 @@ function TargetSelectionPanel() {
       });
       
       // Mark annotations as applied
-      console.log('✅ Marking annotations as applied');
       setAnnotationsApplied(true);
       
-      console.log('🎉 Annotation application completed successfully!');
       
     } catch (error) {
       console.error('❌ Error applying alignment annotations:', error);
@@ -343,7 +284,6 @@ function TargetSelectionPanel() {
         stack: error instanceof Error ? error.stack : undefined
       });
       
-      console.log('🔄 Falling back to error recovery');
       setLoadingAnnotations(false);
       setAnnotationsApplied(true);
     }

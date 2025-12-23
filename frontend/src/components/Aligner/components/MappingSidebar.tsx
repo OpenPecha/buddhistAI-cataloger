@@ -145,7 +145,6 @@ const MappingSidebar = () => {
           index: typeof item.index === 'string' ? Number.parseInt(item.index, 10) : (item.index ?? 0),
           alignment_index: (item.alignment_index ?? []).map(idx => typeof idx === 'string' ? Number.parseInt(idx, 10) : idx),
         }));
-        console.log('updated')
       updateAnnotationMutation.mutate({
         annotationId,
         annotationData: {

@@ -41,7 +41,6 @@ async function prepareData(
         onProgress?.("Reconstructing alignment segments...");
         const reconstructed_annoations=reverse_cleaned_alignments(annotation as Parameters<typeof reverse_cleaned_alignments>[0]);
         //get th text for each alignment segment from content
-        console.log('reconstruct',reconstructed_annoations);
         
         onProgress?.("Populating missing spans...");
         const populated_annoations=populateMissingSpans(reconstructed_annoations);
@@ -53,7 +52,6 @@ async function prepareData(
             sourceText,
             targetText
         );
-        console.log('annotationsWithContent',annotationsWithContent);
         
         onProgress?.("Applying annotations to text...");
         

@@ -25,25 +25,16 @@ export function getAnnotation (text: string){
 export function applySegmentation(text: string, segmentations: Array<{span: {start: number, end: number}}>): string {
     
     if (!text) {
-        console.log('⚠️ applySegmentation: No text provided, returning empty string');
         return '';
     }
     
     if (!segmentations || segmentations.length === 0) {
-        console.log('⚠️ applySegmentation: No segmentations provided, returning original text');
         return text;
     }
 
-    console.log('🔍 Segmentations to apply:', segmentations.map((seg, i) => ({
-        index: i,
-        start: seg.span?.start,
-        end: seg.span?.end,
-        length: seg.span ? seg.span.end - seg.span.start : 0,
-        text: seg.span ? text.substring(seg.span.start, seg.span.end) : 'invalid'
-    })));
+ 
 
     // // Validate segmentations structure
-    // console.log('✅ Validating segmentation structure...');
     // for (let i = 0; i < segmentations.length; i++) {
     //     const seg = segmentations[i];
     //     if (!seg || !seg.span || typeof seg.span.start !== 'number' || typeof seg.span.end !== 'number') {
@@ -58,7 +49,6 @@ export function applySegmentation(text: string, segmentations: Array<{span: {sta
     //         throw new Error(error);
     //     }
     // }
-    // console.log('✅ All segmentations validated successfully');
 
     // Sort segmentations by start position
     const sortedSegmentations = [...segmentations].sort((a, b) => a.span.start - b.span.start);
