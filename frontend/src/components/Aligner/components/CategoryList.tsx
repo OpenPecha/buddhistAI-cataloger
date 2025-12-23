@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useCategories } from '../../../hooks/useCategories';
 import type { Category } from '../../../hooks/useCategories';
 import { ChevronRight, Loader2, Check, Home } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
-
+      
 interface CategoryLevel {
   id: string;
   title: string;
@@ -28,7 +27,7 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
     path: CategoryLevel[];
   } | null>(null);
 
-  const { categories, loading, error } = useCategories(currentParentId);
+  const { categories, isLoading, error } = useCategories(currentParentId);
 
   // Handle category badge click
   const handleCategoryClick = (category: Category) => {
@@ -107,26 +106,26 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
         <div className={`rounded-md bg-white max-h-[400px] overflow-y-auto p-3 border ${
           hasError ? 'border-red-300 bg-red-50' : 'border-gray-200'
         }`}>
-          {loading && (
+          {isLoading && (
             <div className="flex items-center justify-center gap-2 py-8 text-sm text-gray-500">
               <Loader2 className="h-5 w-5 animate-spin" />
               <span>Loading categories...</span>
             </div>
           )}
           
-          {!loading && error && (
+          {!isLoading && error && (
             <div className="py-8 text-center text-sm text-red-600">
               Error loading categories: {error}
             </div>
           )}
           
-          {!loading && !error && categories.length === 0 && (
+          {!isLoading && !error && categories.length === 0 && (
             <div className="py-8 text-center text-sm text-gray-500">
               No categories available
             </div>
           )}
           
-          {!loading && !error && categories.length > 0 && (
+          {!isLoading && !error && categories.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {categories.map((category) => {
                 const isSelected = selectedCategory?.category.id === category.id;

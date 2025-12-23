@@ -987,6 +987,7 @@ const EnhancedTextCreationForm = () => {
                   <div className="relative">
                     <Label
                       htmlFor="text-search"
+                      className="mb-4"
                     >
                       {t("create.searchExistingText")}
                     </Label>

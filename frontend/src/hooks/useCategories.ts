@@ -11,7 +11,7 @@ export interface Category {
 
 interface UseCategoriesResult {
   categories: Category[];
-  loading: boolean;
+  isLoading: boolean;
   error: string | null;
   refetch: () => void;
 }
@@ -41,7 +41,7 @@ export const useCategories = (parentId: string | null = null): UseCategoriesResu
 
   const {
     data: categories = [],
-    isLoading: loading,
+    isLoading,
     error,
     refetch,
   } = useQuery({
@@ -53,7 +53,7 @@ export const useCategories = (parentId: string | null = null): UseCategoriesResu
 
   return {
     categories,
-    loading,
+    isLoading,
     error: error ? (error as Error).message : null,
     refetch: () => {
       refetch();

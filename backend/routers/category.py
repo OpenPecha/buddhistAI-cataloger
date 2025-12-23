@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Body
 from pydantic import BaseModel
 from typing import List, Optional
 import requests
@@ -72,3 +72,49 @@ async def get_categories(
             detail=f"Internal server error: {str(e)}"
         )
 
+
+@router.post("", tags=["categories"])
+async def create_category(
+            application: str = Body(..., embed=True, description="Application identifier"),
+            title: dict = Body(..., embed=True, description="Title in different languages, e.g. {'en': 'Literature', 'bo': 'རྩོམ་རིག', 'zh': ''}"),
+            parent: Optional[str] = Body(None, embed=True, description="Parent category ID, or null for root category"),
+        ):
+            """
+            Create a new category in the OpenPecha API.
+
+            - **application**: Application identifier (e.g., "webuddhist")
+            - **title**: Dictionary of translations for the category title (e.g., {"en": "Literature", "bo": "..."} )
+            - **parent**: Optional. Parent category ID, or null for root category.
+            """
+            if not API_ENDPOINT:
+                raise HTTPException(
+                    status_code=500,
+                    detail="OPENPECHA_ENDPOINT environment variable is not set"
+                )
+
+            try:
+                payload = {
+                    "application": application,
+                    "title": title,
+                    "parent": parent,
+                }
+                url = f"{API_ENDPOINT}/categories"
+                response = requests.post(url, json=payload, timeout=30)
+                if response.status_code not in (200, 201):
+                    raise HTTPException(status_code=response.status_code, detail=response.text)
+                return response.json()
+            except requests.exceptions.Timeout:
+                raise HTTPException(
+                    status_code=504,
+                    detail="Request to OpenPecha API timed out after 30 seconds"
+                )
+            except requests.exceptions.RequestException as e:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"Error connecting to OpenPecha API: {str(e)}"
+                )
+            except Exception as e:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Internal server error: {str(e)}"
+                )

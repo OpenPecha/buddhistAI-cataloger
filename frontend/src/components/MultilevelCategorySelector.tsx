@@ -3,6 +3,7 @@ import { useCategories } from '@/hooks/useCategories';
 import type { Category } from '@/hooks/useCategories';
 import { ChevronRight, Loader2, Check, Home } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import CreateCategoryModal from './CreateCategoryModal';
 
 interface CategoryLevel {
   id: string;
@@ -26,7 +27,7 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
     category: Category;
     path: CategoryLevel[];
   } | null>(null);
-  const { categories, loading, error } = useCategories(currentParentId);
+  const { categories, loading, error, isLoading } = useCategories(currentParentId);
   // Handle category badge click
   const handleCategoryClick = (category: Category) => {
     if (category.has_child) {
@@ -72,12 +73,12 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
   return (
     <div className="space-y-3 ">
       <div className="space-y-2">
+        <span className="flex items-center gap-2">
         <label className="block text-sm font-medium text-gray-700">
           {t('category.category')} <span className="text-red-500">*</span>
         </label>
-        
-      
-
+        <CreateCategoryModal/>
+        </span>
         {/* Breadcrumb Navigation */}
         {navigationPath.length > 0 && (
           <div className="flex items-center gap-1 text-xs flex-wrap  px-3 py-2 rounded-md ">
@@ -119,7 +120,7 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
               {t('category.errorLoadingCategories')} {error}
             </div>
           )}
-          {categories.length === 0 && (
+          {categories.length === 0&& !isLoading && (
             <div className="py-8 text-center text-sm text-gray-500">
               {t('category.noCategoriesAvailable')}
             </div>

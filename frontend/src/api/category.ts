@@ -36,3 +36,31 @@ export const fetchCategories = async (options: FetchCategoriesOptions = {}): Pro
 };
 
 
+interface CreateCategoryPayload {
+  application: string;
+  title: Record<string, string>;
+  parent?: string | null;
+}
+
+
+export const createCategory = async (
+  payload: CreateCategoryPayload
+): Promise<Category> => {
+  const response = await fetch(`${API_URL}/v2/categories`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'accept': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Failed to create category: ${response.status} ${response.statusText} - ${err}`);
+  }
+
+  return response.json();
+};
+
+
