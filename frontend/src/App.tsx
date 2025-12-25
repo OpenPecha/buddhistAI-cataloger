@@ -18,7 +18,6 @@ function App() {
   const isLoginPage = location.pathname === '/login';
 
 
-
   return (
 
     <div className="min-h-screen w-full  relative text-gray-900">

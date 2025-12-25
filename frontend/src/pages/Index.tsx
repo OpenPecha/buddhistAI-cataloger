@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { BookOpen, PersonStanding } from "lucide-react";
+import { usePermission } from "@/hooks/usePermission";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -11,6 +12,8 @@ const Index = () => {
     "editedContent",
     ""
   );
+  const { data: permission } = usePermission();
+  const isAdmin=permission?.role === "admin";
   return (
     <div className="container mx-auto py-16  px-4  space-y-6">
       {/* Header */}
@@ -23,6 +26,7 @@ const Index = () => {
             setEditedContent("");
             navigate("/create");
           }}
+          disabled={!isAdmin}
           variant="default"
           className="bg-blue-600  hover:bg-blue-700 text-white px-6 py-3 text-lg shadow-lg"
         >

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { getLanguageLabel } from "@/utils/getLanguageLabel";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
+import { usePermission } from "@/hooks/usePermission";
 
 interface TextCardProps {
   title: string;
@@ -36,6 +37,8 @@ const TextCard = ({
   instanceId,
   sourceInstanceId,
 }: TextCardProps) => {
+  const { data: permission } = usePermission();
+  const isAdmin=permission?.role === "admin";
   const typeColors: Record<string, string> = {
     root: "bg-primary/10 text-primary border-primary/20",
     translation: "bg-accent/10 text-accent-foreground border-accent/20",
@@ -81,7 +84,9 @@ const TextCard = ({
         </div>
       </CardContent>
       <CardFooter className="flex-col gap-2 items-end ">
-        <Button variant={!isAnnotationAvailable ? "destructive" : "outline"} className={`w-fit cursor-pointer 
+        <Button 
+        disabled={!isAdmin}
+        variant={!isAnnotationAvailable ? "destructive" : "outline"} className={`w-fit cursor-pointer 
         ${!isAnnotationAvailable ? "bg-[#025388] hover:bg-[#025388]/90 text-white" : ""}
         pointer-events-auto`} onClick={(e)=>{
           e.preventDefault()
