@@ -2,8 +2,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { BookOpen, PersonStanding } from "lucide-react";
+import { BookOpen, Loader2, PersonStanding, Plus } from "lucide-react";
 import { usePermission } from "@/hooks/usePermission";
+import PermissionButton from "@/components/PermissionButton";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -12,7 +13,7 @@ const Index = () => {
     "editedContent",
     ""
   );
-  const { data: permission } = usePermission();
+  const { data: permission,isFetching:isFetchingPermission } = usePermission();
   const isAdmin=permission?.role === "admin";
   return (
     <div className="container mx-auto py-16  px-4  space-y-6">
@@ -30,7 +31,7 @@ const Index = () => {
           variant="default"
           className="bg-blue-600  hover:bg-blue-700 text-white px-6 py-3 text-lg shadow-lg"
         >
-          + {t("common.create")}
+          <PermissionButton isLoading={isFetchingPermission} icon={<Plus className="w-4 h-4" />} text={t("common.create")} />
         </Button>
       </div>
 

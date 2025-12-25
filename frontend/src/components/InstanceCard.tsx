@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BookOpenText, PencilIcon, TextWrap } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
+import PermissionButton from './PermissionButton';
 
 interface InstanceCardProps {
   instance: OpenPechaTextInstance;
@@ -17,7 +18,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
   const navigate = useNavigate();
   const { text_id, instance_id } = useParams();
   const [expandedAnnotations, setExpandedAnnotations] = useState<string[]>([]);
-  const { data: permission } = usePermission();
+  const { data: permission,isFetching:isFetchingPermission } = usePermission();
   const isAdmin=permission?.role === "admin";
   // Find segmentation annotation ID from instance.annotations array
   const segmentationAnnotationRef = Array.isArray(instance.annotations)
@@ -136,10 +137,10 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
               }}
               className="group relative px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-sky-400 to-cyan-500 hover:from-sky-500 hover:to-cyan-600 text-white text-sm sm:text-base font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2 w-full sm:w-auto"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              
+              <PermissionButton isLoading={isFetchingPermission} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-              </svg>
-              {t('textForm.translation')}
+              </svg>} text={t('textForm.translation')} />
             </Button>
             
             <Button
@@ -149,10 +150,13 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
               }}
               className="group relative px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-emerald-400 to-green-500 hover:from-emerald-500 hover:to-green-600 text-white text-sm sm:text-base font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2 w-full sm:w-auto"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-              </svg>
-              {t('textForm.commentary')}
+
+              <PermissionButton isLoading={isFetchingPermission} icon={
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                            </svg>
+              } text={t('textForm.commentary')}
+              />
             </Button>
                    
          
@@ -164,8 +168,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
               }}
               className="group relative px-5 py-2.5 bg-linear-to-r from-sky-400 to-cyan-500 hover:from-sky-500 hover:to-cyan-600 text-white font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
             >
-              <PencilIcon className="w-4 h-4" />
-              Edit
+              <PermissionButton isLoading={isFetchingPermission} icon={<PencilIcon className="w-4 h-4" />} text="Edit" />
             </Button>
           </div>
         </div>

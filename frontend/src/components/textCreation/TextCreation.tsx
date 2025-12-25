@@ -21,7 +21,7 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { validateContentEndsWithTsheg, validateSegmentLimits } from "@/utils/contentValidation";
 import { Label } from "../ui/label";
 
-const EnhancedTextCreationForm = () => {
+const TextCreation = () => {
   const navigate = useNavigate();
   const { user } = useAuth0();
   const { t } = useTranslation();
@@ -940,7 +940,7 @@ const EnhancedTextCreationForm = () => {
       ) : (
         <>
           {/* Two-Panel Layout - Show when creating new text or no text selected */}
-          <div className="fixed  inset-0 top-16 left-0 right-0 bottom-0 bg-gradient-to-br from-blue-50 to-indigo-100 flex">
+          <div className="fixed  inset-0 top-16 left-0 right-0 bottom-0  flex">
             {/* Mobile Toggle Button */}
             <button
               onClick={() =>
@@ -960,7 +960,20 @@ const EnhancedTextCreationForm = () => {
                 </>
               )}
             </button>
-
+            <div
+    className="absolute inset-0 pointer-events-none -z-10 bg-gradient-to-br from-blue-50 to-indigo-100"
+    style={{
+      backgroundImage: `
+        linear-gradient(45deg, transparent 49%, #e5e7eb 49%, #e5e7eb 51%, transparent 51%),
+        linear-gradient(-45deg, transparent 49%, #e5e7eb 49%, #e5e7eb 51%, transparent 51%)
+      `,
+      backgroundSize: "40px 40px",
+       WebkitMaskImage:
+            "radial-gradient(ellipse 100% 80% at 50% 100%, #000 50%, transparent 90%)",
+          maskImage:
+            "radial-gradient(ellipse 100% 80% at 50% 100%, #000 50%, transparent 90%)",
+    }}
+  />
         {/* LEFT PANEL: Search + Forms */}
         <div
           className={`
@@ -1192,103 +1205,6 @@ const EnhancedTextCreationForm = () => {
           </div>
         </div>
 
-            {/* RIGHT PANEL: Editor with Optional File Upload */}
-            {/* COMMENTED OUT: When text exists in cataloger, don't show editor */}
-            {/* <div
-              className={`
-                w-full md:w-1/2 h-full overflow-hidden bg-gray-50
-                absolute md:relative
-                transition-transform duration-300 ease-in-out
-                ${
-                  activePanel === "editor"
-                    ? "translate-x-0"
-                    : "translate-x-full md:translate-x-0"
-                }
-              `}
-            >
-              <div className="h-full flex flex-col">
-                <div className="bg-blue-50 border-b border-blue-200 px-4 py-3">
-                  <div className="flex items-center justify-between">
-                    {!editedContent || editedContent?.trim() === "" ? (
-                      <>
-                        <p className="text-sm text-gray-600">
-                          {t("create.startTyping")}
-                        </p>
-                        <div>
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept=".txt"
-                            onChange={(e) => {
-                              const files = e.target.files;
-                              if (files && files.length > 0) {
-                                const file = files[0];
-                                
-                                if (file.size < 1024) {
-                                  alert(t("create.fileTooSmall"));
-                                  e.target.value = '';
-                                  return;
-                                }
-                                
-                                if (!file.name.endsWith('.txt')) {
-                                  alert(t("create.uploadTxtOnly"));
-                                  e.target.value = '';
-                                  return;
-                                }
-                                
-                                const reader = new FileReader();
-                                reader.onload = (event) => {
-                                  const content = event.target?.result as string;
-                                  handleFileUpload(content, file.name);
-                                };
-                                reader.readAsText(file);
-                              }
-                              e.target.value = '';
-                            }}
-                            className="hidden"
-                          />
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => {
-                              fileInputRef.current?.click();
-                            }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
-                          >
-                            <Upload className="w-4 h-4" />
-                            {t("create.uploadFile")}
-                          </Button>
-                        </div>
-                      </>
-                    ) : (
-                      <span className="text-xs text-gray-500">
-                        {editedContent?.length} {t("create.characters")}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="flex-1 overflow-hidden">
-                  <TextEditorView
-                    content={editedContent || ""}
-                    filename={editedContent ? uploadedFilename : t("editor.newDocument")}
-                    editable={true}
-                    onChange={(value) => setEditedContent(value)}
-                    onTextSelect={handleEditorTextSelect}
-                    isCreatingNewText={isCreatingNewText}
-                    hasIncipit={hasIncipitTitle}
-                    hasTitle={hasTitle}
-                    allowedTypes={
-                      selectedText && !isCreatingNewText
-                        ? ["colophon", "incipit", "alt_incipit"]
-                        : undefined
-                    }
-                    validationError={contentValidationError}
-                    segmentValidation={segmentValidation}
-                  />
-                </div>
-              </div>
-            </div> */}
 
             {/* RIGHT PANEL: Editor - Show when creating new text or no text selected */}
             <div
@@ -1399,4 +1315,4 @@ const EnhancedTextCreationForm = () => {
   );
 };
 
-export default EnhancedTextCreationForm;
+export default TextCreation;

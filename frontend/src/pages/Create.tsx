@@ -1,7 +1,7 @@
-import EnhancedTextCreationForm from "@/components/textCreation/EnhancedTextCreationForm";
+import TextCreation from "@/components/textCreation/TextCreation";
 
 const Create = () => {
-  return <EnhancedTextCreationForm />;
+  return <TextCreation />;
 };
 
 export default Create;

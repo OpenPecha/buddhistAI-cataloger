@@ -3,6 +3,7 @@ import {
   Calendar,
   CheckCircleIcon,
   CircleXIcon,
+  Loader2,
   User,
 } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +12,7 @@ import { getLanguageLabel } from "@/utils/getLanguageLabel";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { usePermission } from "@/hooks/usePermission";
+import PermissionButton from "./PermissionButton";
 
 interface TextCardProps {
   title: string;
@@ -37,7 +39,7 @@ const TextCard = ({
   instanceId,
   sourceInstanceId,
 }: TextCardProps) => {
-  const { data: permission } = usePermission();
+  const { data: permission,isFetching:isFetchingPermission } = usePermission();
   const isAdmin=permission?.role === "admin";
   const typeColors: Record<string, string> = {
     root: "bg-primary/10 text-primary border-primary/20",
@@ -93,7 +95,7 @@ const TextCard = ({
           e.stopPropagation()
           navigate(`/align/${sourceInstanceId}/${instanceId}`)
         }}>
-          {!isAnnotationAvailable ? "Align Text" : "update Alignment"}
+          <PermissionButton isLoading={isFetchingPermission} icon={null} text={!isAnnotationAvailable ? "Align Text" : "update Alignment"} />
         </Button>
       </CardFooter>
     </Card>
