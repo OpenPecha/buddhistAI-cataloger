@@ -383,7 +383,8 @@ export function EditorProvider({ children }: { readonly children: React.ReactNod
               // Apply animated background color change
               (targetElement as HTMLElement).style.transition = 'background-color 0.3s ease';
               (targetElement as HTMLElement).style.fontWeight = 'bold';
-              (targetElement as HTMLElement).style.fontSize = '1.8rem';
+              (targetElement as HTMLElement).style.backgroundColor = '#ddd';
+              (targetElement as HTMLElement).style.borderRadius = '10px';
               (targetElement as HTMLElement).style.color = 'gray';
               setTimeout(() => {
                 // Scroll the alternate editor to align the target element with the active line position
