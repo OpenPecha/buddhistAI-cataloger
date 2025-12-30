@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Book, Globe, Users, Loader2 } from 'lucide-react';
 import type { OpenPechaText } from '@/types/text';
-import type { Person } from '@/types/person';
+import type { Person, PersonName } from '@/types/person';
 import { Badge } from './ui/badge';
 import { TableRow, TableCell } from './ui/table';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,7 @@ import { getLanguageColor, getLanguageLabel } from '@/utils/getLanguageLabel';
 
 
 import { API_URL } from '@/config/api';
+import { getBdrclink } from '@/lib/bdrclink';
 
 interface TextListCardProps {
   text: OpenPechaText;
@@ -20,37 +21,12 @@ interface TextListCardProps {
 const TextListCard = ({ text }: TextListCardProps) => {
   const { t } = useTranslation();
   const [showContributors, setShowContributors] = useState(false);
-  const [contributors, setContributors] = useState<Array<{ person: Person | null; role: string; loading: boolean }>>([]);
   
-  // Fetch contributors when popover is opened
-  useEffect(() => {
-    if (showContributors && text.contributions && text.contributions.length > 0) {
-      // Initialize with loading state
-      setContributors(text.contributions.map(c => ({ person: null, role: c.role, loading: true })));
-      
-      // Fetch all contributors in parallel
-      Promise.all(
-        text.contributions.map(async (contribution) => {
-          try {
-            const response = await fetch(`${API_URL}/person/${contribution.person_id}`);
-            if (response.ok) {
-              const person: Person = await response.json();
-              return { person, role: contribution.role, loading: false };
-            }
-            return { person: null, role: contribution.role, loading: false };
-          } catch {
-            return { person: null, role: contribution.role, loading: false };
-          }
-        })
-      ).then(results => {
-        setContributors(results);
-      });
-    }
-  }, [showContributors, text.contributions]);
-  
-  const getPersonDisplayName = (person: Person | null): string => {
-    if (!person) return t('textsPage.nameNotAvailable');
-    return person.name?.bo || person.name?.en || t('textsPage.nameNotAvailable');
+
+  const contributors = text.contributions.map(c => ({ person: c.person_name, role: c.role }));
+  const getPersonDisplayName = (person_name: PersonName): string => {
+    if (!person_name) return t('textsPage.nameNotAvailable');
+    return person_name?.bo || person_name?.en || t('textsPage.nameNotAvailable');
   };
   
 
@@ -86,6 +62,14 @@ const TextListCard = ({ text }: TextListCardProps) => {
         >
           {text.title?.[text.language] || t('textsPage.untitled')}
         </Link>
+      </TableCell>
+      
+      <TableCell>
+        <a href={getBdrclink(text.bdrc)} target="_blank" rel="noopener noreferrer">
+          <Badge className="bg-secondary-700 flex items-center gap-2">
+            {text.bdrc}
+          </Badge>
+        </a>
       </TableCell>
       
       {/* Type Column */}
@@ -157,7 +141,7 @@ const TextListCard = ({ text }: TextListCardProps) => {
                           key={`${contributor.role}-${contributor.person?.id || 'unknown'}`}
                           className="flex items-start gap-2 p-2 rounded bg-gray-50"
                         >
-                          <div className="flex-1">
+                          <div className="flex-1 space-y-1">
                             <div className="text-sm font-medium text-gray-900">
                               {getPersonDisplayName(contributor.person)}
                             </div>

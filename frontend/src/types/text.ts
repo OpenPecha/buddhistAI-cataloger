@@ -7,6 +7,9 @@ export interface Contribution {
   person_bdrc_id: string;
   person_id: string;
   role: string;
+  person_name:{
+    [language: string]: string;
+  };
 }
 
 export interface Title {

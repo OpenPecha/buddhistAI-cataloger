@@ -22,6 +22,7 @@ const TextList = ({texts}: {texts: OpenPechaText[]}) => {
           <TableHeader>
             <TableRow >
               <TableHead className="w-[100px] font-extrabold text-neutral-700">Text</TableHead>
+              <TableHead className="font-extrabold text-neutral-700">BDRC ID</TableHead>
               <TableHead className="font-extrabold text-neutral-700">Type</TableHead>
               <TableHead className="font-extrabold text-neutral-700">Language</TableHead>
               <TableHead className="text-right font-extrabold text-neutral-700">Contributors</TableHead>

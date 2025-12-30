@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import PersonCard from '@/components/PersonCard';
 import PersonFormModal from '@/components/PersonFormModal';
 import { useTranslation } from 'react-i18next';
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const PersonCRUD = () => {
   const { t } = useTranslation();
@@ -69,14 +70,15 @@ const PersonCRUD = () => {
             </div>
           </div>
 
-          {isLoading ? (
+          {isLoading && (
             <div className="flex justify-center items-center h-64 bg-white rounded-lg shadow-md mx-1 sm:mx-0">
               <div className="text-center px-4">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
                 <p className="text-sm sm:text-base text-gray-600">{t('personsPage.loadingPersons')}</p>
               </div>
             </div>
-          ) : error ? (
+          ) }
+          { error && (
             <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mx-1 sm:mx-0">
               <div className="text-center">
                 <p className="text-sm sm:text-base text-red-500 mb-4">{t('personsPage.errorLoadingPersons')}</p>
@@ -88,34 +90,37 @@ const PersonCRUD = () => {
                 </button>
               </div>
             </div>
-          ) : persons.length === 0 ? (
+          )} 
+          { persons.length === 0 && (
             <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mx-1 sm:mx-0">
               <div className="text-center text-gray-500">
                 <p className="text-base sm:text-lg">{t('personsPage.noPersonsFound')}</p>
                 <p className="text-xs sm:text-sm mt-2">{t('personsPage.adjustFiltersOrCreate')}</p>
               </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 ">
-            {persons.map((person: Person) => (
-              <PersonCard 
-                key={`person-card-${person.id}`} 
-                person={person}
-              />
-            ))}
-            </div>
+          )} 
+          { persons.length > 0 && (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="font-extrabold text-neutral-700">Name</TableHead>
+                  <TableHead className="font-extrabold text-neutral-700">BDRC ID</TableHead>
+                  <TableHead className="font-extrabold text-neutral-700">Alternative Names</TableHead>
+                  <TableHead className="font-extrabold text-neutral-700">Wiki Link</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {persons.map((person: Person) => (
+                  <PersonCard 
+                    key={`person-card-${person.id}`} 
+                    person={person}
+                  />
+                ))}
+              </TableBody>
+            </Table>
           )}
         </div>
-
-      {/* Person Form Modal */}
-      <PersonFormModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        onSuccess={handleModalSuccess}
-        mode={modalMode}
-        existingPerson={selectedPerson}
-      />
-    </div>
+      </div>
   );
 };
 

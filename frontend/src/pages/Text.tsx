@@ -352,12 +352,13 @@ const TextsPage = () => {
             </div>
           </div>
         )}
-        {isLoading &&isCheckingText &&<div className="flex justify-center items-center h-64 bg-white rounded-lg shadow-md mx-1 sm:mx-0">
+        {isLoading && <div className="flex justify-center items-center h-64 bg-white rounded-lg shadow-md mx-1 sm:mx-0">
             <div className="text-center px-4">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
               <p className="text-sm sm:text-base text-gray-600">{t('textsPage.loadingTexts')}</p>
             </div>
-          </div>}
+          </div>
+          }
           { error && !isCheckingText && (
           <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mx-1 sm:mx-0">
             <div className="text-center">
@@ -373,7 +374,7 @@ const TextsPage = () => {
         )}
 
         {/* Text Cards Section with Loading/Error States */}
-         {displayTexts.length === 0 && !isCheckingText && !textNotFound && (
+         {!isLoading && displayTexts.length === 0 && !isCheckingText && !textNotFound && (
           <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mx-1 sm:mx-0">
             <div className="text-center text-gray-500">
               <p className="text-base sm:text-lg">{t('textsPage.noTextsFound')}</p>

@@ -1,6 +1,6 @@
 import { Routes, Route, useLocation } from 'react-router-dom';
 import TextsPage from './pages/Text';
-import PersonCRUD from './pages/Person';
+import PersonsPage from './pages/Person';
 import TextInstances from './pages/TextInstances';
 import Instance from './pages/Instance';
 import Navigation from './components/Navigation';
@@ -16,7 +16,7 @@ import AlignmentWorkstation from './components/Aligner/components/AlignmentWorks
 function App() {
   const location = useLocation();
   const isLoginPage = location.pathname === '/login';
-
+  
 
   return (
 
@@ -67,7 +67,7 @@ function App() {
           } />
           <Route path="/persons" element={
             <ProtectedRoute>
-              <PersonCRUD />
+              <PersonsPage />
             </ProtectedRoute>
           } />
           <Route path="/texts/:text_id/instances" element={
