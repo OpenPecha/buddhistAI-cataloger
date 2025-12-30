@@ -158,7 +158,6 @@ function TextInstances() {
         )}
         
         <Button className="bg-blue-500 text-white hover:bg-blue-600 cursor-pointer" onClick={() => {
-          console.log("sync with Webuddhist");
           alert("This feature is coming soon");
         }}>
           Publish to Webuddhist
