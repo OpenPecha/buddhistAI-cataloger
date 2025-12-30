@@ -13,7 +13,6 @@ import PermissionButton from "./PermissionButton";
 
 interface TextCardProps {
   title: string;
-  titleTibetan?: string;
   language: string;
   type: string;
   isAnnotationAvailable?: boolean;
@@ -23,7 +22,6 @@ interface TextCardProps {
 
 const TextCard = ({
   title,
-  titleTibetan,
   language,
   type,
   isAnnotationAvailable,
@@ -37,18 +35,17 @@ const TextCard = ({
   return (
     <TableRow className="cursor-pointer group hover:bg-muted/50">
       {/* Title Column */}
-      <TableCell className="font-medium">
-        <div className="flex items-start gap-2">
+      <TableCell className="">
+        <div className="flex items-start gap-2 truncate">
           <Book className="w-4 h-4 text-muted-foreground group-hover:text-blue-500 transition-smooth mt-1 shrink-0" />
           <div className="flex-1">
-            <div className=" text-lg font-monlam group-hover:text-blue-500 transition-smooth">
+            <div style={{
+              fontSize: '16px',
+              lineHeight: 'normal',
+            }} className=" text-2xl font-monlam group-hover:text-blue-500 transition-smooth">
               {title}
             </div>
-            {titleTibetan && (
-              <p className="text-sm tibetan-text text-muted-foreground mt-1">
-                {titleTibetan}
-              </p>
-            )}
+          
           </div>
         </div>
       </TableCell>
