@@ -19,7 +19,7 @@ interface TextListCardProps {
 }
 
 const TextListCard = ({ text }: TextListCardProps) => {
-  const { t } = useTranslation();
+  const { t,i18n} = useTranslation();
   const [showContributors, setShowContributors] = useState(false);
   
 
@@ -29,7 +29,12 @@ const TextListCard = ({ text }: TextListCardProps) => {
     return person_name?.bo || person_name?.en || t('textsPage.nameNotAvailable');
   };
   
-
+  function getTitle(text: OpenPechaText){
+    const currentLanguage = i18n.language;
+    const title = text.title[currentLanguage];
+    if (title) return title;
+    return text.title?.[text.language] || t('textsPage.untitled');
+  }
 
   const getTypeLabel = (type: string): string => {
     const labels: Record<string, string> = {
@@ -55,13 +60,26 @@ const TextListCard = ({ text }: TextListCardProps) => {
   return (
     <TableRow>
       {/* Text Column */}
-      <TableCell className="font-medium text-xl font-monlam">
+      <TableCell className="font-medium text-xl font-monlam relative group">
         <Link 
           to={`/texts/${text.id}/instances`} 
           className="transition-colors duration-200 text-neutral-700 hover:text-blue-500"
         >
-          {text.title?.[text.language] || t('textsPage.untitled')}
+          {getTitle(text)}
         </Link>
+        {/* Show all available titles on hover if there's more than 1 */}
+        {(Object.keys(text.title).length > 1) && (
+          <div className="absolute left-0 top-full z-20 mt-2 min-w-[200px] bg-white border border-gray-200 shadow-lg rounded-md p-3 hidden group-hover:block">
+            <ul>
+              {Object.entries(text.title).map(([lang, titleStr]) => (
+                <li key={lang} className="mb-1 last:mb-0">
+                  <span className="font-semibold uppercase text-gray-400">{lang}: </span>
+                  <span className="font-monlam text-gray-700">{titleStr}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </TableCell>
       
       <TableCell>
