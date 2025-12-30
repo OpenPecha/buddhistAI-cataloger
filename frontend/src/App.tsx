@@ -1,7 +1,7 @@
 import { Routes, Route, useLocation } from 'react-router-dom';
-import TextCRUD from './pages/Text';
+import TextsPage from './pages/Text';
 import PersonCRUD from './pages/Person';
-import TextInstanceCRUD from './pages/TextInstances';
+import TextInstances from './pages/TextInstances';
 import Instance from './pages/Instance';
 import Navigation from './components/Navigation';
 import Index from './pages/Index';
@@ -62,7 +62,7 @@ function App() {
           } />
           <Route path="/texts" element={
             <ProtectedRoute>
-              <TextCRUD />
+              <TextsPage />
             </ProtectedRoute>
           } />
           <Route path="/persons" element={
@@ -72,7 +72,7 @@ function App() {
           } />
           <Route path="/texts/:text_id/instances" element={
             <ProtectedRoute>
-              <TextInstanceCRUD />
+              <TextInstances />
             </ProtectedRoute>
           } />
           <Route path="/texts/:text_id/instances/:instance_id" element={

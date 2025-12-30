@@ -10,8 +10,16 @@ import BreadCrumb from "@/components/BreadCrumb";
 import type { OpenPechaTextInstanceListItem, RelatedInstance } from "@/types/text";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 
-function TextInstanceCRUD() {
+function TextInstances() {
   const { t } = useTranslation();
   const { text_id } = useParams();
 
@@ -148,6 +156,13 @@ function TextInstanceCRUD() {
             </div>
           </div>
         )}
+        
+        <Button className="bg-blue-500 text-white hover:bg-blue-600 cursor-pointer" onClick={() => {
+          console.log("sync with Webuddhist");
+          alert("This feature is coming soon");
+        }}>
+          Publish to Webuddhist
+       </Button>
 
       </div>
 
@@ -231,31 +246,43 @@ function TextInstanceCRUD() {
                   </h3>
                 </div>
               ) : (
-                <div className="grid gap-6 px-2 sm:px-0 md:grid-cols-2 lg:grid-cols-3">
-                  {relatedInstances.map((relatedInstance: RelatedInstance) => {
-                    const metadata = relatedInstance.metadata;
-                    const textId = metadata.text_id;
-                    const instanceId = relatedInstance.instance_id;
-                    const isAnnotationAvailable = !!relatedInstance.annotation;
-                    const sourceInstanceId = criticalInstance?.id;
-                    return (
-                      <Link
-                        key={relatedInstance.instance_id}
-                        to={`/texts/${textId}/instances/${instanceId}`}
-                        className="block pointer-events-auto"
-                      >
-                        <TextCard
-                          title={getTitle(metadata.title)}
-                          language={metadata.language}
-                          type={relatedInstance.relationship}
-                          bdrcId={undefined}
-                          isAnnotationAvailable={isAnnotationAvailable}
-                          instanceId={instanceId}
-                          sourceInstanceId={sourceInstanceId}
-                        />
-                      </Link>
-                    );
-                  })}
+                <div className="px-2 sm:px-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="font-extrabold text-neutral-700">Title</TableHead>
+                        <TableHead className="font-extrabold text-neutral-700">Language</TableHead>
+                        <TableHead className="font-extrabold text-neutral-700">Type</TableHead>
+                        <TableHead className="font-extrabold text-neutral-700">Status</TableHead>
+                        <TableHead className="text-right font-extrabold text-neutral-700">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {relatedInstances.map((relatedInstance: RelatedInstance) => {
+                        const metadata = relatedInstance.metadata;
+                        const textId = metadata.text_id;
+                        const instanceId = relatedInstance.instance_id;
+                        const isAnnotationAvailable = !!relatedInstance.annotation;
+                        const sourceInstanceId = criticalInstance?.id;
+                        return (
+                          <Link
+                            key={relatedInstance.instance_id}
+                            to={`/texts/${textId}/instances/${instanceId}`}
+                            className="contents"
+                          >
+                            <TextCard
+                              title={getTitle(metadata.title)}
+                              language={metadata.language}
+                              type={relatedInstance.relationship}
+                              isAnnotationAvailable={isAnnotationAvailable}
+                              instanceId={instanceId}
+                              sourceInstanceId={sourceInstanceId}
+                            />
+                          </Link>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </>
@@ -266,4 +293,4 @@ function TextInstanceCRUD() {
   );
 }
 
-export default TextInstanceCRUD;
+export default TextInstances;

@@ -9,8 +9,9 @@ import { fetchTextByBdrcId } from "@/api/texts";
 import { Link, useNavigate } from "react-router-dom";
 import { X } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import TextList from "@/components/TextList";
 
-const TextCRUD = () => {
+const TextsPage = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [offset, setOffset] = useState(0);
@@ -351,16 +352,13 @@ const TextCRUD = () => {
             </div>
           </div>
         )}
-
-        {/* Text Cards Section with Loading/Error States */}
-        {isLoading && !isCheckingText ? (
-          <div className="flex justify-center items-center h-64 bg-white rounded-lg shadow-md mx-1 sm:mx-0">
+        {isLoading &&isCheckingText &&<div className="flex justify-center items-center h-64 bg-white rounded-lg shadow-md mx-1 sm:mx-0">
             <div className="text-center px-4">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
               <p className="text-sm sm:text-base text-gray-600">{t('textsPage.loadingTexts')}</p>
             </div>
-          </div>
-        ) : error && !isCheckingText ? (
+          </div>}
+          { error && !isCheckingText && (
           <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mx-1 sm:mx-0">
             <div className="text-center">
               <p className="text-sm sm:text-base text-red-500 mb-4">{t('textsPage.errorLoadingTexts')}</p>
@@ -372,22 +370,22 @@ const TextCRUD = () => {
               </button>
             </div>
           </div>
-        ) : displayTexts.length === 0 && !isCheckingText && !textNotFound ? (
+        )}
+
+        {/* Text Cards Section with Loading/Error States */}
+         {displayTexts.length === 0 && !isCheckingText && !textNotFound && (
           <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mx-1 sm:mx-0">
             <div className="text-center text-gray-500">
               <p className="text-base sm:text-lg">{t('textsPage.noTextsFound')}</p>
             </div>
-          </div>
-        ) : !isCheckingText && !textNotFound ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 ">
-            {displayTexts.map((text: OpenPechaText) => (
-              <TextListCard key={text.id} text={text} />
-            ))}
-          </div>
-        ) : null}
+          </div>)}
+        { !isCheckingText && !textNotFound ? <TextList texts={displayTexts} /> : null}
       </div>
     </div>
   );
 };
 
-export default TextCRUD;
+
+
+
+export default TextsPage;
