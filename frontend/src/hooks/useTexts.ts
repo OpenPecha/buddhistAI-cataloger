@@ -7,21 +7,11 @@ import {
   fetchText,
   fetchTextInstances,
   fetchTexts,
-  fetchTextsByTitle,
   updateInstance,
 } from "@/api/texts";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 
-export const useTextsByTitle = (title: string) => {
-  return useQuery({
-    queryKey: ["textsByTitle", title],
-    queryFn: ({ signal }) => fetchTextsByTitle(title, signal),
-    enabled: !!title && title.trim().length > 0, // Only fetch when there's a search query
-    staleTime: 5 * 60 * 1000,
-    retry: 1,
-  });
-};
 
 // Text hooks
 export const useTexts = (params?: {
@@ -29,11 +19,12 @@ export const useTexts = (params?: {
   offset?: number;
   language?: string;
   author?: string;
-  type?: string;
+  type?: "root" | "commentary" | "translation" | "translation_source" | "none";
+  title?: string;
 }) => {
   return useQuery({
     queryKey: ["texts", params],
-    queryFn: () => fetchTexts(params),
+    queryFn: ({signal}) => fetchTexts(params, signal),
     // fetchTexts already returns OpenPechaText[], no need for select
     staleTime: 5 * 60 * 1000,
     retry: 1,

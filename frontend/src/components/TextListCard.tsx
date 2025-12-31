@@ -63,7 +63,8 @@ const TextListCard = ({ text }: TextListCardProps) => {
       <TableCell className="font-medium text-xl font-monlam relative group">
         <Link 
           to={`/texts/${text.id}/instances`} 
-          className="transition-colors duration-200 text-neutral-700 hover:text-blue-500"
+          title={getTitle(text)}
+          className="transition-colors duration-200 text-neutral-700 hover:text-blue-500 truncate max-w-[350px] line-clamp-1"
         >
           {getTitle(text)}
         </Link>

@@ -76,7 +76,7 @@ const handleApiResponse = async (response: Response, customMessages?: { 400?: st
 };
 
 // Real API function for Texts
-export const fetchTexts = async (params?: { limit?: number; offset?: number; language?: string; author?: string; type?: string }): Promise<OpenPechaText[]> => {
+export const fetchTexts = async (params?: { limit?: number; offset?: number; language?: string; author?: string; type?: string; title?: string }, signal?: AbortSignal): Promise<OpenPechaText[]> => {
   const queryParams = new URLSearchParams();
   
   if (params?.limit) queryParams.append('limit', params.limit.toString());
@@ -84,12 +84,15 @@ export const fetchTexts = async (params?: { limit?: number; offset?: number; lan
   if (params?.language) queryParams.append('language', params.language);
   if (params?.author) queryParams.append('author', params.author);
   if (params?.type) queryParams.append('type', params.type);
+  if (params?.title) queryParams.append('title', params.title);
   
   const queryString = queryParams.toString();
   const url = queryString ? `${API_URL}/text?${queryString}` : `${API_URL}/text`;
   
   try {
-    const response = await fetch(url);
+    const response = await fetch(url,{
+      signal,
+    });
     const data = await handleApiResponse(response);
     return data.results || data || [];
   } catch (error) {
