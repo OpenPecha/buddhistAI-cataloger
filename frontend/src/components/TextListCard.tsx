@@ -60,7 +60,9 @@ const TextListCard = ({ text }: TextListCardProps) => {
   return (
     <TableRow>
       {/* Text Column */}
-      <TableCell className="font-medium text-xl font-monlam relative group">
+      <TableCell className=" flex gap-2 items-center font-medium text-xl font-monlam relative group">
+      <Book className="w-4 h-4 text-yellow-500 "  />
+        
         <Link 
           to={`/texts/${text.id}/instances`} 
           title={getTitle(text)}

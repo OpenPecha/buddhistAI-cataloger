@@ -42,33 +42,7 @@ const PersonCRUD = () => {
 
       {/* Content */}
       <div className="space-y-4">
-          {/* Pagination Controls */}
-          <div className="bg-white rounded-lg shadow-md p-3 sm:p-4 ">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
-              <Button
-                onClick={handlePrevPage}
-                disabled={offset === 0}
-                variant="outline"
-                className="w-full sm:w-auto"
-              >
-                {t('personsPage.previous')}
-              </Button>
-              <span className="text-xs sm:text-sm text-gray-600 text-center ">
-                {t('personsPage.showing', { 
-                  start: offset + 1, 
-                  end: offset + persons.length 
-                })}
-              </span>
-              <Button
-                onClick={handleNextPage}
-                disabled={persons.length < LIMIT}
-                variant="outline"
-                className="w-full sm:w-auto"
-              >
-                {t('personsPage.next')}
-              </Button>
-            </div>
-          </div>
+         
 
           {isLoading && (
             <div className="flex justify-center items-center h-64 bg-white rounded-lg shadow-md mx-1 sm:mx-0">
@@ -120,6 +94,33 @@ const PersonCRUD = () => {
             </Table>
           )}
         </div>
+         {/* Pagination Controls */}
+         <div className="bg-white rounded-lg shadow-md p-3 sm:p-4 ">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
+              <Button
+                onClick={handlePrevPage}
+                disabled={offset === 0}
+                variant="outline"
+                className="w-full sm:w-auto"
+              >
+                {t('personsPage.previous')}
+              </Button>
+              <span className="text-xs sm:text-sm text-gray-600 text-center ">
+                {t('personsPage.showing', { 
+                  start: offset + 1, 
+                  end: offset + persons.length 
+                })}
+              </span>
+              <Button
+                onClick={handleNextPage}
+                disabled={persons.length < LIMIT}
+                variant="outline"
+                className="w-full sm:w-auto"
+              >
+                {t('personsPage.next')}
+              </Button>
+            </div>
+          </div>
       </div>
   );
 };
