@@ -8,7 +8,7 @@ import TextCard from "@/components/TextCard";
 import TextInstanceCard from "@/components/TextInstanceCard";
 import BreadCrumb from "@/components/BreadCrumb";
 import type { OpenPechaTextInstanceListItem, RelatedInstance } from "@/types/text";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Table,
@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 function TextInstances() {
   const { t } = useTranslation();
   const { text_id } = useParams();
-
+  const [filter, setFilter] = useState<"translation" | "commentary" | "all">("all");
   const {
     data: instances = [],
     isLoading: isLoadingInstances,
@@ -126,7 +126,12 @@ function TextInstances() {
     }
     return Object.values(titleObj)[0] || t('textInstances.untitled');
   };
-
+  const filteredInstances = relatedInstances.filter((instance: RelatedInstance) => {
+    if (filter === "all") {
+      return true;
+    }
+    return instance.relationship === filter;
+  });
   return (
     <div className="container mx-auto py-16  space-y-6">
       {/* Breadcrumb */}
@@ -175,8 +180,12 @@ function TextInstances() {
       {/* Related Instances Section - Only show if critical instance exists */}
       {criticalInstance && (
         <div className="space-y-4 mt-8">
-          <div className="px-2 sm:px-0">
+          <div className="flex justify-between items-center px-2 sm:px-0">
             <h3 className="text-lg sm:text-xl font-semibold text-gray-600">{t('textInstances.relatedTexts')}</h3>
+            <span className="flex items-center gap-2">
+              <span>Filter by:</span>
+            <FilterTranslationOrCommentary filterType={filter} setFilterType={setFilter} />
+            </span>
           </div>
 
           {/* Loading state for related instances */}
@@ -257,7 +266,7 @@ function TextInstances() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {relatedInstances.map((relatedInstance: RelatedInstance) => {
+                      {filteredInstances.map((relatedInstance: RelatedInstance) => {
                         const metadata = relatedInstance.metadata;
                         const textId = metadata.text_id;
                         const instanceId = relatedInstance.instance_id;
@@ -292,4 +301,26 @@ function TextInstances() {
   );
 }
 
+
+import { Select, SelectContent, SelectItem, SelectTrigger,SelectValue } from "@/components/ui/select";
+
+type PropFilterType = {
+ readonly filterType: "translation" | "commentary" | 'all';
+ readonly setFilterType: (filterType: "translation" | "commentary" | 'all') => void;
+};
+
+function FilterTranslationOrCommentary({ filterType, setFilterType }:PropFilterType) {
+  return (
+    <Select value={filterType} onValueChange={(value) => setFilterType(value as "translation" | "commentary" | 'all')}>
+      <SelectTrigger>
+        <SelectValue placeholder="Filter by translation or commentary" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">All</SelectItem>
+        <SelectItem value="translation">Translation</SelectItem>
+        <SelectItem value="commentary">Commentary</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+}
 export default TextInstances;
