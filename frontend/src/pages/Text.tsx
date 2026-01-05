@@ -35,12 +35,7 @@ const TextsPage = () => {
 
   const { data: texts = [], isLoading, error, refetch } = useTexts(paginationParams);
 
-  // Filter out commentary and translation types
-  const filteredTexts = useMemo(() => {
-    return texts.filter((text: OpenPechaText) => 
-      text.type !== 'commentary' && text.type !== 'translation'
-    );
-  }, [texts]);
+
 
 
   // Filter foundText if it's commentary or translation
@@ -83,7 +78,7 @@ const TextsPage = () => {
   };
 
   // Determine what to display
-  const displayTexts = filteredFoundText ? [filteredFoundText] : filteredTexts;
+  const displayTexts = filteredFoundText ? [filteredFoundText] : texts;
   const showPagination = !filteredFoundText;
 
   return (
@@ -165,7 +160,7 @@ const TextsPage = () => {
               <span className="text-xs sm:text-sm text-gray-600 text-center ">
                 {t('textsPage.showing', { 
                   start: offset + 1, 
-                  end: offset + filteredTexts.length 
+                  end: offset + texts.length 
                 })}
               </span>
               <Button
