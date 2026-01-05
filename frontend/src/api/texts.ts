@@ -83,7 +83,7 @@ export const fetchTexts = async (params?: { limit?: number; offset?: number; lan
   if (params?.offset) queryParams.append('offset', params.offset.toString());
   if (params?.language) queryParams.append('language', params.language);
   if (params?.author) queryParams.append('author', params.author);
-  if (params?.type) queryParams.append('type', params.type);
+  if (params?.type && params.type !== 'none') queryParams.append('type', params.type);
   if (params?.title) queryParams.append('title', params.title);
   
   const queryString = queryParams.toString();

@@ -170,6 +170,7 @@ async def get_texts(
             "offset": offset,
             "language": language,
             "author": author,
+            "type": type,
             "title": title,
         }
         params = {k: v for k, v in params.items() if v is not None}

@@ -22,6 +22,7 @@ export const useTexts = (params?: {
   type?: "root" | "commentary" | "translation" | "translation_source" | "none";
   title?: string;
 }) => {
+  
   return useQuery({
     queryKey: ["texts", params],
     queryFn: ({signal}) => fetchTexts(params, signal),
