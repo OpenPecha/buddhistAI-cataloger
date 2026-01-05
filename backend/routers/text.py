@@ -170,13 +170,14 @@ async def get_texts(
             "offset": offset,
             "language": language,
             "author": author,
-            "type": type,   
             "title": title,
         }
         params = {k: v for k, v in params.items() if v is not None}
         
         url = f"{API_ENDPOINT}/texts"
         response = requests.get(url, params=params)
+        print(params)
+        print(response.json())
         
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
