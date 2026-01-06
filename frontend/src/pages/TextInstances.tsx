@@ -132,6 +132,11 @@ function TextInstances() {
     }
     return instance.relationship === filter;
   });
+  const handlePublishToWebuddhist = () => {
+  const webuddhist_cataloger=import.meta.env.VITE_WEBUDDHIST_CATALOGER_URL
+  const url= `${webuddhist_cataloger}/text/${text_id}`;
+  window.open(url);  
+  };
   return (
     <div className="container mx-auto py-16  space-y-6">
       {/* Breadcrumb */}
@@ -162,9 +167,7 @@ function TextInstances() {
           </div>
         )}
         
-        <Button className="bg-blue-500 text-white hover:bg-blue-600 cursor-pointer" onClick={() => {
-          alert("This feature is coming soon");
-        }}>
+        <Button className="bg-blue-500 text-white hover:bg-blue-600 cursor-pointer" onClick={handlePublishToWebuddhist}>
           Publish to Webuddhist
        </Button>
 
