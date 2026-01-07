@@ -225,6 +225,7 @@ const CreateCommentary = () => {
 
       // Prepare commentary data
       const commentaryData: any = {
+        bdrc: bdrcId,
         language,
         content: cleanedContent,
         title,

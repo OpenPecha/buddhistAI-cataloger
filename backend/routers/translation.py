@@ -72,6 +72,7 @@ class CreateCommentary(BaseModel):
     alignment_annotation: Optional[List[AlignmentAnnotation]] = None
     copyright: str
     license: str
+    bdrc: Optional[str] = None
     category_id: Optional[str] = None
     biblography_annotation: Optional[List[BibliographyAnnotation]] = None
     user: Optional[str] = None
