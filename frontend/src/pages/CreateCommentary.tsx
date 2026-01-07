@@ -32,7 +32,7 @@ const CreateCommentary = () => {
   const { t } = useTranslation();
   const { user } = useAuth0();
   const fileInputRef = useRef<HTMLInputElement>(null);
-
+  
   // Fetch instance data
   const { data: instance, isLoading: instanceLoading } = useInstance(instance_id || '');
   const { data: text,isFetched: isTextFetched } = useText(text_id || '');
@@ -40,6 +40,7 @@ const CreateCommentary = () => {
   // Form state
   const [language, setLanguage] = useState('');
   const [title, setTitle] = useState(text_title??"");
+  const [bdrcId, setBdRcId] = useState('');
   const [source, setSource] = useState('');
   const [altTitles, setAltTitles] = useState<string[]>([]);
   const [copyright, setCopyright] = useState<string>('Unknown');
@@ -657,6 +658,18 @@ const CreateCommentary = () => {
                   {t('commentary.source')} <span className="text-red-500">*</span>
                 </Label>
               <SourceSelection source={source} setSource={setSource} />
+              </div>
+
+              {/* BDRC ID Field */}
+              <div>
+                <Label>
+                  {t('textForm.bdrcId')}
+                </Label>
+                <Input
+                  type="text"
+                  value={bdrcId}
+                  onChange={(e) => setBdRcId(e.target.value)}
+                />
               </div>
 
               {/* Copyright and License Fields */}
