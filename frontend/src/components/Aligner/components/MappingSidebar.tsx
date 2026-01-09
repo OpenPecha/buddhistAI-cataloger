@@ -271,7 +271,6 @@ const MappingSidebar = () => {
   const isPublishing =
     createAnnotationMutation.isPending || updateAnnotationMutation.isPending;
 
-  if (isPublishing) return;
 
   return (
     <>
