@@ -797,7 +797,7 @@ const CreateTranslation = () => {
                         onClick={() => {
                           fileInputRef.current?.click();
                         }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                        className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white flex items-center gap-2"
                       >
                         <Upload className="w-4 h-4" />
                         {t('create.uploadFile')}

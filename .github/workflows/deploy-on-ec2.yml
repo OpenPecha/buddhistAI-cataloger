@@ -17,5 +17,7 @@ jobs:
           script: |
             cd ~/buddhistAI-cataloger
             git pull origin main
-            docker compose up --build --remove-orphans
+            docker compose -f docker-compose.prod.yml build
+            docker compose -f docker-compose.prod.yml run --rm backend alembic upgrade head
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
             docker image prune -f

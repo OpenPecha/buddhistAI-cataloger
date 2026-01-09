@@ -4,7 +4,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 import uvicorn
-from routers import person, text, translation, annotation, bdrc, category, enum, tokenize, aligner_data,admin
+from routers import person, text, translation, annotation, bdrc, category, enum, tokenize, aligner_data, admin
+from routers.settings import (
+    tenant_router,
+    user_router,
+    role_router,
+    permission_router,
+    tenant_settings_router,
+    membership_router
+)
 from dotenv import load_dotenv
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -63,6 +71,14 @@ app.include_router(enum.router, prefix="/v2/enum", tags=["enum"])
 app.include_router(tokenize.router, prefix="/tokenize", tags=["tokenize"])
 app.include_router(aligner_data.router, prefix="/aligner-data", tags=["aligner-data"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
+
+# Settings routes
+app.include_router(tenant_router, prefix="/settings/tenants", tags=["settings"])
+app.include_router(user_router, prefix="/settings/users", tags=["settings"])
+app.include_router(role_router, prefix="/settings/roles", tags=["settings"])
+app.include_router(permission_router, prefix="/settings/permissions", tags=["settings"])
+app.include_router(tenant_settings_router, prefix="/settings/tenant-settings", tags=["settings"])
+app.include_router(membership_router, prefix="/settings/memberships", tags=["settings"])
 
 @app.get("/")
 def read_root():

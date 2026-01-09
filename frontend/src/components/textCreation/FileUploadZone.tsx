@@ -106,7 +106,7 @@ const FileUploadZone = ({ onFileUpload }: FileUploadZoneProps) => {
           <Button
             type="button"
             onClick={handleButtonClick}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white"
           >
             Browse Files
           </Button>

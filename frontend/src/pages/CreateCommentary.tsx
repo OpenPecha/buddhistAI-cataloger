@@ -419,7 +419,7 @@ const CreateCommentary = () => {
       {/* Main Split Layout */}
       <div className="fixed inset-0  top-16 left-0 right-0 bottom-0 bg-gray-50 flex">
         {/* LEFT PANEL: Commentary Form */}
-        <div className="w-1/2 h-full overflow-y-auto bg-gradient-to-br from-blue-50 to-indigo-100 border-r border-gray-200">
+        <div className="w-1/2 h-full overflow-y-auto bg-gradient-to-br from-primary/10 to-indigo-100 border-r border-gray-200">
           <div className="p-8">
             {/* Header with Back Button */}
             <div className="mb-6">
@@ -758,7 +758,7 @@ const CreateCommentary = () => {
                         onClick={() => {
                           fileInputRef.current?.click();
                         }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                        className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white flex items-center gap-2"
                       >
                         <Upload className="w-4 h-4" />
                         {t('create.uploadFile')}

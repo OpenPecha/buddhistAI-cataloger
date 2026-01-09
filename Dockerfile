@@ -10,11 +10,15 @@ COPY backend/requirements.txt ./backend/
 RUN apt-get update && apt-get install -y git
 RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY backend/ ./backend/
+RUN chmod +x ./backend/entrypoint.sh
 
 # Final image
 FROM backend-stage
 
 EXPOSE 8000
+
+# Set entrypoint
+ENTRYPOINT ["/bin/bash", "/app/backend/entrypoint.sh"]
 
 # Start backend services
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

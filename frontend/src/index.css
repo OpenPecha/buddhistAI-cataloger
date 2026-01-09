@@ -65,6 +65,11 @@ html[lang="en"] label {
     line-height: 2;
   }
   
+  :root {
+    --brand-primary-color: #1b5cc5;
+    --brand-secondary-color: #b3dfd1;
+  }
+
   body {
     font-family: "poppins", sans-serif;
     line-height: 1.6;

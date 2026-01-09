@@ -136,7 +136,7 @@
   "create": {
     "pageTitle": "OpenPecha Text Cataloger",
     "searchExistingText": "Search for existing text",
-    "searchPlaceholder": "Search by title or BDRC ID...",
+    "searchPlaceholder": "Search by title ...",
     "bdrcCatalog": "BDRC Catalog",
     "createNewText": "Create New Text",
     "createNewTextDesc": "Can't find what you're looking for? Create a new text entry",

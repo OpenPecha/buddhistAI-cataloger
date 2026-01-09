@@ -351,7 +351,7 @@ const UpdateAnnotation = () => {
           onClick={() =>
             setActivePanel(activePanel === "form" ? "editor" : "form")
           }
-          className="md:hidden fixed bottom-6 right-6 z-30 bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-200 flex items-center gap-2"
+          className="md:hidden fixed bottom-6 right-6 z-30 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white rounded-full p-4 shadow-lg transition-all duration-200 flex items-center gap-2"
         >
           {activePanel === "form" ? (
             <>
@@ -469,7 +469,7 @@ const UpdateAnnotation = () => {
                         onClick={() => {
                           fileInputRef.current?.click();
                         }}
-                        className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                        className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white flex items-center gap-2"
                       >
                         <Upload className="w-4 h-4" />
                         {t("create.uploadFile")}

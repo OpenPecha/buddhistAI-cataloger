@@ -928,7 +928,7 @@ const TextCreation = () => {
                 // Reset all state and navigate to clean /create page
                 resetToInitialState();
               }}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 flex items-center gap-2 mx-auto"
+              className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white px-6 py-2 flex items-center gap-2 mx-auto"
             >
               <span className="text-lg">+</span>
               {t("common.create")}
@@ -944,7 +944,7 @@ const TextCreation = () => {
               onClick={() =>
                 setActivePanel(activePanel === "form" ? "editor" : "form")
               }
-              className="md:hidden fixed bottom-6 right-6 z-30  bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-200 flex items-center gap-2"
+              className="md:hidden fixed bottom-6 right-6 z-30  bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white rounded-full p-4 shadow-lg transition-all duration-200 flex items-center gap-2"
             >
               {activePanel === "form" ? (
                 <>
@@ -1106,54 +1106,8 @@ const TextCreation = () => {
                   </div>
                 )}
 
-                {/* Selected Text Info - COMMENTED OUT: Now shown in single full-page message */}
-                {/* {selectedText && !isCreatingNewText && (
-                  <div className="bg-blue-50 border border-blue-200 px-4 py-3 rounded-md">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-blue-900">
-                        {t("create.selectedText")}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={resetToInitialState}
-                      >
-                        {t("create.change")}
-                      </Button>
-                    </div>
-                    <div className="space-y-1 text-sm">
-                      <div>
-                        <strong>{t("text.textTitle")}:</strong> {getTextDisplayName(selectedText)}
-                      </div>
-                      <div>
-                        <strong>{t("create.type")}:</strong> {selectedText.type}
-                      </div>
-                      <div>
-                        <strong>{t("text.language")}:</strong> {selectedText.language}
-                      </div>
-                    </div>
-                  </div>
-                )} */}
-
-                {/* Creating New Text Info */}
-                {isCreatingNewText && (
-                  <div className="bg-green-50 border  border-green-200 px-4 py-3 rounded-md">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-green-900">
-                        {t("create.creatingNewText")}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={resetToInitialState}
-                      >
-                        {t("common.cancel")}
-                      </Button>
-                    </div>
-                  </div>
-                )}
+             
+                
               </div>
             </div>
 
@@ -1256,7 +1210,7 @@ const TextCreation = () => {
                             onClick={() => {
                               fileInputRef.current?.click();
                             }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2"
+                            className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white flex items-center gap-2"
                           >
                             <Upload className="w-4 h-4" />
                             {t("create.uploadFile")}

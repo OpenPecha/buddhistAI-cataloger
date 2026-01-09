@@ -29,7 +29,7 @@ const Index = () => {
           }}
           disabled={!isAdmin}
           variant="default"
-          className="bg-blue-600  hover:bg-blue-700 text-white px-6 py-3 text-lg shadow-lg"
+          className="bg-[var(--color-primary)]  hover:bg-[var(--color-primary)]/90 text-white px-6 py-3 text-lg shadow-lg"
         >
           <PermissionButton isLoading={isFetchingPermission} icon={<Plus className="w-4 h-4" />} text={t("common.create")} />
         </Button>
@@ -41,7 +41,7 @@ const Index = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 ">
             <Link to="/texts">
               <div className=" flex gap-3 items-center  border bg-white border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow min-h-[140px]">
-                  <BookOpen className="w-16 h-16 text-blue-600 flex-shrink-0" />
+                  <BookOpen className="w-16 h-16 text-[var(--color-primary)] flex-shrink-0" />
                 <div className="flex flex-col gap-2 ml-2">
                   <h3 className="text-3xl flex items-center gap-3 font-semibold ">
                     {t("text.texts")}
@@ -54,7 +54,7 @@ const Index = () => {
             </Link>
             <Link to="/persons">
               <div className=" flex gap-3 items-center  border bg-white border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow min-h-[140px]">
-                <PersonStanding className="w-16 h-16 text-purple-600 flex-shrink-0" />
+                <PersonStanding className="w-16 h-16 text-[var(--color-secondary)] flex-shrink-0" />
                 <div className="flex flex-col gap-2">
                   <h3 className="text-3xl flex items-center gap-3 font-semibold ">
                     {t("person.persons")}

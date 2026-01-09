@@ -11,12 +11,14 @@ import CreateCommentary from './pages/CreateCommentary';
 import UpdateAnnotation from './pages/UpdateAnnotation';
 import LoginPage from './pages/LoginPage';
 import Profile from './pages/Profile';
+import Settings from './pages/Settings';
 import ProtectedRoute from './components/ProtectedRoute';
 import AlignmentWorkstation from './components/Aligner/components/AlignmentWorkstation';
 
 function App() {
   const location = useLocation();
   const isLoginPage = location.pathname === '/login';
+  
   
 
   return (
@@ -43,12 +45,17 @@ function App() {
 
         
       {!isLoginPage && <Navigation/>}
-      <div className={isLoginPage ? '' : ''}>
+      <div>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/profile" element={
             <ProtectedRoute>
               <Profile />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <Settings />
             </ProtectedRoute>
           } />
           <Route path="/" element={

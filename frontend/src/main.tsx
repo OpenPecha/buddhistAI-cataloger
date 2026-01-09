@@ -8,6 +8,7 @@ import './i18n/config' // Initialize i18n
 import App from './App.tsx'
 import { UserbackProvider } from './context/UserbackProvider.tsx'
 import { BibliographyProvider } from './context/BibliographyContext.tsx'
+import { UIProvider } from './context/UIContext.tsx'
 import { Auth0Provider } from '@auth0/auth0-react';
 import { Toaster } from "@/components/ui/sonner"
 const queryClient = new QueryClient({
@@ -31,14 +32,16 @@ createRoot(document.getElementById('root')!).render(
       useRefreshTokensFallback={false}
     >  
     <QueryClientProvider client={queryClient}>
-      <BibliographyProvider>
-        <UserbackProvider>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
-        </UserbackProvider>
-      </BibliographyProvider>
-      <Toaster />
+      <UIProvider>
+        <BibliographyProvider>
+          <UserbackProvider>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </UserbackProvider>
+        </BibliographyProvider>
+        <Toaster />
+      </UIProvider>
     </QueryClientProvider>
     </Auth0Provider>
   </StrictMode>,

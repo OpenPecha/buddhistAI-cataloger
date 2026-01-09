@@ -292,7 +292,7 @@ const BDRCWork = forwardRef<BDRCWorkRef, BDRCWorkProps>(
                 </Button>
                 <Button
                   type="button"
-                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  className="flex-1 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90"
                   onClick={handleUseExisting}
                 >
                   {t("textForm.useExistingText")}

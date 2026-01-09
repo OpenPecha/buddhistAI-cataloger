@@ -463,7 +463,7 @@ const TextEditorView = ({ content, onChange, editable = false, onTextSelect, isC
               onClick={() => setActiveTab('content')}
               className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'content'
-                  ? 'border-blue-600 text-blue-600'
+                  ? 'border-[var(--color-primary)] text-[var(--color-primary)]'
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
