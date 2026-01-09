@@ -7,16 +7,17 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Label } from '../ui/label';
+import { useEffect } from 'react';
 
 interface CopyrightProps {
-  copyright: string;
-  setCopyright: (copyright: string) => void;
-  license: string;
-  setLicense: (license: string) => void;
-  copyrightLabelKey?: string;
-  licenseLabelKey?: string;
-  required?: boolean;
-  className?: string;
+ readonly copyright: string;
+ readonly setCopyright: (copyright: string) => void;
+  readonly license: string;
+ readonly setLicense: (license: string) => void;
+ readonly copyrightLabelKey?: string;
+ readonly  licenseLabelKey?: string;
+ readonly required?: boolean;
+ readonly className?: string;
 }
 
 function Copyright({
@@ -30,6 +31,19 @@ function Copyright({
   className = "",
 }: CopyrightProps) {
   const { t } = useTranslation();
+
+    // Auto-set license to "unknown" when copyright is "Unknown"
+    useEffect(() => {
+      if (copyright === "Unknown") {
+        setLicense("unknown");
+      }
+      if (copyright === "Public domain") {
+        setLicense("Public Domain Mark");
+      }
+      if (copyright === "In copyright") {
+        setLicense("under copyright");
+      }
+    }, [copyright]);
 
   const isLicenseDisabled = copyright === "Unknown" || copyright === "Public domain";
 

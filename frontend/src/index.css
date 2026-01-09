@@ -26,12 +26,12 @@
 	font-style: normal;
 }
 
-html[lang="bo"] div {
+html[lang="bo"] > div {
   font-family: 'jomo', sans-serif !important;
   font-size: 16px ;
 }
 
-html[lang="en"] div {
+html[lang="en"] > div {
   font-family: 'poppins', 'Noto', sans-serif !important;
   font-size: 14px ;
 }

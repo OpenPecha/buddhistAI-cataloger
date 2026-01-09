@@ -24,6 +24,7 @@ const UpdateAnnotation = () => {
   // Fetch text and instance data
   const { data: text, isLoading: textLoading } = useText(text_id || "");
   const { data: instance, isLoading: instanceLoading } = useInstance(instance_id || "");
+
   const updateInstanceMutation = useUpdateInstance();
 
   // Find segmentation annotation ID from instance.annotations array
@@ -405,6 +406,7 @@ const UpdateAnnotation = () => {
                   content={editedContent}
                   disableSubmit={!!contentValidationError || segmentValidation.invalidCount > 0}
                   onCancel={() => navigate(`/texts/${text_id}/instances/${instance_id}`)}
+                  instance={instance}
                 />
               </div>
             </div>

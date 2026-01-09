@@ -275,7 +275,6 @@ export const createCommentary = async (instanceId: string, commentaryData: any, 
       },
       body: JSON.stringify({ ...commentaryData, user }),
     });
-    console.log(commentaryData)
     
     // Let handleApiResponse extract and show the actual backend error message
     return await handleApiResponse(response);

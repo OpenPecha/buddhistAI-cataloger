@@ -20,6 +20,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { validateContentEndsWithTsheg, validateSegmentLimits } from "@/utils/contentValidation";
 import { Label } from "../ui/label";
+import { cn } from "@/lib/utils";
 
 const TextCreation = () => {
   const navigate = useNavigate();
@@ -633,10 +634,7 @@ const TextCreation = () => {
   // Show loading screen when auto-selecting text from URL
   const isAutoSelecting = t_id && (isLoadingTextFromUrl || (textFromUrl && !selectedText));
 
-  // Utility: join class names
-  const cn = (...classes: Array<string | false | null | undefined>) => {
-    return classes.filter(Boolean).join(" ");
-  };
+ 
 
   return (
     <>
@@ -1173,19 +1171,7 @@ const TextCreation = () => {
                    </div>
                  )}
 
-                {/* Instance Creation Form - Show when text is selected or creating new with content */}
-                {/* COMMENTED OUT: When text exists in cataloger, don't show instance form */}
-                {/* {(selectedText || (isCreatingNewText && editedContent && editedContent.trim() !== "")) && (
-                  <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                    <InstanceCreationForm
-                      ref={instanceFormRef}
-                      onSubmit={handleInstanceCreation}
-                      isSubmitting={isSubmitting}
-                      onCancel={handleCancel}
-                      content={editedContent}
-                    />
-                  </div>
-                )} */}
+             
 
                 {/* Show instance form only when creating new text with content */}
                 {isCreatingNewText && editedContent && editedContent.trim() !== "" && (

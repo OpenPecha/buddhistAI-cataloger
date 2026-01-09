@@ -38,6 +38,7 @@ interface InstanceCreationFormProps {
   onCancel?: () => void;
   content?: string; // Content from editor for annotation calculation
   disableSubmit?: boolean; // Additional condition to disable submit button
+  instance?:InstanceData|null;
 }
 
 export interface InstanceCreationFormRef {
@@ -77,17 +78,17 @@ const LANGUAGE_OPTIONS = [
 const InstanceCreationForm = forwardRef<
   InstanceCreationFormRef,
   InstanceCreationFormProps
->(({ onSubmit, isSubmitting, onCancel, content = "", disableSubmit = false }, ref) => {
+>(({ onSubmit, isSubmitting, onCancel, content = "", disableSubmit = false, instance = null }, ref) => {
   const { t } = useTranslation();
   
   // State declarations
   const [type, setType] = useState<"diplomatic" | "critical">(
     "critical"
   );
-  const [source, setSource] = useState("");
+  const [source, setSource] = useState(instance?.metadata?.source ?? "");
+  const [colophon, setColophon] = useState(instance?.metadata?.colophon ?? "");
   const [bdrc, setBdrc] = useState("");
   const [wiki, setWiki] = useState("");
-  const [colophon, setColophon] = useState("");
 
   // BDRC search state
   const [bdrcSearch, setBdrcSearch] = useState("");

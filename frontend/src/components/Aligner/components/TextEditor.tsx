@@ -537,10 +537,9 @@ function TextEditor({
     setCleanAnnotationResult(null);
     setCleanAnnotationError(null);
   }
-
+console.log(fontSize)
   return (
     <div className="box-border relative w-full h-full group" 
-    style={{ fontSize: `${fontSize}px` } as React.CSSProperties}
     >
         <button
       className='absolute top-2 right-2 z-10 font-poppins cursor-pointer  px-3 py-1 bg-blue-300 transition-all text-white text-xs rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity'
@@ -549,8 +548,10 @@ function TextEditor({
           value={value}  
           height="100%"
           width="100%"
-          className="h-[78vh]  "
+          className="h-full"
+          style={{ fontSize: `${fontSize}px` } as React.CSSProperties}
           ref={combinedRef}
+
           onChange={onChange}  
           editable={isFullyEditable || isEditable}
           onKeyDown={handleKeyDown}
