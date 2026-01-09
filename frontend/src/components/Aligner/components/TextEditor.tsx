@@ -537,7 +537,6 @@ function TextEditor({
     setCleanAnnotationResult(null);
     setCleanAnnotationError(null);
   }
-console.log(fontSize)
   return (
     <div className="box-border relative w-full h-full group" 
     >
