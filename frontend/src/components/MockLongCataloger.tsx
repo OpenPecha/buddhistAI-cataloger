@@ -371,7 +371,7 @@ const SplitMenu: React.FC<SplitMenuProps> = ({ position, onSplit, onClose }) => 
         className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-md transition-colors flex items-center gap-2"
       >
         <Scissors className="w-4 h-4" />
-        Split Segment Here
+        Split Here
       </button>
     </div>
   );
@@ -968,10 +968,10 @@ function MockLongCataloger() {
               <div className="space-y-6">
                 <div>
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                    Segment Annotations
+                    Boundary Detection
                   </h2>
                   <div className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-md border border-gray-200">
-                    <div className="font-medium mb-1">Segment Text:</div>
+                    <div className="font-medium mb-1">Text:</div>
                     <div className="text-gray-800">{activeSegment.text.slice(0, 100)}...</div>
                   </div>
                 </div>
