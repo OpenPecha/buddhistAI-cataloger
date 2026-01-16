@@ -4,8 +4,11 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useBdrcSearch } from '@/hooks/useBdrcSearch';
-import { Loader2, Scissors, Sparkles, X, Square } from 'lucide-react';
+import { Loader2, Scissors, Sparkles, X, Square, Trash2 } from 'lucide-react';
 import { API_URL } from '@/config/api';
+
+// Special symbol used for splitting segments
+const SEGMENT_SPLIT_MARKER = '📄';
 
 interface TextSegment {
   id: string;
@@ -26,6 +29,7 @@ interface BubbleMenuProps {
 interface SplitMenuProps {
   position: { x: number; y: number };
   onSplit: () => void;
+  onCancel: () => void;
   onClose: () => void;
 }
 
@@ -341,7 +345,7 @@ const SegmentTextContent = React.forwardRef<HTMLDivElement, SegmentTextContentPr
 
 SegmentTextContent.displayName = 'SegmentTextContent';
 
-const SplitMenu: React.FC<SplitMenuProps> = ({ position, onSplit, onClose }) => {
+const SplitMenu: React.FC<SplitMenuProps> = ({ position, onSplit, onCancel, onClose }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -373,6 +377,16 @@ const SplitMenu: React.FC<SplitMenuProps> = ({ position, onSplit, onClose }) => 
       >
         <Scissors className="w-4 h-4" />
         Split Here
+      </button>
+      <button
+        onClick={() => {
+          onCancel();
+          onClose();
+        }}
+        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-md transition-colors flex items-center gap-2 mt-1 text-gray-600"
+      >
+        <X className="w-4 h-4" />
+        Cancel
       </button>
     </div>
   );
@@ -434,6 +448,11 @@ function MockLongCataloger() {
     suggested_author: string | null;
   } | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  
+  // AI text ending detection state
+  const [aiTextEndingLoading, setAiTextEndingLoading] = useState(false);
+  const [previousSegments, setPreviousSegments] = useState<TextSegment[] | null>(null);
+  const aiTextEndingAbortControllerRef = useRef<AbortController | null>(null);
 
   // Focus title input when search results are ready
   useEffect(() => {
@@ -467,11 +486,11 @@ function MockLongCataloger() {
   // Handle file upload
   const handleFileUpload = useCallback((content: string) => {
     setTextContent(content);
-    // Split content by newlines to create segments
-    const lines = content.split('\n').filter(line => line.trim().length > 0);
-    const newSegments: TextSegment[] = lines.map((line, index) => ({
+    // Split content by split marker to create segments
+    const parts = content.split(SEGMENT_SPLIT_MARKER).filter(part => part.trim().length > 0);
+    const newSegments: TextSegment[] = parts.map((part, index) => ({
       id: `segment-${index}`,
-      text: line.trim(),
+      text: part.trim(),
     }));
     setSegments(newSegments);
     // Set first segment as active
@@ -724,6 +743,17 @@ function MockLongCataloger() {
     const segmentIndex = segments.findIndex(seg => seg.id === cursorPosition.segmentId);
     if (segmentIndex === -1) return;
 
+    // Update textContent to include the split marker
+    const segmentStartInText = textContent.indexOf(segment.text);
+    if (segmentStartInText !== -1) {
+      const absoluteSplitPosition = segmentStartInText + cursorPosition.offset;
+      const newTextContent = 
+        textContent.substring(0, absoluteSplitPosition) + 
+        SEGMENT_SPLIT_MARKER + 
+        textContent.substring(absoluteSplitPosition);
+      setTextContent(newTextContent);
+    }
+
     // Create new segments
     const newSegments = [...segments];
     const firstSegment: TextSegment = {
@@ -749,7 +779,63 @@ function MockLongCataloger() {
     setSegments(newSegments);
     setActiveSegmentId(newSegmentId);
     setCursorPosition(null);
-  }, [cursorPosition, segments, activeSegmentId]);
+  }, [cursorPosition, segments, activeSegmentId, textContent]);
+
+  // Merge segment with previous segment
+  const handleMergeWithPrevious = useCallback((segmentId: string) => {
+    const segmentIndex = segments.findIndex(seg => seg.id === segmentId);
+    if (segmentIndex <= 0) {
+      // Can't merge if it's the first segment or not found
+      return;
+    }
+
+    const currentSegment = segments[segmentIndex];
+    const previousSegment = segments[segmentIndex - 1];
+
+    // Combine text - merge without adding extra spaces if not needed
+    const mergedText = previousSegment.text+  currentSegment.text;
+
+    // Preserve metadata from previous segment (or merge if current has metadata but previous doesn't)
+    const mergedSegment: TextSegment = {
+      id: previousSegment.id,
+      text: mergedText,
+      title: previousSegment.title || currentSegment.title,
+      author: previousSegment.author || currentSegment.author,
+      title_bdrc_id: previousSegment.title_bdrc_id || currentSegment.title_bdrc_id,
+      author_bdrc_id: previousSegment.author_bdrc_id || currentSegment.author_bdrc_id,
+      parentSegmentId: previousSegment.parentSegmentId,
+    };
+
+    // Update textContent - remove the split marker between these segments
+    // Find positions of both segments in textContent
+    const previousSegmentStart = textContent.indexOf(previousSegment.text);
+    const currentSegmentStart = textContent.indexOf(currentSegment.text, previousSegmentStart >= 0 ? previousSegmentStart : 0);
+    
+    if (previousSegmentStart !== -1 && currentSegmentStart !== -1) {
+      // Calculate where previous segment ends and current segment ends
+      const previousSegmentEnd = previousSegmentStart + previousSegment.text.length;
+      const currentSegmentEnd = currentSegmentStart + currentSegment.text.length;
+      
+      // Get text before previous segment and after current segment
+      const beforePrevious = textContent.substring(0, previousSegmentStart);
+      const afterCurrent = textContent.substring(currentSegmentEnd);
+      
+      // Replace the section from previous segment start to current segment end with merged text
+      // mergedText already includes proper spacing
+      const newTextContent = beforePrevious + mergedText + afterCurrent;
+      
+      setTextContent(newTextContent);
+    }
+
+    // Update segments array
+    const newSegments = [...segments];
+    newSegments[segmentIndex - 1] = mergedSegment;
+    newSegments.splice(segmentIndex, 1); // Remove current segment
+
+    setSegments(newSegments);
+    setActiveSegmentId(previousSegment.id);
+    setCursorPosition(null);
+  }, [segments, textContent]);
 
   // Update segment annotation
   const updateSegmentAnnotation = useCallback((
@@ -838,6 +924,9 @@ function MockLongCataloger() {
     return () => {
       if (aiAbortControllerRef.current) {
         aiAbortControllerRef.current.abort();
+      }
+      if (aiTextEndingAbortControllerRef.current) {
+        aiTextEndingAbortControllerRef.current.abort();
       }
     };
   }, []);
@@ -928,6 +1017,171 @@ function MockLongCataloger() {
     }
   }, []);
 
+  // Helper function to create segments from starting positions
+  const createSegmentsFromPositions = useCallback((startingPositions: number[]): TextSegment[] => {
+    const textLength = textContent.length;
+    const validPositions = startingPositions
+      .map(pos => Math.max(0, Math.min(pos, textLength)))
+      .filter((pos, index, arr) => index === 0 || pos > arr[index - 1]); // Remove duplicates and ensure sorted
+
+    if (validPositions.length === 0) {
+      return [];
+    }
+
+    const newSegments: TextSegment[] = [];
+    const timestamp = Date.now();
+    for (let i = 0; i < validPositions.length; i++) {
+      const start = validPositions[i];
+      const end = i < validPositions.length - 1 
+        ? validPositions[i + 1] 
+        : textLength;
+      
+      const segmentText = textContent.substring(start, end).trim();
+      
+      if (segmentText.length > 0) {
+        newSegments.push({
+          id: `segment-${timestamp}-${i}`,
+          text: segmentText,
+        });
+      }
+    }
+
+    return newSegments;
+  }, [textContent]);
+
+  // AI detect text endings and create new segmentation
+  const handleAIDetectTextEndings = useCallback(async () => {
+    if (!textContent || textContent.trim().length === 0) return;
+
+    // Abort any existing request
+    if (aiTextEndingAbortControllerRef.current) {
+      aiTextEndingAbortControllerRef.current.abort();
+    }
+
+    // Create new AbortController for this request
+    const abortController = new AbortController();
+    aiTextEndingAbortControllerRef.current = abortController;
+
+    setAiTextEndingLoading(true);
+    
+    // Store current segments for undo (capture current value)
+    const currentSegments = [...segments];
+    setPreviousSegments(currentSegments);
+
+    try {
+      // Check if text contains Tibetan marker "༄༅༅"
+      const tibetanMarker = '༄༅༅། །';
+      const markerPositions: number[] = [];
+      
+      if (textContent.includes(tibetanMarker)) {
+        // Find all occurrences of the marker
+        let searchIndex = 0;
+        while (true) {
+          const index = textContent.indexOf(tibetanMarker, searchIndex);
+          if (index === -1) break;
+          markerPositions.push(index);
+          searchIndex = index + 1;
+        }
+        
+        // Always include position 0 as the first segment start
+        const startingPositions = [0, ...markerPositions].filter((pos, index, arr) => 
+          index === 0 || pos > arr[index - 1]
+        );
+        
+        // Create segments from marker positions
+        const newSegments = createSegmentsFromPositions(startingPositions);
+        
+        if (newSegments.length > 0) {
+          setSegments(newSegments);
+          setActiveSegmentId(newSegments[0].id);
+        } else {
+          throw new Error('No valid segments created from marker positions');
+        }
+        
+        // Reset loading state
+        setAiTextEndingLoading(false);
+        aiTextEndingAbortControllerRef.current = null;
+        return;
+      }
+
+      // If no marker found, use AI API approach
+      // Get the current selected segment text, or use textContent if no segment is selected
+      const activeSegment = activeSegmentId ? segments.find(seg => seg.id === activeSegmentId) : null;
+      const contentToSend = activeSegment ? activeSegment.text : textContent;
+      
+      const response = await fetch(`${API_URL}/ai/detect-text-endings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'accept': 'application/json',
+        },
+        body: JSON.stringify({ content: contentToSend }),
+        signal: abortController.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to detect text endings');
+      }
+
+      const data = await response.json();
+      const { starting_positions } = data;
+
+      if (!starting_positions || !Array.isArray(starting_positions) || starting_positions.length === 0) {
+        throw new Error('Invalid response format');
+      }
+
+      // Create new segments based on AI-detected starting positions
+      const newSegments = createSegmentsFromPositions(starting_positions);
+
+      if (newSegments.length === 0) {
+        throw new Error('No valid segments created from AI detection');
+      }
+
+      // Update segments
+      setSegments(newSegments);
+      
+      // Set first segment as active if available
+      if (newSegments.length > 0) {
+        setActiveSegmentId(newSegments[0].id);
+      }
+    } catch (error) {
+      // Don't log error if it was aborted
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error('Error detecting text endings:', error);
+        // Restore previous segments on error
+        setSegments(currentSegments);
+        setPreviousSegments(null);
+      }
+    } finally {
+      // Only reset loading if this request wasn't aborted
+      if (!abortController.signal.aborted) {
+        setAiTextEndingLoading(false);
+        aiTextEndingAbortControllerRef.current = null;
+      }
+    }
+  }, [textContent, segments, createSegmentsFromPositions, activeSegmentId]);
+
+  // Stop AI text ending detection request
+  const handleAITextEndingStop = useCallback(() => {
+    if (aiTextEndingAbortControllerRef.current) {
+      aiTextEndingAbortControllerRef.current.abort();
+      aiTextEndingAbortControllerRef.current = null;
+      setAiTextEndingLoading(false);
+    }
+  }, []);
+
+  // Undo AI text ending detection
+  const handleUndoTextEndingDetection = useCallback(() => {
+    if (previousSegments) {
+      setSegments(previousSegments);
+      setPreviousSegments(null);
+      // Set first segment as active if available
+      if (previousSegments.length > 0) {
+        setActiveSegmentId(previousSegments[0].id);
+      }
+    }
+  }, [previousSegments]);
+
   // Save annotations with span information
   const handleSave = useCallback(() => {
     if (!textContent || segments.length === 0) {
@@ -998,49 +1252,7 @@ function MockLongCataloger() {
       });
     });
 
-    // Create comprehensive output
-    const output = {
-      textContent: {
-        // fullText: textContent,
-        totalLength: textContent.length,
-        totalSegments: segments.length,
-      },
-      segmentation: {
-        method: 'split_by_newlines_with_manual_splits',
-        segments: annotations.map(ann => ({
-          segmentId: ann.segmentId,
-          segmentIndex: ann.segmentIndex,
-          span: {
-            start: ann.span.start,
-            end: ann.span.end,
-            length: ann.span.end - ann.span.start,
-          },
-          textLength: ann.text.length,
-        })),
-      },
-      annotations: annotations.map(ann => ({
-        segmentId: ann.segmentId,
-        segmentIndex: ann.segmentIndex,
-        span: {
-          start: ann.span.start,
-          end: ann.span.end,
-          length: ann.span.end - ann.span.start,
-        },
-        metadata: ann.metadata,
-      })),
-      summary: {
-        totalSegments: segments.length,
-        annotatedSegments: segments.filter(s => 
-          s.title || s.author || s.title_bdrc_id || s.author_bdrc_id
-        ).length,
-        segmentsWithTitle: segments.filter(s => s.title).length,
-        segmentsWithAuthor: segments.filter(s => s.author).length,
-        segmentsWithTitleBdrcId: segments.filter(s => s.title_bdrc_id).length,
-        segmentsWithAuthorBdrcId: segments.filter(s => s.author_bdrc_id).length,
-        totalTextLength: textContent.length,
-        totalSegmentsTextLength: segments.reduce((sum, s) => sum + s.text.length, 0),
-      },
-    };
+   
 
   }, [textContent, segments]);
 
@@ -1357,16 +1569,59 @@ function MockLongCataloger() {
                     {segments.length} segment{segments.length !== 1 ? 's' : ''}
                   </p>
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setTextContent('');
-                    setSegments([]);
-                    setActiveSegmentId(null);
-                  }}
-                >
-                  Load New File
-                </Button>
+                <div className="flex items-center gap-2">
+                  {/* AI Text Ending Detection Button */}
+                  <Button
+                    variant="outline"
+                    onClick={handleAIDetectTextEndings}
+                    disabled={aiTextEndingLoading || !textContent}
+                    className="flex items-center gap-2"
+                  >
+                    {aiTextEndingLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Detecting...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-4 h-4" />
+                        AI Detect Text Endings
+                      </>
+                    )}
+                  </Button>
+                  {aiTextEndingLoading && (
+                    <Button
+                      variant="outline"
+                      onClick={handleAITextEndingStop}
+                      className="px-3 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                      title="Stop detection"
+                    >
+                      <Square className="w-4 h-4" />
+                    </Button>
+                  )}
+                  {/* Undo Button */}
+                  {previousSegments && !aiTextEndingLoading && (
+                    <Button
+                      variant="outline"
+                      onClick={handleUndoTextEndingDetection}
+                      className="border-orange-300 text-orange-600 hover:bg-orange-50 hover:border-orange-400"
+                      title="Undo AI segmentation"
+                    >
+                      Undo
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setTextContent('');
+                      setSegments([]);
+                      setActiveSegmentId(null);
+                      setPreviousSegments(null);
+                    }}
+                  >
+                    Load New File
+                  </Button>
+                </div>
               </div>
 
               {/* Text Display */}
@@ -1419,9 +1674,10 @@ function MockLongCataloger() {
                           }
                         }}
                         onClick={(e) => {
-                          // Only handle click if not clicking on text content or split menu
+                          // Only handle click if not clicking on text content or split menu or cancel button
                           if (!(e.target as HTMLElement).closest('.segment-text-content') &&
-                              !(e.target as HTMLElement).closest('.split-menu')) {
+                              !(e.target as HTMLElement).closest('.split-menu') &&
+                              !(e.target as HTMLElement).closest('.cancel-split-button')) {
                             handleSegmentClick(segment.id, e);
                           }
                         }}
@@ -1442,6 +1698,20 @@ function MockLongCataloger() {
                           }
                         `}
                       >
+                        {/* Cancel Split Button - positioned at top-middle border */}
+                        {/* Only show if there's a previous segment to merge with */}
+                        {cursorPosition && cursorPosition.segmentId === segment.id && index > 0 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                            }}
+                            className="cancel-split-button cursor-pointer z-100 absolute -top-3 left-1/2 -translate-x-1/2  bg-white border-2 border-red-500 rounded-full p-1.5 shadow-lg hover:bg-red-50 transition-colors"
+                            title="Merge with previous segment"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </button>
+                        )}
                         <div className="flex items-start gap-3">
                         <div className="shrink-0 w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
                           {index + 1}
@@ -1490,6 +1760,11 @@ function MockLongCataloger() {
                         <SplitMenu
                           position={cursorPosition.menuPosition}
                           onSplit={handleSplitSegment}
+                          onCancel={() => {
+                            handleMergeWithPrevious(segment.id);
+
+                            setCursorPosition(null);
+                          }}
                           onClose={() => {
                             setCursorPosition(null);
                           }}
