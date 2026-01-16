@@ -406,7 +406,10 @@ function MockLongCataloger() {
   const { results: titleResults, isLoading: titleLoading } = useBdrcSearch(
     titleSearchQuery,
     'Instance',
-    1000
+    1000,
+    ()=>{
+        titleInputRef.current?.focus();
+    }
   );
   const [showTitleDropdown, setShowTitleDropdown] = useState(false);
 
@@ -416,7 +419,10 @@ function MockLongCataloger() {
   const { results: authorResults, isLoading: authorLoading } = useBdrcSearch(
     authorSearchQuery,
     'Person',
-    1000
+    1000,
+    ()=>{
+        authorInputRef.current?.focus();
+    }
   );
   const [showAuthorDropdown, setShowAuthorDropdown] = useState(false);
 
@@ -442,6 +448,21 @@ function MockLongCataloger() {
       authorInputRef.current?.focus();
     }
   }, [authorLoading, authorResults.length, authorSearch, showAuthorDropdown]);
+
+  // Focus title or author input when AI suggestions are loaded
+  useEffect(() => {
+    if (!aiLoading && aiSuggestions) {
+      // Use setTimeout to ensure DOM has updated with the new values
+      setTimeout(() => {
+        // Focus title field if it has a suggestion, otherwise focus author field
+        if (aiSuggestions.title || aiSuggestions.suggested_title) {
+          titleInputRef.current?.focus();
+        } else if (aiSuggestions.author || aiSuggestions.suggested_author) {
+          authorInputRef.current?.focus();
+        }
+      }, 100);
+    }
+  }, [aiLoading, aiSuggestions]);
 
   // Handle file upload
   const handleFileUpload = useCallback((content: string) => {
@@ -864,20 +885,24 @@ function MockLongCataloger() {
         updateSegmentAnnotation(activeSegmentId, 'title', data.title);
         setTitleSearch(data.title);
         setTitleSearchQuery(data.title);
+        setShowTitleDropdown(data.title.length > 0);
       } else if (data.suggested_title) {
         updateSegmentAnnotation(activeSegmentId, 'title', data.suggested_title);
         setTitleSearch(data.suggested_title);
         setTitleSearchQuery(data.suggested_title);
+        setShowTitleDropdown(data.suggested_title.length > 0);
       }
 
       if (data.author) {
         updateSegmentAnnotation(activeSegmentId, 'author', data.author);
         setAuthorSearch(data.author);
         setAuthorSearchQuery(data.author);
+        setShowAuthorDropdown(data.author.length > 0);
       } else if (data.suggested_author) {
         updateSegmentAnnotation(activeSegmentId, 'author', data.suggested_author);
         setAuthorSearch(data.suggested_author);
         setAuthorSearchQuery(data.suggested_author);
+        setShowAuthorDropdown(data.suggested_author.length > 0);
       }
     } catch (error) {
       // Don't log error if it was aborted

@@ -32,7 +32,7 @@ export interface BdrcSearchResult {
  * @returns search results and loading state
  */
 
-export function useBdrcSearch(searchQuery: string, type: string = "Instance", debounceMs: number = 1000) {
+export function useBdrcSearch(searchQuery: string, type: string = "Instance", debounceMs: number = 1000,callback: () => void | null=()=>{}) {
   const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
 
   // Debounce the search query
@@ -70,11 +70,16 @@ export function useBdrcSearch(searchQuery: string, type: string = "Instance", de
       }
 
       const data = await response.json();
+      if(data && callback){
+        callback();
+      }
       return Array.isArray(data) ? data : [];
     },
     enabled: isEnabled,
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     retry: 1,
+    
+
   });
 
   let errorMessage: string | null = null;
