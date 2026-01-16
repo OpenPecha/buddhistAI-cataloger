@@ -14,6 +14,7 @@ import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import ProtectedRoute from './components/ProtectedRoute';
 import AlignmentWorkstation from './components/Aligner/components/AlignmentWorkstation';
+import MockLongCataloger from './components/MockLongCataloger';
 
 function App() {
   const location = useLocation();
@@ -108,6 +109,7 @@ function App() {
               <UpdateAnnotation />
             </ProtectedRoute>
           } />
+          <Route path="mock" element={<MockLongCataloger />}></Route>
         </Routes>
         </div>
     </div>

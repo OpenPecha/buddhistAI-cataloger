@@ -26,10 +26,8 @@ export default defineConfig(({ mode }) => {
               console.warn('proxy error', err);
             });
             proxy.on('proxyReq', (_proxyReq, req) => {
-              console.warn('Sending Request to the Target:', req.method, req.url);
             });
             proxy.on('proxyRes', (proxyRes, req) => {
-              console.warn('Received Response from the Target:', proxyRes.statusCode, req.url);
             });
           },
         },

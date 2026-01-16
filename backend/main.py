@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 import uvicorn
+from routers import ai
 from routers import person, text, translation, annotation, bdrc, category, enum, tokenize, aligner_data, admin
 from routers.settings import (
     tenant_router,
@@ -71,6 +72,8 @@ app.include_router(enum.router, prefix="/v2/enum", tags=["enum"])
 app.include_router(tokenize.router, prefix="/tokenize", tags=["tokenize"])
 app.include_router(aligner_data.router, prefix="/aligner-data", tags=["aligner-data"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
+
+app.include_router(ai.router, prefix="/ai", tags=["ai"])
 
 # Settings routes
 app.include_router(tenant_router, prefix="/settings/tenants", tags=["settings"])
