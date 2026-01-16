@@ -4,7 +4,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { useBdrcSearch } from '@/hooks/useBdrcSearch';
-import { Loader2, Scissors, Sparkles, X } from 'lucide-react';
+import { Loader2, Scissors, Sparkles, X, Square } from 'lucide-react';
 import { API_URL } from '@/config/api';
 
 interface TextSegment {
@@ -14,6 +14,7 @@ interface TextSegment {
   author?: string;
   title_bdrc_id?: string;
   author_bdrc_id?: string;
+  parentSegmentId?: string;
 }
 
 interface BubbleMenuProps {
@@ -381,6 +382,8 @@ function MockLongCataloger() {
   const [textContent, setTextContent] = useState<string>('');
   const [segments, setSegments] = useState<TextSegment[]>([]);
   const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
+  // Generate a random ID for the last segment of previous data (mock)
+  const [previousDataLastSegmentId] = useState<string>(() => `prev-segment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
   const [bubbleMenuState, setBubbleMenuState] = useState<{ 
     segmentId: string; 
     position: { x: number; y: number }; 
@@ -392,6 +395,7 @@ function MockLongCataloger() {
   const segmentRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const titleInputRef = useRef<HTMLInputElement>(null);
   const authorInputRef = useRef<HTMLInputElement>(null);
+  const aiAbortControllerRef = useRef<AbortController | null>(null);
 
   // Track if change is coming from dropdown selection to prevent re-triggering search
   const isSelectingFromDropdown = useRef({ title: false, author: false });
@@ -662,6 +666,24 @@ function MockLongCataloger() {
   }, []);
 
 
+  // Handle attach parent button click for first segment
+  const handleAttachParent = useCallback(() => {
+    if (segments.length === 0) return;
+    
+    const firstSegmentId = segments[0].id;
+    
+    // Toggle attachment: if already attached, remove it; otherwise attach
+    setSegments(prev => prev.map(seg => {
+      if (seg.id === firstSegmentId) {
+        return {
+          ...seg,
+          parentSegmentId: seg.parentSegmentId ? undefined : previousDataLastSegmentId,
+        };
+      }
+      return seg;
+    }));
+  }, [segments, previousDataLastSegmentId]);
+
   // Split segment at cursor position
   const handleSplitSegment = useCallback(() => {
     if (!cursorPosition || !activeSegmentId) return;
@@ -781,8 +803,23 @@ function MockLongCataloger() {
 
   // Clear AI suggestions when active segment changes (but don't auto-fetch)
   useEffect(() => {
+    // Abort any ongoing AI request when segment changes
+    if (aiAbortControllerRef.current) {
+      aiAbortControllerRef.current.abort();
+      aiAbortControllerRef.current = null;
+    }
+    setAiLoading(false);
     setAiSuggestions(null);
   }, [activeSegmentId]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (aiAbortControllerRef.current) {
+        aiAbortControllerRef.current.abort();
+      }
+    };
+  }, []);
 
   // AI auto-detect title and author from text
   const handleAIDetect = useCallback(async () => {
@@ -794,6 +831,15 @@ function MockLongCataloger() {
     const text = segment.text.trim();
     if (!text) return;
 
+    // Abort any existing request
+    if (aiAbortControllerRef.current) {
+      aiAbortControllerRef.current.abort();
+    }
+
+    // Create new AbortController for this request
+    const abortController = new AbortController();
+    aiAbortControllerRef.current = abortController;
+
     setAiLoading(true);
     try {
       const response = await fetch(`${API_URL}/ai/generate-title-author`, {
@@ -803,6 +849,7 @@ function MockLongCataloger() {
           'accept': 'application/json',
         },
         body: JSON.stringify({ content: text }),
+        signal: abortController.signal,
       });
 
       if (!response.ok) {
@@ -833,11 +880,28 @@ function MockLongCataloger() {
         setAuthorSearchQuery(data.suggested_author);
       }
     } catch (error) {
-      console.error('Error fetching AI suggestions:', error);
+      // Don't log error if it was aborted
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error('Error fetching AI suggestions:', error);
+      }
     } finally {
-      setAiLoading(false);
+      // Only reset loading if this request wasn't aborted
+      if (!abortController.signal.aborted) {
+        setAiLoading(false);
+        aiAbortControllerRef.current = null;
+      }
     }
   }, [activeSegmentId, segments, updateSegmentAnnotation]);
+
+  // Stop AI suggestion request
+  const handleAIStop = useCallback(() => {
+    if (aiAbortControllerRef.current) {
+      aiAbortControllerRef.current.abort();
+      aiAbortControllerRef.current = null;
+      setAiLoading(false);
+      setAiSuggestions(null);
+    }
+  }, []);
 
   // Save annotations with span information
   const handleSave = useCallback(() => {
@@ -1129,13 +1193,13 @@ function MockLongCataloger() {
                 </div>
 
                 {/* AI Auto-detect Button */}
-                <div>
+                <div className="flex gap-2">
                   <Button
                     type="button"
                     variant="outline"
                     onClick={handleAIDetect}
                     disabled={aiLoading}
-                    className="w-full flex items-center justify-center gap-2"
+                    className="flex-1 flex items-center justify-center gap-2"
                   >
                     {aiLoading ? (
                       <>
@@ -1149,6 +1213,17 @@ function MockLongCataloger() {
                       </>
                     )}
                   </Button>
+                  {aiLoading && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleAIStop}
+                      className="px-3 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                      title="Stop AI suggestion"
+                    >
+                      <Square className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
 
                 {/* AI Suggestions Box */}
@@ -1276,43 +1351,73 @@ function MockLongCataloger() {
                 onMouseUp={handleTextSelection}
               >
                 {segments.map((segment, index) => {
+                  const isFirstSegment = index === 0;
+                  const isAttached = isFirstSegment && segment.parentSegmentId !== undefined;
+                  
                   return (
-                    <div
-                      key={segment.id}
-                      data-segment-id={segment.id}
-                      data-segment-container-id={segment.id}
-                      ref={(el) => {
-                        if (el) {
-                          segmentRefs.current.set(segment.id, el);
-                        } else {
-                          segmentRefs.current.delete(segment.id);
-                        }
-                      }}
-                      onClick={(e) => {
-                        // Only handle click if not clicking on text content or split menu
-                        if (!(e.target as HTMLElement).closest('.segment-text-content') &&
-                            !(e.target as HTMLElement).closest('.split-menu')) {
-                          handleSegmentClick(segment.id, e);
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          handleSegmentClick(segment.id);
-                        }
-                      }}
-                      role="button"
-                      tabIndex={0}
-                      className={`
-                        mb-4 p-4 rounded-lg border-2 cursor-pointer transition-all relative
-                        ${
-                          segment.id === activeSegmentId
-                            ? 'border-blue-500 bg-blue-50 shadow-md'
-                            : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
-                        }
-                      `}
-                    >
-                      <div className="flex items-start gap-3">
+                    <div key={segment.id}>
+                      {/* Attach Parent Button - only for first segment */}
+                      {isFirstSegment && (
+                        <div className="mb-2 flex justify-start">
+                          <Button
+                            type="button"
+                            variant={isAttached ? "default" : "outline"}
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAttachParent();
+                            }}
+                            className={`text-xs ${
+                              isAttached 
+                                ? 'bg-green-600 hover:bg-green-700 text-white' 
+                                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            {isAttached ? '✓ Attached' : 'Attach Parent'}
+                          </Button>
+                          {isAttached && (
+                            <span className="ml-2 text-xs text-gray-500 flex items-center">
+                              (Linked to: {previousDataLastSegmentId})
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      
+                      <div
+                        data-segment-id={segment.id}
+                        data-segment-container-id={segment.id}
+                        ref={(el) => {
+                          if (el) {
+                            segmentRefs.current.set(segment.id, el);
+                          } else {
+                            segmentRefs.current.delete(segment.id);
+                          }
+                        }}
+                        onClick={(e) => {
+                          // Only handle click if not clicking on text content or split menu
+                          if (!(e.target as HTMLElement).closest('.segment-text-content') &&
+                              !(e.target as HTMLElement).closest('.split-menu')) {
+                            handleSegmentClick(segment.id, e);
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleSegmentClick(segment.id);
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        className={`
+                          mb-4 p-4 rounded-lg border-2 cursor-pointer transition-all relative
+                          ${
+                            segment.id === activeSegmentId
+                              ? 'border-blue-500 bg-blue-50 shadow-md'
+                              : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
+                          }
+                        `}
+                      >
+                        <div className="flex items-start gap-3">
                         <div className="shrink-0 w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
                           {index + 1}
                         </div>
@@ -1352,6 +1457,7 @@ function MockLongCataloger() {
                             )}
                           </div>
                         )}
+                        </div>
                       </div>
                       
                       {/* Split Menu - positioned relative to segment container */}
