@@ -1,4 +1,6 @@
 import { Routes, Route, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
 import TextsPage from './pages/Text';
 import PersonsPage from './pages/Person';
 import TextInstances from './pages/TextInstances';
@@ -14,12 +16,39 @@ import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import ProtectedRoute from './components/ProtectedRoute';
 import AlignmentWorkstation from './components/Aligner/components/AlignmentWorkstation';
-import MockLongCataloger from './components/MockLongCataloger';
+import OutlinerUpload from './pages/OutlinerUpload';
+import OutlinerWorkspace from './pages/OutlinerWorkspace';
+import { getUserByEmail, createUser } from './api/settings';
 
 function App() {
   const location = useLocation();
   const isLoginPage = location.pathname === '/login';
-  
+  const { isAuthenticated, user, isLoading } = useAuth0();
+
+  useEffect(() => {
+    const ensureUserExists = async () => {
+      if (isAuthenticated && user?.email && !isLoading) {
+        try {
+          // Check if user exists in database
+          const existingUser = await getUserByEmail(user.email);
+          
+          // If user doesn't exist, create them
+          if (!existingUser && user.sub) {
+            await createUser({
+              id: user.sub,
+              email: user.email,
+              name: user.name || null,
+              picture: user.picture || null,
+            });
+          }
+        } catch (error) {
+          console.error('Error ensuring user exists:', error);
+        }
+      }
+    };
+
+    ensureUserExists();
+  }, [isAuthenticated, user, isLoading]);
   
 
   return (
@@ -109,7 +138,16 @@ function App() {
               <UpdateAnnotation />
             </ProtectedRoute>
           } />
-          <Route path="mock" element={<MockLongCataloger />}></Route>
+          <Route path="/outliner" element={
+            <ProtectedRoute>
+              <OutlinerUpload />
+            </ProtectedRoute>
+          } />
+          <Route path="/outliner/:documentId" element={
+            <ProtectedRoute>
+              <OutlinerWorkspace />
+            </ProtectedRoute>
+          } />
         </Routes>
         </div>
     </div>

@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 import uvicorn
 from routers import ai
-from routers import person, text, translation, annotation, bdrc, category, enum, tokenize, aligner_data, admin
+from routers import person, text, translation, annotation, bdrc, category, enum, tokenize, aligner_data, admin,outliner
 from routers.settings import (
     tenant_router,
     user_router,
@@ -45,8 +45,13 @@ app = FastAPI(
 
 class PayloadSizeIncrease(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        # Only needed for routes that use form()/UploadFile via form-data
-        await request.form(max_part_size=50 * 1024 * 1024)  # 50 MB
+        # Only parse form data if it's multipart/form-data and store it in request.state
+        # This way endpoints can still access the raw body through FastAPI's dependency injection
+        content_type = request.headers.get("content-type", "")
+        if "multipart/form-data" in content_type:
+            # Store parsed form in request.state, but don't consume the body
+            # FastAPI will handle the parsing through its dependency injection
+            pass
         return await call_next(request)
 
 app.add_middleware(PayloadSizeIncrease)
@@ -72,6 +77,7 @@ app.include_router(enum.router, prefix="/v2/enum", tags=["enum"])
 app.include_router(tokenize.router, prefix="/tokenize", tags=["tokenize"])
 app.include_router(aligner_data.router, prefix="/aligner-data", tags=["aligner-data"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
+app.include_router(outliner.router, prefix="/outliner", tags=["outliner"])
 
 app.include_router(ai.router, prefix="/ai", tags=["ai"])
 

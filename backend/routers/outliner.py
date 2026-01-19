@@ -1,0 +1,664 @@
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Request
+from pydantic import BaseModel, Field
+from typing import List, Optional
+from sqlalchemy.orm import Session
+from sqlalchemy import func
+from datetime import datetime
+import uuid
+from core.database import get_db
+from models.outliner import OutlinerDocument, OutlinerSegment
+
+router = APIRouter()
+
+# ==================== Pydantic Schemas ====================
+
+class SegmentCreate(BaseModel):
+    text: str
+    segment_index: int
+    span_start: int
+    span_end: int
+    title: Optional[str] = None
+    author: Optional[str] = None
+    title_bdrc_id: Optional[str] = None
+    author_bdrc_id: Optional[str] = None
+    parent_segment_id: Optional[str] = None
+
+
+class SegmentUpdate(BaseModel):
+    text: Optional[str] = None
+    title: Optional[str] = None
+    author: Optional[str] = None
+    title_bdrc_id: Optional[str] = None
+    author_bdrc_id: Optional[str] = None
+    parent_segment_id: Optional[str] = None
+
+
+class SegmentResponse(BaseModel):
+    id: str
+    text: str
+    segment_index: int
+    span_start: int
+    span_end: int
+    title: Optional[str] = None
+    author: Optional[str] = None
+    title_bdrc_id: Optional[str] = None
+    author_bdrc_id: Optional[str] = None
+    parent_segment_id: Optional[str] = None
+    is_annotated: bool
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DocumentCreate(BaseModel):
+    content: str
+    filename: Optional[str] = None
+    user_id: Optional[str] = None
+
+
+class DocumentResponse(BaseModel):
+    id: str
+    content: str
+    filename: Optional[str] = None
+    user_id: Optional[str] = None
+    total_segments: int
+    annotated_segments: int
+    progress_percentage: float
+    created_at: datetime
+    updated_at: datetime
+    segments: List[SegmentResponse] = []
+
+    class Config:
+        from_attributes = True
+
+
+class DocumentListResponse(BaseModel):
+    id: str
+    filename: Optional[str] = None
+    total_segments: int
+    annotated_segments: int
+    progress_percentage: float
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class BulkSegmentUpdate(BaseModel):
+    segments: List[SegmentUpdate] = Field(..., description="List of segment updates with segment IDs")
+    segment_ids: List[str] = Field(..., description="Corresponding segment IDs for each update")
+
+
+class SplitSegmentRequest(BaseModel):
+    segment_id: str
+    split_position: int  # Character offset within segment text
+    document_id: Optional[str] = None  # Optional: used when segment doesn't exist yet
+
+
+class MergeSegmentsRequest(BaseModel):
+    segment_ids: List[str] = Field(..., min_items=2, description="IDs of segments to merge (in order)")
+
+
+# ==================== Helper Functions ====================
+
+def update_document_progress(db: Session, document_id: str):
+    """Recalculate and update document progress"""
+    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    if not document:
+        return
+    
+    # Count total and annotated segments
+    total = db.query(func.count(OutlinerSegment.id)).filter(
+        OutlinerSegment.document_id == document_id
+    ).scalar()
+    
+    annotated = db.query(func.count(OutlinerSegment.id)).filter(
+        OutlinerSegment.document_id == document_id,
+        OutlinerSegment.is_annotated == True
+    ).scalar()
+    
+    document.total_segments = total
+    document.annotated_segments = annotated
+    document.update_progress()
+    db.commit()
+
+
+# ==================== Document Endpoints ====================
+
+@router.post("/documents", response_model=DocumentResponse, status_code=201)
+async def create_document(
+    document: DocumentCreate,
+    db: Session = Depends(get_db)
+):
+    """Create a new outliner document with full text content"""
+    db_document = OutlinerDocument(
+        id=str(uuid.uuid4()),
+        content=document.content,
+        filename=document.filename,
+        user_id=document.user_id,
+        total_segments=0,
+        annotated_segments=0,
+        progress_percentage=0.0
+    )
+    db.add(db_document)
+    db.commit()
+    db.refresh(db_document)
+    return db_document
+
+
+@router.post("/documents/upload", response_model=DocumentResponse, status_code=201)
+async def upload_document(
+    file: Optional[UploadFile] = File(None),
+    content: Optional[str] = Form(None),
+    filename: Optional[str] = Form(None),
+    user_id: Optional[str] = Form(None),
+    db: Session = Depends(get_db)
+):
+    """Upload a text file or text content to create a new outliner document"""
+    text_content = None
+    document_filename = None
+    
+    # Try to get file content first
+    if file is not None and file.filename and file.filename.strip():
+        try:
+            file_content = await file.read()
+            if file_content:
+                text_content = file_content.decode('utf-8')
+                document_filename = file.filename
+        except Exception as e:
+            # Log the error for debugging but continue to check content field
+            print(f"Error reading file: {e}")
+    
+    # If no file content, check for direct text content
+    if not text_content and content:
+        text_content = content
+        document_filename = filename or "text_document.txt"
+    
+    # Validate that we have content from either source
+    if not text_content:
+        raise HTTPException(
+            status_code=400,
+            detail="Either 'file' or 'content' field is required"
+        )
+    
+    # Validate that we have non-empty content
+    if len(text_content.strip()) == 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Content cannot be empty"
+        )
+    
+    db_document = OutlinerDocument(
+        id=str(uuid.uuid4()),
+        content=text_content,
+        filename=document_filename,
+        user_id=user_id,
+        total_segments=0,
+        annotated_segments=0,
+        progress_percentage=0.0
+    )
+    db.add(db_document)
+    db.commit()
+    db.refresh(db_document)
+    return db_document
+
+
+@router.get("/documents", response_model=List[DocumentListResponse])
+async def list_documents(
+    user_id: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """List all outliner documents, optionally filtered by user"""
+    query = db.query(OutlinerDocument)
+    if user_id:
+        query = query.filter(OutlinerDocument.user_id == user_id)
+    documents = query.order_by(OutlinerDocument.updated_at.desc()).offset(skip).limit(limit).all()
+    return documents
+
+
+@router.get("/documents/{document_id}", response_model=DocumentResponse)
+async def get_document(
+    document_id: str,
+    include_segments: bool = True,
+    db: Session = Depends(get_db)
+):
+    """Get a document by ID with all its segments"""
+    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    if include_segments:
+        # Load segments ordered by segment_index
+        segments = db.query(OutlinerSegment).filter(
+            OutlinerSegment.document_id == document_id
+        ).order_by(OutlinerSegment.segment_index).all()
+        document.segments = segments
+    
+    return document
+
+
+@router.put("/documents/{document_id}/content")
+async def update_document_content(
+    document_id: str,
+    content: str,
+    db: Session = Depends(get_db)
+):
+    """Update the full text content of a document"""
+    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    document.content = content
+    document.updated_at = datetime.utcnow()
+    db.commit()
+    return {"message": "Document content updated", "document_id": document_id}
+
+
+@router.delete("/documents/{document_id}", status_code=204)
+async def delete_document(
+    document_id: str,
+    db: Session = Depends(get_db)
+):
+    """Delete a document and all its segments"""
+    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    db.delete(document)
+    db.commit()
+    return None
+
+
+# ==================== Segment Endpoints ====================
+
+@router.post("/documents/{document_id}/segments", response_model=SegmentResponse, status_code=201)
+async def create_segment(
+    document_id: str,
+    segment: SegmentCreate,
+    db: Session = Depends(get_db)
+):
+    """Create a new segment in a document"""
+    # Verify document exists
+    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    db_segment = OutlinerSegment(
+        id=str(uuid.uuid4()),
+        document_id=document_id,
+        text=segment.text,
+        segment_index=segment.segment_index,
+        span_start=segment.span_start,
+        span_end=segment.span_end,
+        title=segment.title,
+        author=segment.author,
+        title_bdrc_id=segment.title_bdrc_id,
+        author_bdrc_id=segment.author_bdrc_id,
+        parent_segment_id=segment.parent_segment_id
+    )
+    db_segment.update_annotation_status()
+    
+    db.add(db_segment)
+    update_document_progress(db, document_id)
+    db.commit()
+    db.refresh(db_segment)
+    return db_segment
+
+
+@router.post("/documents/{document_id}/segments/bulk", response_model=List[SegmentResponse], status_code=201)
+async def create_segments_bulk(
+    document_id: str,
+    segments: List[SegmentCreate],
+    db: Session = Depends(get_db)
+):
+    """Create multiple segments at once"""
+    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    db_segments = []
+    for segment in segments:
+        db_segment = OutlinerSegment(
+            id=str(uuid.uuid4()),
+            document_id=document_id,
+            text=segment.text,
+            segment_index=segment.segment_index,
+            span_start=segment.span_start,
+            span_end=segment.span_end,
+            title=segment.title,
+            author=segment.author,
+            title_bdrc_id=segment.title_bdrc_id,
+            author_bdrc_id=segment.author_bdrc_id,
+            parent_segment_id=segment.parent_segment_id
+        )
+        db_segment.update_annotation_status()
+        db_segments.append(db_segment)
+        db.add(db_segment)
+    
+    update_document_progress(db, document_id)
+    db.commit()
+    
+    for seg in db_segments:
+        db.refresh(seg)
+    
+    return db_segments
+
+
+@router.get("/documents/{document_id}/segments", response_model=List[SegmentResponse])
+async def list_segments(
+    document_id: str,
+    db: Session = Depends(get_db)
+):
+    """Get all segments for a document"""
+    segments = db.query(OutlinerSegment).filter(
+        OutlinerSegment.document_id == document_id
+    ).order_by(OutlinerSegment.segment_index).all()
+    return segments
+
+
+@router.get("/segments/{segment_id}", response_model=SegmentResponse)
+async def get_segment(
+    segment_id: str,
+    db: Session = Depends(get_db)
+):
+    """Get a single segment by ID"""
+    segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
+    if not segment:
+        raise HTTPException(status_code=404, detail="Segment not found")
+    return segment
+
+
+@router.put("/segments/{segment_id}", response_model=SegmentResponse)
+async def update_segment(
+    segment_id: str,
+    segment_update: SegmentUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update a segment's content or annotations"""
+    segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
+    if not segment:
+        raise HTTPException(status_code=404, detail="Segment not found")
+    
+    # Update fields if provided
+    if segment_update.text is not None:
+        segment.text = segment_update.text
+    if segment_update.title is not None:
+        segment.title = segment_update.title
+    if segment_update.author is not None:
+        segment.author = segment_update.author
+    if segment_update.title_bdrc_id is not None:
+        segment.title_bdrc_id = segment_update.title_bdrc_id
+    if segment_update.author_bdrc_id is not None:
+        segment.author_bdrc_id = segment_update.author_bdrc_id
+    if segment_update.parent_segment_id is not None:
+        segment.parent_segment_id = segment_update.parent_segment_id
+    
+    segment.update_annotation_status()
+    segment.updated_at = datetime.utcnow()
+    
+    update_document_progress(db, segment.document_id)
+    db.commit()
+    db.refresh(segment)
+    return segment
+
+
+@router.put("/segments/bulk", response_model=List[SegmentResponse])
+async def update_segments_bulk(
+    updates: BulkSegmentUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update multiple segments at once"""
+    if len(updates.segments) != len(updates.segment_ids):
+        raise HTTPException(
+            status_code=400,
+            detail="Number of segments must match number of segment_ids"
+        )
+    
+    updated_segments = []
+    document_ids = set()
+    
+    for segment_id, segment_update in zip(updates.segment_ids, updates.segments):
+        segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
+        if not segment:
+            continue
+        
+        document_ids.add(segment.document_id)
+        
+        if segment_update.text is not None:
+            segment.text = segment_update.text
+        if segment_update.title is not None:
+            segment.title = segment_update.title
+        if segment_update.author is not None:
+            segment.author = segment_update.author
+        if segment_update.title_bdrc_id is not None:
+            segment.title_bdrc_id = segment_update.title_bdrc_id
+        if segment_update.author_bdrc_id is not None:
+            segment.author_bdrc_id = segment_update.author_bdrc_id
+        if segment_update.parent_segment_id is not None:
+            segment.parent_segment_id = segment_update.parent_segment_id
+        
+        segment.update_annotation_status()
+        segment.updated_at = datetime.utcnow()
+        updated_segments.append(segment)
+    
+    # Update progress for all affected documents
+    for doc_id in document_ids:
+        update_document_progress(db, doc_id)
+    
+    db.commit()
+    
+    for seg in updated_segments:
+        db.refresh(seg)
+    
+    return updated_segments
+
+
+@router.post("/segments/{segment_id}/split", response_model=List[SegmentResponse])
+async def split_segment(
+    segment_id: str,
+    split_request: SplitSegmentRequest,
+    db: Session = Depends(get_db)
+):
+    """Split a segment at a given position"""
+    segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
+    
+    # If segment doesn't exist, check if we need to create initial segment from document
+    if not segment:
+        # If document_id is provided, try to create initial segment from document content
+        if split_request.document_id:
+            document = db.query(OutlinerDocument).filter(OutlinerDocument.id == split_request.document_id).first()
+            if not document:
+                raise HTTPException(status_code=404, detail="Document not found")
+            
+            # Check if document has any segments
+            existing_segments = db.query(OutlinerSegment).filter(
+                OutlinerSegment.document_id == split_request.document_id
+            ).count()
+            
+            # If no segments exist, create initial segment from document content
+            if existing_segments == 0:
+                if not document.content or len(document.content.strip()) == 0:
+                    raise HTTPException(status_code=400, detail="Document has no content to split")
+                
+                # Create initial segment from full document content
+                initial_segment = OutlinerSegment(
+                    id=str(uuid.uuid4()),
+                    document_id=split_request.document_id,
+                    text=document.content,
+                    segment_index=0,
+                    span_start=0,
+                    span_end=len(document.content),
+                    title=None,
+                    author=None,
+                    parent_segment_id=None
+                )
+                initial_segment.update_annotation_status()
+                db.add(initial_segment)
+                db.commit()
+                db.refresh(initial_segment)
+                
+                # Now use this segment for splitting
+                segment = initial_segment
+            else:
+                raise HTTPException(status_code=404, detail="Segment not found")
+        else:
+            raise HTTPException(status_code=404, detail="Segment not found")
+    
+    if split_request.split_position < 0 or split_request.split_position >= len(segment.text):
+        raise HTTPException(status_code=400, detail="Invalid split position")
+    
+    text_before = segment.text[:split_request.split_position].strip()
+    text_after = segment.text[split_request.split_position:].strip()
+    
+    if not text_before or not text_after:
+        raise HTTPException(status_code=400, detail="Split would create empty segment")
+    
+    # Update first segment
+    segment.text = text_before
+    segment.span_end = segment.span_start + len(text_before)
+    segment.update_annotation_status()
+    
+    # Create second segment
+    new_segment = OutlinerSegment(
+        id=str(uuid.uuid4()),
+        document_id=segment.document_id,
+        text=text_after,
+        segment_index=segment.segment_index + 1,
+        span_start=segment.span_end,
+        span_end=segment.span_end + len(text_after),
+        title=None,
+        author=None,
+        parent_segment_id=segment.parent_segment_id
+    )
+    
+    # Update segment indices for following segments
+    following_segments = db.query(OutlinerSegment).filter(
+        OutlinerSegment.document_id == segment.document_id,
+        OutlinerSegment.segment_index > segment.segment_index
+    ).all()
+    
+    for seg in following_segments:
+        seg.segment_index += 1
+    
+    db.add(new_segment)
+    update_document_progress(db, segment.document_id)
+    db.commit()
+    db.refresh(segment)
+    db.refresh(new_segment)
+    
+    return [segment, new_segment]
+
+
+@router.post("/segments/merge", response_model=SegmentResponse)
+async def merge_segments(
+    merge_request: MergeSegmentsRequest,
+    db: Session = Depends(get_db)
+):
+    """Merge multiple segments into one"""
+    if len(merge_request.segment_ids) < 2:
+        raise HTTPException(status_code=400, detail="At least 2 segments required for merge")
+    
+    segments = db.query(OutlinerSegment).filter(
+        OutlinerSegment.id.in_(merge_request.segment_ids)
+    ).order_by(OutlinerSegment.segment_index).all()
+    
+    if len(segments) != len(merge_request.segment_ids):
+        raise HTTPException(status_code=404, detail="One or more segments not found")
+    
+    # Check all segments belong to same document
+    document_id = segments[0].document_id
+    if not all(seg.document_id == document_id for seg in segments):
+        raise HTTPException(status_code=400, detail="All segments must belong to same document")
+    
+    # Merge text and metadata
+    merged_text = "".join(seg.text for seg in segments)
+    merged_title = next((seg.title for seg in segments if seg.title), None)
+    merged_author = next((seg.author for seg in segments if seg.author), None)
+    merged_title_bdrc_id = next((seg.title_bdrc_id for seg in segments if seg.title_bdrc_id), None)
+    merged_author_bdrc_id = next((seg.author_bdrc_id for seg in segments if seg.author_bdrc_id), None)
+    merged_parent_id = segments[0].parent_segment_id
+    
+    # Update first segment with merged data
+    first_segment = segments[0]
+    first_segment.text = merged_text
+    first_segment.span_end = segments[-1].span_end
+    first_segment.title = merged_title
+    first_segment.author = merged_author
+    first_segment.title_bdrc_id = merged_title_bdrc_id
+    first_segment.author_bdrc_id = merged_author_bdrc_id
+    first_segment.parent_segment_id = merged_parent_id
+    first_segment.update_annotation_status()
+    
+    # Delete other segments and update indices
+    segment_indices_to_delete = [seg.segment_index for seg in segments[1:]]
+    for seg in segments[1:]:
+        db.delete(seg)
+    
+    # Update indices of following segments
+    following_segments = db.query(OutlinerSegment).filter(
+        OutlinerSegment.document_id == document_id,
+        OutlinerSegment.segment_index > first_segment.segment_index
+    ).all()
+    
+    shift_amount = len(segments) - 1
+    for seg in following_segments:
+        seg.segment_index -= shift_amount
+    
+    update_document_progress(db, document_id)
+    db.commit()
+    db.refresh(first_segment)
+    
+    return first_segment
+
+
+@router.delete("/segments/{segment_id}", status_code=204)
+async def delete_segment(
+    segment_id: str,
+    db: Session = Depends(get_db)
+):
+    """Delete a segment"""
+    segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
+    if not segment:
+        raise HTTPException(status_code=404, detail="Segment not found")
+    
+    document_id = segment.document_id
+    segment_index = segment.segment_index
+    
+    db.delete(segment)
+    
+    # Update indices of following segments
+    following_segments = db.query(OutlinerSegment).filter(
+        OutlinerSegment.document_id == document_id,
+        OutlinerSegment.segment_index > segment_index
+    ).all()
+    
+    for seg in following_segments:
+        seg.segment_index -= 1
+    
+    update_document_progress(db, document_id)
+    db.commit()
+    return None
+
+
+@router.get("/documents/{document_id}/progress")
+async def get_document_progress(
+    document_id: str,
+    db: Session = Depends(get_db)
+):
+    """Get progress statistics for a document"""
+    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    return {
+        "document_id": document_id,
+        "total_segments": document.total_segments,
+        "annotated_segments": document.annotated_segments,
+        "progress_percentage": document.progress_percentage,
+        "updated_at": document.updated_at
+    }

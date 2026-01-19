@@ -33,6 +33,58 @@ export interface TenantCreate {
   brand_name: string;
 }
 
+export interface User {
+  id: string;
+  email: string;
+  name?: string | null;
+  picture?: string | null;
+  created_at: string;
+}
+
+export interface UserCreate {
+  id: string;
+  email: string;
+  name?: string | null;
+  picture?: string | null;
+}
+
+export const getUserByEmail = async (email: string): Promise<User | null> => {
+  const response = await fetch(`${API_URL}/settings/users/by-email/${encodeURIComponent(email)}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'accept': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      return null;
+    }
+    throw new Error('Failed to fetch user');
+  }
+
+  return response.json();
+};
+
+export const createUser = async (user: UserCreate): Promise<User> => {
+  const response = await fetch(`${API_URL}/settings/users`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'accept': 'application/json',
+    },
+    body: JSON.stringify(user),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to create user: ${error}`);
+  }
+
+  return response.json();
+};
+
 export const getTenantByDomain = async (domain: string): Promise<Tenant | null> => {
     const response = await fetch(`${API_URL}/settings/tenants/by-domain/${domain}`, {
         method: 'GET',

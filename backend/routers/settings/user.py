@@ -12,6 +12,7 @@ router = APIRouter()
 
 
 class UserCreate(BaseModel):
+    id: str
     email: EmailStr
     name: Optional[str] = None
     picture: Optional[str] = None
@@ -41,6 +42,15 @@ async def get_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_d
     return users
 
 
+@router.get("/by-email/{email}", response_model=UserResponse)
+async def get_user_by_email(email: str, db: Session = Depends(get_db)):
+    """Get a user by email"""
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(user_id: str, db: Session = Depends(get_db)):
     """Get a user by ID"""
@@ -59,7 +69,7 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="User with this email already exists")
     
     db_user = User(
-        id=str(uuid.uuid4()),
+        id=user.id,
         email=user.email,
         name=user.name,
         picture=user.picture,
