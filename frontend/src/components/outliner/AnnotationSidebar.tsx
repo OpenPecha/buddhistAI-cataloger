@@ -6,9 +6,8 @@ import { TitleField, type TitleFieldRef } from './sidebarFields/TitleField';
 import { AuthorField, type AuthorFieldRef } from './sidebarFields/AuthorField';
 import { AISuggestionsBox } from './AISuggestionsBox';
 import { useAISuggestions } from '@/hooks/useAISuggestions';
-import { updateSegment } from '@/api/outliner';
+import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
 import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
 
 interface AnnotationSidebarProps {
   activeSegment: TextSegment | undefined;
@@ -46,7 +45,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   activeSegment,
   documentId,
 }, ref) => {
-  const queryClient = useQueryClient();
+  const { updateSegment: updateSegmentMutation } = useOutlinerDocument();
   const activeSegmentId = activeSegment?.id || null;
   const title = activeSegment?.title || '';
   const author = activeSegment?.author || '';
@@ -167,11 +166,10 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       }
     }
 
-    // Make API call to update segment
+    // Make API call to update segment using mutation
     try {
-      await updateSegment(activeSegmentId, updatePayload);
+      await updateSegmentMutation(activeSegmentId, updatePayload);
       toast.success('Annotations saved successfully');
-      queryClient.invalidateQueries({ queryKey: ['outliner', 'document', documentId] });
       // Clear pending changes for this segment
       if (pendingChangesRef.current.has(activeSegmentId)) {
         pendingChangesRef.current.delete(activeSegmentId);
@@ -180,7 +178,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       console.error('Failed to save annotations:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to save annotations');
     }
-  }, [activeSegment, activeSegmentId, formData]);
+  }, [activeSegment, activeSegmentId, formData, updateSegmentMutation]);
  
   function onUpdate( field: 'title' | 'author', value: Title | Author){
     if(field === 'title'){

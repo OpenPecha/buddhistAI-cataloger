@@ -52,6 +52,10 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
     enabled: !!documentId,
     staleTime: 0, // Always refetch to get latest data
     refetchInterval: false,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchIntervalInBackground: false,
   });
 
   // Mutation for uploading document
