@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Trash2, Loader2 } from 'lucide-react';
+import { Trash2, Loader2, Check } from 'lucide-react';
 import type { TextSegment, CursorPosition } from './types';
 import { SegmentTextContent } from './SegmentTextContent';
 import { useOutliner } from './OutlinerContext';
@@ -10,7 +10,6 @@ interface SegmentConfig {
   isActive: boolean;
   isFirstSegment: boolean;
   isAttached: boolean;
-  previousDataLastSegmentId: string;
 }
 
 interface SegmentItemProps {
@@ -29,7 +28,6 @@ export const SegmentItem: React.FC<SegmentItemProps> = ({
     isActive,
     isFirstSegment,
     isAttached,
-    previousDataLastSegmentId,
   } = segmentConfig;
 
   const {
@@ -41,14 +39,23 @@ export const SegmentItem: React.FC<SegmentItemProps> = ({
     onAttachParent,
     onMergeWithPrevious,
     segmentLoadingStates,
+    onSegmentStatusUpdate,
   } = useOutliner();
   
   const isLoading = segmentLoadingStates?.get(segment.id) ?? false;
+  const isChecked = segment.status === 'checked';
+  
+  const handleStatusToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onSegmentStatusUpdate) {
+      const newStatus = isChecked ? 'unchecked' : 'checked';
+      await onSegmentStatusUpdate(segment.id, newStatus);
+    }
+  };
   return (
     <div>
       {/* Attach Parent Button - only for first segment */}
       {isFirstSegment && (
-        <div className="mb-2 flex justify-start">
           <Button
             type="button"
             variant={isAttached ? 'default' : 'outline'}
@@ -57,7 +64,7 @@ export const SegmentItem: React.FC<SegmentItemProps> = ({
               e.stopPropagation();
               onAttachParent();
             }}
-            className={`text-xs ${
+            className={`text-xs my-3 ${
               isAttached
                 ? 'bg-green-600 hover:bg-green-700 text-white'
                 : 'border-gray-300 text-gray-700 hover:bg-gray-50'
@@ -65,12 +72,7 @@ export const SegmentItem: React.FC<SegmentItemProps> = ({
           >
             {isAttached ? '✓ Attached' : 'Attach Parent'}
           </Button>
-          {isAttached && (
-            <span className="ml-2 text-xs text-gray-500 flex items-center">
-              (Linked to: {previousDataLastSegmentId})
-            </span>
-          )}
-        </div>
+          
       )}
 
       <div
@@ -126,8 +128,14 @@ export const SegmentItem: React.FC<SegmentItemProps> = ({
           </button>
         )}
         <div className="flex items-start gap-3">
-          <div className="shrink-0 w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
-            {index + 1}
+          <div className="shrink-0">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+              isChecked 
+                ? 'bg-green-600 text-white' 
+                : 'bg-gray-200 text-gray-600'
+            }`}>
+              {index + 1}
+            </div>
           </div>
           <div className="flex-1 relative">
             <SegmentTextContent
@@ -165,6 +173,35 @@ export const SegmentItem: React.FC<SegmentItemProps> = ({
             )}
           </div>
         </div>
+        
+        {/* Checkbox for marking checked/unchecked, with label */}
+        {isActive && onSegmentStatusUpdate && (
+          <label
+            className={`
+              absolute -bottom-3 left-1/2 -translate-x-1/2 z-10
+              flex items-center gap-2 p-1 rounded transition-all shadow-lg bg-white border
+              ${isChecked 
+                ? 'border-green-600 bg-green-50 text-green-800' 
+                : 'border-gray-300 bg-white text-gray-700'
+              }
+              ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+            `}
+            title={isChecked ? 'Mark as unchecked' : 'Mark as checked'}
+            style={{ minWidth: 'fit-content' }}
+          >
+            <input
+              type="checkbox"
+              className="form-checkbox rounded-full border-gray-300 text-green-600 focus:ring-green-500 w-5 h-5 transition cursor-pointer"
+              checked={isChecked}
+              disabled={isLoading}
+              onChange={handleStatusToggle}
+              aria-label={isChecked ? 'Mark as unchecked' : 'Mark as checked'}
+            />
+            <span className="text-xs select-none">
+              {isChecked ? 'approved' : 'check'}
+            </span>
+          </label>
+        )}
       </div>
     </div>
   );

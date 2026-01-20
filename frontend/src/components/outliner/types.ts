@@ -6,16 +6,20 @@ export interface TextSegment {
   title_bdrc_id?: string;
   author_bdrc_id?: string;
   parentSegmentId?: string;
+  is_attached?: boolean | null;
+  status?: string | null; // checked, unchecked
 }
 
 export interface BubbleMenuProps {
   position: { x: number; y: number };
   onSelect: (field: 'title' | 'author') => void;
   onClose: () => void;
+  selectedText?: string;
 }
 
 export interface SplitMenuProps {
   position: { x: number; y: number };
+  segmentId: string;
   onSplit: () => void;
   onCancel: () => void;
   onClose: () => void;

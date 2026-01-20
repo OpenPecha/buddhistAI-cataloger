@@ -112,16 +112,17 @@ function Navigation() {
               >
                 Persons
               </Link>
-              {/* <a
-                href="https://formatter.buddhistai.tools/formatter"
+              <Link
+                to="/outliner"
                 className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  isActive('/formatter')
-                    ? 'bg-blue-100 text-blue-700'
+                  location.pathname.startsWith('/outliner')
+                    ? ''
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
+                style={getActiveStyle(location.pathname.startsWith('/outliner'))}
               >
-                Formatter
-              </a> */}
+                Outliner
+              </Link>
             </div>
           </div>
 

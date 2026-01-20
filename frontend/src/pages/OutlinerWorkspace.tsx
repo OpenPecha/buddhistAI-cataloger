@@ -1,25 +1,23 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
-import { useSegmentAnnotations } from '@/hooks/useSegmentAnnotations';
-import { useAISuggestions } from '@/hooks/useAISuggestions';
 import { useAITextEndings } from '@/hooks/useAITextEndings';
+import { toast } from 'sonner';
 import type {
   TextSegment,
   BubbleMenuState,
   CursorPosition,
 } from '@/components/outliner';
-import { AnnotationSidebar } from '@/components/outliner/AnnotationSidebar';
+import { AnnotationSidebar, type AnnotationSidebarRef } from '@/components/outliner/AnnotationSidebar';
 import { Workspace } from '@/components/outliner/Workspace';
 import { OutlinerProvider } from '@/components/outliner/OutlinerContext';
 
 const OutlinerWorkspace: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   
-  // Local state for UI
-  const [segments, setSegments] = useState<TextSegment[]>([]);
-  const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
-  const initializedDocumentIdRef = useRef<string | null>(null);
+  // Get activeSegmentId from URL
+  const activeSegmentId = searchParams.get('segmentId');
   
   // Backend integration hook
   const {
@@ -30,76 +28,32 @@ const OutlinerWorkspace: React.FC = () => {
     isSaving,
     segmentLoadingStates,
     updateSegment: updateSegmentBackend,
+    bulkUpdateSegments: bulkUpdateSegmentsBackend,
     splitSegment: splitSegmentBackend,
     mergeSegments: mergeSegmentsBackend,
-  } = useOutlinerDocument({
-    onDocumentLoaded: (document) => {
-      // Prevent re-initialization if already initialized for this document
-      if (initializedDocumentIdRef.current === documentId) {
-        return;
-      }
-      
-      // Initialize local state from backend document
-      if (document.segments && document.segments.length > 0) {
-        const loadedSegments = document.segments.map((seg) => ({
-          id: seg.id,
-          text: seg.text,
-          title: seg.title || undefined,
-          author: seg.author || undefined,
-          title_bdrc_id: seg.title_bdrc_id || undefined,
-          author_bdrc_id: seg.author_bdrc_id || undefined,
-          parentSegmentId: seg.parent_segment_id || undefined,
-        }));
-        setSegments(loadedSegments);
-        if (loadedSegments.length > 0) {
-          setActiveSegmentId(loadedSegments[0].id);
-        }
-        initializedDocumentIdRef.current = documentId || null;
-      } else if (document.content && document.content.trim().length > 0) {
-        // If no segments but content exists, create a single segment from the content
-        const defaultSegment: TextSegment = {
-          id: `segment-${Date.now()}-default`,
-          text: document.content.trim(),
-        };
-        setSegments([defaultSegment]);
-        setActiveSegmentId(defaultSegment.id);
-        initializedDocumentIdRef.current = documentId || null;
-      }
-    },
-  });
+    resetSegments: resetSegmentsBackend,
+    createSegmentsBulk: createSegmentsBulkBackend,
+  } = useOutlinerDocument();
   
-  // Use backend data
+  // Use backend data directly
   const currentTextContent = backendTextContent || '';
-  const currentSegments = backendSegments.length > 0 ? backendSegments : segments;
+  const currentSegments = backendSegments;
   
-  // Reset segments when documentId changes
+  // Set initial activeSegmentId from URL or first segment
   useEffect(() => {
-    if (documentId) {
-      // Only reset if this is a different document
-      if (initializedDocumentIdRef.current !== documentId) {
-        setSegments([]);
-        setActiveSegmentId(null);
-        initializedDocumentIdRef.current = null;
-      }
-    } else {
-      // Reset if documentId is cleared
-      setSegments([]);
-      setActiveSegmentId(null);
-      initializedDocumentIdRef.current = null;
+    if (currentSegments.length > 0 && !activeSegmentId) {
+      setSearchParams({ segmentId: currentSegments[0].id }, { replace: true });
     }
-  }, [documentId]);
+  }, [currentSegments, activeSegmentId, setSearchParams]);
   
-  // Generate a random ID for the last segment of previous data (mock)
-  const [previousDataLastSegmentId] = useState<string>(
-    () => `prev-segment-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-  );
+  // UI state for menus
   const [bubbleMenuState, setBubbleMenuState] = useState<BubbleMenuState | null>(null);
   const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(null);
-  const workspaceRef = useRef<HTMLDivElement>(null) as React.RefObject<HTMLDivElement>;
-  const segmentRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  
+  // Store pending bubble menu value to apply when segment becomes active
+  const pendingBubbleMenuValueRef = useRef<{ field: 'title' | 'author'; segmentId: string; text: string } | null>(null);
 
   // AI text ending detection hook
-  const [previousSegments, setPreviousSegments] = useState<TextSegment[] | null>(null);
   const aiTextEndingAbortControllerRef = useRef<AbortController | null>(null);
   const aiTextEndings = useAITextEndings({
     documentId: documentId || undefined,
@@ -113,6 +67,23 @@ const OutlinerWorkspace: React.FC = () => {
 
   // Get active segment
   const activeSegment = currentSegments.find((seg) => seg.id === activeSegmentId);
+
+  // Apply pending bubble menu value when segment becomes active
+  useEffect(() => {
+    if (pendingBubbleMenuValueRef.current && activeSegmentId === pendingBubbleMenuValueRef.current.segmentId) {
+      const { field, text } = pendingBubbleMenuValueRef.current;
+      
+      // Use requestAnimationFrame to ensure sidebar has updated
+      requestAnimationFrame(() => {
+        if (field === 'title') {
+          annotationSidebarRef.current?.setTitleValueWithoutUpdate(text);
+        } else if (field === 'author') {
+          annotationSidebarRef.current?.setAuthorValueWithoutUpdate(text);
+        }
+        pendingBubbleMenuValueRef.current = null;
+      });
+    }
+  }, [activeSegmentId]);
 
   // Handle text selection in workspace
   const handleTextSelection = useCallback(() => {
@@ -190,31 +161,48 @@ const OutlinerWorkspace: React.FC = () => {
     }
   }, [currentSegments]);
 
-  // Handle segment click
+  // Handle segment click - update URL
   const handleSegmentClick = useCallback((segmentId: string, event?: React.MouseEvent) => {
-    // If clicking on the segment container (not text), just activate it
-    if (!event || (event.target as HTMLElement).closest('.segment-text-content')) {
-      setActiveSegmentId(segmentId);
-      setBubbleMenuState(null);
-      return;
-    }
-    setActiveSegmentId(segmentId);
+    setSearchParams({ segmentId }, { replace: true });
     setBubbleMenuState(null);
-    setCursorPosition(null);
-  }, []);
+    if (!event || !(event.target as HTMLElement).closest('.segment-text-content')) {
+      setCursorPosition(null);
+    }
+  }, [setSearchParams]);
 
   // Handle cursor position change in contentEditable
   const handleCursorChange = useCallback((segmentId: string, element: HTMLDivElement) => {
     const selection = globalThis.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
+    
+    // If no selection exists, try to create one at the end of the element
+    let range: Range;
+    if (!selection || selection.rangeCount === 0) {
+      // Create a range at the end of the element
+      range = document.createRange();
+      const textNode = element.firstChild;
+      if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+        const textLength = textNode.textContent?.length || 0;
+        range.setStart(textNode, textLength);
+        range.setEnd(textNode, textLength);
+      } else {
+        // If no text node, set at the element itself
+        range.setStart(element, 0);
+        range.setEnd(element, 0);
+      }
+      // Set the selection
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    } else {
+      range = selection.getRangeAt(0);
+    }
 
-    const range = selection.getRangeAt(0);
-
-    // Check if selection is within this segment
+    // Check if selection is within this segment/content
     if (!element.contains(range.commonAncestorContainer)) return;
 
     // Check if there's text selected - if yes, don't show split menu
-    const selectedText = selection.toString().trim();
+    const selectedText = selection?.toString().trim() || '';
     if (selectedText.length > 0) {
       // Text is selected, don't show split menu (bubble menu will be shown by handleTextSelection)
       setCursorPosition(null);
@@ -237,9 +225,14 @@ const OutlinerWorkspace: React.FC = () => {
     const menuWidth = 180;
 
     // Position menu below cursor, relative to segment container
+    // If cursorRect has no width/height (collapsed range), use a default position
     const menuPosition = {
-      x: cursorRect.left - segmentRect.left - menuWidth / 2 + cursorRect.width / 2,
-      y: cursorRect.bottom - segmentRect.top + 8, // 8px gap below cursor
+      x: cursorRect.width > 0 
+        ? cursorRect.left - segmentRect.left - menuWidth / 2 + cursorRect.width / 2
+        : segmentRect.width / 2 - menuWidth / 2,
+      y: cursorRect.height > 0 
+        ? cursorRect.bottom - segmentRect.top + 8
+        : 8, // 8px gap below cursor
     };
 
     // Ensure menu stays within segment bounds (with padding)
@@ -263,7 +256,12 @@ const OutlinerWorkspace: React.FC = () => {
       // Restore the original content
       const target = e.currentTarget;
       const segmentId = target.getAttribute('data-segment-id');
-      if (segmentId) {
+      if (segmentId === 'content-no-segments') {
+        // Restore full text content when no segments
+        setTimeout(() => {
+          target.textContent = currentTextContent;
+        }, 0);
+      } else if (segmentId) {
         const segment = currentSegments.find((seg) => seg.id === segmentId);
         if (segment) {
           // Use setTimeout to restore after browser tries to update
@@ -273,9 +271,9 @@ const OutlinerWorkspace: React.FC = () => {
         }
       }
     },
-    [currentSegments]
+    [currentSegments, currentTextContent]
   );
-
+  
   // Handle contentEditable keydown to prevent content changes
   const handleContentEditableKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     // Allow navigation keys
@@ -307,28 +305,84 @@ const OutlinerWorkspace: React.FC = () => {
   }, []);
 
   // Handle attach parent button click for first segment
-  const handleAttachParent = useCallback(() => {
-    if (segments.length === 0) return;
+  const handleAttachParent = useCallback(async () => {
+    if (currentSegments.length === 0) return;
+    if (!documentId) return; // Only works with backend documents
 
-    const firstSegmentId = segments[0].id;
+    const firstSegment = currentSegments[0];
+    const firstSegmentId = firstSegment.id;
 
-    // Toggle attachment: if already attached, remove it; otherwise attach
-    setSegments((prev) =>
-      prev.map((seg) => {
-        if (seg.id === firstSegmentId) {
-          return {
-            ...seg,
-            parentSegmentId: seg.parentSegmentId ? undefined : previousDataLastSegmentId,
-          };
-        }
-        return seg;
-      })
-    );
-  }, [segments, previousDataLastSegmentId]);
+    // Toggle is_attached: if already attached, set to false; otherwise set to true
+    const newIsAttached = !(firstSegment.is_attached ?? false);
+
+    try {
+      await updateSegmentBackend(firstSegmentId, {
+        is_attached: newIsAttached,
+      });
+    } catch (error) {
+      console.error('Failed to update attachment status:', error);
+    }
+  }, [currentSegments, documentId, updateSegmentBackend]);
+
+  // Handle segment status update (checked/unchecked)
+  const handleSegmentStatusUpdate = useCallback(
+    async (segmentId: string, status: 'checked' | 'unchecked') => {
+      if (!documentId) return;
+      try {
+        await updateSegmentBackend(segmentId, { status });
+      } catch (error) {
+        console.error('Failed to update segment status:', error);
+      }
+    },
+    [documentId, updateSegmentBackend]
+  );
 
   // Split segment at cursor position
   const handleSplitSegment = useCallback(async () => {
-    if (!cursorPosition || !activeSegmentId) return;
+    if (!cursorPosition || !documentId) return;
+
+    // Handle case when there are no segments - create segments from content (optimistic)
+    if (cursorPosition.segmentId === 'content-no-segments') {
+      const offset = cursorPosition.offset;
+      const textBefore = currentTextContent.substring(0, offset).trim();
+      const textAfter = currentTextContent.substring(offset).trim();
+
+      // Don't split if either part would be empty
+      if (!textBefore || !textAfter) {
+        return;
+      }
+
+      // Create segments using bulk create (with optimistic updates)
+      try {
+        const createdSegments = await createSegmentsBulkBackend([
+          {
+            segment_index: 0,
+            span_start: 0,
+            span_end: offset,
+            text: textBefore,
+          },
+          {
+            segment_index: 1,
+            span_start: offset,
+            span_end: currentTextContent.length,
+            text: textAfter,
+          },
+        ]);
+        setCursorPosition(null);
+        // Set the first created segment as active
+        if (createdSegments && createdSegments.length > 0) {
+          setSearchParams({ segmentId: createdSegments[0].id }, { replace: true });
+        }
+        return;
+      } catch (error) {
+        console.error('Failed to create segments:', error);
+        // Error toast is handled by the mutation
+        return;
+      }
+    }
+
+    // Handle normal segment split
+    if (!activeSegmentId) return;
 
     const segment = currentSegments.find((seg) => seg.id === cursorPosition.segmentId);
     if (!segment) return;
@@ -341,18 +395,16 @@ const OutlinerWorkspace: React.FC = () => {
       return;
     }
 
-    // Use backend split
-    if (documentId) {
-      try {
-        await splitSegmentBackend(cursorPosition.segmentId, cursorPosition.offset);
-        setCursorPosition(null);
-        return;
-      } catch (error) {
-        console.error('Failed to split segment:', error);
-        return;
-      }
+    // Use backend split (with optimistic updates)
+    try {
+      await splitSegmentBackend(cursorPosition.segmentId, cursorPosition.offset);
+      setCursorPosition(null);
+      return;
+    } catch (error) {
+      console.error('Failed to split segment:', error);
+      return;
     }
-  }, [cursorPosition, currentSegments, activeSegmentId, documentId, splitSegmentBackend]);
+  }, [cursorPosition, currentSegments, activeSegmentId, documentId, splitSegmentBackend, currentTextContent, createSegmentsBulkBackend]);
 
   // Merge segment with previous segment
   const handleMergeWithPrevious = useCallback(
@@ -400,36 +452,35 @@ const OutlinerWorkspace: React.FC = () => {
     [documentId, updateSegmentBackend]
   );
 
-  // Segment annotations hook (handles title/author with BDRC search)
-  const segmentAnnotations = useSegmentAnnotations({
-    activeSegment,
-    activeSegmentId,
-    onUpdate: updateSegmentAnnotation,
-  });
-
-  // AI suggestions hook
-  const aiSuggestions = useAISuggestions({
-    activeSegment,
-    activeSegmentId,
-    documentId: documentId || undefined,
-    onUpdate: updateSegmentAnnotation,
-    onTitleChange: segmentAnnotations.onTitleChange,
-    onAuthorChange: segmentAnnotations.onAuthorChange,
-    onShowTitleDropdown: () => {}, // Handled internally by segmentAnnotations
-    onShowAuthorDropdown: () => {}, // Handled internally by segmentAnnotations
-  });
+  // Ref for AnnotationSidebar to access its methods
+  const annotationSidebarRef = useRef<AnnotationSidebarRef>(null);
 
   // Handle bubble menu selection
   const handleBubbleMenuSelect = useCallback(
     (field: 'title' | 'author', segmentId: string, text: string) => {
       if (!segmentId || !text) return;
 
-      // Update the segment annotation
-      updateSegmentAnnotation(segmentId, field, text);
+      // Store the pending value
+      pendingBubbleMenuValueRef.current = { field, segmentId, text };
+
+      // Activate the segment so sidebar shows it - update URL
+      setSearchParams({ segmentId }, { replace: true });
+      
+      // If the segment is already active, apply immediately
+      if (activeSegmentId === segmentId) {
+        requestAnimationFrame(() => {
+          if (field === 'title') {
+            annotationSidebarRef.current?.setTitleValueWithoutUpdate(text);
+          } else if (field === 'author') {
+            annotationSidebarRef.current?.setAuthorValueWithoutUpdate(text);
+          }
+          pendingBubbleMenuValueRef.current = null;
+        });
+      }
 
       setBubbleMenuState(null);
     },
-    [updateSegmentAnnotation]
+    [setSearchParams, activeSegmentId]
   );
 
   // Cleanup on unmount
@@ -487,10 +538,6 @@ const OutlinerWorkspace: React.FC = () => {
     const abortController = new AbortController();
     aiTextEndingAbortControllerRef.current = abortController;
 
-    // Store current segments for undo (capture current value)
-    const segmentsForUndo = [...currentSegments];
-    setPreviousSegments(segmentsForUndo);
-
     try {
       // Check if text contains Tibetan marker "༄༅༅"
       const tibetanMarker = '༄༅༅། །';
@@ -506,20 +553,9 @@ const OutlinerWorkspace: React.FC = () => {
           searchIndex = index + 1;
         }
 
-        // Always include position 0 as the first segment start
-        const startingPositions = [0, ...markerPositions].filter(
-          (pos, index, arr) => index === 0 || pos > arr[index - 1]
-        );
-
-        // Create segments from marker positions
-        const newSegments = createSegmentsFromPositions(startingPositions);
-
-        if (newSegments.length > 0) {
-          setSegments(newSegments);
-          setActiveSegmentId(newSegments[0].id);
-        } else {
-          throw new Error('No valid segments created from marker positions');
-        }
+        // Note: Marker-based segmentation should be handled by backend
+        // For now, this is a placeholder - backend should handle creating segments
+        console.warn('Marker-based segmentation requires backend support');
 
         aiTextEndingAbortControllerRef.current = null;
         return;
@@ -587,41 +623,24 @@ const OutlinerWorkspace: React.FC = () => {
           throw new Error('No valid segments created from AI detection');
         }
 
-        // Replace only the selected segment with the new segments in the currentSegments array
-        const newSegments = [...currentSegments];
-        newSegments.splice(segmentIndex, 1, ...newSegmentsFromSegment);
-
-        setSegments(newSegments);
-
-        // Set first new segment as active
+        // Note: Segment splitting should be handled by backend API
+        // For now, this is a placeholder - backend should handle the split
+        console.warn('AI detection on active segment requires backend support');
+        
+        // Set first new segment as active (if backend creates it)
         if (newSegmentsFromSegment.length > 0) {
-          setActiveSegmentId(newSegmentsFromSegment[0].id);
+          // Wait for backend to update, then set active segment
+          // This will be handled by query invalidation
         }
       } else {
-        // No active segment selected, apply to whole textContent (existing behavior)
-        const newSegments = createSegmentsFromPositions(starting_positions);
-
-        if (newSegments.length === 0) {
-          throw new Error('No valid segments created from AI detection');
-        }
-
-        // Update segments
-        setSegments(newSegments);
-
-        // Set first segment as active if available
-        if (newSegments.length > 0) {
-          setActiveSegmentId(newSegments[0].id);
-        }
+        // No active segment selected, apply to whole textContent
+        // Note: This should be handled by backend API
+        console.warn('AI detection requires backend support for creating segments');
       }
     } catch (error) {
       // Don't log error if it was aborted
       if (error instanceof Error && error.name !== 'AbortError') {
         console.error('Error detecting text endings:', error);
-        // Restore previous segments on error
-        if (previousSegments) {
-          setSegments(previousSegments);
-          setPreviousSegments(null);
-        }
       }
     } finally {
       // Only reset abort controller if this request wasn't aborted
@@ -629,7 +648,7 @@ const OutlinerWorkspace: React.FC = () => {
         aiTextEndingAbortControllerRef.current = null;
       }
     }
-  }, [currentTextContent, currentSegments, createSegmentsFromPositions, activeSegmentId, aiTextEndings, previousSegments]);
+  }, [currentTextContent, currentSegments, createSegmentsFromPositions, activeSegmentId, aiTextEndings, setSearchParams]);
 
   // Stop AI text ending detection request
   const handleAITextEndingStop = useCallback(() => {
@@ -642,86 +661,12 @@ const OutlinerWorkspace: React.FC = () => {
 
   // Undo AI text ending detection
   const handleUndoTextEndingDetection = useCallback(() => {
-    if (previousSegments) {
-      setSegments(previousSegments);
-      setPreviousSegments(null);
-      // Set first segment as active if available
-      if (previousSegments.length > 0) {
-        setActiveSegmentId(previousSegments[0].id);
-      }
-    }
-  }, [previousSegments]);
+    // Note: Undo functionality should be handled by backend
+    // For now, this is a placeholder
+    console.warn('Undo functionality requires backend support');
+  }, []);
 
-  // Save annotations with span information
-  const handleSave = useCallback(() => {
-    if (!currentTextContent || currentSegments.length === 0) {
-      return;
-    }
-
-    // Calculate span addresses for each segment
-    // Find each segment's text position in the original currentTextContent
-    let searchOffset = 0;
-    const annotations: Array<{
-      segmentId: string;
-      segmentIndex: number;
-      span: {
-        start: number;
-        end: number;
-      };
-      text: string;
-      metadata: {
-        title?: string;
-        author?: string;
-        title_bdrc_id?: string;
-        author_bdrc_id?: string;
-      };
-    }> = [];
-
-    currentSegments.forEach((segment, index) => {
-      const segmentText = segment.text;
-
-      // Try to find the segment text in the original currentTextContent
-      // Start searching from the previous segment's end position
-      const start = currentTextContent.indexOf(segmentText, searchOffset);
-      let end = start + segmentText.length;
-
-      // If not found, calculate based on cumulative length
-      if (start === -1) {
-        // Fallback: calculate based on previous segments
-        const previousEnd =
-          annotations.length > 0 ? annotations[annotations.length - 1].span.end : 0;
-        // Try to find a reasonable position by searching from beginning
-        const fallbackStart = currentTextContent.indexOf(segmentText, 0);
-        if (fallbackStart !== -1) {
-          end = fallbackStart + segmentText.length;
-          searchOffset = end;
-        } else {
-          // Last resort: use cumulative approximation
-          end = previousEnd + segmentText.length + 1; // +1 for potential newline
-          searchOffset = end;
-        }
-      } else {
-        searchOffset = end;
-      }
-
-      annotations.push({
-        segmentId: segment.id,
-        segmentIndex: index,
-        span: {
-          start: start !== -1 ? start : annotations.length > 0 ? annotations[annotations.length - 1].span.end + 1 : 0,
-          end: end,
-        },
-        text: segmentText,
-        metadata: {
-          ...(segment.title && { title: segment.title }),
-          ...(segment.author && { author: segment.author }),
-          ...(segment.title_bdrc_id && { title_bdrc_id: segment.title_bdrc_id }),
-          ...(segment.author_bdrc_id && { author_bdrc_id: segment.author_bdrc_id }),
-        },
-      });
-    });
-  }, [currentTextContent, currentSegments]);
-
+ 
   // Show loading state if document is loading
   if (isLoadingDocument && !documentId) {
     return (
@@ -746,21 +691,17 @@ const OutlinerWorkspace: React.FC = () => {
         textContent: currentTextContent,
         segments: currentSegments,
         activeSegmentId,
-        previousDataLastSegmentId,
         bubbleMenuState,
         cursorPosition,
         aiTextEndingLoading: aiTextEndings.isLoading,
-        previousSegments,
         segmentLoadingStates: segmentLoadingStates || new Map(),
-        workspaceRef: workspaceRef as React.RefObject<HTMLDivElement>,
-        segmentRefs,
         onFileUpload: () => {},
         onFileUploadToBackend: undefined,
         isUploading: isLoadingDocument || isSaving,
         onTextSelection: handleTextSelection,
         onSegmentClick: handleSegmentClick,
         onCursorChange: handleCursorChange,
-        onActivate: setActiveSegmentId,
+        onActivate: (segmentId: string) => setSearchParams({ segmentId }, { replace: true }),
         onInput: handleContentEditableInput,
         onKeyDown: handleContentEditableKeyDown,
         onAttachParent: handleAttachParent,
@@ -773,6 +714,8 @@ const OutlinerWorkspace: React.FC = () => {
         onLoadNewFile: () => {
           navigate('/outliner');
         },
+        onSegmentStatusUpdate: handleSegmentStatusUpdate,
+        onResetSegments: resetSegmentsBackend,
       }}
     >
       <div className="flex flex-col bg-gray-50" style={{ height: 'calc(100vh - 4rem)' }}>
@@ -780,33 +723,12 @@ const OutlinerWorkspace: React.FC = () => {
         <div className="flex-1 flex overflow-hidden">
           {/* Sidebar */}
           <AnnotationSidebar
+            ref={annotationSidebarRef}
             activeSegment={activeSegment}
             textContent={currentTextContent}
             segments={currentSegments}
-            onSave={handleSave}
-            titleValue={segmentAnnotations.titleSearch}
-            titleResults={segmentAnnotations.titleResults}
-            titleLoading={segmentAnnotations.titleLoading}
-            showTitleDropdown={segmentAnnotations.showTitleDropdown}
-            titleInputRef={segmentAnnotations.titleInputRef}
-            onTitleChange={segmentAnnotations.onTitleChange}
-            onTitleFocus={segmentAnnotations.onTitleFocus}
-            onTitleSelect={segmentAnnotations.onTitleSelect}
-            onTitleBdrcIdClear={segmentAnnotations.onTitleBdrcIdClear}
-            authorValue={segmentAnnotations.authorSearch}
-            authorResults={segmentAnnotations.authorResults}
-            authorLoading={segmentAnnotations.authorLoading}
-            showAuthorDropdown={segmentAnnotations.showAuthorDropdown}
-            authorInputRef={segmentAnnotations.authorInputRef}
-            onAuthorChange={segmentAnnotations.onAuthorChange}
-            onAuthorFocus={segmentAnnotations.onAuthorFocus}
-            onAuthorSelect={segmentAnnotations.onAuthorSelect}
-            onAuthorBdrcIdClear={segmentAnnotations.onAuthorBdrcIdClear}
-            aiSuggestions={aiSuggestions.aiSuggestions}
-            aiLoading={aiSuggestions.aiLoading}
-            onAIDetect={aiSuggestions.onAIDetect}
-            onAIStop={aiSuggestions.onAIStop}
-            onAISuggestionUse={aiSuggestions.onAISuggestionUse}
+            documentId={documentId || undefined}
+            onUpdate={updateSegmentAnnotation}
           />
 
           {/* Main Workspace */}

@@ -1,72 +1,137 @@
-import React from 'react';
+import { useImperativeHandle, forwardRef, useRef, useEffect, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
+import Emitter from '@/events';
 import type { TextSegment } from './types';
-import { TitleField } from './TitleField';
-import { AuthorField } from './AuthorField';
+import { TitleField, type TitleFieldRef } from './sidebarFields/TitleField';
+import { AuthorField, type AuthorFieldRef } from './sidebarFields/AuthorField';
 import { AISuggestionsBox } from './AISuggestionsBox';
+import { useAISuggestions } from '@/hooks/useAISuggestions';
 
 interface AnnotationSidebarProps {
   activeSegment: TextSegment | undefined;
   textContent: string;
   segments: TextSegment[];
-  onSave: () => void;
-  // Title field props
-  titleValue: string;
-  titleResults: Array<{ workId?: string; instanceId?: string; title?: string }>;
-  titleLoading: boolean;
-  showTitleDropdown: boolean;
-  titleInputRef: React.RefObject<HTMLInputElement | null>;
-  onTitleChange: (value: string) => void;
-  onTitleFocus: () => void;
-  onTitleSelect: (title: { workId?: string; instanceId?: string; title?: string }) => void;
-  onTitleBdrcIdClear: () => void;
-  // Author field props
-  authorValue: string;
-  authorResults: Array<{ bdrc_id?: string; name?: string }>;
-  authorLoading: boolean;
-  showAuthorDropdown: boolean;
-  authorInputRef: React.RefObject<HTMLInputElement | null>;
-  onAuthorChange: (value: string) => void;
-  onAuthorFocus: () => void;
-  onAuthorSelect: (author: { bdrc_id?: string; name?: string }) => void;
-  onAuthorBdrcIdClear: () => void;
-  // AI suggestions props
-  aiSuggestions: { title: string | null; suggested_title: string | null; author: string | null; suggested_author: string | null } | null;
-  aiLoading: boolean;
-  onAIDetect: () => void;
-  onAIStop: () => void;
-  onAISuggestionUse: (field: 'title' | 'author', value: string) => void;
+  documentId?: string;
+  onUpdate: (segmentId: string, field: 'title' | 'author' | 'title_bdrc_id' | 'author_bdrc_id', value: string) => Promise<void>;
 }
 
-export const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
+export interface Title{
+  name:string,
+  bdrc_id:string
+}
+
+export interface Author{
+  name:string,
+  bdrc_id:string
+}
+
+interface PendingChanges {
+  segmentId: string;
+  title?: Title;
+  author?: Author;
+}
+
+export interface FormDataType {
+  title: Title;
+  author: Author;
+}
+
+export interface AnnotationSidebarRef {
+  setTitleValueWithoutUpdate: (value: string) => void;
+  setAuthorValueWithoutUpdate: (value: string) => void;
+  getPendingChanges: () => PendingChanges[];
+}
+
+export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSidebarProps>(({
   activeSegment,
   textContent,
   segments,
-  onSave,
-  titleValue,
-  titleResults,
-  titleLoading,
-  showTitleDropdown,
-  titleInputRef,
-  onTitleChange,
-  onTitleFocus,
-  onTitleSelect,
-  onTitleBdrcIdClear,
-  authorValue,
-  authorResults,
-  authorLoading,
-  showAuthorDropdown,
-  authorInputRef,
-  onAuthorChange,
-  onAuthorFocus,
-  onAuthorSelect,
-  onAuthorBdrcIdClear,
-  aiSuggestions,
-  aiLoading,
-  onAIDetect,
-  onAIStop,
-  onAISuggestionUse,
-}) => {
+  documentId,
+}, ref) => {
+  const activeSegmentId = activeSegment?.id || null;
+
+  const [title, setTitle] = useState<Title>({name: '', bdrc_id: ''});
+  const [author, setAuthor] = useState<Author>({name: '', bdrc_id: ''});
+  // Form data that resets when segment changes
+  const [formData, setFormData] = useState<FormDataType>({ title: title, author: author });
+  
+  // Track pending changes per segment
+  const pendingChangesRef = useRef<Map<string, FormDataType>>(new Map());
+  
+  // Refs for field components
+  const titleFieldRef = useRef<TitleFieldRef>(null);
+  const authorFieldRef = useRef<AuthorFieldRef>(null);
+
+  // Reset formData when segment changes
+  useEffect(() => {
+    if (activeSegment) {
+      setTitle({name: activeSegment.title || '', bdrc_id: activeSegment.title_bdrc_id || ''});
+      setAuthor({name: activeSegment.author || '', bdrc_id: activeSegment.author_bdrc_id || ''});
+    }
+  }, [activeSegmentId, activeSegment]);
+
+  // Handle title update
+  const handleTitleUpdate = useCallback((value: string) => {
+    setFormData(prev => {
+      const updated = { ...prev, title: value };
+      if (activeSegmentId) {
+        const current = pendingChangesRef.current.get(activeSegmentId) || prev;
+        pendingChangesRef.current.set(activeSegmentId, { ...current, title: value });
+      }
+      return updated;
+    });
+  }, [activeSegmentId]);
+
+  // Handle author update
+  const handleAuthorUpdate = useCallback((value: string) => {
+    setFormData(prev => {
+      const updated = { ...prev, author: value };
+      if (activeSegmentId) {
+        const current = pendingChangesRef.current.get(activeSegmentId) || prev;
+        pendingChangesRef.current.set(activeSegmentId, { ...current, author: value });
+      }
+      return updated;
+    });
+  }, [activeSegmentId]);
+
+
+  // AI suggestions hook
+  const aiSuggestions = useAISuggestions({
+    activeSegment,
+    activeSegmentId,
+    documentId,
+    onUpdate,
+    onTitleChange: handleTitleUpdate,
+    onAuthorChange: handleAuthorUpdate,
+    onShowTitleDropdown: () => {},
+    onShowAuthorDropdown: () => {},
+  });
+  function onSave(){
+    console.log(title)
+    console.log(author)
+  }
+ 
+  function onUpdate( field: 'title' | 'author', value: Title | Author){
+    if(field === 'title'){
+    setFormData(prev => {
+      const updated = { ...prev, title: value };
+      return updated;
+    });
+  }else if(field === 'author'){
+    setFormData(prev => {
+      const updated = { ...prev, author: value };
+      return updated;
+    });
+  }
+  }
+  function resetForm(){
+    setTitle({name: '', bdrc_id: ''});
+    setAuthor({name: '', bdrc_id: ''});
+  }
+
+const isDisabled = 
+  (!formData.title?.name|| !formData.title?.bdrc_id || formData.author?.name|| !formData.author?.bdrc_id);
+console.log(isDisabled)
   return (
     <div className="w-96 bg-white border-r border-gray-200 flex flex-col font-monlam-2">
       <div className="p-6 overflow-y-auto flex-1">
@@ -81,37 +146,28 @@ export const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
             </div>
 
             <TitleField
+              ref={titleFieldRef}
               segment={activeSegment}
-              value={titleValue}
-              results={titleResults}
-              loading={titleLoading}
-              showDropdown={showTitleDropdown}
-              inputRef={titleInputRef}
-              onChange={onTitleChange}
-              onFocus={onTitleFocus}
-              onSelect={onTitleSelect}
-              onBdrcIdClear={onTitleBdrcIdClear}
+              activeSegmentId={activeSegmentId}
+              formData={formData}
+              onUpdate={onUpdate}
+              resetForm={resetForm}
             />
 
             <AuthorField
+              ref={authorFieldRef}
               segment={activeSegment}
-              value={authorValue}
-              results={authorResults}
-              loading={authorLoading}
-              showDropdown={showAuthorDropdown}
-              inputRef={authorInputRef}
-              onChange={onAuthorChange}
-              onFocus={onAuthorFocus}
-              onSelect={onAuthorSelect}
-              onBdrcIdClear={onAuthorBdrcIdClear}
+              formData={formData}
+              onUpdate={onUpdate}
+              resetForm={resetForm}
             />
 
             <AISuggestionsBox
-              suggestions={aiSuggestions}
-              loading={aiLoading}
-              onDetect={onAIDetect}
-              onStop={onAIStop}
-              onUseSuggestion={onAISuggestionUse}
+              suggestions={aiSuggestions.aiSuggestions}
+              loading={aiSuggestions.aiLoading}
+              onDetect={aiSuggestions.onAIDetect}
+              onStop={aiSuggestions.onAIStop}
+              onUseSuggestion={aiSuggestions.onAISuggestionUse}
             />
           </div>
         ) : (
@@ -127,7 +183,7 @@ export const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
         <Button
           type="button"
           onClick={onSave}
-          disabled={!textContent || segments.length === 0}
+          disabled={isDisabled}
           className="w-full"
           variant="default"
         >
@@ -136,4 +192,6 @@ export const AnnotationSidebar: React.FC<AnnotationSidebarProps> = ({
       </div>
     </div>
   );
-};
+});
+
+AnnotationSidebar.displayName = 'AnnotationSidebar';

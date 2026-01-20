@@ -13,7 +13,7 @@ router = APIRouter()
 # ==================== Pydantic Schemas ====================
 
 class SegmentCreate(BaseModel):
-    text: str
+    text: Optional[str] = None  # Optional - will be extracted from document if not provided
     segment_index: int
     span_start: int
     span_end: int
@@ -31,6 +31,8 @@ class SegmentUpdate(BaseModel):
     title_bdrc_id: Optional[str] = None
     author_bdrc_id: Optional[str] = None
     parent_segment_id: Optional[str] = None
+    is_attached: Optional[bool] = None
+    status: Optional[str] = None  # checked, unchecked
 
 
 class SegmentResponse(BaseModel):
@@ -45,6 +47,8 @@ class SegmentResponse(BaseModel):
     author_bdrc_id: Optional[str] = None
     parent_segment_id: Optional[str] = None
     is_annotated: bool
+    is_attached: Optional[bool] = None
+    status: Optional[str] = None  # checked, unchecked
     created_at: datetime
     updated_at: datetime
 
@@ -66,6 +70,7 @@ class DocumentResponse(BaseModel):
     total_segments: int
     annotated_segments: int
     progress_percentage: float
+    status: Optional[str] = None  # active, completed, deleted, approved, rejected
     created_at: datetime
     updated_at: datetime
     segments: List[SegmentResponse] = []
@@ -80,6 +85,9 @@ class DocumentListResponse(BaseModel):
     total_segments: int
     annotated_segments: int
     progress_percentage: float
+    checked_segments: int  # Number of checked segments
+    unchecked_segments: int  # Number of unchecked segments
+    status: Optional[str] = None  # active, completed, deleted, approved, rejected
     created_at: datetime
     updated_at: datetime
 
@@ -100,6 +108,13 @@ class SplitSegmentRequest(BaseModel):
 
 class MergeSegmentsRequest(BaseModel):
     segment_ids: List[str] = Field(..., min_items=2, description="IDs of segments to merge (in order)")
+
+
+class BulkSegmentOperationsRequest(BaseModel):
+    """Request model for bulk segment operations"""
+    create: Optional[List[SegmentCreate]] = Field(None, description="Segments to create")
+    update: Optional[List[dict]] = Field(None, description="List of dicts with 'id' and update fields")
+    delete: Optional[List[str]] = Field(None, description="Segment IDs to delete")
 
 
 # ==================== Helper Functions ====================
@@ -218,7 +233,34 @@ async def list_documents(
     if user_id:
         query = query.filter(OutlinerDocument.user_id == user_id)
     documents = query.order_by(OutlinerDocument.updated_at.desc()).offset(skip).limit(limit).all()
-    return documents
+    
+    # Calculate checked/unchecked segments for each document
+    result = []
+    for doc in documents:
+        checked = db.query(func.count(OutlinerSegment.id)).filter(
+            OutlinerSegment.document_id == doc.id,
+            OutlinerSegment.status == 'checked'
+        ).scalar() or 0
+        
+        unchecked = db.query(func.count(OutlinerSegment.id)).filter(
+            OutlinerSegment.document_id == doc.id,
+            OutlinerSegment.status == 'unchecked'
+        ).scalar() or 0
+        
+        result.append({
+            "id": doc.id,
+            "filename": doc.filename,
+            "total_segments": doc.total_segments,
+            "annotated_segments": doc.annotated_segments,
+            "progress_percentage": doc.progress_percentage,
+            "checked_segments": checked,
+            "unchecked_segments": unchecked,
+            "status": doc.status,
+            "created_at": doc.created_at,
+            "updated_at": doc.updated_at,
+        })
+    
+    return result
 
 
 @router.get("/documents/{document_id}", response_model=DocumentResponse)
@@ -288,10 +330,17 @@ async def create_segment(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
+    # Extract text from document content using span addresses if text not provided
+    segment_text = segment.text
+    if not segment_text:
+        if segment.span_start < 0 or segment.span_end > len(document.content):
+            raise HTTPException(status_code=400, detail="Invalid span addresses")
+        segment_text = document.content[segment.span_start:segment.span_end]
+    
     db_segment = OutlinerSegment(
         id=str(uuid.uuid4()),
         document_id=document_id,
-        text=segment.text,
+        text=segment_text,
         segment_index=segment.segment_index,
         span_start=segment.span_start,
         span_end=segment.span_end,
@@ -299,7 +348,8 @@ async def create_segment(
         author=segment.author,
         title_bdrc_id=segment.title_bdrc_id,
         author_bdrc_id=segment.author_bdrc_id,
-        parent_segment_id=segment.parent_segment_id
+        parent_segment_id=segment.parent_segment_id,
+        status='unchecked'  # Default to unchecked
     )
     db_segment.update_annotation_status()
     
@@ -323,10 +373,17 @@ async def create_segments_bulk(
     
     db_segments = []
     for segment in segments:
+        # Extract text from document content using span addresses if text not provided
+        segment_text = segment.text
+        if not segment_text:
+            if segment.span_start < 0 or segment.span_end > len(document.content):
+                raise HTTPException(status_code=400, detail=f"Invalid span addresses for segment at index {segment.segment_index}")
+            segment_text = document.content[segment.span_start:segment.span_end]
+        
         db_segment = OutlinerSegment(
             id=str(uuid.uuid4()),
             document_id=document_id,
-            text=segment.text,
+            text=segment_text,
             segment_index=segment.segment_index,
             span_start=segment.span_start,
             span_end=segment.span_end,
@@ -334,7 +391,8 @@ async def create_segments_bulk(
             author=segment.author,
             title_bdrc_id=segment.title_bdrc_id,
             author_bdrc_id=segment.author_bdrc_id,
-            parent_segment_id=segment.parent_segment_id
+            parent_segment_id=segment.parent_segment_id,
+            status='unchecked'  # Default to unchecked
         )
         db_segment.update_annotation_status()
         db_segments.append(db_segment)
@@ -397,6 +455,13 @@ async def update_segment(
         segment.author_bdrc_id = segment_update.author_bdrc_id
     if segment_update.parent_segment_id is not None:
         segment.parent_segment_id = segment_update.parent_segment_id
+    if segment_update.is_attached is not None:
+        segment.is_attached = segment_update.is_attached
+    if segment_update.status is not None:
+        # Validate status value
+        if segment_update.status not in ['checked', 'unchecked']:
+            raise HTTPException(status_code=400, detail="Status must be 'checked' or 'unchecked'")
+        segment.status = segment_update.status
     
     segment.update_annotation_status()
     segment.updated_at = datetime.utcnow()
@@ -441,6 +506,13 @@ async def update_segments_bulk(
             segment.author_bdrc_id = segment_update.author_bdrc_id
         if segment_update.parent_segment_id is not None:
             segment.parent_segment_id = segment_update.parent_segment_id
+        if segment_update.is_attached is not None:
+            segment.is_attached = segment_update.is_attached
+        if segment_update.status is not None:
+            # Validate status value
+            if segment_update.status not in ['checked', 'unchecked']:
+                continue  # Skip invalid status updates
+            segment.status = segment_update.status
         
         segment.update_annotation_status()
         segment.updated_at = datetime.utcnow()
@@ -495,7 +567,8 @@ async def split_segment(
                     span_end=len(document.content),
                     title=None,
                     author=None,
-                    parent_segment_id=None
+                    parent_segment_id=None,
+                    status='unchecked'  # Default to unchecked
                 )
                 initial_segment.update_annotation_status()
                 db.add(initial_segment)
@@ -533,7 +606,8 @@ async def split_segment(
         span_end=segment.span_end + len(text_after),
         title=None,
         author=None,
-        parent_segment_id=segment.parent_segment_id
+        parent_segment_id=segment.parent_segment_id,
+        status=segment.status or 'unchecked'  # Inherit status from original segment or default to unchecked
     )
     
     # Update segment indices for following segments
@@ -645,6 +719,244 @@ async def delete_segment(
     return None
 
 
+@router.post("/documents/{document_id}/segments/bulk-operations", response_model=List[SegmentResponse])
+async def bulk_segment_operations(
+    document_id: str,
+    operations: BulkSegmentOperationsRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Perform bulk operations on segments: create, update, and delete in a single transaction.
+    This is optimized for performance by batching all operations together.
+    """
+    # Verify document exists
+    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    result_segments = []
+    
+    # Process deletions first
+    if operations.delete:
+        segments_to_delete = db.query(OutlinerSegment).filter(
+            OutlinerSegment.id.in_(operations.delete),
+            OutlinerSegment.document_id == document_id
+        ).all()
+        
+        if len(segments_to_delete) != len(operations.delete):
+            found_ids = {seg.id for seg in segments_to_delete}
+            missing_ids = set(operations.delete) - found_ids
+            raise HTTPException(
+                status_code=404,
+                detail=f"Some segments not found: {list(missing_ids)}"
+            )
+        
+        # Get segment indices to update after deletion
+        deleted_indices = {seg.segment_index for seg in segments_to_delete}
+        max_deleted_index = max(deleted_indices) if deleted_indices else -1
+        
+        # Delete segments
+        for seg in segments_to_delete:
+            db.delete(seg)
+        
+        # Update indices of following segments
+        if max_deleted_index >= 0:
+            following_segments = db.query(OutlinerSegment).filter(
+                OutlinerSegment.document_id == document_id,
+                OutlinerSegment.segment_index > max_deleted_index
+            ).all()
+            
+            shift_amount = len(segments_to_delete)
+            for seg in following_segments:
+                seg.segment_index -= shift_amount
+    
+    # Process updates
+    if operations.update:
+        segment_updates = {update.get('id'): update for update in operations.update if 'id' in update}
+        segment_ids_to_update = list(segment_updates.keys())
+        
+        segments_to_update = db.query(OutlinerSegment).filter(
+            OutlinerSegment.id.in_(segment_ids_to_update),
+            OutlinerSegment.document_id == document_id
+        ).all()
+        
+        if len(segments_to_update) != len(segment_ids_to_update):
+            found_ids = {seg.id for seg in segments_to_update}
+            missing_ids = set(segment_ids_to_update) - found_ids
+            raise HTTPException(
+                status_code=404,
+                detail=f"Some segments not found for update: {list(missing_ids)}"
+            )
+        
+        for segment in segments_to_update:
+            update_data = segment_updates[segment.id]
+            
+            # Update fields if provided
+            if 'text' in update_data and update_data['text'] is not None:
+                segment.text = update_data['text']
+            if 'title' in update_data and update_data['title'] is not None:
+                segment.title = update_data['title']
+            if 'author' in update_data and update_data['author'] is not None:
+                segment.author = update_data['author']
+            if 'title_bdrc_id' in update_data and update_data['title_bdrc_id'] is not None:
+                segment.title_bdrc_id = update_data['title_bdrc_id']
+            if 'author_bdrc_id' in update_data and update_data['author_bdrc_id'] is not None:
+                segment.author_bdrc_id = update_data['author_bdrc_id']
+            if 'parent_segment_id' in update_data and update_data['parent_segment_id'] is not None:
+                segment.parent_segment_id = update_data['parent_segment_id']
+            if 'is_attached' in update_data and update_data['is_attached'] is not None:
+                segment.is_attached = update_data['is_attached']
+            if 'status' in update_data and update_data['status'] is not None:
+                if update_data['status'] not in ['checked', 'unchecked']:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Invalid status: {update_data['status']}. Must be 'checked' or 'unchecked'"
+                    )
+                segment.status = update_data['status']
+            if 'span_start' in update_data and update_data['span_start'] is not None:
+                segment.span_start = update_data['span_start']
+            if 'span_end' in update_data and update_data['span_end'] is not None:
+                segment.span_end = update_data['span_end']
+            if 'segment_index' in update_data and update_data['segment_index'] is not None:
+                segment.segment_index = update_data['segment_index']
+            
+            segment.update_annotation_status()
+            segment.updated_at = datetime.utcnow()
+            result_segments.append(segment)
+    
+    # Process creates
+    if operations.create:
+        # Get current max segment_index to ensure proper ordering
+        max_index = db.query(func.max(OutlinerSegment.segment_index)).filter(
+            OutlinerSegment.document_id == document_id
+        ).scalar() or -1
+        
+        new_segments = []
+        for idx, segment_data in enumerate(operations.create):
+            # If segment_index is not provided or needs adjustment, calculate it
+            segment_index = segment_data.segment_index if segment_data.segment_index is not None else max_index + idx + 1
+            
+            # Extract text from document content using span addresses if text not provided
+            segment_text = segment_data.text
+            if not segment_text:
+                if segment_data.span_start < 0 or segment_data.span_end > len(document.content):
+                    raise HTTPException(status_code=400, detail=f"Invalid span addresses for segment at index {segment_index}")
+                segment_text = document.content[segment_data.span_start:segment_data.span_end]
+            
+            db_segment = OutlinerSegment(
+                id=str(uuid.uuid4()),
+                document_id=document_id,
+                text=segment_text,
+                segment_index=segment_index,
+                span_start=segment_data.span_start,
+                span_end=segment_data.span_end,
+                title=segment_data.title,
+                author=segment_data.author,
+                title_bdrc_id=segment_data.title_bdrc_id,
+                author_bdrc_id=segment_data.author_bdrc_id,
+                parent_segment_id=segment_data.parent_segment_id,
+                status='unchecked'  # Default to unchecked
+            )
+            db_segment.update_annotation_status()
+            new_segments.append(db_segment)
+            db.add(db_segment)
+        
+        result_segments.extend(new_segments)
+    
+    # Update document progress
+    update_document_progress(db, document_id)
+    
+    # Commit all changes in a single transaction
+    db.commit()
+    
+    # Refresh all segments
+    for seg in result_segments:
+        db.refresh(seg)
+    
+    return result_segments
+
+
+@router.delete("/documents/{document_id}/segments/reset", status_code=204)
+async def reset_segments(
+    document_id: str,
+    db: Session = Depends(get_db)
+):
+    """Delete all segments for a document"""
+    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    # Delete all segments for this document
+    db.query(OutlinerSegment).filter(OutlinerSegment.document_id == document_id).delete()
+    
+    # Update document progress
+    update_document_progress(db, document_id)
+    db.commit()
+    return None
+
+
+class DocumentStatusUpdate(BaseModel):
+    status: str
+
+
+class SegmentStatusUpdate(BaseModel):
+    status: str
+
+
+@router.put("/documents/{document_id}/status")
+async def update_document_status(
+    document_id: str,
+    status_update: DocumentStatusUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update document status"""
+    status = status_update.status
+    # Validate status value
+    valid_statuses = ['active', 'completed', 'deleted', 'approved', 'rejected']
+    if status not in valid_statuses:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Status must be one of: {', '.join(valid_statuses)}"
+        )
+    
+    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    document.status = status
+    document.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(document)
+    
+    return {"message": "Document status updated", "document_id": document_id, "status": status}
+
+
+@router.put("/segments/{segment_id}/status")
+async def update_segment_status(
+    segment_id: str,
+    status_update: SegmentStatusUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update segment status (checked/unchecked)"""
+    status = status_update.status
+    # Validate status value
+    if status not in ['checked', 'unchecked']:
+        raise HTTPException(status_code=400, detail="Status must be 'checked' or 'unchecked'")
+    
+    segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
+    if not segment:
+        raise HTTPException(status_code=404, detail="Segment not found")
+    
+    segment.status = status
+    segment.updated_at = datetime.utcnow()
+    
+    update_document_progress(db, segment.document_id)
+    db.commit()
+    db.refresh(segment)
+    
+    return {"message": "Segment status updated", "segment_id": segment_id, "status": status}
+
+
 @router.get("/documents/{document_id}/progress")
 async def get_document_progress(
     document_id: str,
@@ -655,10 +967,23 @@ async def get_document_progress(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
+    # Count checked and unchecked segments
+    checked = db.query(func.count(OutlinerSegment.id)).filter(
+        OutlinerSegment.document_id == document_id,
+        OutlinerSegment.status == 'checked'
+    ).scalar()
+    
+    unchecked = db.query(func.count(OutlinerSegment.id)).filter(
+        OutlinerSegment.document_id == document_id,
+        OutlinerSegment.status == 'unchecked'
+    ).scalar()
+    
     return {
         "document_id": document_id,
         "total_segments": document.total_segments,
         "annotated_segments": document.annotated_segments,
+        "checked_segments": checked or 0,
+        "unchecked_segments": unchecked or 0,
         "progress_percentage": document.progress_percentage,
         "updated_at": document.updated_at
     }

@@ -62,7 +62,7 @@ export const useSegmentAnnotations = ({
       setTitleSearchQuery('');
       setAuthorSearchQuery('');
     }
-  }, [activeSegmentId]);
+  }, [activeSegmentId, activeSegment]);
 
   // Focus effects
   useEffect(() => {
@@ -95,14 +95,10 @@ export const useSegmentAnnotations = ({
         setTitleSearchQuery(value);
       }
       setShowTitleDropdown(value.length > 0);
-      if (activeSegmentId) {
-        onUpdate(activeSegmentId, 'title', value);
-        if (!value && activeSegment?.title_bdrc_id) {
-          onUpdate(activeSegmentId, 'title_bdrc_id', '');
-        }
-      }
+      // Don't update database automatically - only update local state
+      // Database update will happen when save button is clicked
     },
-    [activeSegmentId, activeSegment, onUpdate]
+    []
   );
 
   const handleAuthorChange = useCallback(
@@ -112,21 +108,23 @@ export const useSegmentAnnotations = ({
         setAuthorSearchQuery(value);
       }
       setShowAuthorDropdown(value.length > 0);
-      if (activeSegmentId) {
-        onUpdate(activeSegmentId, 'author', value);
-        if (!value && activeSegment?.author_bdrc_id) {
-          onUpdate(activeSegmentId, 'author_bdrc_id', '');
-        }
-      }
+      // Don't update database automatically - only update local state
+      // Database update will happen when save button is clicked
     },
-    [activeSegmentId, activeSegment, onUpdate]
+    []
   );
 
   const handleTitleSelect = useCallback(
     (title: { workId?: string; instanceId?: string; title?: string }) => {
       if (!activeSegmentId || !title.workId) return;
       isSelectingTitle.current = true;
+      // Update bdrc_id optimistically - this triggers database update
       onUpdate(activeSegmentId, 'title_bdrc_id', title.workId);
+      // Optionally update title text if provided, but don't trigger separate update
+      if (title.title) {
+        setTitleSearch(title.title);
+        setTitleSearchQuery(title.title);
+      }
       setShowTitleDropdown(false);
       setTimeout(() => {
         isSelectingTitle.current = false;
@@ -139,7 +137,13 @@ export const useSegmentAnnotations = ({
     (author: { bdrc_id?: string; name?: string }) => {
       if (!activeSegmentId || !author.bdrc_id) return;
       isSelectingAuthor.current = true;
+      // Update bdrc_id optimistically - this triggers database update
       onUpdate(activeSegmentId, 'author_bdrc_id', author.bdrc_id);
+      // Optionally update author text if provided, but don't trigger separate update
+      if (author.name) {
+        setAuthorSearch(author.name);
+        setAuthorSearchQuery(author.name);
+      }
       setShowAuthorDropdown(false);
       setTimeout(() => {
         isSelectingAuthor.current = false;
@@ -150,15 +154,36 @@ export const useSegmentAnnotations = ({
 
   const handleTitleBdrcIdClear = useCallback(() => {
     if (activeSegmentId) {
+      // Clear BDRC ID immediately (this is a metadata change)
       onUpdate(activeSegmentId, 'title_bdrc_id', '');
+      // Clear title text locally (will be saved when save button is clicked)
+      setTitleSearch('');
+      setTitleSearchQuery('');
     }
   }, [activeSegmentId, onUpdate]);
 
   const handleAuthorBdrcIdClear = useCallback(() => {
     if (activeSegmentId) {
+      // Clear BDRC ID immediately (this is a metadata change)
       onUpdate(activeSegmentId, 'author_bdrc_id', '');
+      // Clear author text locally (will be saved when save button is clicked)
+      setAuthorSearch('');
+      setAuthorSearchQuery('');
     }
   }, [activeSegmentId, onUpdate]);
+
+  // Method to set field value without triggering database update (for bubble menu)
+  const setTitleValueWithoutUpdate = useCallback((value: string) => {
+    setTitleSearch(value);
+    setTitleSearchQuery(value);
+    setShowTitleDropdown(value.length > 0);
+  }, []);
+
+  const setAuthorValueWithoutUpdate = useCallback((value: string) => {
+    setAuthorSearch(value);
+    setAuthorSearchQuery(value);
+    setShowAuthorDropdown(value.length > 0);
+  }, []);
 
   return {
     // Title
@@ -171,6 +196,7 @@ export const useSegmentAnnotations = ({
     onTitleFocus: () => setShowTitleDropdown(titleSearch.length > 0),
     onTitleSelect: handleTitleSelect,
     onTitleBdrcIdClear: handleTitleBdrcIdClear,
+    setTitleValueWithoutUpdate,
 
     // Author
     authorSearch,
@@ -182,5 +208,6 @@ export const useSegmentAnnotations = ({
     onAuthorFocus: () => setShowAuthorDropdown(authorSearch.length > 0),
     onAuthorSelect: handleAuthorSelect,
     onAuthorBdrcIdClear: handleAuthorBdrcIdClear,
+    setAuthorValueWithoutUpdate,
   };
 };

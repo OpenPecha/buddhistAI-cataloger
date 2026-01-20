@@ -10,16 +10,10 @@ interface OutlinerContextValue {
   textContent: string;
   segments: TextSegment[];
   activeSegmentId: string | null;
-  previousDataLastSegmentId: string;
   bubbleMenuState: BubbleMenuState | null;
   cursorPosition: CursorPosition | null;
   aiTextEndingLoading: boolean;
-  previousSegments: TextSegment[] | null;
   segmentLoadingStates: Map<string, boolean>; // Map of segmentId -> loading boolean
-  
-  // Refs
-  workspaceRef: React.RefObject<HTMLDivElement>;
-  segmentRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
   
   // Handlers
   onFileUpload: (content: string) => void;
@@ -39,6 +33,8 @@ interface OutlinerContextValue {
   onAITextEndingStop: () => void;
   onUndoTextEndingDetection: () => void;
   onLoadNewFile: () => void;
+  onSegmentStatusUpdate?: (segmentId: string, status: 'checked' | 'unchecked') => Promise<void>;
+  onResetSegments?: () => void;
 }
 
 const OutlinerContext = createContext<OutlinerContextValue | null>(null);

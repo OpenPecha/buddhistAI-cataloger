@@ -10,9 +10,13 @@ import {
   splitSegment as apiSplitSegment,
   mergeSegments as apiMergeSegments,
   updateOutlinerDocumentContent,
+  resetSegments as apiResetSegments,
+  bulkSegmentOperations as apiBulkSegmentOperations,
+  createSegmentsBulk as apiCreateSegmentsBulk,
   outlinerSegmentToTextSegment,
   type OutlinerDocument,
   type SegmentUpdateRequest,
+  type SegmentCreateRequest,
 } from '@/api/outliner';
 import type { TextSegment } from '@/components/outliner';
 import { toast } from 'sonner';
@@ -47,6 +51,7 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
     queryFn: () => getOutlinerDocument(documentId!, true),
     enabled: !!documentId,
     staleTime: 0, // Always refetch to get latest data
+    refetchInterval: false,
   });
 
   // Mutation for uploading document
@@ -151,20 +156,110 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
     },
   });
 
-  // Mutation for splitting segment - no optimistic updates, only update on success
+  // Mutation for splitting segment - optimistic updates with rollback on error
   const splitSegmentMutation = useMutation({
     mutationFn: ({ segmentId, splitPosition }: { segmentId: string; splitPosition: number }) =>
       apiSplitSegment(segmentId, splitPosition, documentId || undefined),
-    onMutate: async ({ segmentId }) => {
+    onMutate: async ({ segmentId, splitPosition }) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['outliner-document', documentId] });
+
+      // Snapshot the previous value for rollback
+      const previousDocument = queryClient.getQueryData<OutlinerDocument>([
+        'outliner-document',
+        documentId,
+      ]);
+
+      if (!previousDocument?.segments) {
+        return { previousDocument: previousDocument || null };
+      }
+
+      // Find the segment to split
+      const segmentToSplit = previousDocument.segments.find((seg) => seg.id === segmentId);
+      if (!segmentToSplit) {
+        return { previousDocument };
+      }
+
+      // Calculate split text
+      const textBefore = segmentToSplit.text.substring(0, splitPosition).trim();
+      const textAfter = segmentToSplit.text.substring(splitPosition).trim();
+
+      // Don't proceed if split would create empty segments
+      if (!textBefore || !textAfter) {
+        return { previousDocument };
+      }
+
+      // Create optimistic segments
+      const firstSegment = {
+        ...segmentToSplit,
+        text: textBefore,
+        span_end: segmentToSplit.span_start + textBefore.length,
+      };
+
+      // Generate temporary ID for second segment (will be replaced by server response)
+      const tempSecondSegmentId = `temp-${Date.now()}`;
+      const secondSegment = {
+        id: tempSecondSegmentId,
+        text: textAfter,
+        segment_index: segmentToSplit.segment_index + 1,
+        span_start: firstSegment.span_end,
+        span_end: firstSegment.span_end + textAfter.length,
+        title: null,
+        author: null,
+        title_bdrc_id: null,
+        author_bdrc_id: null,
+        parent_segment_id: segmentToSplit.parent_segment_id,
+        is_annotated: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // Update segments array: replace the split segment with two new segments
+      const segmentIndex = previousDocument.segments.findIndex((seg) => seg.id === segmentId);
+      const newSegments = [...previousDocument.segments];
+      
+      // Replace the original segment with first part, insert second part after it
+      newSegments.splice(segmentIndex, 1, firstSegment, secondSegment);
+      
+      // Update segment indices for following segments
+      for (let i = segmentIndex + 2; i < newSegments.length; i++) {
+        newSegments[i] = {
+          ...newSegments[i],
+          segment_index: newSegments[i].segment_index + 1,
+        };
+      }
+
+      // Optimistically update the query cache
+      const optimisticDocument: OutlinerDocument = {
+        ...previousDocument,
+        segments: newSegments,
+        total_segments: previousDocument.total_segments + 1,
+      };
+
+      queryClient.setQueryData<OutlinerDocument>(
+        ['outliner-document', documentId],
+        optimisticDocument
+      );
+
       // Set loading state for the segment being split
       setSegmentLoadingStates((prev) => {
         const newMap = new Map(prev);
         newMap.set(segmentId, true);
         return newMap;
       });
+
+      return { previousDocument };
     },
-    onError: (error: Error, variables) => {
-      // Remove loading state on error - don't update UI
+    onError: (error: Error, variables, context) => {
+      // Rollback to previous document state
+      if (context?.previousDocument) {
+        queryClient.setQueryData<OutlinerDocument>(
+          ['outliner-document', documentId],
+          context.previousDocument
+        );
+      }
+
+      // Remove loading state on error
       setSegmentLoadingStates((prev) => {
         const newMap = new Map(prev);
         newMap.delete(variables.segmentId);
@@ -179,7 +274,8 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
         newMap.delete(variables.segmentId);
         return newMap;
       });
-      // Only update UI on success
+      
+      // Refetch to ensure consistency with server state (in case server made different changes)
       queryClient.invalidateQueries({ queryKey: ['outliner-document', documentId] });
       toast.success('Segment split successfully');
     },
@@ -341,6 +437,184 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
     [updateContentMutation]
   );
 
+  // Reset segments handler - optimistic updates
+  const resetSegmentsMutation = useMutation({
+    mutationFn: () => apiResetSegments(documentId!),
+    onMutate: async () => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['outliner-document', documentId] });
+
+      // Snapshot the previous value for rollback
+      const previousDocument = queryClient.getQueryData<OutlinerDocument>([
+        'outliner-document',
+        documentId,
+      ]);
+
+      if (!previousDocument) {
+        return { previousDocument: null };
+      }
+
+      // Optimistically clear all segments
+      const optimisticDocument: OutlinerDocument = {
+        ...previousDocument,
+        segments: [],
+        total_segments: 0,
+        annotated_segments: 0,
+        progress_percentage: 0,
+      };
+
+      queryClient.setQueryData<OutlinerDocument>(
+        ['outliner-document', documentId],
+        optimisticDocument
+      );
+
+      return { previousDocument };
+    },
+    onError: (error: Error, _variables, context) => {
+      // Rollback to previous document state
+      if (context?.previousDocument) {
+        queryClient.setQueryData<OutlinerDocument>(
+          ['outliner-document', documentId],
+          context.previousDocument
+        );
+      }
+      toast.error(`Failed to reset segments: ${error.message}`);
+    },
+    onSuccess: () => {
+      // Refetch to ensure consistency with server state
+      queryClient.invalidateQueries({ queryKey: ['outliner-document', documentId] });
+      toast.success('Segments reset successfully');
+    },
+  });
+
+  const handleResetSegments = useCallback(async () => {
+    if (!documentId) return;
+    setIsSaving(true);
+    try {
+      await resetSegmentsMutation.mutateAsync();
+    } finally {
+      setIsSaving(false);
+    }
+  }, [documentId, resetSegmentsMutation]);
+
+  // Create segments bulk handler - optimistic updates
+  const createSegmentsBulkMutation = useMutation({
+    mutationFn: (segments: SegmentCreateRequest[]) =>
+      apiCreateSegmentsBulk(documentId!, segments),
+    onMutate: async (segments) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['outliner-document', documentId] });
+
+      // Snapshot the previous value for rollback
+      const previousDocument = queryClient.getQueryData<OutlinerDocument>([
+        'outliner-document',
+        documentId,
+      ]);
+
+      if (!previousDocument) {
+        return { previousDocument: null };
+      }
+
+      // Create optimistic segments with temporary IDs
+      const timestamp = Date.now();
+      const optimisticSegments = segments.map((seg, index) => ({
+        id: `temp-${timestamp}-${index}`,
+        text: seg.text || previousDocument.content.substring(seg.span_start, seg.span_end),
+        segment_index: seg.segment_index,
+        span_start: seg.span_start,
+        span_end: seg.span_end,
+        title: seg.title || null,
+        author: seg.author || null,
+        title_bdrc_id: seg.title_bdrc_id || null,
+        author_bdrc_id: seg.author_bdrc_id || null,
+        parent_segment_id: seg.parent_segment_id || null,
+        is_annotated: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }));
+
+      // Optimistically update the document with new segments
+      const optimisticDocument: OutlinerDocument = {
+        ...previousDocument,
+        segments: optimisticSegments,
+        total_segments: optimisticSegments.length,
+        annotated_segments: 0,
+        progress_percentage: 0,
+      };
+
+      queryClient.setQueryData<OutlinerDocument>(
+        ['outliner-document', documentId],
+        optimisticDocument
+      );
+
+      return { previousDocument };
+    },
+    onError: (error: Error, _variables, context) => {
+      // Rollback to previous document state
+      if (context?.previousDocument) {
+        queryClient.setQueryData<OutlinerDocument>(
+          ['outliner-document', documentId],
+          context.previousDocument
+        );
+      }
+      toast.error(`Failed to create segments: ${error.message}`);
+    },
+    onSuccess: (data) => {
+      // Refetch to ensure consistency with server state (server IDs will replace temp IDs)
+      queryClient.invalidateQueries({ queryKey: ['outliner-document', documentId] });
+      toast.success(`Created ${data.length} segment${data.length > 1 ? 's' : ''} successfully`);
+    },
+  });
+
+  const handleCreateSegmentsBulk = useCallback(
+    async (segments: SegmentCreateRequest[]) => {
+      if (!documentId) return;
+      setIsSaving(true);
+      try {
+        return await createSegmentsBulkMutation.mutateAsync(segments);
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [documentId, createSegmentsBulkMutation]
+  );
+
+  // Bulk segment operations handler
+  const bulkSegmentOperationsMutation = useMutation({
+    mutationFn: (operations: Parameters<typeof apiBulkSegmentOperations>[1]) =>
+      apiBulkSegmentOperations(documentId!, operations),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['outliner-document', documentId] });
+      const createdCount = variables.create?.length || 0;
+      const updatedCount = variables.update?.length || 0;
+      const deletedCount = variables.delete?.length || 0;
+      
+      if (createdCount > 0 || updatedCount > 0 || deletedCount > 0) {
+        const actions = [];
+        if (createdCount > 0) actions.push(`${createdCount} created`);
+        if (updatedCount > 0) actions.push(`${updatedCount} updated`);
+        if (deletedCount > 0) actions.push(`${deletedCount} deleted`);
+        toast.success(`Segments ${actions.join(', ')} successfully`);
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to perform bulk operations: ${error.message}`);
+    },
+  });
+
+  const handleBulkSegmentOperations = useCallback(
+    async (operations: Parameters<typeof apiBulkSegmentOperations>[1]) => {
+      if (!documentId) return;
+      setIsSaving(true);
+      try {
+        await bulkSegmentOperationsMutation.mutateAsync(operations);
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [documentId, bulkSegmentOperationsMutation]
+  );
+
   return {
     // Document data
     document,
@@ -360,6 +634,9 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
     splitSegment: handleSplitSegment,
     mergeSegments: handleMergeSegments,
     updateContent: handleUpdateContent,
+    resetSegments: handleResetSegments,
+    createSegmentsBulk: handleCreateSegmentsBulk,
+    bulkSegmentOperations: handleBulkSegmentOperations,
     refetchDocument: refetch,
   };
 };

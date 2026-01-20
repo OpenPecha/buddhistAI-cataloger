@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, Sparkles, Square } from 'lucide-react';
+import { Loader2, Sparkles, Square, RotateCcw } from 'lucide-react';
 
 interface WorkspaceHeaderConfig {
   segmentsCount: number;
@@ -13,6 +13,7 @@ interface WorkspaceHeaderActions {
   onAITextEndingStop: () => void;
   onUndoTextEndingDetection: () => void;
   onLoadNewFile: () => void;
+  onResetSegments?: () => void;
 }
 
 interface WorkspaceHeaderProps {
@@ -25,7 +26,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
   actions,
 }) => {
   const { segmentsCount, aiTextEndingLoading, hasPreviousSegments } = headerConfig;
-  const { onAIDetectTextEndings, onAITextEndingStop, onUndoTextEndingDetection, onLoadNewFile } = actions;
+  const { onAIDetectTextEndings, onAITextEndingStop, onUndoTextEndingDetection, onLoadNewFile, onResetSegments } = actions;
   return (
     <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
       <div>
@@ -73,6 +74,17 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
             title="Undo AI segmentation"
           >
             Undo
+          </Button>
+        )}
+        {onResetSegments && segmentsCount > 0 && (
+          <Button
+            variant="outline"
+            onClick={onResetSegments}  
+            className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+            title="Reset all segments"
+          >
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Reset Segments
           </Button>
         )}
         <Button variant="outline" onClick={onLoadNewFile}>

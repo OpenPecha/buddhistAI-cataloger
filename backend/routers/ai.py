@@ -1,4 +1,5 @@
 import os
+import re
 from google import genai
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -60,7 +61,7 @@ Provide all four fields (title, suggested_title, author, suggested_author) in th
 
         # Generate content with structured output using Pydantic schema
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-2.5-flash-lite",
             contents=prompt,
             config={
                 "response_mime_type": "application/json",
@@ -91,19 +92,94 @@ Provide all four fields (title, suggested_title, author, suggested_author) in th
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating title and author: {str(e)}")
 
+def detect_text_boundaries_rule_based(content: str) -> Optional[List[int]]:
+    """
+    Rule-based detection of text boundaries using regex patterns.
+    Returns list of starting positions if patterns are found, None otherwise.
+    """
+    # Define split markers matching the frontend patterns
+    split_markers = [
+        # Tibetan markers
+        {'pattern': '༄༅༅། །', 'type': 'string'},
+        {'pattern': '༄༅༅', 'type': 'string'},
+        {'pattern': r'༄༅༅[།\s]*', 'type': 'regex'},
+        
+        # Common chapter/section markers
+        {'pattern': r'\n\s*第[一二三四五六七八九十百千万]+[章节卷篇回]\s*', 'type': 'regex'},
+        {'pattern': r'\n\s*Chapter\s+\d+\s*[:-]?\s*', 'type': 'regex', 'flags': re.IGNORECASE},
+        {'pattern': r'\n\s*Section\s+\d+\s*[:-]?\s*', 'type': 'regex', 'flags': re.IGNORECASE},
+        
+        
+        # Sanskrit/Tibetan text boundaries
+        {'pattern': r'\n\s*[ༀ-༿]+\s*\n', 'type': 'regex'},
+    ]
+    
+    all_positions = set()
+    
+    # Check each marker pattern and collect all matching positions
+    for marker in split_markers:
+        positions = []
+        
+        if marker['type'] == 'string':
+            # Exact string match
+            pattern_str = marker['pattern']
+            search_index = 0
+            while True:
+                index = content.find(pattern_str, search_index)
+                if index == -1:
+                    break
+                positions.append(index)
+                search_index = index + 1
+        else:
+            # Regex match
+            flags = marker.get('flags', 0)
+            pattern = re.compile(marker['pattern'], flags)
+            for match in pattern.finditer(content):
+                positions.append(match.start())
+        
+        # Add all found positions
+        all_positions.update(positions)
+    
+    # If we found any patterns, return the starting positions
+    if all_positions:
+        # Convert to sorted list and ensure 0 is included
+        starting_positions = sorted(set(all_positions))
+        if not starting_positions or starting_positions[0] != 0:
+            starting_positions.insert(0, 0)
+        
+        # Remove duplicates and ensure we don't exceed text length
+        starting_positions = sorted(set(starting_positions))
+        text_length = len(content)
+        starting_positions = [pos for pos in starting_positions if pos <= text_length]
+        
+        return starting_positions
+    
+    return None
+
 @router.post("/detect-text-endings", response_model=TextEndingDetectionResponse)
 async def detect_text_endings(request: ContentRequest):
     """
     Detect text endings (sentence/paragraph boundaries) and return starting positions of each segment.
-    Uses Gemini to intelligently identify natural text boundaries.
+    First checks rule-based patterns, then uses Gemini if no patterns are found.
     """
-    if not GEMINI_API_KEY:
-        raise HTTPException(
-            status_code=500,
-            detail="GEMINI_API_KEY environment variable is not set"
-        )
-    
     try:
+        # First, try rule-based detection
+        rule_based_positions = detect_text_boundaries_rule_based(request.content)
+        
+        if rule_based_positions:
+            # Return rule-based results immediately
+            return TextEndingDetectionResponse(
+                starting_positions=rule_based_positions,
+                total_segments=len(rule_based_positions)
+            )
+        
+        # If no rule-based patterns found, proceed with AI detection
+        if not GEMINI_API_KEY:
+            raise HTTPException(
+                status_code=500,
+                detail="GEMINI_API_KEY environment variable is not set"
+            )
+    
         # Initialize the client
         client = genai.Client(api_key=GEMINI_API_KEY)
         
@@ -157,7 +233,7 @@ If the entire content is a single coherent text, return:
 
         # Generate content with structured output
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-2.5-flash-lite",
             contents=prompt,
             config={
                 "response_mime_type": "application/json",
@@ -166,7 +242,6 @@ If the entire content is a single coherent text, return:
         
         # Parse the response and calculate starting positions
         import json
-        import re
         if hasattr(response, 'text') and response.text:
             try:
                 # Try to parse as JSON object or array

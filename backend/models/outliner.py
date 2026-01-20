@@ -22,8 +22,8 @@ class OutlinerDocument(Base):
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    status: Mapped[str | None] = mapped_column(String, nullable=True) #  active ,completed, deleted ,approved , rejected
     
-    # Relationships
     segments: Mapped[list["OutlinerSegment"]] = relationship(
         "OutlinerSegment",
         back_populates="document",
@@ -68,7 +68,7 @@ class OutlinerSegment(Base):
         ForeignKey("outliner_segments.id", ondelete="SET NULL"),
         nullable=True
     )
-    
+    status: Mapped[str | None] = mapped_column(String, nullable=True) # checked, unchecked
     # Status tracking
     is_annotated: Mapped[bool] = mapped_column(default=False)  # Has title or author
     
@@ -76,6 +76,7 @@ class OutlinerSegment(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    is_attached: Mapped[bool] = mapped_column(default=False, nullable=True)  # Is attached to a parent segment
     # Relationships
     document: Mapped["OutlinerDocument"] = relationship("OutlinerDocument", back_populates="segments")
     parent_segment: Mapped["OutlinerSegment | None"] = relationship(

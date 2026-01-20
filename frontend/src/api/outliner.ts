@@ -16,6 +16,19 @@ export interface OutlinerDocument {
   segments?: OutlinerSegment[];
 }
 
+export interface OutlinerDocumentListItem {
+  id: string;
+  filename?: string | null;
+  total_segments: number;
+  annotated_segments: number;
+  progress_percentage: number;
+  checked_segments: number;
+  unchecked_segments: number;
+  status?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface OutlinerSegment {
   id: string;
   text: string;
@@ -28,6 +41,8 @@ export interface OutlinerSegment {
   author_bdrc_id?: string | null;
   parent_segment_id?: string | null;
   is_annotated: boolean;
+  is_attached?: boolean | null;
+  status?: string | null; // checked, unchecked
   created_at: string;
   updated_at: string;
 }
@@ -39,7 +54,7 @@ export interface DocumentCreateRequest {
 }
 
 export interface SegmentCreateRequest {
-  text: string;
+  text?: string; // Optional - backend will extract from document if not provided
   segment_index: number;
   span_start: number;
   span_end: number;
@@ -57,11 +72,19 @@ export interface SegmentUpdateRequest {
   title_bdrc_id?: string;
   author_bdrc_id?: string;
   parent_segment_id?: string;
+  is_attached?: boolean;
+  status?: string; // checked, unchecked
 }
 
 export interface BulkSegmentUpdateRequest {
   segments: SegmentUpdateRequest[];
   segment_ids: string[];
+}
+
+export interface BulkSegmentOperationsRequest {
+  create?: SegmentCreateRequest[];
+  update?: Array<{ id: string } & Partial<SegmentUpdateRequest & { span_start?: number; span_end?: number; segment_index?: number }>>;
+  delete?: string[];
 }
 
 export interface SplitSegmentRequest {
@@ -77,6 +100,8 @@ export interface DocumentProgress {
   document_id: string;
   total_segments: number;
   annotated_segments: number;
+  checked_segments: number;
+  unchecked_segments: number;
   progress_percentage: number;
   updated_at: string;
 }
@@ -185,7 +210,7 @@ export const listOutlinerDocuments = async (
   user_id?: string,
   skip: number = 0,
   limit: number = 100
-): Promise<OutlinerDocument[]> => {
+): Promise<OutlinerDocumentListItem[]> => {
   const params = new URLSearchParams();
   if (user_id) params.append('user_id', user_id);
   params.append('skip', skip.toString());
@@ -342,6 +367,61 @@ export const deleteSegment = async (segmentId: string): Promise<void> => {
   }
 };
 
+export const updateDocumentStatus = async (
+  documentId: string,
+  status: string
+): Promise<{ message: string; document_id: string; status: string }> => {
+  const response = await fetch(`${API_URL}/outliner/documents/${documentId}/status`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ status }),
+  });
+
+  return handleApiResponse(response);
+};
+
+export const updateSegmentStatus = async (
+  segmentId: string,
+  status: 'checked' | 'unchecked'
+): Promise<{ message: string; segment_id: string; status: string }> => {
+  const response = await fetch(`${API_URL}/outliner/segments/${segmentId}/status`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ status }),
+  });
+
+  return handleApiResponse(response);
+};
+
+export const bulkSegmentOperations = async (
+  documentId: string,
+  operations: BulkSegmentOperationsRequest
+): Promise<OutlinerSegment[]> => {
+  const response = await fetch(`${API_URL}/outliner/documents/${documentId}/segments/bulk-operations`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(operations),
+  });
+
+  return handleApiResponse(response);
+};
+
+export const resetSegments = async (documentId: string): Promise<void> => {
+  const response = await fetch(`${API_URL}/outliner/documents/${documentId}/segments/reset`, {
+    method: 'DELETE',
+  });
+
+  if (!response.ok) {
+    await handleApiResponse(response);
+  }
+};
+
 // ==================== AI Endpoints ====================
 
 export interface DetectTextEndingsRequest {
@@ -411,21 +491,24 @@ export const outlinerSegmentToTextSegment = (segment: OutlinerSegment): TextSegm
     title_bdrc_id: segment.title_bdrc_id || undefined,
     author_bdrc_id: segment.author_bdrc_id || undefined,
     parentSegmentId: segment.parent_segment_id || undefined,
+    is_attached: segment.is_attached ?? undefined,
+    status: segment.status || undefined,
   };
 };
 
 /**
  * Convert TextSegment to OutlinerSegment format for API
+ * Note: text is not included - backend will extract it from document using span addresses
  */
 export const textSegmentToOutlinerSegment = (
   segment: TextSegment,
-  documentId: string,
+  _documentId: string,
   index: number,
   spanStart: number,
   spanEnd: number
 ): SegmentCreateRequest => {
   return {
-    text: segment.text,
+    // text is omitted - backend extracts from document content using span_start/span_end
     segment_index: index,
     span_start: spanStart,
     span_end: spanEnd,

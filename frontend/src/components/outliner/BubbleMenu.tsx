@@ -1,7 +1,8 @@
 import React, { useRef, useEffect } from 'react';
+import Emitter from '@/events';
 import type { BubbleMenuProps } from './types';
 
-export const BubbleMenu: React.FC<BubbleMenuProps> = ({ position, onSelect, onClose }) => {
+export const BubbleMenu: React.FC<BubbleMenuProps> = ({ position, onSelect, onClose, selectedText }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -14,6 +15,20 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({ position, onSelect, onCl
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
+
+  const handleTitleSelect = () => {
+    if (selectedText) {
+      Emitter.emit('bubbleMenu:updateTitle', selectedText);
+    }
+    onSelect('title');
+  };
+
+  const handleAuthorSelect = () => {
+    if (selectedText) {
+      Emitter.emit('bubbleMenu:updateAuthor', selectedText);
+    }
+    onSelect('author');
+  };
 
   return (
     <div
@@ -28,13 +43,13 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({ position, onSelect, onCl
         Use selected text as:
       </div>
       <button
-        onClick={() => onSelect('title')}
+        onClick={handleTitleSelect}
         className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-md transition-colors"
       >
         📄 Title
       </button>
       <button
-        onClick={() => onSelect('author')}
+        onClick={handleAuthorSelect}
         className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-md transition-colors"
       >
         👤 Author
