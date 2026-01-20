@@ -43,15 +43,10 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
       inputRef.current?.focus();
     }
   );
-
-
-
-
-
   // Handle title selection from BDRC search
   const handleSelect = 
     (title: { workId?: string; instanceId?: string; title?: string }) => {
-   onUpdate('title', {name:title?.title || '', bdrc_id:title?.workId || ''})
+   onUpdate('title', {name: titleSearch|| '', bdrc_id:title?.workId || ''})
    inputRef.current?.blur();
     }
 

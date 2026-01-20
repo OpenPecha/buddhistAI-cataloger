@@ -6,13 +6,13 @@ import { TitleField, type TitleFieldRef } from './sidebarFields/TitleField';
 import { AuthorField, type AuthorFieldRef } from './sidebarFields/AuthorField';
 import { AISuggestionsBox } from './AISuggestionsBox';
 import { useAISuggestions } from '@/hooks/useAISuggestions';
+import { updateSegment } from '@/api/outliner';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface AnnotationSidebarProps {
   activeSegment: TextSegment | undefined;
-  textContent: string;
-  segments: TextSegment[];
   documentId?: string;
-  onUpdate: (segmentId: string, field: 'title' | 'author' | 'title_bdrc_id' | 'author_bdrc_id', value: string) => Promise<void>;
 }
 
 export interface Title{
@@ -44,17 +44,14 @@ export interface AnnotationSidebarRef {
 
 export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSidebarProps>(({
   activeSegment,
-  textContent,
-  segments,
   documentId,
 }, ref) => {
+  const queryClient = useQueryClient();
   const activeSegmentId = activeSegment?.id || null;
-
-  const [title, setTitle] = useState<Title>({name: '', bdrc_id: ''});
-  const [author, setAuthor] = useState<Author>({name: '', bdrc_id: ''});
+  const title = activeSegment?.title || '';
+  const author = activeSegment?.author || '';
   // Form data that resets when segment changes
-  const [formData, setFormData] = useState<FormDataType>({ title: title, author: author });
-  
+  const [formData, setFormData] = useState<FormDataType>({ title: {name: title, bdrc_id: ''}, author: {name: author, bdrc_id: ''}});
   // Track pending changes per segment
   const pendingChangesRef = useRef<Map<string, FormDataType>>(new Map());
   
@@ -65,18 +62,18 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   // Reset formData when segment changes
   useEffect(() => {
     if (activeSegment) {
-      setTitle({name: activeSegment.title || '', bdrc_id: activeSegment.title_bdrc_id || ''});
-      setAuthor({name: activeSegment.author || '', bdrc_id: activeSegment.author_bdrc_id || ''});
+      setFormData({ title: {name: title, bdrc_id: ''}, author: {name: author, bdrc_id: ''}});
     }
-  }, [activeSegmentId, activeSegment]);
+  }, [activeSegmentId]);
 
   // Handle title update
   const handleTitleUpdate = useCallback((value: string) => {
     setFormData(prev => {
-      const updated = { ...prev, title: value };
+      const updatedTitle: Title = { ...prev.title, name: value };
+      const updated = { ...prev, title: updatedTitle };
       if (activeSegmentId) {
         const current = pendingChangesRef.current.get(activeSegmentId) || prev;
-        pendingChangesRef.current.set(activeSegmentId, { ...current, title: value });
+        pendingChangesRef.current.set(activeSegmentId, { ...current, title: updatedTitle });
       }
       return updated;
     });
@@ -85,31 +82,105 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   // Handle author update
   const handleAuthorUpdate = useCallback((value: string) => {
     setFormData(prev => {
-      const updated = { ...prev, author: value };
+      const updatedAuthor: Author = { ...prev.author, name: value };
+      const updated = { ...prev, author: updatedAuthor };
       if (activeSegmentId) {
         const current = pendingChangesRef.current.get(activeSegmentId) || prev;
-        pendingChangesRef.current.set(activeSegmentId, { ...current, author: value });
+        pendingChangesRef.current.set(activeSegmentId, { ...current, author: updatedAuthor });
       }
       return updated;
     });
   }, [activeSegmentId]);
 
 
+  // Wrapper for AI suggestions to update formData
+  const handleAIUpdate = useCallback(async (
+    segmentId: string,
+    field: 'title' | 'author' | 'title_bdrc_id' | 'author_bdrc_id',
+    value: string
+  ) => {
+    if (field === 'title' || field === 'title_bdrc_id') {
+      setFormData(prev => {
+        const updatedTitle: Title = {
+          name: field === 'title' ? value : prev.title?.name || '',
+          bdrc_id: field === 'title_bdrc_id' ? value : prev.title?.bdrc_id || ''
+        };
+        return { ...prev, title: updatedTitle };
+      });
+    } else if (field === 'author' || field === 'author_bdrc_id') {
+      setFormData(prev => {
+        const updatedAuthor: Author = {
+          name: field === 'author' ? value : prev.author?.name || '',
+          bdrc_id: field === 'author_bdrc_id' ? value : prev.author?.bdrc_id || ''
+        };
+        return { ...prev, author: updatedAuthor };
+      });
+    }
+  }, []);
+
   // AI suggestions hook
   const aiSuggestions = useAISuggestions({
     activeSegment,
     activeSegmentId,
     documentId,
-    onUpdate,
+    onUpdate: handleAIUpdate,
     onTitleChange: handleTitleUpdate,
     onAuthorChange: handleAuthorUpdate,
     onShowTitleDropdown: () => {},
     onShowAuthorDropdown: () => {},
   });
-  function onSave(){
-    console.log(title)
-    console.log(author)
-  }
+  const onSave = useCallback(async () => {
+    // Validate that we have an active segment
+    if (!activeSegment || !activeSegmentId) {
+      toast.error('No segment selected');
+      return;
+    }
+
+    // Validate form data
+    const titleName = formData.title?.name?.trim() || '';
+    const authorName = formData.author?.name?.trim() || '';
+    
+    if (!titleName && !authorName) {
+      toast.error('Please provide at least a title or author');
+      return;
+    }
+
+    // Prepare update payload
+    const updatePayload: {
+      title?: string;
+      author?: string;
+      title_bdrc_id?: string;
+      author_bdrc_id?: string;
+    } = {};
+
+    if (titleName) {
+      updatePayload.title = titleName;
+      if (formData.title?.bdrc_id) {
+        updatePayload.title_bdrc_id = formData.title.bdrc_id;
+      }
+    }
+
+    if (authorName) {
+      updatePayload.author = authorName;
+      if (formData.author?.bdrc_id) {
+        updatePayload.author_bdrc_id = formData.author.bdrc_id;
+      }
+    }
+
+    // Make API call to update segment
+    try {
+      await updateSegment(activeSegmentId, updatePayload);
+      toast.success('Annotations saved successfully');
+      queryClient.invalidateQueries({ queryKey: ['outliner', 'document', documentId] });
+      // Clear pending changes for this segment
+      if (pendingChangesRef.current.has(activeSegmentId)) {
+        pendingChangesRef.current.delete(activeSegmentId);
+      }
+    } catch (error) {
+      console.error('Failed to save annotations:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to save annotations');
+    }
+  }, [activeSegment, activeSegmentId, formData]);
  
   function onUpdate( field: 'title' | 'author', value: Title | Author){
     if(field === 'title'){
@@ -125,13 +196,9 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   }
   }
   function resetForm(){
-    setTitle({name: '', bdrc_id: ''});
-    setAuthor({name: '', bdrc_id: ''});
+    setFormData({ title: {name: '', bdrc_id: ''}, author: {name: '', bdrc_id: ''}});
   }
 
-const isDisabled = 
-  (!formData.title?.name|| !formData.title?.bdrc_id || formData.author?.name|| !formData.author?.bdrc_id);
-console.log(isDisabled)
   return (
     <div className="w-96 bg-white border-r border-gray-200 flex flex-col font-monlam-2">
       <div className="p-6 overflow-y-auto flex-1">
@@ -183,7 +250,6 @@ console.log(isDisabled)
         <Button
           type="button"
           onClick={onSave}
-          disabled={isDisabled}
           className="w-full"
           variant="default"
         >
