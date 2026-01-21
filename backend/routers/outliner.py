@@ -83,6 +83,7 @@ class DocumentResponse(BaseModel):
 class DocumentListResponse(BaseModel):
     id: str
     filename: Optional[str] = None
+    user_id: Optional[str] = None
     total_segments: int
     annotated_segments: int
     progress_percentage: float
@@ -117,6 +118,16 @@ class BulkSegmentOperationsRequest(BaseModel):
     update: Optional[List[dict]] = Field(None, description="List of dicts with 'id' and update fields")
     delete: Optional[List[str]] = Field(None, description="Segment IDs to delete")
 
+
+import re
+
+def remove_escape_chars_except_newline(text: str) -> str:
+    """
+    Removes all ASCII control characters except newline (\n).
+    """
+    # ASCII control chars: 0x00–0x1F and 0x7F
+    # Keep \n (0x0A)
+    return re.sub(r'[\x00-\x09\x0B-\x1F\x7F]', '', text)
 
 # ==================== Helper Functions ====================
 
@@ -255,7 +266,8 @@ async def upload_document(
         try:
             file_content = await file.read()
             if file_content:
-                text_content = file_content.decode('utf-8')
+                text_content_temp = file_content.decode('utf-8')
+                text_content = remove_escape_chars_except_newline(text_content_temp)
                 document_filename = file.filename
         except Exception as e:
             # Log the error for debugging but continue to check content field
@@ -300,12 +312,28 @@ async def list_documents(
     user_id: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
+    include_deleted: bool = False,
     db: Session = Depends(get_db)
 ):
-    """List all outliner documents, optionally filtered by user"""
+    """
+    List all outliner documents, optionally filtered by user and deletion status.
+    
+    Args:
+        user_id: Filter documents by user ID
+        skip: Number of documents to skip (pagination)
+        limit: Maximum number of documents to return
+        include_deleted: If False (default), exclude deleted documents. If True, include all documents.
+    """
     query = db.query(OutlinerDocument)
     if user_id:
         query = query.filter(OutlinerDocument.user_id == user_id)
+    
+    # Filter out deleted documents by default
+    if not include_deleted:
+        query = query.filter(
+            (OutlinerDocument.status != 'deleted') | (OutlinerDocument.status.is_(None))
+        )
+    
     documents = query.order_by(OutlinerDocument.updated_at.desc()).offset(skip).limit(limit).all()
     
     # Calculate checked/unchecked segments for each document
@@ -324,6 +352,7 @@ async def list_documents(
         result.append({
             "id": doc.id,
             "filename": doc.filename,
+            "user_id": doc.user_id,
             "total_segments": doc.total_segments,
             "annotated_segments": doc.annotated_segments,
             "progress_percentage": doc.progress_percentage,
@@ -687,18 +716,26 @@ async def split_segment(
         else:
             raise HTTPException(status_code=404, detail="Segment not found")
     
-    if split_request.split_position < 0 or split_request.split_position >= len(segment.text):
+    # IMPORTANT: Do not strip/trim. Document content (and spans) must preserve whitespace/newlines exactly.
+    # split_position is a character offset within segment.text.
+    if split_request.split_position <= 0 or split_request.split_position >= len(segment.text):
         raise HTTPException(status_code=400, detail="Invalid split position")
+
+    old_span_start = segment.span_start
+    old_span_end = segment.span_end
+    new_first_span_end = old_span_start + split_request.split_position
+
+    # Safety check: split position must fall within the segment span
+    if new_first_span_end < old_span_start or new_first_span_end > old_span_end:
+        raise HTTPException(status_code=400, detail="Invalid split position for segment span")
+
+    text_before = segment.text[:split_request.split_position]
+    text_after = segment.text[split_request.split_position:]
+
     
-    text_before = segment.text[:split_request.split_position].strip()
-    text_after = segment.text[split_request.split_position:].strip()
-    
-    if not text_before or not text_after:
-        raise HTTPException(status_code=400, detail="Split would create empty segment")
-    
-    # Update first segment
+    # Update first segment (preserve whitespace/newlines; update span_end using split_position)
     segment.text = text_before
-    segment.span_end = segment.span_start + len(text_before)
+    segment.span_end = new_first_span_end
     segment.update_annotation_status()
     
     # Create second segment
@@ -707,12 +744,12 @@ async def split_segment(
         document_id=segment.document_id,
         text=text_after,
         segment_index=segment.segment_index + 1,
-        span_start=segment.span_end,
-        span_end=segment.span_end + len(text_after),
+        span_start=new_first_span_end,
+        span_end=old_span_end,
         title=None,
         author=None,
         parent_segment_id=segment.parent_segment_id,
-        status=segment.status or 'unchecked'  # Inherit status from original segment or default to unchecked
+        status=segment.status or 'unchecked'
     )
     
     # Update segment indices for following segments
@@ -1012,9 +1049,16 @@ class SegmentStatusUpdate(BaseModel):
 async def update_document_status(
     document_id: str,
     status_update: DocumentStatusUpdate,
+    user_id: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """Update document status"""
+    """
+    Update document status.
+    
+    When restoring a deleted document (changing status from 'deleted' to 'active'),
+    the user_id parameter must be provided and must match the document's user_id
+    to ensure only the document owner can restore it.
+    """
     status = status_update.status
     # Validate status value
     valid_statuses = ['active', 'completed', 'deleted', 'approved', 'rejected']
@@ -1027,6 +1071,19 @@ async def update_document_status(
     document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
+    
+    # If restoring a deleted document (changing to 'active'), verify ownership
+    if document.status == 'deleted' and status == 'active':
+        if not user_id:
+            raise HTTPException(
+                status_code=400,
+                detail="user_id parameter is required to restore a deleted document"
+            )
+        if document.user_id != user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="You can only restore documents that belong to you"
+            )
     
     document.status = status
     document.updated_at = datetime.utcnow()

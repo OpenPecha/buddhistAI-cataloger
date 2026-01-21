@@ -59,7 +59,9 @@ html[lang="en"] label {
     }
   }
   
-
+  .scroll-container {
+    overflow-anchor: none;
+  }
   .cm-editor div {
     font-family: 'noto', sans-serif !important;
     line-height: 2;

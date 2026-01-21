@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
 import { OutlinerFileUploadZone } from '@/components/outliner/OutlinerFileUploadZone';
 import { listOutlinerDocuments, updateDocumentStatus, type OutlinerDocumentListItem } from '@/api/outliner';
@@ -14,7 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { FileText, Upload, Calendar, BarChart3, Trash2 } from 'lucide-react';
+import { FileText, Upload, Calendar, BarChart3, Trash2, RotateCcw, Filter } from 'lucide-react';
 
 // Simple modal implementation
 function Modal({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
@@ -39,25 +40,41 @@ const OutlinerUpload: React.FC = () => {
   const { user } = useAuth0();
   const navigate = useNavigate();
   const [showUpload, setShowUpload] = useState(false);
+  const [showDeleted, setShowDeleted] = useState(false);
   const { uploadFile, isLoading } = useOutlinerDocument();
   const queryClient = useQueryClient();
 
-  // Fetch documents list
+  // Fetch documents list with optional deleted filter
   const { data: documents = [], isLoading: isLoadingDocuments, refetch } = useQuery<OutlinerDocumentListItem[]>({
-    queryKey: ['outliner-documents', user?.sub],
-    queryFn: () => listOutlinerDocuments(user?.sub),
+    queryKey: ['outliner-documents', user?.sub, showDeleted],
+    queryFn: () => listOutlinerDocuments(user?.sub, 0, 100, showDeleted),
     enabled: !!user?.sub,
   });
 
-  // Filter out deleted documents
-  const activeDocuments = documents.filter(doc => doc.status !== 'deleted');
+  // Filter documents based on current view
+  const displayedDocuments = showDeleted
+    ? documents.filter(doc => doc.status === 'deleted')
+    : documents.filter(doc => doc.status !== 'deleted');
 
   // Delete document mutation
   const deleteDocumentMutation = useMutation({
-    mutationFn: (documentId: string) => updateDocumentStatus(documentId, 'deleted'),
+    mutationFn: (documentId: string) => updateDocumentStatus(documentId, 'deleted', user?.sub),
     onSuccess: () => {
       // Refetch documents list after deletion
       queryClient.invalidateQueries({ queryKey: ['outliner-documents', user?.sub] });
+    },
+  });
+
+  // Restore document mutation
+  const restoreDocumentMutation = useMutation({
+    mutationFn: (documentId: string) => updateDocumentStatus(documentId, 'active', user?.sub),
+    onSuccess: () => {
+      // Refetch documents list after restoration
+      queryClient.invalidateQueries({ queryKey: ['outliner-documents', user?.sub] });
+      toast.success('Document restored successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to restore document');
     },
   });
 
@@ -77,6 +94,11 @@ const OutlinerUpload: React.FC = () => {
     if (globalThis.confirm('Are you sure you want to delete this document?')) {
       await deleteDocumentMutation.mutateAsync(documentId);
     }
+  };
+
+  const handleRestoreClick = async (e: React.MouseEvent, documentId: string) => {
+    e.stopPropagation(); // Prevent row click
+    await restoreDocumentMutation.mutateAsync(documentId);
   };
 
   const formatDate = (dateString: string) => {
@@ -99,13 +121,23 @@ const OutlinerUpload: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Outliner Documents</h1>
             <p className="text-gray-600">Manage your text documents and annotations</p>
           </div>
-          <Button
-            onClick={() => setShowUpload(true)}
-            className="flex items-center gap-2"
-          >
-            <Upload className="w-4 h-4" />
-            Upload New
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              onClick={() => setShowDeleted(!showDeleted)}
+              variant={showDeleted ? "default" : "outline"}
+              className="flex items-center gap-2"
+            >
+              <Filter className="w-4 h-4" />
+              {showDeleted ? 'Show Active' : 'Show Deleted'}
+            </Button>
+            <Button
+              onClick={() => setShowUpload(true)}
+              className="flex items-center gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              Upload New
+            </Button>
+          </div>
         </div>
 
         {/* Modal for Upload */}
@@ -128,21 +160,29 @@ const OutlinerUpload: React.FC = () => {
             </div>
           </div>
         )}
-        {!isLoadingDocuments && activeDocuments.length === 0 && (
+        {!isLoadingDocuments && displayedDocuments.length === 0 && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
             <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">No documents yet</h2>
-            <p className="text-gray-600 mb-6">Get started by uploading your first document</p>
-            <Button
-              onClick={() => setShowUpload(true)}
-              className="flex items-center gap-2 mx-auto"
-            >
-              <Upload className="w-4 h-4" />
-              Upload Your First Document
-            </Button>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              {showDeleted ? 'No deleted documents' : 'No documents yet'}
+            </h2>
+            <p className="text-gray-600 mb-6">
+              {showDeleted 
+                ? 'You don\'t have any deleted documents' 
+                : 'Get started by uploading your first document'}
+            </p>
+            {!showDeleted && (
+              <Button
+                onClick={() => setShowUpload(true)}
+                className="flex items-center gap-2 mx-auto"
+              >
+                <Upload className="w-4 h-4" />
+                Upload Your First Document
+              </Button>
+            )}
           </div>
         )}
-        {!isLoadingDocuments && activeDocuments.length > 0 && (
+        {!isLoadingDocuments && displayedDocuments.length > 0 && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <Table>
               <TableHeader>
@@ -155,11 +195,19 @@ const OutlinerUpload: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {activeDocuments.map((doc) => (
+                {displayedDocuments.map((doc) => {
+                  const isDeleted = doc.status === 'deleted';
+                  const isOwner = doc.user_id === user?.sub || !doc.user_id;
+                  
+                  return (
                   <TableRow
                     key={doc.id}
-                    onClick={() => handleDocumentClick(doc.id)}
-                    className="cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={() => {
+                      if (!isDeleted) {
+                        handleDocumentClick(doc.id);
+                      }
+                    }}
+                    className={`${isDeleted ? 'opacity-60' : 'cursor-pointer hover:bg-gray-50'} transition-colors`}
                   >
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -212,18 +260,35 @@ const OutlinerUpload: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={(e) => handleDeleteClick(e, doc.id)}
-                        disabled={deleteDocumentMutation.isPending}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        {isDeleted && isOwner && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={(e) => handleRestoreClick(e, doc.id)}
+                            disabled={restoreDocumentMutation.isPending}
+                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                            title="Restore document"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {!isDeleted && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={(e) => handleDeleteClick(e, doc.id)}
+                            disabled={deleteDocumentMutation.isPending}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            title="Delete document"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                )})}
               </TableBody>
             </Table>
           </div>

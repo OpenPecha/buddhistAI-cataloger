@@ -1,11 +1,10 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { List, useDynamicRowHeight, type RowComponentProps } from "react-window";
+import { useDebouncedState } from "@tanstack/react-pacer";
 
-import FileUploadZone from '@/components/textCreation/FileUploadZone';
-import { OutlinerFileUploadZone } from './OutlinerFileUploadZone';
 import { BubbleMenu } from './BubbleMenu';
 import { SplitMenu } from './SplitMenu';
-import { SegmentItem } from './SegmentItem';
+import { SegmentItemMemo as SegmentItem } from './SegmentItem';
 import { WorkspaceHeader } from './WorkspaceHeader';
 import { ContentDisplay } from './ContentDisplay';
 import { useOutliner } from './OutlinerContext';
@@ -38,8 +37,9 @@ const Row = ({ index, style, ...rowData }: RowComponentProps<RowData>) => {
   const rowRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
- 
-
+  const splitter = useCallback(() => {
+    onSplitSegment();
+  }, [onSplitSegment]);
 
   if (!segment) return null;
 
@@ -52,7 +52,6 @@ const Row = ({ index, style, ...rowData }: RowComponentProps<RowData>) => {
     ...style,
     width: '100%',
   };
-
   return (
     <div style={rowStyle} ref={rowRef} className="px-6">
       <div ref={contentRef} className="relative">
@@ -74,7 +73,7 @@ const Row = ({ index, style, ...rowData }: RowComponentProps<RowData>) => {
             <SplitMenu
               position={cursorPosition.menuPosition}
               segmentId={segment.id}
-              onSplit={onSplitSegment}
+              onSplit={splitter}
               onCancel={() => onMergeWithPrevious(segment.id)}
               onClose={() => {}}
             />
@@ -119,7 +118,6 @@ export const Workspace: React.FC = () => {
     onInput,
     onKeyDown,
   } = useOutliner();
-
   const containerRef = useRef<HTMLDivElement>(null);
   const parentContainerRef = useRef<HTMLDivElement>(null);
   const [containerHeight] = React.useState(() => {
@@ -134,16 +132,53 @@ export const Workspace: React.FC = () => {
     defaultRowHeight: 50
   });
 
+  // Save scroll position immediately when split happens, debounced value for restoration
+  const scrollPositionRef = useRef<number | null>(null);
+  const [shouldRestoreScroll, setShouldRestoreScroll] = useDebouncedState<boolean>(
+    false,
+    { wait: 100 }
+  );
+  // Track previous segments count to detect when split completes
+  const prevSegmentsCountRef = useRef(segments.length);
+  const segmentsCountChanged = prevSegmentsCountRef.current !== segments.length;
+
+  // Save scroll position when split is triggered
+  const handleSplitSegmentWithScrollSave = useCallback(() => {
+    if (containerRef.current) {
+      console.log('scroll position',scrollPositionRef.current);
+      setShouldRestoreScroll(true);
+    }
+    onSplitSegment();
+  }, [onSplitSegment, setShouldRestoreScroll]);
+
+  // Restore scroll position after segments update (split completes)
+  useEffect(() => {
+      // Use requestAnimationFrame to ensure DOM has updated
+      setTimeout(() => {  
+        if (containerRef.current) {
+          containerRef.current.scrollBy(0, scrollPositionRef.current);
+          // Clear saved position after restoring
+          scrollPositionRef.current = null;
+          setShouldRestoreScroll(false);
+        }
+      }, 100);
+        
+    prevSegmentsCountRef.current = segments.length;
+  }, [segments.length, segmentsCountChanged, shouldRestoreScroll, setShouldRestoreScroll]);
+
     const rowProps: RowData = {
     segments,
     activeSegmentId,
     cursorPosition,
     bubbleMenuState,
     segmentLoadingStates,
-    onSplitSegment,
+    onSplitSegment: handleSplitSegmentWithScrollSave,
     onMergeWithPrevious,
     onBubbleMenuSelect,
   };
+
+  
+
 
   if (isUploading) {
     return (
@@ -155,7 +190,6 @@ export const Workspace: React.FC = () => {
       </div>
     );
   }
-
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
         <div ref={parentContainerRef} className="flex-1 flex flex-col overflow-hidden">
@@ -175,27 +209,84 @@ export const Workspace: React.FC = () => {
             }}
           />
 
-          {/* Text Display - Virtualized */}
+          {/* Text Display - Virtualized or Direct Rendering */}
           <div
             ref={containerRef}
-            className="flex-1 bg-white relative overflow-auto"
+            className="flex-1 bg-white relative overflow-auto scroll-container"
             onClick={onTextSelection}
             style={{ minHeight: 0 }}
+            onScroll={(e) => {
+              scrollPositionRef.current = e.target.scrollTop;
+            }}
             aria-label="Text workspace content area"
             role="section"
           >
-            {segments.length > 0 && containerHeight > 0 ? (
-              <List
-                rowComponent={Row as any}
-                rowProps={rowProps}
-                rowHeight={rowHeight}
-                height={containerHeight}
-                rowCount={segments.length}
-                width="100%"
-                className="scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
-                overscanCount={3}
-              />
-            ) : segments.length === 0 && textContent ? (
+            {segments.length > 0 ? 
+              // segments.length > 100 && containerHeight > 0 ? (
+                // Use react-window for large lists (>100 segments)
+                // <List
+                //   rowComponent={Row as any}
+                //   rowProps={rowProps}
+                //   rowHeight={rowHeight}
+                //   style={{ height: containerHeight }}
+                //   rowCount={segments.length}
+                //   className="scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+                //   overscanCount={5}
+
+                //   />
+              // ) : (
+                // Direct rendering for smaller lists (<=100 segments)
+                <div className="scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                  {segments.map((segment, index) => {
+                    const isFirstSegment = index === 0;
+                    const isAttached = isFirstSegment && (segment.is_attached ?? false);
+                    const isActive = segment.id === activeSegmentId;
+                    
+                    return (
+                      <div key={segment.id} className="px-6">
+                        <div className="relative">
+                          <SegmentItem
+                            segment={segment}
+                            segmentConfig={{
+                              index,
+                              isActive,
+                              isFirstSegment,
+                              isAttached,
+                            }}
+                            cursorPosition={cursorPosition}
+                          />
+
+                          {/* Split Menu */}
+                          {cursorPosition &&
+                            cursorPosition.segmentId === segment.id &&
+                            cursorPosition.menuPosition && (
+                              <SplitMenu
+                                position={cursorPosition.menuPosition}
+                                segmentId={segment.id}
+                                onSplit={handleSplitSegmentWithScrollSave}
+                                onCancel={() => onMergeWithPrevious(segment.id)}
+                                onClose={() => {}}
+                              />
+                            )}
+
+                          {/* Bubble Menu */}
+                          {bubbleMenuState && bubbleMenuState.segmentId === segment.id && (
+                            <BubbleMenu
+                              position={bubbleMenuState.position}
+                              selectedText={bubbleMenuState.selectedText}
+                              onSelect={(field) =>
+                                onBubbleMenuSelect(field, segment.id, bubbleMenuState.selectedText)
+                              }
+                              onClose={() => {}}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              
+             : segments.length === 0 && textContent ? (
               <div className="relative">
                 <ContentDisplay
                   text={textContent}
@@ -213,7 +304,7 @@ export const Workspace: React.FC = () => {
                     <SplitMenu
                       position={cursorPosition.menuPosition}
                       segmentId="content-no-segments"
-                      onSplit={onSplitSegment}
+                      onSplit={handleSplitSegmentWithScrollSave}
                       onCancel={() => {}}
                       onClose={() => {}}
                     />

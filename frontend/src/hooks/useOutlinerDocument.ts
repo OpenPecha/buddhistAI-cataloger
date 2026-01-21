@@ -185,11 +185,12 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
       }
 
       // Calculate split text
-      const textBefore = segmentToSplit.text.substring(0, splitPosition).trim();
-      const textAfter = segmentToSplit.text.substring(splitPosition).trim();
+      // IMPORTANT: Do not trim/strip. Preserve whitespace/newlines exactly.
+      const textBefore = segmentToSplit.text.substring(0, splitPosition);
+      const textAfter = segmentToSplit.text.substring(splitPosition);
 
       // Don't proceed if split would create empty segments
-      if (!textBefore || !textAfter) {
+      if (splitPosition <= 0 || splitPosition >= segmentToSplit.text.length) {
         return { previousDocument };
       }
 
@@ -197,7 +198,7 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
       const firstSegment = {
         ...segmentToSplit,
         text: textBefore,
-        span_end: segmentToSplit.span_start + textBefore.length,
+        span_end: segmentToSplit.span_start + splitPosition,
       };
 
       // Generate temporary ID for second segment (will be replaced by server response)
@@ -207,7 +208,7 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
         text: textAfter,
         segment_index: segmentToSplit.segment_index + 1,
         span_start: firstSegment.span_end,
-        span_end: firstSegment.span_end + textAfter.length,
+        span_end: segmentToSplit.span_end,
         title: null,
         author: null,
         title_bdrc_id: null,

@@ -18,7 +18,7 @@ interface SegmentItemProps {
   cursorPosition: CursorPosition | null;
 }
 
-export const SegmentItem: React.FC<SegmentItemProps> = ({
+const SegmentItem: React.FC<SegmentItemProps> = ({
   segment,
   segmentConfig,
   cursorPosition,
@@ -170,3 +170,5 @@ export const SegmentItem: React.FC<SegmentItemProps> = ({
     </div>
   );
 };
+
+export const SegmentItemMemo = React.memo(SegmentItem);

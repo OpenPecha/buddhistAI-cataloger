@@ -2,7 +2,6 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
 import { useAITextEndings } from '@/hooks/useAITextEndings';
-import { toast } from 'sonner';
 import type {
   TextSegment,
   BubbleMenuState,
@@ -15,7 +14,6 @@ import { OutlinerProvider } from '@/components/outliner/OutlinerContext';
 const OutlinerWorkspace: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  
   // Get activeSegmentId from URL
   const activeSegmentId = searchParams.get('segmentId');
   
@@ -337,17 +335,17 @@ const OutlinerWorkspace: React.FC = () => {
   );
 
   // Split segment at cursor position
-  const handleSplitSegment = useCallback(async () => {
+  const handleSplitSegment =async ()=> {
     if (!cursorPosition || !documentId) return;
 
-    // Handle case when there are no segments - create segments from content (optimistic)
     if (cursorPosition.segmentId === 'content-no-segments') {
       const offset = cursorPosition.offset;
-      const textBefore = currentTextContent.substring(0, offset).trim();
-      const textAfter = currentTextContent.substring(offset).trim();
+      // IMPORTANT: Do not trim/strip. Preserve whitespace/newlines exactly.
+      const textBefore = currentTextContent.substring(0, offset);
+      const textAfter = currentTextContent.substring(offset);
 
       // Don't split if either part would be empty
-      if (!textBefore || !textAfter) {
+      if (textBefore.length === 0 || textAfter.length === 0) {
         return;
       }
 
@@ -380,31 +378,26 @@ const OutlinerWorkspace: React.FC = () => {
       }
     }
 
-    // Handle normal segment split
     if (!activeSegmentId) return;
 
     const segment = currentSegments.find((seg) => seg.id === cursorPosition.segmentId);
     if (!segment) return;
 
-    const textBefore = segment.text.substring(0, cursorPosition.offset).trim();
-    const textAfter = segment.text.substring(cursorPosition.offset).trim();
+    const textBefore = segment.text.substring(0, cursorPosition.offset);
+    const textAfter = segment.text.substring(cursorPosition.offset);
 
-    // Don't split if either part would be empty
-    if (!textBefore || !textAfter) {
+    if (textBefore.length === 0 || textAfter.length === 0) {
       return;
     }
 
-    // Use backend split (with optimistic updates)
     try {
       await splitSegmentBackend(cursorPosition.segmentId, cursorPosition.offset);
-      setCursorPosition(null);
       return;
     } catch (error) {
       console.error('Failed to split segment:', error);
       return;
     }
-  }, [cursorPosition, currentSegments, activeSegmentId, documentId, splitSegmentBackend, currentTextContent, createSegmentsBulkBackend]);
-
+  }
   // Merge segment with previous segment
   const handleMergeWithPrevious = useCallback(
     async (segmentId: string) => {
@@ -430,25 +423,6 @@ const OutlinerWorkspace: React.FC = () => {
       }
     },
     [currentSegments, documentId, mergeSegmentsBackend]
-  );
-
-  // Update segment annotation
-  const updateSegmentAnnotation = useCallback(
-    async (
-      segmentId: string,
-      field: 'title' | 'author' | 'title_bdrc_id' | 'author_bdrc_id',
-      value: string
-    ) => {
-      // Sync to backend if we have a documentId
-      if (documentId) {
-        try {
-          await updateSegmentBackend(segmentId, { [field]: value });
-        } catch (error) {
-          console.error('Failed to update segment:', error);
-        }
-      }
-    },
-    [documentId, updateSegmentBackend]
   );
 
   // Ref for AnnotationSidebar to access its methods
@@ -538,28 +512,6 @@ const OutlinerWorkspace: React.FC = () => {
     aiTextEndingAbortControllerRef.current = abortController;
 
     try {
-      // Check if text contains Tibetan marker "༄༅༅"
-      const tibetanMarker = '༄༅༅། །';
-      const markerPositions: number[] = [];
-
-      if (currentTextContent.includes(tibetanMarker)) {
-        // Find all occurrences of the marker
-        let searchIndex = 0;
-        while (true) {
-          const index = currentTextContent.indexOf(tibetanMarker, searchIndex);
-          if (index === -1) break;
-          markerPositions.push(index);
-          searchIndex = index + 1;
-        }
-
-        // Note: Marker-based segmentation should be handled by backend
-        // For now, this is a placeholder - backend should handle creating segments
-        console.warn('Marker-based segmentation requires backend support');
-
-        aiTextEndingAbortControllerRef.current = null;
-        return;
-      }
-
       // If no marker found, use AI API approach with React Query
       // Get the current selected segment text, or use currentTextContent if no segment is selected
       const activeSegment = activeSegmentId
@@ -728,7 +680,7 @@ const OutlinerWorkspace: React.FC = () => {
           />
 
           {/* Main Workspace */}
-          <Workspace />
+          <Workspace  />
         </div>
       </div>
     </OutlinerProvider>

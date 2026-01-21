@@ -19,6 +19,7 @@ export interface OutlinerDocument {
 export interface OutlinerDocumentListItem {
   id: string;
   filename?: string | null;
+  user_id?: string | null;
   total_segments: number;
   annotated_segments: number;
   progress_percentage: number;
@@ -209,12 +210,14 @@ export const getOutlinerDocument = async (
 export const listOutlinerDocuments = async (
   user_id?: string,
   skip: number = 0,
-  limit: number = 100
+  limit: number = 100,
+  include_deleted: boolean = false
 ): Promise<OutlinerDocumentListItem[]> => {
   const params = new URLSearchParams();
   if (user_id) params.append('user_id', user_id);
   params.append('skip', skip.toString());
   params.append('limit', limit.toString());
+  params.append('include_deleted', include_deleted.toString());
 
   const response = await fetch(`${API_URL}/outliner/documents?${params.toString()}`);
   return handleApiResponse(response);
@@ -369,9 +372,14 @@ export const deleteSegment = async (segmentId: string): Promise<void> => {
 
 export const updateDocumentStatus = async (
   documentId: string,
-  status: string
+  status: string,
+  user_id?: string
 ): Promise<{ message: string; document_id: string; status: string }> => {
-  const response = await fetch(`${API_URL}/outliner/documents/${documentId}/status`, {
+  const params = new URLSearchParams();
+  if (user_id) params.append('user_id', user_id);
+  
+  const url = `${API_URL}/outliner/documents/${documentId}/status${params.toString() ? `?${params.toString()}` : ''}`;
+  const response = await fetch(url, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
