@@ -99,15 +99,13 @@ const Row = ({ index, style, ...rowData }: RowComponentProps<RowData>) => {
 export const Workspace: React.FC = () => {
   const {
     textContent,
+    isUploading,
     segments,
     activeSegmentId,
     bubbleMenuState,
     cursorPosition,
     aiTextEndingLoading,
     segmentLoadingStates,
-    onFileUpload,
-    onFileUploadToBackend,
-    isUploading,
     onTextSelection,
     onBubbleMenuSelect,
     onSplitSegment,
@@ -147,9 +145,19 @@ export const Workspace: React.FC = () => {
     onBubbleMenuSelect,
   };
 
+  if (isUploading) {
+    return (
+      <div className="flex flex-1 items-center justify-center bg-white min-h-screen">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-400"></div>
+          <span className="text-gray-500 text-lg">Loading, please wait...</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {textContent ? (
         <div ref={parentContainerRef} className="flex-1 flex flex-col overflow-hidden">
           {/* Workspace Header */}
           <WorkspaceHeader
@@ -214,20 +222,7 @@ export const Workspace: React.FC = () => {
             ) : null}
           </div>
         </div>
-      ) : (
-        <div className="flex-1 flex items-center justify-center p-12">
-          <div className="w-full max-w-2xl">
-            {onFileUploadToBackend ? (
-              <OutlinerFileUploadZone
-                onFileUpload={onFileUploadToBackend}
-                isUploading={isUploading}
-              />
-            ) : (
-              <FileUploadZone onFileUpload={onFileUpload} />
-            )}
-          </div>
-        </div>
-      )}
+   
     </div>
   );
 };

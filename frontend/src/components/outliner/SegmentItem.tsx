@@ -39,19 +39,12 @@ export const SegmentItem: React.FC<SegmentItemProps> = ({
     onAttachParent,
     onMergeWithPrevious,
     segmentLoadingStates,
-    onSegmentStatusUpdate,
   } = useOutliner();
   
   const isLoading = segmentLoadingStates?.get(segment.id) ?? false;
   const isChecked = segment.status === 'checked';
   
-  const handleStatusToggle = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onSegmentStatusUpdate) {
-      const newStatus = isChecked ? 'unchecked' : 'checked';
-      await onSegmentStatusUpdate(segment.id, newStatus);
-    }
-  };
+  
   return (
     <div>
       {/* Attach Parent Button - only for first segment */}
@@ -173,35 +166,6 @@ export const SegmentItem: React.FC<SegmentItemProps> = ({
             )}
           </div>
         </div>
-        
-        {/* Checkbox for marking checked/unchecked, with label */}
-        {isActive && onSegmentStatusUpdate && (
-          <label
-            className={`
-              absolute -bottom-3 left-1/2 -translate-x-1/2 z-10
-              flex items-center gap-2 p-1 rounded transition-all shadow-lg bg-white border
-              ${isChecked 
-                ? 'border-green-600 bg-green-50 text-green-800' 
-                : 'border-gray-300 bg-white text-gray-700'
-              }
-              ${isLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-            `}
-            title={isChecked ? 'Mark as unchecked' : 'Mark as checked'}
-            style={{ minWidth: 'fit-content' }}
-          >
-            <input
-              type="checkbox"
-              className="form-checkbox rounded-full border-gray-300 text-green-600 focus:ring-green-500 w-5 h-5 transition cursor-pointer"
-              checked={isChecked}
-              disabled={isLoading}
-              onChange={handleStatusToggle}
-              aria-label={isChecked ? 'Mark as unchecked' : 'Mark as checked'}
-            />
-            <span className="text-xs select-none">
-              {isChecked ? 'approved' : 'check'}
-            </span>
-          </label>
-        )}
       </div>
     </div>
   );

@@ -38,10 +38,11 @@ export const AuthorField = forwardRef<AuthorFieldRef, AuthorFieldProps>(({
   const { results: authorResults, isLoading: authorLoading } = useBdrcSearch(
     authorSearch,
     'Person',
-    2000,
+    1000,
     () => {
       inputRef.current?.focus();
-    }
+    },
+    isFocused
   );
 
   const handleSelect = 

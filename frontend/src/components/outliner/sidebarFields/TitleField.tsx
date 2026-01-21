@@ -38,10 +38,11 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
   const { results: titleResults, isLoading: titleLoading } = useBdrcSearch(
     titleSearch,
     'Instance',
-    2000,
+    1000,
     () => {
       inputRef.current?.focus();
-    }
+    },
+    isFocused
   );
   // Handle title selection from BDRC search
   const handleSelect = 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useDebouncedState  } from "@tanstack/react-pacer"
 import { API_URL } from '@/config/api';
 
 export interface BdrcContributor {
@@ -32,20 +33,16 @@ export interface BdrcSearchResult {
  * @returns search results and loading state
  */
 
-export function useBdrcSearch(searchQuery: string, type: string = "Instance", debounceMs: number = 1000,callback: () => void | null=()=>{}) {
-  const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
-
-  // Debounce the search query
+export function useBdrcSearch(searchQuery: string, type: string = "Instance", debounceMs: number = 1000,callback: () => void | null=()=>{},enabled: boolean = true) {
+  const [debouncedValue, setDebouncedValue, debouncer] = useDebouncedState(
+    searchQuery,
+    { wait: debounceMs }
+  );
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedQuery(searchQuery);
-    }, debounceMs);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery, debounceMs]);
-
-  const trimmedQuery = debouncedQuery.trim();
-  const isEnabled = trimmedQuery.length > 0;
+    setDebouncedValue(searchQuery);
+  }, [searchQuery,setDebouncedValue]);
+  const trimmedQuery = debouncedValue.trim();
+  const isEnabled = trimmedQuery.length > 0 && enabled;
 
   const { data, isLoading, error } = useQuery<BdrcSearchResult[]>({
     queryKey: ["bdrc-search", trimmedQuery, type],
@@ -78,9 +75,10 @@ export function useBdrcSearch(searchQuery: string, type: string = "Instance", de
     enabled: isEnabled,
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     retry: 1,
-    
-
   });
+
+
+
 
   let errorMessage: string | null = null;
   if (error) {

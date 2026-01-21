@@ -28,7 +28,6 @@ const OutlinerWorkspace: React.FC = () => {
     isSaving,
     segmentLoadingStates,
     updateSegment: updateSegmentBackend,
-    bulkUpdateSegments: bulkUpdateSegmentsBackend,
     splitSegment: splitSegmentBackend,
     mergeSegments: mergeSegmentsBackend,
     resetSegments: resetSegmentsBackend,
@@ -725,10 +724,7 @@ const OutlinerWorkspace: React.FC = () => {
           <AnnotationSidebar
             ref={annotationSidebarRef}
             activeSegment={activeSegment}
-            textContent={currentTextContent}
-            segments={currentSegments}
             documentId={documentId || undefined}
-            onUpdate={updateSegmentAnnotation}
           />
 
           {/* Main Workspace */}

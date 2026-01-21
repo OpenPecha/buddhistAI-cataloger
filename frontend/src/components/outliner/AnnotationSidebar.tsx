@@ -150,6 +150,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       author?: string;
       title_bdrc_id?: string;
       author_bdrc_id?: string;
+      status?: string;
     } = {};
 
     if (titleName) {
@@ -165,7 +166,9 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
         updatePayload.author_bdrc_id = formData.author.bdrc_id;
       }
     }
-
+    if(titleName && authorName){
+    updatePayload.status = 'checked';
+    }
     // Make API call to update segment using mutation
     try {
       await updateSegmentMutation(activeSegmentId, updatePayload);
@@ -193,8 +196,21 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
     });
   }
   }
-  function resetForm(){
-    setFormData({ title: {name: '', bdrc_id: ''}, author: {name: '', bdrc_id: ''}});
+ function resetForm(){
+  setFormData({ title: {name: '', bdrc_id: ''}, author: {name: '', bdrc_id: ''}});
+ }
+ async function onReset(){
+    resetForm();
+    if(activeSegmentId){
+      const newPayload={
+        title: '',
+        author: '',
+        title_bdrc_id: '',
+        author_bdrc_id: '',
+        status: 'unchecked'
+      }
+      await updateSegmentMutation(activeSegmentId, newPayload);
+    }
   }
 
   return (
@@ -244,14 +260,21 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       </div>
 
       {/* Save Button */}
-      <div className="p-6 border-t border-gray-200 bg-white">
+      <div className="flex gap-2 p-6 border-t border-gray-200 bg-white">
         <Button
           type="button"
           onClick={onSave}
-          className="w-full"
           variant="default"
         >
           Save Annotations
+        </Button>
+        <Button
+          type="button"
+          onClick={onReset}
+          variant="outline"
+          disabled={!activeSegmentId}
+        >
+          Reset Annotations
         </Button>
       </div>
     </div>
