@@ -128,25 +128,48 @@ const OutlinerWorkspace: React.FC = () => {
       if (segmentContainer) {
         const segmentRect = segmentContainer.getBoundingClientRect();
         const menuWidth = 150; // Bubble menu width
+        const menuHeight = 100; // Approximate bubble menu height
+        const gap = 8; // Gap between selection and menu
+        const padding = 8;
+        const viewportHeight = window.innerHeight;
 
-        // Position menu below selection, relative to segment container (same as split menu)
+        // Calculate initial position below selection, relative to segment container
         const menuPosition = {
           x: rect.left - segmentRect.left - menuWidth / 2 + rect.width / 2,
-          y: rect.bottom - segmentRect.top + 8, // 8px gap below selection
+          y: rect.bottom - segmentRect.top + gap, // 8px gap below selection
         };
 
-        // Ensure menu stays within segment bounds (with padding)
-        const padding = 8;
-        if (menuPosition.x < padding) {
-          menuPosition.x = padding;
+        // Convert to viewport coordinates to check boundaries
+        const viewportY = segmentRect.top + menuPosition.y;
+
+        // Check if menu would overflow below viewport
+        let adjustedY = menuPosition.y;
+        if (viewportY + menuHeight + padding > viewportHeight) {
+          // Position above selection instead
+          adjustedY = rect.top - segmentRect.top - menuHeight - gap;
         }
-        if (menuPosition.x + menuWidth > segmentRect.width - padding) {
-          menuPosition.x = segmentRect.width - menuWidth - padding;
+
+        // Ensure menu stays within segment bounds horizontally (with padding)
+        let adjustedX = menuPosition.x;
+        if (adjustedX < padding) {
+          adjustedX = padding;
+        }
+        if (adjustedX + menuWidth > segmentRect.width - padding) {
+          adjustedX = segmentRect.width - menuWidth - padding;
+        }
+
+        // Final viewport check: ensure menu doesn't go off-screen vertically
+        const finalViewportY = segmentRect.top + adjustedY;
+        if (finalViewportY < padding) {
+          adjustedY = padding - segmentRect.top;
+        }
+        if (finalViewportY + menuHeight > viewportHeight - padding) {
+          adjustedY = viewportHeight - padding - menuHeight - segmentRect.top;
         }
 
         setBubbleMenuState({
           segmentId: targetSegmentId,
-          position: menuPosition,
+          position: { x: adjustedX, y: adjustedY },
           selectedText: selectedText,
           selectionRange: range.cloneRange(),
         });
@@ -220,29 +243,53 @@ const OutlinerWorkspace: React.FC = () => {
 
     const segmentRect = segmentContainer.getBoundingClientRect();
     const menuWidth = 180;
+    const menuHeight = 50; // Approximate menu height
+    const gap = 8; // Gap between cursor and menu
+    const padding = 8;
+    const viewportHeight = window.innerHeight;
 
-    // Position menu below cursor, relative to segment container
-    // If cursorRect has no width/height (collapsed range), use a default position
+    // Calculate initial position below cursor, relative to segment container
     const menuPosition = {
       x: cursorRect.width > 0 
         ? cursorRect.left - segmentRect.left - menuWidth / 2 + cursorRect.width / 2
         : segmentRect.width / 2 - menuWidth / 2,
       y: cursorRect.height > 0 
-        ? cursorRect.bottom - segmentRect.top + 8
-        : 8, // 8px gap below cursor
+        ? cursorRect.bottom - segmentRect.top + gap
+        : gap, // 8px gap below cursor
     };
 
-    // Ensure menu stays within segment bounds (with padding)
-    const padding = 8;
-    if (menuPosition.x < padding) {
-      menuPosition.x = padding;
+    // Convert to viewport coordinates to check boundaries
+    const viewportY = segmentRect.top + menuPosition.y;
+
+    // Check if menu would overflow below viewport
+    let adjustedY = menuPosition.y;
+    if (viewportY + menuHeight + padding > viewportHeight) {
+      // Position above cursor instead
+      adjustedY = cursorRect.height > 0 
+        ? cursorRect.top - segmentRect.top - menuHeight - gap
+        : -menuHeight - gap;
     }
-    if (menuPosition.x + menuWidth > segmentRect.width - padding) {
-      menuPosition.x = segmentRect.width - menuWidth - padding;
+
+    // Ensure menu stays within segment bounds horizontally (with padding)
+    let adjustedX = menuPosition.x;
+    if (adjustedX < padding) {
+      adjustedX = padding;
+    }
+    if (adjustedX + menuWidth > segmentRect.width - padding) {
+      adjustedX = segmentRect.width - menuWidth - padding;
+    }
+
+    // Final viewport check: ensure menu doesn't go off-screen vertically
+    const finalViewportY = segmentRect.top + adjustedY;
+    if (finalViewportY < padding) {
+      adjustedY = padding - segmentRect.top;
+    }
+    if (finalViewportY + menuHeight > viewportHeight - padding) {
+      adjustedY = viewportHeight - padding - menuHeight - segmentRect.top;
     }
 
     // Show split menu and hide bubble menu when no text is selected
-    setCursorPosition({ segmentId, offset, menuPosition });
+    setCursorPosition({ segmentId, offset, menuPosition: { x: adjustedX, y: adjustedY } });
     setBubbleMenuState(null);
   }, []);
 
@@ -333,6 +380,8 @@ const OutlinerWorkspace: React.FC = () => {
     },
     [documentId, updateSegmentBackend]
   );
+
+
 
   // Split segment at cursor position
   const handleSplitSegment =async ()=> {

@@ -48,8 +48,33 @@ export interface UserCreate {
   picture?: string | null;
 }
 
+export interface UserUpdate {
+  email?: string;
+  name?: string | null;
+  picture?: string | null;
+}
+
 export const getUserByEmail = async (email: string): Promise<User | null> => {
   const response = await fetch(`${API_URL}/settings/users/by-email/${encodeURIComponent(email)}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'accept': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      return null;
+    }
+    throw new Error('Failed to fetch user');
+  }
+
+  return response.json();
+};
+
+export const getUser = async (userId: string): Promise<User | null> => {
+  const response = await fetch(`${API_URL}/settings/users/${encodeURIComponent(userId)}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -80,6 +105,24 @@ export const createUser = async (user: UserCreate): Promise<User> => {
   if (!response.ok) {
     const error = await response.text();
     throw new Error(`Failed to create user: ${error}`);
+  }
+
+  return response.json();
+};
+
+export const updateUser = async (userId: string, user: UserUpdate): Promise<User> => {
+  const response = await fetch(`${API_URL}/settings/users/${encodeURIComponent(userId)}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      'accept': 'application/json',
+    },
+    body: JSON.stringify(user),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    throw new Error(`Failed to update user: ${error}`);
   }
 
   return response.json();

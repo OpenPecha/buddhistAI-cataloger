@@ -75,6 +75,7 @@ export interface SegmentUpdateRequest {
   parent_segment_id?: string;
   is_attached?: boolean;
   status?: string; // checked, unchecked
+  comment?: string;
 }
 
 export interface BulkSegmentUpdateRequest {

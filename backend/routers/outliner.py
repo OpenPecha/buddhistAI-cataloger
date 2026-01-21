@@ -34,6 +34,7 @@ class SegmentUpdate(BaseModel):
     parent_segment_id: Optional[str] = None
     is_attached: Optional[bool] = None
     status: Optional[str] = None  # checked, unchecked
+    comment: Optional[str] = None
 
 
 class SegmentResponse(BaseModel):
@@ -50,6 +51,7 @@ class SegmentResponse(BaseModel):
     is_annotated: bool
     is_attached: Optional[bool] = None
     status: Optional[str] = None  # checked, unchecked
+    comment: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -577,9 +579,11 @@ async def update_segment(
         segment.parent_segment_id = segment_update.parent_segment_id
     if segment_update.is_attached is not None:
         segment.is_attached = segment_update.is_attached
+    if segment_update.comment is not None:
+        segment.comment=segment_update.comment    
     if segment_update.status is not None:
         # Validate status value
-        if segment_update.status not in ['checked', 'unchecked']:
+        if segment_update.status not in ['checked', 'unchecked','approved']:
             raise HTTPException(status_code=400, detail="Status must be 'checked' or 'unchecked'")
         segment.status = segment_update.status
     
@@ -1102,7 +1106,7 @@ async def update_segment_status(
     """Update segment status (checked/unchecked)"""
     status = status_update.status
     # Validate status value
-    if status not in ['checked', 'unchecked']:
+    if status not in ['checked', 'unchecked','approved']:
         raise HTTPException(status_code=400, detail="Status must be 'checked' or 'unchecked'")
     
     segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()

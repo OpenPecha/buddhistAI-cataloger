@@ -20,6 +20,10 @@ interface RowData {
   onSplitSegment: () => void;
   onMergeWithPrevious: (segmentId: string) => void;
   onBubbleMenuSelect: (field: 'title' | 'author', segmentId: string, text: string) => void;
+  collapsedSegments: Set<string>;
+  toggleSegmentCollapse: (segmentId: string) => void;
+  toggleCollapseAll: () => void;
+  isAllCollapsed: boolean;
 }
 
 
@@ -32,6 +36,10 @@ const Row = ({ index, style, ...rowData }: RowComponentProps<RowData>) => {
     onSplitSegment,
     onMergeWithPrevious,
     onBubbleMenuSelect,
+    collapsedSegments,
+    toggleSegmentCollapse,
+    toggleCollapseAll,
+    isAllCollapsed,
   } = rowData;
   const segment = segments[index];
   const rowRef = useRef<HTMLDivElement>(null);
@@ -46,6 +54,7 @@ const Row = ({ index, style, ...rowData }: RowComponentProps<RowData>) => {
   const isFirstSegment = index === 0;
   const isAttached = isFirstSegment && (segment.is_attached ?? false);
   const isActive = segment.id === activeSegmentId;
+  const isCollapsed = collapsedSegments.has(segment.id);
 
   // Ensure style includes width for proper layout
   const rowStyle: React.CSSProperties = {
@@ -64,6 +73,10 @@ const Row = ({ index, style, ...rowData }: RowComponentProps<RowData>) => {
             isAttached,
           }}
           cursorPosition={cursorPosition}
+          isCollapsed={isCollapsed}
+          onToggleCollapse={toggleSegmentCollapse}
+          onCollapseAll={isFirstSegment ? toggleCollapseAll : undefined}
+          isAllCollapsed={isFirstSegment ? isAllCollapsed : undefined}
         />
 
         {/* Split Menu - positioned relative to segment container */}
@@ -120,6 +133,69 @@ export const Workspace: React.FC = () => {
   } = useOutliner();
   const containerRef = useRef<HTMLDivElement>(null);
   const parentContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Manage collapsed state for all segments
+  const [collapsedSegments, setCollapsedSegments] = React.useState<Set<string>>(new Set());
+  
+  // Initialize: all segments collapsed except active one
+  React.useEffect(() => {
+    if (segments.length > 0 && activeSegmentId) {
+      const newCollapsed = new Set<string>();
+      segments.forEach(segment => {
+        if (segment.id !== activeSegmentId) {
+          newCollapsed.add(segment.id);
+        }
+      });
+      setCollapsedSegments(newCollapsed);
+    }
+  }, [segments, activeSegmentId]);
+  
+  // Update collapsed state when active segment changes
+  React.useEffect(() => {
+    if (activeSegmentId) {
+      setCollapsedSegments(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(activeSegmentId); // Expand active segment
+        return newSet;
+      });
+    }
+  }, [activeSegmentId]);
+  
+  const toggleSegmentCollapse = React.useCallback((segmentId: string) => {
+    setCollapsedSegments(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(segmentId)) {
+        newSet.delete(segmentId);
+      } else {
+        newSet.add(segmentId);
+      }
+      return newSet;
+    });
+  }, []);
+  
+  const toggleCollapseAll = React.useCallback(() => {
+    if (segments.length === 0) return;
+    
+    const allCollapsed = segments.every(seg => collapsedSegments.has(seg.id));
+    
+    if (allCollapsed) {
+      // Expand all
+      setCollapsedSegments(new Set());
+    } else {
+      // Collapse all except active
+      const newCollapsed = new Set<string>();
+      segments.forEach(segment => {
+        if (segment.id !== activeSegmentId) {
+          newCollapsed.add(segment.id);
+        }
+      });
+      setCollapsedSegments(newCollapsed);
+    }
+  }, [segments, collapsedSegments, activeSegmentId]);
+  
+  const isAllCollapsed = segments.length > 0 && segments.every(seg => 
+    seg.id === activeSegmentId ? false : collapsedSegments.has(seg.id)
+  );
   const [containerHeight] = React.useState(() => {
     // Initialize with a reasonable default
     if (globalThis.window !== undefined) {
@@ -155,7 +231,7 @@ export const Workspace: React.FC = () => {
   useEffect(() => {
       // Use requestAnimationFrame to ensure DOM has updated
       setTimeout(() => {  
-        if (containerRef.current) {
+        if (containerRef.current && scrollPositionRef.current !== null) {
           containerRef.current.scrollBy(0, scrollPositionRef.current);
           // Clear saved position after restoring
           scrollPositionRef.current = null;
@@ -175,6 +251,10 @@ export const Workspace: React.FC = () => {
     onSplitSegment: handleSplitSegmentWithScrollSave,
     onMergeWithPrevious,
     onBubbleMenuSelect,
+    collapsedSegments,
+    toggleSegmentCollapse,
+    toggleCollapseAll,
+    isAllCollapsed,
   };
 
   
@@ -216,7 +296,8 @@ export const Workspace: React.FC = () => {
             onClick={onTextSelection}
             style={{ minHeight: 0 }}
             onScroll={(e) => {
-              scrollPositionRef.current = e.target.scrollTop;
+              const target = e.target as HTMLDivElement;
+              scrollPositionRef.current = target.scrollTop;
             }}
             aria-label="Text workspace content area"
             role="section"
@@ -241,6 +322,7 @@ export const Workspace: React.FC = () => {
                     const isFirstSegment = index === 0;
                     const isAttached = isFirstSegment && (segment.is_attached ?? false);
                     const isActive = segment.id === activeSegmentId;
+                    const isCollapsed = collapsedSegments.has(segment.id);
                     
                     return (
                       <div key={segment.id} className="px-6">
@@ -254,6 +336,10 @@ export const Workspace: React.FC = () => {
                               isAttached,
                             }}
                             cursorPosition={cursorPosition}
+                            isCollapsed={isCollapsed}
+                            onToggleCollapse={toggleSegmentCollapse}
+                            onCollapseAll={isFirstSegment ? toggleCollapseAll : undefined}
+                            isAllCollapsed={isFirstSegment ? isAllCollapsed : undefined}
                           />
 
                           {/* Split Menu */}

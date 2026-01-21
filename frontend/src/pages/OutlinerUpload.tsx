@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
 import { OutlinerFileUploadZone } from '@/components/outliner/OutlinerFileUploadZone';
@@ -15,7 +15,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { FileText, Upload, Calendar, BarChart3, Trash2, RotateCcw, Filter } from 'lucide-react';
+import { FileText, Upload, Calendar, BarChart3, Trash2, RotateCcw, Filter, Settings } from 'lucide-react';
+import { usePermission } from '@/hooks/usePermission';
+import { useUser } from '@/hooks/useUser';
 
 // Simple modal implementation
 function Modal({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
@@ -37,18 +39,19 @@ function Modal({ open, onClose, children }: { open: boolean; onClose: () => void
 }
 
 const OutlinerUpload: React.FC = () => {
-  const { user } = useAuth0();
+  const {user}= useUser();
+  const isAdmin = user?.role === 'admin';
+  const userId = user?.id;
   const navigate = useNavigate();
   const [showUpload, setShowUpload] = useState(false);
   const [showDeleted, setShowDeleted] = useState(false);
   const { uploadFile, isLoading } = useOutlinerDocument();
   const queryClient = useQueryClient();
-
   // Fetch documents list with optional deleted filter
   const { data: documents = [], isLoading: isLoadingDocuments, refetch } = useQuery<OutlinerDocumentListItem[]>({
-    queryKey: ['outliner-documents', user?.sub, showDeleted],
-    queryFn: () => listOutlinerDocuments(user?.sub, 0, 100, showDeleted),
-    enabled: !!user?.sub,
+    queryKey: ['outliner-documents', userId, showDeleted],
+    queryFn: () => listOutlinerDocuments(userId, 0, 100, showDeleted),
+    enabled: !!userId,
   });
 
   // Filter documents based on current view
@@ -58,19 +61,19 @@ const OutlinerUpload: React.FC = () => {
 
   // Delete document mutation
   const deleteDocumentMutation = useMutation({
-    mutationFn: (documentId: string) => updateDocumentStatus(documentId, 'deleted', user?.sub),
+    mutationFn: (documentId: string) => updateDocumentStatus(documentId, 'deleted', userId),
     onSuccess: () => {
       // Refetch documents list after deletion
-      queryClient.invalidateQueries({ queryKey: ['outliner-documents', user?.sub] });
+      queryClient.invalidateQueries({ queryKey: ['outliner-documents', userId] });
     },
   });
 
   // Restore document mutation
   const restoreDocumentMutation = useMutation({
-    mutationFn: (documentId: string) => updateDocumentStatus(documentId, 'active', user?.sub),
+    mutationFn: (documentId: string) => updateDocumentStatus(documentId, 'active', userId),
     onSuccess: () => {
       // Refetch documents list after restoration
-      queryClient.invalidateQueries({ queryKey: ['outliner-documents', user?.sub] });
+      queryClient.invalidateQueries({ queryKey: ['outliner-documents', userId] });
       toast.success('Document restored successfully');
     },
     onError: (error: Error) => {
@@ -79,7 +82,7 @@ const OutlinerUpload: React.FC = () => {
   });
 
   const handleFileUpload = async (file: File) => {
-    await uploadFile(file, user?.sub);
+    await uploadFile(file, userId);
     // Refetch documents list after upload
     refetch();
     setShowUpload(false);
@@ -137,6 +140,14 @@ const OutlinerUpload: React.FC = () => {
               <Upload className="w-4 h-4" />
               Upload New
             </Button>
+            {isAdmin && (
+            <Link to="/outliner-admin">
+             <Button variant="outline" className="flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              Admin
+             </Button>
+            </Link>
+            )}
           </div>
         </div>
 
@@ -197,7 +208,7 @@ const OutlinerUpload: React.FC = () => {
               <TableBody>
                 {displayedDocuments.map((doc) => {
                   const isDeleted = doc.status === 'deleted';
-                  const isOwner = doc.user_id === user?.sub || !doc.user_id;
+                  const isOwner = doc.user_id === userId || !doc.user_id;
                   
                   return (
                   <TableRow

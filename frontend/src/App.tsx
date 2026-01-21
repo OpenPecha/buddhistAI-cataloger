@@ -19,6 +19,7 @@ import AlignmentWorkstation from './components/Aligner/components/AlignmentWorks
 import OutlinerUpload from './pages/OutlinerUpload';
 import OutlinerWorkspace from './pages/OutlinerWorkspace';
 import { getUserByEmail, createUser } from './api/settings';
+import OutlinerAdmin from './pages/Outliner-admin';
 
 function App() {
   const location = useLocation();
@@ -146,6 +147,11 @@ function App() {
           <Route path="/outliner/:documentId" element={
             <ProtectedRoute>
               <OutlinerWorkspace />
+            </ProtectedRoute>
+          } />
+          <Route path="/outliner-admin" element={
+            <ProtectedRoute>
+              <OutlinerAdmin />
             </ProtectedRoute>
           } />
         </Routes>

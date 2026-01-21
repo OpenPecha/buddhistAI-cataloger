@@ -11,5 +11,6 @@ class User(Base):
     name: Mapped[str | None]
     picture: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    role: Mapped[str | None] = mapped_column(String, nullable=True,default='user')
 
     memberships = relationship("TenantMembership", back_populates="user")

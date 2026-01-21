@@ -14,6 +14,9 @@ class OutlinerDocument(Base):
     filename: Mapped[str | None] = mapped_column(String, nullable=True)  # Original filename if uploaded
     user_id: Mapped[str | None] = mapped_column(String, ForeignKey("users.id"), nullable=True, index=True)
     
+    order: Mapped[int] = mapped_column(Integer, nullable=True,default=0)
+    category: Mapped[str | None] = mapped_column(String, nullable=True,default='uncategorized')
+    
     # Progress tracking
     total_segments: Mapped[int] = mapped_column(Integer, default=0)  # Total number of segments
     annotated_segments: Mapped[int] = mapped_column(Integer, default=0)  # Segments with title/author
@@ -22,7 +25,7 @@ class OutlinerDocument(Base):
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    status: Mapped[str | None] = mapped_column(String, nullable=True) #  active ,completed, deleted ,approved , rejected
+    status: Mapped[str | None] = mapped_column(String, nullable=True) #  active ,completed, deleted ,approved ,rejected
     
     segments: Mapped[list["OutlinerSegment"]] = relationship(
         "OutlinerSegment",
@@ -71,7 +74,7 @@ class OutlinerSegment(Base):
     status: Mapped[str | None] = mapped_column(String, nullable=True) # checked, unchecked
     # Status tracking
     is_annotated: Mapped[bool] = mapped_column(default=False)  # Has title or author
-    
+    comment: Mapped[str | None] = mapped_column(String, nullable=True)
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
