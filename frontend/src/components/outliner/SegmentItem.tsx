@@ -245,4 +245,4 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
   );
 };
 
-export const SegmentItemMemo = React.me mo(SegmentItem);
+export const SegmentItemMemo = React.memo(SegmentItem);
