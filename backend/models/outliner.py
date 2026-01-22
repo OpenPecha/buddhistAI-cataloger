@@ -1,4 +1,4 @@
-from sqlalchemy import String, Text, Integer, Float, DateTime, ForeignKey, Index
+from sqlalchemy import String, Text, Integer, Float, DateTime, ForeignKey, Index,JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 import uuid
@@ -74,7 +74,7 @@ class OutlinerSegment(Base):
     status: Mapped[str | None] = mapped_column(String, nullable=True) # checked, unchecked
     # Status tracking
     is_annotated: Mapped[bool] = mapped_column(default=False)  # Has title or author
-    comment: Mapped[str | None] = mapped_column(String, nullable=True)
+    comment: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

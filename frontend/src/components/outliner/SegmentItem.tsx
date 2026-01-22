@@ -140,6 +140,8 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
         
         {/* Cancel Split Button - positioned at top-middle border */}
         {/* Only show if there's a previous segment to merge with */}
+        <CommentView comment={segment.comment} />
+      
         {cursorPosition && cursorPosition.segmentId === segment.id && index > 0 && (
           <button
             type="button"
@@ -241,3 +243,33 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
 };
 
 export const SegmentItemMemo = React.memo(SegmentItem);
+
+
+import { MessageCircle } from "lucide-react";
+
+function CommentView({ comment }: { readonly comment: string | null }) {
+  if (!comment) return null;
+
+  return (
+    <div className="relative inline-flex items-center group float-right">
+      {/* Icon */}
+      <MessageCircle className="h-4 w-4 text-red-400 cursor-pointer" />
+      
+      {/* Tooltip - aligned to the right of the icon */}
+      <div
+        className="
+          absolute right-full top-1/2 z-50 ml-2 w-max max-w-xs
+          -translate-y-1/2
+          rounded-md bg-gray-900 px-3 py-2
+          text-xs text-white
+          opacity-0 group-hover:opacity-100
+          pointer-events-none
+          transition-opacity
+        "
+        style={{ whiteSpace: 'pre-line' }}
+      >
+        {comment}
+      </div>
+    </div>
+  );
+}

@@ -46,6 +46,7 @@ export interface OutlinerSegment {
   status?: string | null; // checked, unchecked
   created_at: string;
   updated_at: string;
+  comment?: string | null;
 }
 
 export interface DocumentCreateRequest {
@@ -503,6 +504,7 @@ export const outlinerSegmentToTextSegment = (segment: OutlinerSegment): TextSegm
     parentSegmentId: segment.parent_segment_id || undefined,
     is_attached: segment.is_attached ?? undefined,
     status: segment.status || undefined,
+    comment: segment.comment || undefined,
   };
 };
 

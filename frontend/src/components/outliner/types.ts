@@ -8,6 +8,7 @@ export interface TextSegment {
   parentSegmentId?: string;
   is_attached?: boolean | null;
   status?: string | null; // checked, unchecked
+  comment?: string | null;
 }
 
 export interface BubbleMenuProps {
