@@ -61,6 +61,7 @@ export const AuthorField = forwardRef<AuthorFieldRef, AuthorFieldProps>(({
   useEffect(() => {
     const handleBubbleMenuUpdate = (value: string) => {
       setAuthorSearch(value);
+      inputRef.current?.focus();
     };
 
     Emitter.on('bubbleMenu:updateAuthor', handleBubbleMenuUpdate);

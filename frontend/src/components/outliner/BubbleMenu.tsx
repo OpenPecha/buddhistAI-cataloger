@@ -5,7 +5,13 @@ import type { BubbleMenuProps } from './types';
 export const BubbleMenu: React.FC<BubbleMenuProps> = ({ position, onSelect, onClose, selectedText }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const [adjustedPosition, setAdjustedPosition] = useState(position);
-
+  // Function to reset the current window selection
+  const resetWindowSelection = () => {
+    const selection = window.getSelection?.();
+    if (selection && typeof selection.removeAllRanges === "function") {
+      selection.removeAllRanges();
+    }
+  };
   // Adjust position to keep menu within viewport
   useEffect(() => {
     if (menuRef.current) {
@@ -64,6 +70,7 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({ position, onSelect, onCl
       Emitter.emit('bubbleMenu:updateTitle', selectedText);
     }
     onSelect('title');
+    resetWindowSelection()
   };
 
   const handleAuthorSelect = () => {
@@ -71,6 +78,8 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({ position, onSelect, onCl
       Emitter.emit('bubbleMenu:updateAuthor', selectedText);
     }
     onSelect('author');
+    resetWindowSelection()
+
   };
 
   return (

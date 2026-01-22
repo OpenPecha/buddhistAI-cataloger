@@ -65,6 +65,7 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
   useEffect(() => {
     const handleBubbleMenuUpdate = (value: string) => {
       setTitleSearch(value);
+      inputRef.current?.focus();
     };
 
     Emitter.on('bubbleMenu:updateTitle', handleBubbleMenuUpdate);

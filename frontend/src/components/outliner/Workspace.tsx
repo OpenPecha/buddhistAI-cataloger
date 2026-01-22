@@ -27,86 +27,86 @@ interface RowData {
 }
 
 
-const Row = ({ index, style, ...rowData }: RowComponentProps<RowData>) => {
-  const {
-    segments,
-    activeSegmentId,
-    cursorPosition,
-    bubbleMenuState,
-    onSplitSegment,
-    onMergeWithPrevious,
-    onBubbleMenuSelect,
-    collapsedSegments,
-    toggleSegmentCollapse,
-    toggleCollapseAll,
-    isAllCollapsed,
-  } = rowData;
-  const segment = segments[index];
-  const rowRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
+// const Row = ({ index, style, ...rowData }: RowComponentProps<RowData>) => {
+//   const {
+//     segments,
+//     activeSegmentId,
+//     cursorPosition,
+//     bubbleMenuState,
+//     onSplitSegment,
+//     onMergeWithPrevious,
+//     onBubbleMenuSelect,
+//     collapsedSegments,
+//     toggleSegmentCollapse,
+//     toggleCollapseAll,
+//     isAllCollapsed,
+//   } = rowData;
+//   const segment = segments[index];
+//   const rowRef = useRef<HTMLDivElement>(null);
+//   const contentRef = useRef<HTMLDivElement>(null);
 
-  const splitter = useCallback(() => {
-    onSplitSegment();
-  }, [onSplitSegment]);
+//   const splitter = useCallback(() => {
+//     onSplitSegment();
+//   }, [onSplitSegment]);
 
-  if (!segment) return null;
+//   if (!segment) return null;
 
-  const isFirstSegment = index === 0;
-  const isAttached = isFirstSegment && (segment.is_attached ?? false);
-  const isActive = segment.id === activeSegmentId;
-  const isCollapsed = collapsedSegments.has(segment.id);
+//   const isFirstSegment = index === 0;
+//   const isAttached = isFirstSegment && (segment.is_attached ?? false);
+//   const isActive = segment.id === activeSegmentId;
+//   const isCollapsed = collapsedSegments.has(segment.id);
 
-  // Ensure style includes width for proper layout
-  const rowStyle: React.CSSProperties = {
-    ...style,
-    width: '100%',
-  };
-  return (
-    <div style={rowStyle} ref={rowRef} className="px-6">
-      <div ref={contentRef} className="relative">
-        <SegmentItem
-          segment={segment}
-          segmentConfig={{
-            index,
-            isActive,
-            isFirstSegment,
-            isAttached,
-          }}
-          cursorPosition={cursorPosition}
-          isCollapsed={isCollapsed}
-          onToggleCollapse={toggleSegmentCollapse}
-          onCollapseAll={isFirstSegment ? toggleCollapseAll : undefined}
-          isAllCollapsed={isFirstSegment ? isAllCollapsed : undefined}
-        />
+//   // Ensure style includes width for proper layout
+//   const rowStyle: React.CSSProperties = {
+//     ...style,
+//     width: '100%',
+//   };
+//   return (
+//     <div style={rowStyle} ref={rowRef} className="px-6">
+//       <div ref={contentRef} className="relative">
+//         <SegmentItem
+//           segment={segment}
+//           segmentConfig={{
+//             index,
+//             isActive,
+//             isFirstSegment,
+//             isAttached,
+//           }}
+//           cursorPosition={cursorPosition}
+//           isCollapsed={isCollapsed}
+//           onToggleCollapse={toggleSegmentCollapse}
+//           onCollapseAll={isFirstSegment ? toggleCollapseAll : undefined}
+//           isAllCollapsed={isFirstSegment ? isAllCollapsed : undefined}
+//         />
 
-        {/* Split Menu - positioned relative to segment container */}
-        {cursorPosition &&
-          cursorPosition.segmentId === segment.id &&
-          cursorPosition.menuPosition && (
-            <SplitMenu
-              position={cursorPosition.menuPosition}
-              segmentId={segment.id}
-              onSplit={splitter}
-              onCancel={() => onMergeWithPrevious(segment.id)}
-              onClose={() => {}}
-            />
-          )}
+//         {/* Split Menu - positioned relative to segment container */}
+//         {cursorPosition &&
+//           cursorPosition.segmentId === segment.id &&
+//           cursorPosition.menuPosition && (
+//             <SplitMenu
+//               position={cursorPosition.menuPosition}
+//               segmentId={segment.id}
+//               onSplit={splitter}
+//               onCancel={() => onMergeWithPrevious(segment.id)}
+//               onClose={() => {}}
+//             />
+//           )}
 
-        {/* Bubble Menu - positioned relative to segment container */}
-        {bubbleMenuState && bubbleMenuState.segmentId === segment.id && (
-          <BubbleMenu
-            position={bubbleMenuState.position}
-            selectedText={bubbleMenuState.selectedText}
-            onSelect={(field) =>
-              onBubbleMenuSelect(field, segment.id, bubbleMenuState.selectedText)
-            }
-            onClose={() => {}}
-          />
-        )}
-      </div>
-    </div>
-  );
-};
+//         {/* Bubble Menu - positioned relative to segment container */}
+//         {bubbleMenuState && bubbleMenuState.segmentId === segment.id && (
+//           <BubbleMenu
+//             position={bubbleMenuState.position}
+//             selectedText={bubbleMenuState.selectedText}
+//             onSelect={(field) =>
+//               onBubbleMenuSelect(field, segment.id, bubbleMenuState.selectedText)
+//             }
+//             onClose={() => {}}
+//           />
+//         )}
+//       </div>
+//     </div>
+//   );
+// };
 
 export const Workspace: React.FC = () => {
   const {
@@ -117,7 +117,6 @@ export const Workspace: React.FC = () => {
     bubbleMenuState,
     cursorPosition,
     aiTextEndingLoading,
-    segmentLoadingStates,
     onTextSelection,
     onBubbleMenuSelect,
     onSplitSegment,
@@ -195,17 +194,17 @@ export const Workspace: React.FC = () => {
   const isAllCollapsed = segments.length > 0 && segments.every(seg => 
     seg.id === activeSegmentId ? false : collapsedSegments.has(seg.id)
   );
-  const [containerHeight] = React.useState(() => {
-    // Initialize with a reasonable default
-    if (globalThis.window !== undefined) {
-      return globalThis.window.innerHeight - 150; // Approximate header + padding
-    }
-    return 600;
-  });
+  // const [containerHeight] = React.useState(() => {
+  //   // Initialize with a reasonable default
+  //   if (globalThis.window !== undefined) {
+  //     return globalThis.window.innerHeight - 150; // Approximate header + padding
+  //   }
+  //   return 600;
+  // });
  
-  const rowHeight = useDynamicRowHeight({
-    defaultRowHeight: 50
-  });
+  // const rowHeight = useDynamicRowHeight({
+  //   defaultRowHeight: 50
+  // });
 
   // Save scroll position immediately when split happens, debounced value for restoration
   const scrollPositionRef = useRef<number | null>(null);
@@ -240,20 +239,20 @@ export const Workspace: React.FC = () => {
     prevSegmentsCountRef.current = segments.length;
   }, [segments.length, segmentsCountChanged, shouldRestoreScroll, setShouldRestoreScroll]);
 
-    const rowProps: RowData = {
-    segments,
-    activeSegmentId,
-    cursorPosition,
-    bubbleMenuState,
-    segmentLoadingStates,
-    onSplitSegment: handleSplitSegmentWithScrollSave,
-    onMergeWithPrevious,
-    onBubbleMenuSelect,
-    collapsedSegments,
-    toggleSegmentCollapse,
-    toggleCollapseAll,
-    isAllCollapsed,
-  };
+  //   const rowProps: RowData = {
+  //   segments,
+  //   activeSegmentId,
+  //   cursorPosition,
+  //   bubbleMenuState,
+  //   segmentLoadingStates,
+  //   onSplitSegment: handleSplitSegmentWithScrollSave,
+  //   onMergeWithPrevious,
+  //   onBubbleMenuSelect,
+  //   collapsedSegments,
+  //   toggleSegmentCollapse,
+  //   toggleCollapseAll,
+  //   isAllCollapsed,
+  // };
 
   
 
@@ -360,7 +359,7 @@ export const Workspace: React.FC = () => {
                               onSelect={(field) =>
                                 onBubbleMenuSelect(field, segment.id, bubbleMenuState.selectedText)
                               }
-                              onClose={() => {}}
+                              onClose={()=>{}}
                             />
                           )}
                         </div>

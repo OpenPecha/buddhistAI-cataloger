@@ -14,7 +14,6 @@ interface OutlinerContextValue {
   cursorPosition: CursorPosition | null;
   aiTextEndingLoading: boolean;
   segmentLoadingStates: Map<string, boolean>; // Map of segmentId -> loading boolean
-  
   // Handlers
   onFileUpload: (content: string) => void;
   onFileUploadToBackend?: (file: File) => Promise<void>;

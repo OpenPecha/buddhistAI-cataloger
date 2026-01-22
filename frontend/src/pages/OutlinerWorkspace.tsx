@@ -45,6 +45,7 @@ const OutlinerWorkspace: React.FC = () => {
   
   // UI state for menus
   const [bubbleMenuState, setBubbleMenuState] = useState<BubbleMenuState | null>(null);
+ 
   const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(null);
   
   // Store pending bubble menu value to apply when segment becomes active
@@ -483,7 +484,7 @@ const OutlinerWorkspace: React.FC = () => {
 
       // Store the pending value
       pendingBubbleMenuValueRef.current = { field, segmentId, text };
-
+     
       // Activate the segment so sidebar shows it - update URL
       setSearchParams({ segmentId }, { replace: true });
       
