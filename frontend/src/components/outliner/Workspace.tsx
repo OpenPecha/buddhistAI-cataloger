@@ -125,7 +125,6 @@ export const Workspace: React.FC = () => {
     onAIDetectTextEndings,
     onAITextEndingStop,
     onUndoTextEndingDetection,
-    onLoadNewFile,
     onResetSegments,
     onCursorChange,
     onInput,
@@ -284,7 +283,6 @@ export const Workspace: React.FC = () => {
               onAIDetectTextEndings,
               onAITextEndingStop,
               onUndoTextEndingDetection,
-              onLoadNewFile,
               onResetSegments,
             }}
           />

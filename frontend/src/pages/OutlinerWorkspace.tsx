@@ -711,9 +711,6 @@ const OutlinerWorkspace: React.FC = () => {
         onAIDetectTextEndings: handleAIDetectTextEndings,
         onAITextEndingStop: handleAITextEndingStop,
         onUndoTextEndingDetection: handleUndoTextEndingDetection,
-        onLoadNewFile: () => {
-          navigate('/outliner');
-        },
         onSegmentStatusUpdate: handleSegmentStatusUpdate,
         onResetSegments: resetSegmentsBackend,
       }}

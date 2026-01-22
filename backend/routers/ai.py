@@ -19,9 +19,12 @@ router = APIRouter()
 # Configure Gemini API
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
+class TextEndingDetectionRequest(BaseModel):
+    content: str = Field(..., description="The text content to analyze for text endings")
+    document_id: str = Field(..., description="The document ID to associate segments with")
+
 class ContentRequest(BaseModel):
     content: str = Field(..., description="The text content to analyze for title and author")
-    document_id: str = Field(..., description="The document ID to associate segments with")
 
 class TitleAuthorResponse(BaseModel):
     title: Optional[str] = Field(None, description="Extracted title from the content if explicitly mentioned")
@@ -40,7 +43,11 @@ async def generate_title_author(request: ContentRequest):
             status_code=500,
             detail="GEMINI_API_KEY environment variable is not set"
         )
-    
+    content = request.content
+    start_clip = content[:400]
+    end_clip = content[-400:] if len(content) > 400 else ""
+    clipped_content = f"{start_clip}\n{end_clip}" if end_clip else start_clip
+    print(clipped_content)
     try:
         # Initialize the client
         client = genai.Client(api_key=GEMINI_API_KEY)
@@ -62,7 +69,7 @@ Fields to provide:
 - suggested_author: A suggested author name if author is null, otherwise null (must be in the same language as content)
 
 Text to analyze:
-{request.content}
+{clipped_content}
 
 Provide all four fields (title, suggested_title, author, suggested_author) in the same language as the content."""
 
@@ -75,7 +82,6 @@ Provide all four fields (title, suggested_title, author, suggested_author) in th
                 "response_schema": TitleAuthorResponse,
             }
         )
-        print(response)
         
         # Access the parsed response directly
         if hasattr(response, 'parsed') and response.parsed:
@@ -163,7 +169,7 @@ def detect_text_boundaries_rule_based(content: str) -> Optional[List[int]]:
     return None
 
 @router.post("/detect-text-endings", response_model=TextEndingDetectionResponse)
-async def detect_text_endings(request: ContentRequest, db: Session = Depends(get_db)):
+async def detect_text_endings(request: TextEndingDetectionRequest, db: Session = Depends(get_db)):
     """
     Detect text endings (sentence/paragraph boundaries) and return starting positions of each segment.
     First checks rule-based patterns, then uses Gemini if no patterns are found.

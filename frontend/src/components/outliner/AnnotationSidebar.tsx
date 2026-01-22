@@ -45,6 +45,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   activeSegment,
   documentId,
 }, ref) => {
+  const {document} = useOutlinerDocument();
   const { updateSegment: updateSegmentMutation } = useOutlinerDocument();
   const activeSegmentId = activeSegment?.id || null;
   const title = activeSegment?.title || '';
@@ -166,9 +167,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
         updatePayload.author_bdrc_id = formData.author.bdrc_id;
       }
     }
-    if(titleName && authorName){
     updatePayload.status = 'checked';
-    }
     // Make API call to update segment using mutation
     try {
       await updateSegmentMutation(activeSegmentId, updatePayload);
@@ -212,14 +211,14 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       await updateSegmentMutation(activeSegmentId, newPayload);
     }
   }
-
+  const text_title = document?.filename ? document.filename.replace(/\.[^/.]+$/, '') : '';
   return (
     <div className="w-96 bg-white border-r border-gray-200 flex flex-col font-monlam-2">
       <div className="p-6 overflow-y-auto flex-1">
         {activeSegment ? (
           <div className="space-y-6">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Boundary Detection</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">{text_title}</h2>
               <div className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-md border border-gray-200">
                 <div className="font-medium mb-1">Text:</div>
                 <div className="text-gray-800">{activeSegment.text.slice(0, 100)}...</div>
@@ -266,7 +265,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
           onClick={onSave}
           variant="default"
         >
-          Save Annotations
+          Save
         </Button>
         <Button
           type="button"
@@ -274,7 +273,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
           variant="outline"
           disabled={!activeSegmentId}
         >
-          Reset Annotations
+          Reset
         </Button>
       </div>
     </div>

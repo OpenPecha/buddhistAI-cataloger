@@ -8,7 +8,6 @@ interface AISuggestionsBoxProps {
   loading: boolean;
   onDetect: () => void;
   onStop: () => void;
-  onUseSuggestion: (field: 'title' | 'author', value: string) => void;
 }
 
 export const AISuggestionsBox: React.FC<AISuggestionsBoxProps> = ({
@@ -16,7 +15,6 @@ export const AISuggestionsBox: React.FC<AISuggestionsBoxProps> = ({
   loading,
   onDetect,
   onStop,
-  onUseSuggestion,
 }) => {
   return (
     <>
@@ -69,15 +67,7 @@ export const AISuggestionsBox: React.FC<AISuggestionsBoxProps> = ({
                 <div className="text-sm text-blue-900 mb-2">
                   {suggestions.title || suggestions.suggested_title}
                 </div>
-                {suggestions.suggested_title && (
-                  <button
-                    type="button"
-                    onClick={() => onUseSuggestion('title', suggestions.suggested_title!)}
-                    className="text-xs text-blue-600 hover:text-blue-800 underline"
-                  >
-                    Use this suggestion
-                  </button>
-                )}
+             
               </div>
             )}
             {/* Author Suggestion */}
@@ -87,15 +77,7 @@ export const AISuggestionsBox: React.FC<AISuggestionsBoxProps> = ({
                 <div className="text-sm text-blue-900 mb-2">
                   {suggestions.author || suggestions.suggested_author}
                 </div>
-                {suggestions.suggested_author && (
-                  <button
-                    type="button"
-                    onClick={() => onUseSuggestion('author', suggestions.suggested_author!)}
-                    className="text-xs text-blue-600 hover:text-blue-800 underline"
-                  >
-                    Use this suggestion
-                  </button>
-                )}
+              
               </div>
             )}
             {/* Show message if no suggestions */}

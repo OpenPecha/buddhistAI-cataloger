@@ -7,6 +7,11 @@ from sqlalchemy.dialects.postgresql import insert
 from datetime import datetime
 import uuid
 from core.database import get_db
+from core.redis import (
+    get_document_content_from_cache,
+    set_document_content_in_cache,
+    invalidate_document_content_cache
+)
 from models.outliner import OutlinerDocument, OutlinerSegment
 
 router = APIRouter()
@@ -133,6 +138,37 @@ def remove_escape_chars_except_newline(text: str) -> str:
 
 # ==================== Helper Functions ====================
 
+def get_document_with_cache(db: Session, document_id: str) -> Optional[OutlinerDocument]:
+    """
+    Get document from database, checking Redis cache first for content.
+    If content is in cache, use it; otherwise fetch from DB and cache it.
+    
+    Args:
+        db: Database session
+        document_id: Document ID
+        
+    Returns:
+        OutlinerDocument if found, None otherwise
+    """
+    # Try to get content from cache first
+    cached_content = get_document_content_from_cache(document_id)
+    
+    if cached_content is not None:
+        # Content found in cache, fetch document metadata from DB
+        document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+        if document:
+            # Replace content with cached version
+            document.content = cached_content
+        return document
+    else:
+        # Content not in cache, fetch from DB
+        document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+        if document:
+            # Cache the content for future requests
+            set_document_content_in_cache(document_id, document.content)
+        return document
+
+
 def update_document_progress(db: Session, document_id: str):
     """
     Recalculate and update document progress using COUNT queries.
@@ -248,6 +284,10 @@ async def create_document(
     db.add(db_document)
     db.commit()
     db.refresh(db_document)
+    
+    # Cache the new document content
+    set_document_content_in_cache(db_document.id, db_document.content)
+    
     return db_document
 
 
@@ -306,6 +346,10 @@ async def upload_document(
     db.add(db_document)
     db.commit()
     db.refresh(db_document)
+    
+    # Cache the new document content
+    set_document_content_in_cache(db_document.id, db_document.content)
+    
     return db_document
 
 
@@ -375,17 +419,30 @@ async def get_document(
     db: Session = Depends(get_db)
 ):
     """Get a document by ID with all its segments"""
-    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    document = get_document_with_cache(db, document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
     if include_segments:
-        # Load segments ordered by segment_index
-        segments = db.query(OutlinerSegment).filter(
+        # Load only selected fields for each segment
+        segments = db.query(
+            OutlinerSegment.span_start,
+            OutlinerSegment.span_end,
+            OutlinerSegment.is_attached,
+            OutlinerSegment.segment_index,
+            OutlinerSegment.comment,
+            OutlinerSegment.id,
+            OutlinerSegment.status,
+            OutlinerSegment.title,
+            OutlinerSegment.author,
+            OutlinerSegment.title_bdrc_id,
+            OutlinerSegment.author_bdrc_id,
+        ).filter(
             OutlinerSegment.document_id == document_id
         ).order_by(OutlinerSegment.segment_index).all()
-        document.segments = segments
-    
+        # Instead of assigning a list of dicts directly (which breaks SQLAlchemy relations), store the segments as an extra attribute for serialization
+        document.segment_list = [dict(segment._asdict()) for segment in segments]
+
     return document
 
 
@@ -403,6 +460,11 @@ async def update_document_content(
     document.content = content
     document.updated_at = datetime.utcnow()
     db.commit()
+    
+    # Invalidate cache and update with new content
+    invalidate_document_content_cache(document_id)
+    set_document_content_in_cache(document_id, content)
+    
     return {"message": "Document content updated", "document_id": document_id}
 
 
@@ -418,6 +480,10 @@ async def delete_document(
     
     db.delete(document)
     db.commit()
+    
+    # Invalidate cache when document is deleted
+    invalidate_document_content_cache(document_id)
+    
     return None
 
 
@@ -430,8 +496,8 @@ async def create_segment(
     db: Session = Depends(get_db)
 ):
     """Create a new segment in a document"""
-    # Verify document exists
-    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    # Verify document exists and get content from cache if available
+    document = get_document_with_cache(db, document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
@@ -472,7 +538,7 @@ async def create_segments_bulk(
     db: Session = Depends(get_db)
 ):
     """Create multiple segments at once"""
-    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    document = get_document_with_cache(db, document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
@@ -681,7 +747,7 @@ async def split_segment(
     if not segment:
         # If document_id is provided, try to create initial segment from document content
         if split_request.document_id:
-            document = db.query(OutlinerDocument).filter(OutlinerDocument.id == split_request.document_id).first()
+            document = get_document_with_cache(db, split_request.document_id)
             if not document:
                 raise HTTPException(status_code=404, detail="Document not found")
             
@@ -875,8 +941,8 @@ async def bulk_segment_operations(
     Perform bulk operations on segments: create, update, and delete in a single transaction.
     This is optimized for performance by batching all operations together.
     """
-    # Verify document exists
-    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    # Verify document exists and get content from cache if available
+    document = get_document_with_cache(db, document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
