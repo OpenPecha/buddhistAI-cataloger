@@ -1,10 +1,10 @@
 import type { Document } from '../shared/types';
 
 interface DocumentRowProps {
-  document: Document;
-  onStatusChange: (documentId: string, newStatus: string) => void;
-  onSelect: (document: Document) => void;
-  onDelete: (documentId: string) => void;
+  readonly document: Document;
+   readonly onStatusChange: (documentId: string, newStatus: string) => void;
+  readonly onSelect: (document: Document) => void;
+ readonly onDelete: (documentId: string) => void;
 }
 
 function DocumentRow({ document, onStatusChange, onSelect, onDelete }: DocumentRowProps) {

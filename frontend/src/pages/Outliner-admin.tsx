@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 
 // Components
 import { OverviewTab, DocumentsTab, SegmentsTab } from '../components/admin';
-
+import type { Document } from '../components/admin/shared/types';
 // Hooks
 import {
   useOutlinerData,
@@ -61,6 +61,10 @@ function OutlinerAdmin() {
       return newSet;
     });
   };
+  const handleDocumentSelectAction = (document: Document) => {
+    handleDocumentSelect(document);
+    setActiveTab('segments');
+  };
 
   const handleDocumentDelete = (documentId: string) => {
     deleteDocumentAction(documentId, selectedDocument);
@@ -114,7 +118,7 @@ function OutlinerAdmin() {
             <DocumentsTab
               documents={documents}
               onDocumentStatusChange={updateDocumentStatus}
-              onDocumentSelect={handleDocumentSelect}
+              onDocumentSelect={handleDocumentSelectAction}
               onDocumentDelete={handleDocumentDelete}
             />
           )}

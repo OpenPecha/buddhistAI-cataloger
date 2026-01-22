@@ -249,10 +249,9 @@ const OutlinerWorkspace: React.FC = () => {
     const viewportHeight = window.innerHeight;
 
     // Calculate initial position below cursor, relative to segment container
+    // Position menu at cursor's left edge (aligned with cursor position)
     const menuPosition = {
-      x: cursorRect.width > 0 
-        ? cursorRect.left - segmentRect.left - menuWidth / 2 + cursorRect.width / 2
-        : segmentRect.width / 2 - menuWidth / 2,
+      x: cursorRect.left - segmentRect.left,
       y: cursorRect.height > 0 
         ? cursorRect.bottom - segmentRect.top + gap
         : gap, // 8px gap below cursor
