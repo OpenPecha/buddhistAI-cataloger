@@ -47,7 +47,6 @@ async def generate_title_author(request: ContentRequest):
     start_clip = content[:400]
     end_clip = content[-400:] if len(content) > 400 else ""
     clipped_content = f"{start_clip}\n{end_clip}" if end_clip else start_clip
-    print(clipped_content)
     try:
         # Initialize the client
         client = genai.Client(api_key=GEMINI_API_KEY)

@@ -220,7 +220,6 @@ export const Workspace: React.FC = () => {
   // Save scroll position when split is triggered
   const handleSplitSegmentWithScrollSave = useCallback(() => {
     if (containerRef.current) {
-      console.log('scroll position',scrollPositionRef.current);
       setShouldRestoreScroll(true);
     }
     onSplitSegment();
