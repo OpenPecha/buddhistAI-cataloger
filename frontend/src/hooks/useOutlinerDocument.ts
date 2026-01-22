@@ -493,6 +493,12 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
   });
 
   const handleResetSegments = useCallback(async () => {
+    if (!confirm('⚠️Are you sure you want to reset the segments? This action cannot be undone.')) {
+      return;
+    }
+    if (!confirm('⚠️Are you really sure?')) {
+      return;
+    }
     if (!documentId) return;
     setIsSaving(true);
     try {
