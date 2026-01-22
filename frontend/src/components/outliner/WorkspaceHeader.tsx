@@ -41,6 +41,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
           variant="outline"
           onClick={onAIDetectTextEndings}
           disabled={aiTextEndingLoading}
+          title="AI Detect Text Endings"
           className="flex items-center gap-2"
         >
           {aiTextEndingLoading ? (
@@ -50,8 +51,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
             </>
           ) : (
             <>
-              <Sparkles className="w-4 h-4" />
-              AI Detect Text Endings
+              <Sparkles className="w-4 h-4"/>
             </>
           )}
         </Button>

@@ -15,8 +15,8 @@ export const useAITextEndings = (options?: UseAITextEndingsOptions) => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: ({ content, signal }: { content: string; signal?: AbortSignal }) =>
-      detectTextEndings({ content }, signal),
+    mutationFn: ({ content,document_id, signal }: { content: string; document_id: string; signal?: AbortSignal }) =>
+      detectTextEndings({ content, document_id: options?.documentId }, signal),
     onSuccess: (data) => {
       if (options?.documentId) {
         // Invalidate document query to refetch updated segments

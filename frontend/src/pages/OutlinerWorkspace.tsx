@@ -570,6 +570,7 @@ const OutlinerWorkspace: React.FC = () => {
       // Use React Query mutation for AI detection
       const data = await aiTextEndings.detectTextEndings({
         content: contentToSend,
+        document_id:documentId,
         signal: abortController.signal,
       });
 

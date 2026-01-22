@@ -434,6 +434,7 @@ export const resetSegments = async (documentId: string): Promise<void> => {
 // ==================== AI Endpoints ====================
 
 export interface DetectTextEndingsRequest {
+  document_id: string;
   content: string;
 }
 

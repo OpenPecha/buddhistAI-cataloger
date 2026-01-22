@@ -1,10 +1,16 @@
 import os
 import re
+import uuid
+import json
 from google import genai
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from typing import Optional, List
+from sqlalchemy.orm import Session
+from sqlalchemy import func
 from dotenv import load_dotenv
+from core.database import get_db
+from models.outliner import OutlinerDocument, OutlinerSegment
 
 load_dotenv(override=True)
 
@@ -15,6 +21,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 class ContentRequest(BaseModel):
     content: str = Field(..., description="The text content to analyze for title and author")
+    document_id: str = Field(..., description="The document ID to associate segments with")
 
 class TitleAuthorResponse(BaseModel):
     title: Optional[str] = Field(None, description="Extracted title from the content if explicitly mentioned")
@@ -75,7 +82,6 @@ Provide all four fields (title, suggested_title, author, suggested_author) in th
             return response.parsed
         elif hasattr(response, 'text') and response.text:
             # Fallback: parse JSON manually if parsed attribute not available
-            import json
             result = json.loads(response.text.strip())
             return TitleAuthorResponse(
                 title=result.get("title"),
@@ -157,35 +163,38 @@ def detect_text_boundaries_rule_based(content: str) -> Optional[List[int]]:
     return None
 
 @router.post("/detect-text-endings", response_model=TextEndingDetectionResponse)
-async def detect_text_endings(request: ContentRequest):
+async def detect_text_endings(request: ContentRequest, db: Session = Depends(get_db)):
     """
     Detect text endings (sentence/paragraph boundaries) and return starting positions of each segment.
     First checks rule-based patterns, then uses Gemini if no patterns are found.
+    Creates segments in the database when detection is complete.
     """
     try:
+        # Verify document exists
+        document = db.query(OutlinerDocument).filter(OutlinerDocument.id == request.document_id).first()
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
         # First, try rule-based detection
         rule_based_positions = detect_text_boundaries_rule_based(request.content)
         
+        starting_positions = None
         if rule_based_positions:
-            # Return rule-based results immediately
-            return TextEndingDetectionResponse(
-                starting_positions=rule_based_positions,
-                total_segments=len(rule_based_positions)
-            )
+            starting_positions = rule_based_positions
+        else:
+            # If no rule-based patterns found, proceed with AI detection
+            if not GEMINI_API_KEY:
+                raise HTTPException(
+                    status_code=500,
+                    detail="GEMINI_API_KEY environment variable is not set"
+                )
         
-        # If no rule-based patterns found, proceed with AI detection
-        if not GEMINI_API_KEY:
-            raise HTTPException(
-                status_code=500,
-                detail="GEMINI_API_KEY environment variable is not set"
-            )
-    
-        # Initialize the client
-        client = genai.Client(api_key=GEMINI_API_KEY)
-        
-        # Create prompt to detect text endings and identify starting positions
-        # We'll ask for ending positions and calculate starting positions ourselves for accuracy
-        prompt = f"""You are an expert scholar of Tibetan texts with deep experience in textual criticism, canon structure, and discourse analysis.
+            # Initialize the client
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            
+            # Create prompt to detect text endings and identify starting positions
+            # We'll ask for ending positions and calculate starting positions ourselves for accuracy
+            prompt = f"""You are an expert scholar of Tibetan texts with deep experience in textual criticism, canon structure, and discourse analysis.
 
 You are given a SINGLE continuous block of text.
 This text MAY contain multiple DISTINCT Tibetan texts concatenated together.
@@ -231,89 +240,130 @@ If the entire content is a single coherent text, return:
 }}
 """
 
-        # Generate content with structured output
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
-            contents=prompt,
-            config={
-                "response_mime_type": "application/json",
-            }
-        )
-        
-        # Parse the response and calculate starting positions
-        import json
-        if hasattr(response, 'text') and response.text:
-            try:
-                # Try to parse as JSON object or array
-                response_text = response.text.strip()
-                result = json.loads(response_text)
-                
-                # Handle different response formats
-                if isinstance(result, dict):
-                    # Expected format: {"starting_positions": [0, 456, 1823]}
-                    starting_positions = result.get("starting_positions", [])
-                elif isinstance(result, list):
-                    # Fallback: direct array of positions
-                    starting_positions = result
-                else:
-                    raise ValueError("Unexpected response format")
-                
-                # Validate and process starting positions
-                if not isinstance(starting_positions, list):
-                    raise ValueError("starting_positions is not a list")
-                
-                # Convert to integers and sort
-                starting_positions = sorted([int(pos) for pos in starting_positions if isinstance(pos, (int, str))])
-                
-                # Ensure 0 is included as the first position
-                if not starting_positions or starting_positions[0] != 0:
-                    starting_positions.insert(0, 0)
-                
-                # Remove duplicates and sort
-                starting_positions = sorted(set(starting_positions))
-                
-                # Ensure we don't exceed text length
-                text_length = len(request.content)
-                starting_positions = [pos for pos in starting_positions if pos <= text_length]
-                
-                return TextEndingDetectionResponse(
-                    starting_positions=starting_positions,
-                    total_segments=len(starting_positions)
-                )
-            except ValueError as e:
-                # Fallback: try to extract positions from text response using regex
-                # Look for array-like patterns in the response
-                array_match = re.search(r'\[[\d\s,]+\]', response.text)
-                if array_match:
-                    starting_positions = json.loads(array_match.group())
-                    starting_positions = sorted([int(pos) for pos in starting_positions])
+            # Generate content with structured output
+            response = client.models.generate_content(
+                model="gemini-2.5-flash-lite",
+                contents=prompt,
+                config={
+                    "response_mime_type": "application/json",
+                }
+            )
+            
+            # Parse the response and calculate starting positions
+            if hasattr(response, 'text') and response.text:
+                try:
+                    # Try to parse as JSON object or array
+                    response_text = response.text.strip()
+                    result = json.loads(response_text)
                     
-                    # Ensure 0 is included
+                    # Handle different response formats
+                    if isinstance(result, dict):
+                        # Expected format: {"starting_positions": [0, 456, 1823]}
+                        starting_positions = result.get("starting_positions", [])
+                    elif isinstance(result, list):
+                        # Fallback: direct array of positions
+                        starting_positions = result
+                    else:
+                        raise ValueError("Unexpected response format")
+                    
+                    # Validate and process starting positions
+                    if not isinstance(starting_positions, list):
+                        raise ValueError("starting_positions is not a list")
+                    
+                    # Convert to integers and sort
+                    starting_positions = sorted([int(pos) for pos in starting_positions if isinstance(pos, (int, str))])
+                    
+                    # Ensure 0 is included as the first position
                     if not starting_positions or starting_positions[0] != 0:
                         starting_positions.insert(0, 0)
                     
-                    # Remove duplicates and validate
+                    # Remove duplicates and sort
                     starting_positions = sorted(set(starting_positions))
+                    
+                    # Ensure we don't exceed text length
                     text_length = len(request.content)
                     starting_positions = [pos for pos in starting_positions if pos <= text_length]
-                    
-                    return TextEndingDetectionResponse(
-                        starting_positions=starting_positions,
-                        total_segments=len(starting_positions)
-                    )
-                else:
-                    raise HTTPException(
-                        status_code=500,
-                        detail=f"Could not parse positions from response: {response.text}. Error: {str(e)}"
-                    )
+                except ValueError as e:
+                    # Fallback: try to extract positions from text response using regex
+                    # Look for array-like patterns in the response
+                    array_match = re.search(r'\[[\d\s,]+\]', response.text)
+                    if array_match:
+                        starting_positions = json.loads(array_match.group())
+                        starting_positions = sorted([int(pos) for pos in starting_positions])
+                        
+                        # Ensure 0 is included
+                        if not starting_positions or starting_positions[0] != 0:
+                            starting_positions.insert(0, 0)
+                        
+                        # Remove duplicates and validate
+                        starting_positions = sorted(set(starting_positions))
+                        text_length = len(request.content)
+                        starting_positions = [pos for pos in starting_positions if pos <= text_length]
+                    else:
+                        raise HTTPException(
+                            status_code=500,
+                            detail=f"Could not parse positions from response: {response.text}. Error: {str(e)}"
+                        )
+            else:
+                raise HTTPException(
+                    status_code=500,
+                    detail="No response received from the model"
+                )
+        
+        # If we have starting positions (from either rule-based or AI detection), create segments
+        if starting_positions:
+            # Extract text segments and create database records
+            db_segments = []
+            text_length = len(request.content)
+            for idx, start_pos in enumerate(starting_positions):
+                end_pos = (
+                    starting_positions[idx + 1]
+                    if idx + 1 < len(starting_positions)
+                    else text_length
+                )
+
+                segment_text = request.content[start_pos:end_pos]
+
+                db_segments.append({
+                    "id": str(uuid.uuid4()),
+                    "document_id": request.document_id,
+                    "text": segment_text,
+                    "segment_index": idx,
+                    "span_start": start_pos,
+                    "span_end": end_pos,
+                    "status": "unchecked",
+                    "is_annotated": False,
+                })
+            db.bulk_insert_mappings(OutlinerSegment, db_segments)
+            
+            # Update document statistics
+            document.total_segments = len(db_segments)
+            document.annotated_segments = db.query(func.count(OutlinerSegment.id)).filter(
+                OutlinerSegment.document_id == request.document_id,
+                OutlinerSegment.is_annotated == True
+            ).scalar() or 0
+            document.update_progress()
+            
+            # Commit all changes
+            db.commit()
+            
+            return TextEndingDetectionResponse(
+                starting_positions=starting_positions,
+                total_segments=len(starting_positions)
+            )
         else:
             raise HTTPException(
                 status_code=500,
-                detail="No response received from the model"
+                detail="Could not detect any text segments"
             )
             
+    except HTTPException:
+        # Re-raise HTTPException as-is
+        raise
     except Exception as e:
-        # Re-raise HTTPException as-is, wrap other exceptions
-        if isinstance(e, HTTPException):
-            raise
-        raise HTTPException(status_code=500, detail=f"Error detecting text endings: {str(e)}")
+        # Wrap other exceptions
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error detecting text endings: {str(e)}"
+        )
+            
