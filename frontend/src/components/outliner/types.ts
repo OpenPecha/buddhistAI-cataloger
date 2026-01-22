@@ -1,3 +1,5 @@
+import type { CommentsData } from '@/api/outliner';
+
 export interface TextSegment {
   id: string;
   text: string;
@@ -8,7 +10,7 @@ export interface TextSegment {
   parentSegmentId?: string;
   is_attached?: boolean | null;
   status?: string | null; // checked, unchecked
-  comment?: string | null;
+  comment?: string | CommentsData | null; // Can be old string format or new CommentsData format
 }
 
 export interface BubbleMenuProps {

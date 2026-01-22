@@ -46,7 +46,7 @@ export interface OutlinerSegment {
   status?: string | null; // checked, unchecked
   created_at: string;
   updated_at: string;
-  comment?: string | null;
+  comment?: string | CommentsData | null; // Can be old string format or new CommentsData format
 }
 
 export interface DocumentCreateRequest {
@@ -67,6 +67,16 @@ export interface SegmentCreateRequest {
   parent_segment_id?: string;
 }
 
+export interface Comment {
+  content: string;
+  username: string;
+  timestamp: string;
+}
+
+export interface CommentsData {
+  comments: Comment[];
+}
+
 export interface SegmentUpdateRequest {
   text?: string;
   title?: string;
@@ -76,7 +86,9 @@ export interface SegmentUpdateRequest {
   parent_segment_id?: string;
   is_attached?: boolean;
   status?: string; // checked, unchecked
-  comment?: string;
+  comment?: string | CommentsData; // Can be old string format or new CommentsData format
+  comment_content?: string; // New comment content to append
+  comment_username?: string; // Username for new comment
 }
 
 export interface BulkSegmentUpdateRequest {
@@ -504,7 +516,7 @@ export const outlinerSegmentToTextSegment = (segment: OutlinerSegment): TextSegm
     parentSegmentId: segment.parent_segment_id || undefined,
     is_attached: segment.is_attached ?? undefined,
     status: segment.status || undefined,
-    comment: segment.comment || undefined,
+    comment: segment.comment || undefined, // Can be string or CommentsData
   };
 };
 

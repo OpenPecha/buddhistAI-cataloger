@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Request
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Union, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import func, update
 from sqlalchemy.dialects.postgresql import insert
@@ -30,6 +30,10 @@ class SegmentCreate(BaseModel):
     parent_segment_id: Optional[str] = None
 
 
+class CommentAdd(BaseModel):
+    content: str
+    username: str
+
 class SegmentUpdate(BaseModel):
     text: Optional[str] = None
     title: Optional[str] = None
@@ -39,7 +43,9 @@ class SegmentUpdate(BaseModel):
     parent_segment_id: Optional[str] = None
     is_attached: Optional[bool] = None
     status: Optional[str] = None  # checked, unchecked
-    comment: Optional[str] = None
+    comment: Optional[str] = None  # Deprecated: kept for backward compatibility
+    comment_content: Optional[str] = None  # New comment content to append
+    comment_username: Optional[str] = None  # Username for new comment
 
 
 class SegmentResponse(BaseModel):
@@ -56,7 +62,7 @@ class SegmentResponse(BaseModel):
     is_annotated: bool
     is_attached: Optional[bool] = None
     status: Optional[str] = None  # checked, unchecked
-    comment: Optional[str] = None
+    comment: Optional[Union[str, Dict[str, Any]]] = None  # Can be old string format or new dict format with comments array
     created_at: datetime
     updated_at: datetime
 
@@ -646,7 +652,52 @@ async def update_segment(
     if segment_update.is_attached is not None:
         segment.is_attached = segment_update.is_attached
     if segment_update.comment is not None:
-        segment.comment=segment_update.comment    
+        # Backward compatibility: if old comment format is used, convert to new format
+        segment.comment = segment_update.comment
+    # Handle new comment format: append comment with username
+    if segment_update.comment_content is not None and segment_update.comment_username is not None:
+        import json
+        # Get existing comments or initialize empty list
+        existing_comments = []
+        if segment.comment:
+            try:
+                # Try to parse as JSON array (new format)
+                if isinstance(segment.comment, dict):
+                    # If it's already a dict, check if it has comments array
+                    if isinstance(segment.comment.get('comments'), list):
+                        existing_comments = segment.comment['comments']
+                    else:
+                        # Convert old string format to new format
+                        existing_comments = [{"content": str(segment.comment), "username": "Unknown", "timestamp": datetime.utcnow().isoformat()}]
+                elif isinstance(segment.comment, str):
+                    try:
+                        parsed = json.loads(segment.comment)
+                        if isinstance(parsed, dict) and isinstance(parsed.get('comments'), list):
+                            existing_comments = parsed['comments']
+                        elif isinstance(parsed, list):
+                            existing_comments = parsed
+                        else:
+                            # Old string format
+                            existing_comments = [{"content": segment.comment, "username": "Unknown", "timestamp": datetime.utcnow().isoformat()}]
+                    except json.JSONDecodeError:
+                        # Old string format
+                        existing_comments = [{"content": segment.comment, "username": "Unknown", "timestamp": datetime.utcnow().isoformat()}]
+                elif isinstance(segment.comment, list):
+                    existing_comments = segment.comment
+            except Exception:
+                # Fallback: treat as old string format
+                existing_comments = [{"content": str(segment.comment), "username": "Unknown", "timestamp": datetime.utcnow().isoformat()}]
+        
+        # Append new comment
+        new_comment = {
+            "content": segment_update.comment_content,
+            "username": segment_update.comment_username,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        existing_comments.append(new_comment)
+        
+        # Store as JSON dict with comments array
+        segment.comment = {"comments": existing_comments}
     if segment_update.status is not None:
         # Validate status value
         if segment_update.status not in ['checked', 'unchecked','approved']:

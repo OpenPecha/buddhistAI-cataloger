@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import type { Segment } from '../shared/types';
-import CommentInput from './CommentInput';
-import { useDebouncedValue } from '@tanstack/react-pacer';
 import { Button } from '@/components/ui/button';
-import { useOutliner } from '@/components/outliner/OutlinerContext';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
+import { useUser } from '@/hooks/useUser';
+import CommentView from '@/components/outliner/CommentView';
 
 interface SegmentRowProps {
  readonly segment: Segment;
@@ -17,31 +16,53 @@ function SegmentRow({
   isExpanded,
   onToggleExpansion,
 }: SegmentRowProps) {
-  const [comment, setComment] = useState(segment.comment || '');
+  const [commentContent, setCommentContent] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   const {
     isSaving,
     updateSegment: updateSegmentBackend,
   } = useOutlinerDocument();
+  const { user } = useUser();
+
+  // Handle comment submission (separate from save button)
+  const handleCommentSubmit = useCallback(async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    
+    if (!commentContent.trim()) {
+      return;
+    }
+
+    const username = user?.name || user?.email || 'Unknown';
+    setIsSubmittingComment(true);
+
+    try {
+      await updateSegmentBackend(segment.id, {
+        comment_content: commentContent.trim(),
+        comment_username: username,
+      });
+      setCommentContent(''); // Clear input after successful submission
+    } catch (e) {
+      console.warn('Failed to add comment:', e);
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  }, [commentContent, user, updateSegmentBackend, segment.id]);
+
+  // Handle Enter key in comment textarea
+  const handleCommentKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleCommentSubmit();
+    }
+  }, [handleCommentSubmit]);
 
   const handleSave = async () => {
     try {
-    if(comment!==''){
-        await updateSegmentBackend(segment.id, 
-          {
-            comment: comment.trim(),
-            status: 'unchecked'
-          }
-        );
-      }else {
-            await updateSegmentBackend(segment.id,{
-              comment:"",
-              status:"approved",
-            })
-          
-      }
-    }
-     catch(e){
-      console.warn(e)
+      await updateSegmentBackend(segment.id, {
+        status: 'approved',
+      });
+    } catch(e) {
+      console.warn(e);
     }
   };
 
@@ -128,13 +149,32 @@ function SegmentRow({
         </td>
         <td className="px-6 py-4">
           <div className="space-y-2">
-            <CommentInput
-              value={comment}
-              onChange={setComment}
-              isPending={isSaving}
-              isSaved={false}
-            />
-          
+            {/* Show existing comments */}
+            <CommentView comment={segment.comment} showFull={true} />
+            
+            {/* Comment Input */}
+            <form onSubmit={handleCommentSubmit} className="mt-2">
+              <textarea
+                value={commentContent}
+                onChange={(e) => setCommentContent(e.target.value)}
+                onKeyDown={handleCommentKeyDown}
+                placeholder="Add a comment... (Press Enter to submit)"
+                className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                rows={2}
+                disabled={isSubmittingComment}
+              />
+              <div className="flex justify-end mt-1">
+                <Button
+                  type="submit"
+                  size="sm"
+                  variant="ghost"
+                  disabled={!commentContent.trim() || isSubmittingComment}
+                  className="h-6 text-xs"
+                >
+                  {isSubmittingComment ? 'Submitting...' : 'Submit'}
+                </Button>
+              </div>
+            </form>
           </div>
         </td>
         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

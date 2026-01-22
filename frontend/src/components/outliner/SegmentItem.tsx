@@ -4,6 +4,7 @@ import { Trash2, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
 import type { TextSegment, CursorPosition } from './types';
 import { SegmentTextContent } from './SegmentTextContent';
 import { useOutliner } from './OutlinerContext';
+import CommentView from './CommentView';
 
 interface SegmentConfig {
   index: number;
@@ -140,7 +141,9 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
         
         {/* Cancel Split Button - positioned at top-middle border */}
         {/* Only show if there's a previous segment to merge with */}
-        <CommentView comment={segment.comment} />
+        <div className="absolute top-4 right-4 z-10">
+          <CommentView comment={segment.comment} />
+        </div>
       
         {cursorPosition && cursorPosition.segmentId === segment.id && index > 0 && (
           <button
@@ -242,34 +245,4 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
   );
 };
 
-export const SegmentItemMemo = React.memo(SegmentItem);
-
-
-import { MessageCircle } from "lucide-react";
-
-function CommentView({ comment }: { readonly comment: string | null }) {
-  if (!comment) return null;
-
-  return (
-    <div className="relative inline-flex items-center group float-right">
-      {/* Icon */}
-      <MessageCircle className="h-4 w-4 text-red-400 cursor-pointer" />
-      
-      {/* Tooltip - aligned to the right of the icon */}
-      <div
-        className="
-          absolute right-full top-1/2 z-50 ml-2 w-max max-w-xs
-          -translate-y-1/2
-          rounded-md bg-gray-900 px-3 py-2
-          text-xs text-white
-          opacity-0 group-hover:opacity-100
-          pointer-events-none
-          transition-opacity
-        "
-        style={{ whiteSpace: 'pre-line' }}
-      >
-        {comment}
-      </div>
-    </div>
-  );
-}
+export const SegmentItemMemo = React.me mo(SegmentItem);
