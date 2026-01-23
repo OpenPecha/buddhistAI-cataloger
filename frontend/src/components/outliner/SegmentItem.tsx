@@ -1,22 +1,23 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Trash2, Loader2, ChevronDown, ChevronRight, Merge } from 'lucide-react';
-import type { TextSegment, CursorPosition } from './types';
+import { Loader2, ChevronDown, ChevronRight, Merge } from 'lucide-react';
+import type { TextSegment } from './types';
 import { SegmentTextContent } from './SegmentTextContent';
 import { useOutliner } from './OutlinerContext';
+import { SplitMenu } from './SplitMenu';
+import { BubbleMenu } from './BubbleMenu';
+import Emitter from '@/events';
 
 
 
 interface SegmentItemProps {
   segment: TextSegment;
   index: number;
-  cursorPosition: CursorPosition | null;
 }
 
 const SegmentItem: React.FC<SegmentItemProps> = ({
   segment,
   index,
-  cursorPosition,
 }) => {
 
 
@@ -30,6 +31,10 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
     onAttachParent,
     onMergeWithPrevious,
     segmentLoadingStates,
+    cursorPosition,
+    bubbleMenuState,
+    onBubbleMenuSelect,
+    onSplitSegment,
   } = useOutliner();
   
   const isLoading = segmentLoadingStates?.get(segment.id) ?? false;
@@ -43,14 +48,25 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
     e.stopPropagation();
     setIsCollapsed(!isCollapsed);
   };
+
+  useEffect(() => {
+    const handleSegmentsExpand = (expand: boolean) => {
+      if (segment.id !== activeSegmentId) {
+        setIsCollapsed(expand);
+      }
+    };
+
+    Emitter.on('segments:expand', handleSegmentsExpand);
+    return () => {
+      Emitter.off('segments:expand', handleSegmentsExpand);
+    };
+  }, []);
   
   
-  const onCollapseAll = () => {
-    console.log("onCollapseAll");
-  };
-  const isAllCollapsed = false;
+  const showSplitMenu = cursorPosition?.segmentId === segment.id && cursorPosition.menuPosition;
+  const showBubbleMenu = bubbleMenuState?.segmentId === segment.id;
   return (
-    <div>
+    <div className='relative'>
       {/* Attach Parent Button and Collapse All Button - only for first segment */}
       {isFirstSegment && (
         <div className="flex items-center justify-between gap-2 my-3">
@@ -70,20 +86,6 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
           >
             {isAttached ? '✓ Attached' : 'Attach Parent'}
           </Button>
-          {onCollapseAll && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onCollapseAll();
-              }}
-              className="text-xs border-gray-300 text-gray-700 hover:bg-gray-50"
-            >
-              {isAllCollapsed ? 'Expand All' : 'Collapse All'}
-            </Button>
-          )}
         </div>
       )}
 
@@ -92,10 +94,11 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
         data-segment-id={segment.id}
         data-segment-container-id={segment.id}
         onClick={(e) => {
-          // Only handle click if not clicking on text content or split menu or cancel button or collapse button
+          // Only handle click if not clicking on text content or menus or buttons
           if (
             !(e.target as HTMLElement).closest('.segment-text-content') &&
             !(e.target as HTMLElement).closest('.split-menu') &&
+            !(e.target as HTMLElement).closest('.bubble-menu') &&
             !(e.target as HTMLElement).closest('.cancel-split-button') &&
             !(e.target as HTMLElement).closest('.collapse-button')
           ) {
@@ -224,8 +227,35 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
           </div>
         </div>
       </div>
+      
+      {/* Split Menu - positioned relative to segment container */}
+      {showSplitMenu && (
+          <SplitMenu
+            position={cursorPosition.menuPosition}
+            segmentId={segment.id}
+            onSplit={onSplitSegment}
+            onCancel={() => onMergeWithPrevious(segment.id)}
+            onClose={() => {}}
+          />
+        )}
+
+      {/* Bubble Menu - positioned relative to segment container */}
+      {showBubbleMenu && (
+        <BubbleMenu
+          position={bubbleMenuState.position}
+          segmentId={segment.id}
+          selectedText={bubbleMenuState.selectedText}
+          onSelect={(field) =>
+            onBubbleMenuSelect(field, segment.id, bubbleMenuState.selectedText)
+          }
+          onClose={() => {}}
+        />
+      )}
     </div>
   );
 };
 
 export const SegmentItemMemo = React.memo(SegmentItem);
+
+
+

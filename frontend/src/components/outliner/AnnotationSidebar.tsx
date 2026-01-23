@@ -6,9 +6,11 @@ import { AuthorField, type AuthorFieldRef } from './sidebarFields/AuthorField';
 import { AISuggestionsBox } from './AISuggestionsBox';
 import { useAISuggestions } from '@/hooks/useAISuggestions';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
+import { useComment } from '@/hooks/useComment';
 import { useUser } from '@/hooks/useUser';
-import CommentView from './CommentView';
+import CommentView from './comment/CommentView';
 import { toast } from 'sonner';
+import Comments from './comment/Comment';
 
 interface AnnotationSidebarProps {
   activeSegment: TextSegment | undefined;
@@ -47,16 +49,21 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   documentId,
 }, ref) => {
   const {document} = useOutlinerDocument();
-  const { updateSegment: updateSegmentMutation } = useOutlinerDocument();
+  const { updateSegment: updateSegmentMutation, createCommentMutation } = useOutlinerDocument();
   const { user } = useUser();
   const activeSegmentId = activeSegment?.id || null;
   const title = activeSegment?.title || '';
   const author = activeSegment?.author || '';
+  
+  // Fetch comments separately using useComment hook
+  const { comments, isLoading: isLoadingComments } = useComment(activeSegmentId, {
+    enabled: !!activeSegmentId,
+  });
+  
   // Form data that resets when segment changes
   const [formData, setFormData] = useState<FormDataType>({ title: {name: title, bdrc_id: ''}, author: {name: author, bdrc_id: ''}});
   // Comment input state
   const [commentContent, setCommentContent] = useState('');
-  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
   // Track pending changes per segment
   const pendingChangesRef = useRef<Map<string, FormDataType>>(new Map());
   
@@ -91,7 +98,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       setFormData({ title: {name: title, bdrc_id: ''}, author: {name: author, bdrc_id: ''}});
       setCommentContent(''); // Reset comment input when segment changes
     }
-  }, [activeSegmentId]);
+  }, [activeSegment, title, author]);
 
   // Handle title update
   const handleTitleUpdate = useCallback((value: string) => {
@@ -239,46 +246,14 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
     }
   }
 
-  // Handle comment submission (separate from save button)
-  const handleCommentSubmit = useCallback(async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    
-    if (!activeSegmentId || !commentContent.trim()) {
-      return;
-    }
 
-    const username = user?.name || user?.email || 'Unknown';
-    setIsSubmittingComment(true);
-
-    try {
-      await updateSegmentMutation(activeSegmentId, {
-        comment_content: commentContent.trim(),
-        comment_username: username,
-      });
-      toast.success('Comment added successfully');
-      setCommentContent(''); // Clear input after successful submission
-    } catch (error) {
-      console.error('Failed to add comment:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to add comment');
-    } finally {
-      setIsSubmittingComment(false);
-    }
-  }, [activeSegmentId, commentContent, user, updateSegmentMutation]);
-
-  // Handle Enter key in comment textarea (submit on Enter, but allow Shift+Enter for new line)
-  const handleCommentKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleCommentSubmit();
-    }
-  }, [handleCommentSubmit]);
 
   const text_title = document?.filename ? document.filename.replace(/\.[^/.]+$/, '') : '';
   return (
     <div className="w-96 bg-white border-r border-gray-200 flex flex-col font-monlam-2">
       <div className="p-6 overflow-y-auto flex-1">
         {activeSegment ? (
-          <div className="space-y-6">
+          <div className="flex flex-col flex-1 h-full space-y-6">
             <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-4">{text_title}</h2>
               <div className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-md border border-gray-200">
@@ -310,34 +285,11 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
               onDetect={aiSuggestions.onAIDetect}
               onStop={aiSuggestions.onAIStop}
             />
-
-            {/* Comments Section */}
-            <div className="border-t border-gray-200 pt-6">
-              <CommentView comment={activeSegment.comment} showFull={true} />
+            <hr/>
+            <div className='bg-neutral-200 p-3 rounded-md'>
               
-              {/* Comment Input */}
-              <form onSubmit={handleCommentSubmit} className="mt-4 space-y-2">
-                <textarea
-                  value={commentContent}
-                  onChange={(e) => setCommentContent(e.target.value)}
-                  onKeyDown={handleCommentKeyDown}
-                  placeholder="Add a comment... (Press Enter to submit, Shift+Enter for new line)"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  rows={3}
-                  disabled={isSubmittingComment}
-                />
-                <div className="flex justify-end">
-                  <Button
-                    type="submit"
-                    size="sm"
-                    variant="outline"
-                    disabled={!commentContent.trim() || isSubmittingComment}
-                  >
-                    {isSubmittingComment ? 'Submitting...' : 'Submit Comment'}
-                  </Button>
-                </div>
-              </form>
-            </div>
+            <Comments segmentId={activeSegmentId || ''} />
+              </div>
           </div>
         ) : (
           <div className="text-center text-gray-500 py-12">
@@ -351,9 +303,10 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       <div className="flex gap-2 p-6 border-t border-gray-200 bg-white">
         <Button
           type="button"
+          className='flex-1'
           onClick={onSave}
           variant="default"
-          disabled={!activeSegmentId}
+          disabled={!activeSegmentId || formData.title.name.trim() === '' || formData.author.name.trim() === ''}
         >
           Save
         </Button>

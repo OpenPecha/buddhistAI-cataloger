@@ -11,7 +11,7 @@ export interface Document {
   updated_at: string;
 }
 
-import type { CommentsData } from '@/api/outliner';
+import type { Comment } from '@/api/outliner';
 
 export interface Segment {
   id: string;
@@ -27,7 +27,7 @@ export interface Segment {
   is_annotated: boolean;
   is_attached?: boolean | null;
   status?: string | null;
-  comment?: string | CommentsData | null; // Can be old string format or new CommentsData format
+  comments?: Comment[]; // Optional - comments are fetched separately
   created_at: string;
   updated_at: string;
 }

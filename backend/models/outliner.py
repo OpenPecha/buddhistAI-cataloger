@@ -74,7 +74,7 @@ class OutlinerSegment(Base):
     status: Mapped[str | None] = mapped_column(String, nullable=True) # checked, unchecked
     # Status tracking
     is_annotated: Mapped[bool] = mapped_column(default=False)  # Has title or author
-    comment: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    comment: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)  # Can be array of comments or dict (for backward compatibility)
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 // Components
 import { OverviewTab, DocumentsTab, SegmentsTab } from '../components/admin';
-import type { Document } from '../components/admin/shared/types';
+import type { Document, Segment } from '../components/admin/shared/types';
 // Hooks
 import {
   useOutlinerData,
@@ -10,14 +11,14 @@ import {
 } from '../hooks';
 
 function OutlinerAdmin() {
-  const [activeTab, setActiveTab] = useState('overview');
   const [expandedSegments, setExpandedSegments] = useState<Set<string>>(new Set());
 
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: '📊' },
-    { id: 'documents', label: 'Documents', icon: '📄' },
-    { id: 'segments', label: 'Segments', icon: '📝' }
-  ];
+    { id: 'overview', label: 'Overview' },
+    { id: 'documents', label: 'Documents'},
+    { id: 'segments', label: 'Segments' }
+  ] as const;
+  const [activeTab, setActiveTab] = useState<typeof tabs[number]["id"]>(tabs[0].id);
 
   // Custom hooks for data management
   const {
@@ -34,6 +35,8 @@ function OutlinerAdmin() {
     setSelectedDocument,
     setSegments
   } = useOutlinerData();
+
+  
 
   const { updateDocumentStatus, deleteDocument: deleteDocumentAction } = useDocumentActions({
     loadDocuments,
@@ -89,40 +92,34 @@ function OutlinerAdmin() {
           <p className="text-gray-600">Manage users, documents, and system settings</p>
         </div>
 
-        <div className="mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <span className="mr-2">{tab.icon}</span>
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-          </div>
-        </div>
+        <Tabs defaultValue="overview" value={activeTab} onValueChange={(value) => setActiveTab(value as typeof tabs[number]["id"])} className="flex flex-col w-full">
+          <TabsList className="shrink-0 flex border-b border-gray-200 mb-10">
+            {tabs.map((tab) => (
+              <TabsTrigger
+                key={tab.id}
+                className="bg-white px-5 h-[45px] flex items-center justify-center text-[15px] leading-none text-mauve-6 select-none first:rounded-tl-md last:rounded-tr-md hover:text-blue-600 data-[state=active]:text-blue-600 data-[state=active]:shadow-[inset_0_-1px_0_0,0_1px_0_0] data-[state=active]:shadow-current data-[state=active]:focus:relative outline-none cursor-default"
+                value={tab.id}
+              >
+                <span className="mr-2">{tab.icon}</span>
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-        <div className="tab-content">
-          {activeTab === 'overview' && (
+          <TabsContent value="overview">
             <OverviewTab stats={stats} />
-          )}
-          {activeTab === 'documents' && (
+          </TabsContent>
+
+          <TabsContent value="documents">
             <DocumentsTab
               documents={documents}
               onDocumentStatusChange={updateDocumentStatus}
               onDocumentSelect={handleDocumentSelectAction}
               onDocumentDelete={handleDocumentDelete}
             />
-          )}
-          {activeTab === 'segments' && (
+          </TabsContent>
+
+          <TabsContent value="segments">
             <SegmentsTab
               selectedDocument={selectedDocument}
               segments={segments}
@@ -130,8 +127,8 @@ function OutlinerAdmin() {
               expandedSegments={expandedSegments}
               onToggleExpansion={toggleSegmentExpansion}
             />
-          )}
-        </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import type { CommentsData } from '@/api/outliner';
+import type { Comment } from '@/api/outliner';
 
 export interface TextSegment {
   id: string;
@@ -10,11 +10,12 @@ export interface TextSegment {
   parentSegmentId?: string;
   is_attached?: boolean | null;
   status?: string | null; // checked, unchecked
-  comment?: string | CommentsData | null; // Can be old string format or new CommentsData format
+  comments: Comment[]; // Updated to use comments array
 }
 
 export interface BubbleMenuProps {
   position: { x: number; y: number };
+  segmentId: string;
   onSelect: (field: 'title' | 'author') => void;
   onClose: () => void;
   selectedText?: string;

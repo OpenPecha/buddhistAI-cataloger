@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, Sparkles, Square, RotateCcw, EllipsisVertical } from 'lucide-react';
+import { Loader2, Sparkles, Square, RotateCcw, EllipsisVertical, Redo, Undo } from 'lucide-react';
 
 interface WorkspaceHeaderConfig {
   segmentsCount: number;
@@ -85,6 +85,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
 
 
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import ExpandAllButton from './ExpandAllButton';
 
 
 function Menu({ onResetSegments }: {readonly onResetSegments: () => void }) {
@@ -100,8 +101,11 @@ function Menu({ onResetSegments }: {readonly onResetSegments: () => void }) {
           onClick={onResetSegments}
           className="text-red-600 hover:bg-red-50"
         >
+          <Undo/>
           Reset All Segments
         </DropdownMenuItem>
+      
+        <ExpandAllButton/>          
       </DropdownMenuContent>
     </DropdownMenu>
   );

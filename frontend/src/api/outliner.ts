@@ -46,7 +46,7 @@ export interface OutlinerSegment {
   status?: string | null; // checked, unchecked
   created_at: string;
   updated_at: string;
-  comment?: string | CommentsData | null; // Can be old string format or new CommentsData format
+  comments: Comment[]; // Updated to use comments array
 }
 
 export interface DocumentCreateRequest {
@@ -86,7 +86,7 @@ export interface SegmentUpdateRequest {
   parent_segment_id?: string;
   is_attached?: boolean;
   status?: string; // checked, unchecked
-  comment?: string | CommentsData; // Can be old string format or new CommentsData format
+  comment?: string | CommentsData | Comment[]; // Can be old string format, CommentsData format, or array format
   comment_content?: string; // New comment content to append
   comment_username?: string; // Username for new comment
 }
@@ -384,6 +384,64 @@ export const deleteSegment = async (segmentId: string): Promise<void> => {
   }
 };
 
+// ==================== Comment Endpoints ====================
+
+export interface CommentCreateRequest {
+  content: string;
+  username: string;
+}
+
+export interface CommentUpdateRequest {
+  content: string;
+}
+
+export const getSegmentComments = async (segmentId: string): Promise<Comment[]> => {
+  const response = await fetch(`${API_URL}/outliner/segments/${segmentId}/comment`);
+  return handleApiResponse(response);
+};
+
+export const addSegmentComment = async (
+  segmentId: string,
+  comment: CommentCreateRequest
+): Promise<Comment[]> => {
+  const response = await fetch(`${API_URL}/outliner/segments/${segmentId}/comment`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(comment),
+  });
+
+  return handleApiResponse(response);
+};
+
+export const updateSegmentComment = async (
+  segmentId: string,
+  commentIndex: number,
+  comment: CommentUpdateRequest
+): Promise<Comment[]> => {
+  const response = await fetch(`${API_URL}/outliner/segments/${segmentId}/comment/${commentIndex}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(comment),
+  });
+
+  return handleApiResponse(response);
+};
+
+export const deleteSegmentComment = async (
+  segmentId: string,
+  commentIndex: number
+): Promise<Comment[]> => {
+  const response = await fetch(`${API_URL}/outliner/segments/${segmentId}/comment/${commentIndex}`, {
+    method: 'DELETE',
+  });
+
+  return handleApiResponse(response);
+};
+
 export const updateDocumentStatus = async (
   documentId: string,
   status: string,
@@ -516,7 +574,7 @@ export const outlinerSegmentToTextSegment = (segment: OutlinerSegment): TextSegm
     parentSegmentId: segment.parent_segment_id || undefined,
     is_attached: segment.is_attached ?? undefined,
     status: segment.status || undefined,
-    comment: segment.comment || undefined, // Can be string or CommentsData
+    comments: segment.comments,
   };
 };
 

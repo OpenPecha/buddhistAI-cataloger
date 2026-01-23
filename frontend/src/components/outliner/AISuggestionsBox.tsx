@@ -52,46 +52,7 @@ export const AISuggestionsBox: React.FC<AISuggestionsBoxProps> = ({
         )}
       </div>
 
-      {/* AI Suggestions Box */}
-      {suggestions && (
-        <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="text-sm font-semibold text-blue-900 mb-3 flex items-center gap-2">
-            <Sparkles className="w-4 h-4" />
-            AI Suggestions
-          </div>
-          <div className="space-y-3">
-            {/* Title Suggestion */}
-            {(suggestions.suggested_title || suggestions.title) && (
-              <div>
-                <div className="text-xs text-blue-600 font-medium mb-1">Title:</div>
-                <div className="text-sm text-blue-900 mb-2">
-                  {suggestions.title || suggestions.suggested_title}
-                </div>
-             
-              </div>
-            )}
-            {/* Author Suggestion */}
-            {(suggestions.suggested_author || suggestions.author) && (
-              <div>
-                <div className="text-xs text-blue-600 font-medium mb-1">Author:</div>
-                <div className="text-sm text-blue-900 mb-2">
-                  {suggestions.author || suggestions.suggested_author}
-                </div>
-              
-              </div>
-            )}
-            {/* Show message if no suggestions */}
-            {!suggestions.suggested_title &&
-              !suggestions.title &&
-              !suggestions.suggested_author &&
-              !suggestions.author && (
-                <div className="text-sm text-blue-700 italic">
-                  No suggestions available for this segment.
-                </div>
-              )}
-          </div>
-        </div>
-      )}
+      
     </>
   );
 };

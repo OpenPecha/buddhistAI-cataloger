@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, R
 from pydantic import BaseModel, Field
 from typing import List, Optional, Union, Dict, Any
 from sqlalchemy.orm import Session
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import func, update
 from sqlalchemy.dialects.postgresql import insert
 from datetime import datetime
@@ -34,6 +35,17 @@ class CommentAdd(BaseModel):
     content: str
     username: str
 
+class CommentUpdate(BaseModel):
+    content: str
+
+class CommentResponse(BaseModel):
+    content: str
+    username: str
+    timestamp: str
+
+class CommentsResponse(BaseModel):
+    comments: List[CommentResponse]
+
 class SegmentUpdate(BaseModel):
     text: Optional[str] = None
     title: Optional[str] = None
@@ -62,7 +74,7 @@ class SegmentResponse(BaseModel):
     is_annotated: bool
     is_attached: Optional[bool] = None
     status: Optional[str] = None  # checked, unchecked
-    comment: Optional[Union[str, Dict[str, Any]]] = None  # Can be old string format or new dict format with comments array
+    comments: Optional[List[CommentResponse]] = None
     created_at: datetime
     updated_at: datetime
 
@@ -534,7 +546,26 @@ async def create_segment(
     update_document_progress(db, document_id)
     db.commit()
     db.refresh(db_segment)
-    return db_segment
+
+    comments_list = _get_comments_list(db_segment)
+    return SegmentResponse(
+        id=db_segment.id,
+        text=db_segment.text,
+        segment_index=db_segment.segment_index,
+        span_start=db_segment.span_start,
+        span_end=db_segment.span_end,
+        title=db_segment.title,
+        author=db_segment.author,
+        title_bdrc_id=db_segment.title_bdrc_id,
+        author_bdrc_id=db_segment.author_bdrc_id,
+        parent_segment_id=db_segment.parent_segment_id,
+        is_annotated=db_segment.is_annotated,
+        is_attached=db_segment.is_attached,
+        status=db_segment.status,
+        comments=comments_list,
+        created_at=db_segment.created_at,
+        updated_at=db_segment.updated_at
+    )
 
 
 @router.post("/documents/{document_id}/segments/bulk", response_model=List[SegmentResponse], status_code=201)
@@ -577,11 +608,32 @@ async def create_segments_bulk(
     
     update_document_progress(db, document_id)
     db.commit()
-    
+
     for seg in db_segments:
         db.refresh(seg)
-    
-    return db_segments
+
+    segment_responses = []
+    for segment in db_segments:
+        comments_list = _get_comments_list(segment)
+        segment_responses.append(SegmentResponse(
+            id=segment.id,
+            text=segment.text,
+            segment_index=segment.segment_index,
+            span_start=segment.span_start,
+            span_end=segment.span_end,
+            title=segment.title,
+            author=segment.author,
+            title_bdrc_id=segment.title_bdrc_id,
+            author_bdrc_id=segment.author_bdrc_id,
+            parent_segment_id=segment.parent_segment_id,
+            is_annotated=segment.is_annotated,
+            is_attached=segment.is_attached,
+            status=segment.status,
+            comments=comments_list,
+            created_at=segment.created_at,
+            updated_at=segment.updated_at
+        ))
+    return segment_responses
 
 
 @router.get("/documents/{document_id}/segments", response_model=List[SegmentResponse])
@@ -593,7 +645,29 @@ async def list_segments(
     segments = db.query(OutlinerSegment).filter(
         OutlinerSegment.document_id == document_id
     ).order_by(OutlinerSegment.segment_index).all()
-    return segments
+
+    segment_responses = []
+    for segment in segments:
+        comments_list = _get_comments_list(segment)
+        segment_responses.append(SegmentResponse(
+            id=segment.id,
+            text=segment.text,
+            segment_index=segment.segment_index,
+            span_start=segment.span_start,
+            span_end=segment.span_end,
+            title=segment.title,
+            author=segment.author,
+            title_bdrc_id=segment.title_bdrc_id,
+            author_bdrc_id=segment.author_bdrc_id,
+            parent_segment_id=segment.parent_segment_id,
+            is_annotated=segment.is_annotated,
+            is_attached=segment.is_attached,
+            status=segment.status,
+            comments=comments_list,
+            created_at=segment.created_at,
+            updated_at=segment.updated_at
+        ))
+    return segment_responses
 
 
 @router.get("/segments/{segment_id}", response_model=SegmentResponse)
@@ -605,7 +679,26 @@ async def get_segment(
     segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
     if not segment:
         raise HTTPException(status_code=404, detail="Segment not found")
-    return segment
+
+    comments_list = _get_comments_list(segment)
+    return SegmentResponse(
+        id=segment.id,
+        text=segment.text,
+        segment_index=segment.segment_index,
+        span_start=segment.span_start,
+        span_end=segment.span_end,
+        title=segment.title,
+        author=segment.author,
+        title_bdrc_id=segment.title_bdrc_id,
+        author_bdrc_id=segment.author_bdrc_id,
+        parent_segment_id=segment.parent_segment_id,
+        is_annotated=segment.is_annotated,
+        is_attached=segment.is_attached,
+        status=segment.status,
+        comments=comments_list,
+        created_at=segment.created_at,
+        updated_at=segment.updated_at
+    )
 
 
 @router.put("/segments/{segment_id}", response_model=SegmentResponse)
@@ -656,37 +749,8 @@ async def update_segment(
         segment.comment = segment_update.comment
     # Handle new comment format: append comment with username
     if segment_update.comment_content is not None and segment_update.comment_username is not None:
-        import json
-        # Get existing comments or initialize empty list
-        existing_comments = []
-        if segment.comment:
-            try:
-                # Try to parse as JSON array (new format)
-                if isinstance(segment.comment, dict):
-                    # If it's already a dict, check if it has comments array
-                    if isinstance(segment.comment.get('comments'), list):
-                        existing_comments = segment.comment['comments']
-                    else:
-                        # Convert old string format to new format
-                        existing_comments = [{"content": str(segment.comment), "username": "Unknown", "timestamp": datetime.utcnow().isoformat()}]
-                elif isinstance(segment.comment, str):
-                    try:
-                        parsed = json.loads(segment.comment)
-                        if isinstance(parsed, dict) and isinstance(parsed.get('comments'), list):
-                            existing_comments = parsed['comments']
-                        elif isinstance(parsed, list):
-                            existing_comments = parsed
-                        else:
-                            # Old string format
-                            existing_comments = [{"content": segment.comment, "username": "Unknown", "timestamp": datetime.utcnow().isoformat()}]
-                    except json.JSONDecodeError:
-                        # Old string format
-                        existing_comments = [{"content": segment.comment, "username": "Unknown", "timestamp": datetime.utcnow().isoformat()}]
-                elif isinstance(segment.comment, list):
-                    existing_comments = segment.comment
-            except Exception:
-                # Fallback: treat as old string format
-                existing_comments = [{"content": str(segment.comment), "username": "Unknown", "timestamp": datetime.utcnow().isoformat()}]
+        # Get existing comments using helper function
+        existing_comments = _get_comments_list(segment)
         
         # Append new comment
         new_comment = {
@@ -696,8 +760,8 @@ async def update_segment(
         }
         existing_comments.append(new_comment)
         
-        # Store as JSON dict with comments array
-        segment.comment = {"comments": existing_comments}
+        # Store as array directly
+        segment.comment = existing_comments
     if segment_update.status is not None:
         # Validate status value
         if segment_update.status not in ['checked', 'unchecked','approved']:
@@ -723,8 +787,26 @@ async def update_segment(
     # PERFORMANCE FIX #3: Single commit (get_db dependency handles commit automatically)
     # No db.refresh() needed - ORM object is already updated in memory
     # The object will be flushed and committed by get_db dependency
-    
-    return segment
+
+    comments_list = _get_comments_list(segment)
+    return SegmentResponse(
+        id=segment.id,
+        text=segment.text,
+        segment_index=segment.segment_index,
+        span_start=segment.span_start,
+        span_end=segment.span_end,
+        title=segment.title,
+        author=segment.author,
+        title_bdrc_id=segment.title_bdrc_id,
+        author_bdrc_id=segment.author_bdrc_id,
+        parent_segment_id=segment.parent_segment_id,
+        is_annotated=segment.is_annotated,
+        is_attached=segment.is_attached,
+        status=segment.status,
+        comments=comments_list,
+        created_at=segment.created_at,
+        updated_at=segment.updated_at
+    )
 
 
 @router.put("/segments/bulk", response_model=List[SegmentResponse])
@@ -778,11 +860,32 @@ async def update_segments_bulk(
         update_document_progress(db, doc_id)
     
     db.commit()
-    
+
     for seg in updated_segments:
         db.refresh(seg)
-    
-    return updated_segments
+
+    segment_responses = []
+    for segment in updated_segments:
+        comments_list = _get_comments_list(segment)
+        segment_responses.append(SegmentResponse(
+            id=segment.id,
+            text=segment.text,
+            segment_index=segment.segment_index,
+            span_start=segment.span_start,
+            span_end=segment.span_end,
+            title=segment.title,
+            author=segment.author,
+            title_bdrc_id=segment.title_bdrc_id,
+            author_bdrc_id=segment.author_bdrc_id,
+            parent_segment_id=segment.parent_segment_id,
+            is_annotated=segment.is_annotated,
+            is_attached=segment.is_attached,
+            status=segment.status,
+            comments=comments_list,
+            created_at=segment.created_at,
+            updated_at=segment.updated_at
+        ))
+    return segment_responses
 
 
 @router.post("/segments/{segment_id}/split", response_model=List[SegmentResponse])
@@ -887,8 +990,29 @@ async def split_segment(
     db.commit()
     db.refresh(segment)
     db.refresh(new_segment)
-    
-    return [segment, new_segment]
+
+    segment_responses = []
+    for seg in [segment, new_segment]:
+        comments_list = _get_comments_list(seg)
+        segment_responses.append(SegmentResponse(
+            id=seg.id,
+            text=seg.text,
+            segment_index=seg.segment_index,
+            span_start=seg.span_start,
+            span_end=seg.span_end,
+            title=seg.title,
+            author=seg.author,
+            title_bdrc_id=seg.title_bdrc_id,
+            author_bdrc_id=seg.author_bdrc_id,
+            parent_segment_id=seg.parent_segment_id,
+            is_annotated=seg.is_annotated,
+            is_attached=seg.is_attached,
+            status=seg.status,
+            comments=comments_list,
+            created_at=seg.created_at,
+            updated_at=seg.updated_at
+        ))
+    return segment_responses
 
 
 @router.post("/segments/merge", response_model=SegmentResponse)
@@ -949,8 +1073,26 @@ async def merge_segments(
     update_document_progress(db, document_id)
     db.commit()
     db.refresh(first_segment)
-    
-    return first_segment
+
+    comments_list = _get_comments_list(first_segment)
+    return SegmentResponse(
+        id=first_segment.id,
+        text=first_segment.text,
+        segment_index=first_segment.segment_index,
+        span_start=first_segment.span_start,
+        span_end=first_segment.span_end,
+        title=first_segment.title,
+        author=first_segment.author,
+        title_bdrc_id=first_segment.title_bdrc_id,
+        author_bdrc_id=first_segment.author_bdrc_id,
+        parent_segment_id=first_segment.parent_segment_id,
+        is_annotated=first_segment.is_annotated,
+        is_attached=first_segment.is_attached,
+        status=first_segment.status,
+        comments=comments_list,
+        created_at=first_segment.created_at,
+        updated_at=first_segment.updated_at
+    )
 
 
 @router.delete("/segments/{segment_id}", status_code=204)
@@ -980,6 +1122,160 @@ async def delete_segment(
     update_document_progress(db, document_id)
     db.commit()
     return None
+
+
+# ==================== Comment Endpoints ====================
+
+def _get_comments_list(segment: OutlinerSegment) -> List[Dict[str, Any]]:
+    """Helper function to extract comments list from segment.comment field"""
+    import json
+    if not segment.comment:
+        return []
+    
+    try:
+        # New format: comments are stored directly as an array
+        if isinstance(segment.comment, list):
+            # Return a copy to avoid mutating the original list
+            return list(segment.comment)
+        
+        # Handle string format (backward compatibility)
+        if isinstance(segment.comment, str):
+            try:
+                parsed = json.loads(segment.comment)
+                if isinstance(parsed, list):
+                    return parsed
+                elif isinstance(parsed, dict) and isinstance(parsed.get('comments'), list):
+                    return parsed['comments']
+                else:
+                    return [{"content": segment.comment, "username": "Unknown", "timestamp": datetime.utcnow().isoformat()}]
+            except json.JSONDecodeError:
+                return [{"content": segment.comment, "username": "Unknown", "timestamp": datetime.utcnow().isoformat()}]
+        
+        # Handle dict format (backward compatibility)
+        if isinstance(segment.comment, dict) and isinstance(segment.comment.get('comments'), list):
+            return segment.comment['comments']
+            
+    except Exception:
+        return [{"content": str(segment.comment), "username": "Unknown", "timestamp": datetime.utcnow().isoformat()}]
+    
+    return []
+
+
+@router.get("/segments/{segment_id}/comment", response_model=List[CommentResponse])
+async def get_segment_comments(
+    segment_id: str,
+    db: Session = Depends(get_db)
+):
+    """Get all comments for a segment"""
+    segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
+    if not segment:
+        raise HTTPException(status_code=404, detail="Segment not found")
+    
+    comments_list = _get_comments_list(segment)
+    return [CommentResponse(**c) for c in comments_list]
+
+
+@router.post("/segments/{segment_id}/comment", response_model=List[CommentResponse])
+async def add_segment_comment(
+    segment_id: str,
+    comment: CommentAdd,
+    db: Session = Depends(get_db)
+):
+    """Add a comment to a segment"""
+    segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
+    
+    if not segment:
+        raise HTTPException(status_code=404, detail="Segment not found")
+    
+    # Get existing comments (returns a copy of the list)
+    existing_comments = _get_comments_list(segment)
+    
+    # Add new comment
+    new_comment = {
+        "content": comment.content,
+        "username": comment.username,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    existing_comments.append(new_comment)
+    
+    # Update segment comment field - store as array directly
+    segment.comment = existing_comments
+    # Explicitly mark the JSON field as modified so SQLAlchemy detects the change
+    flag_modified(segment, "comment")
+    segment.updated_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(segment)
+    
+    return [CommentResponse(**c) for c in existing_comments]
+
+
+@router.put("/segments/{segment_id}/comment/{comment_index}", response_model=List[CommentResponse])
+async def update_segment_comment(
+    segment_id: str,
+    comment_index: int,
+    comment_update: CommentUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update a specific comment by index"""
+    segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
+    if not segment:
+        raise HTTPException(status_code=404, detail="Segment not found")
+    
+    comments_list = _get_comments_list(segment)
+    
+    if comment_index < 0 or comment_index >= len(comments_list):
+        raise HTTPException(status_code=404, detail="Comment not found")
+    
+    # Update the comment
+    comments_list[comment_index]["content"] = comment_update.content
+    comments_list[comment_index]["timestamp"] = datetime.utcnow().isoformat()
+    
+    # Update segment comment field - store as array directly
+    segment.comment = comments_list
+    # Explicitly mark the JSON field as modified so SQLAlchemy detects the change
+    flag_modified(segment, "comment")
+    segment.updated_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(segment)
+    
+    return [CommentResponse(**c) for c in comments_list]
+
+
+@router.delete("/segments/{segment_id}/comment/{comment_index}", response_model=List[CommentResponse])
+async def delete_segment_comment(
+    segment_id: str,
+    comment_index: int,
+    db: Session = Depends(get_db)
+):
+    """Delete a specific comment by index"""
+    segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
+    if not segment:
+        raise HTTPException(status_code=404, detail="Segment not found")
+    
+    comments_list = _get_comments_list(segment)
+    
+    if comment_index < 0 or comment_index >= len(comments_list):
+        raise HTTPException(status_code=404, detail="Comment not found")
+    
+    # Remove the comment
+    comments_list.pop(comment_index)
+    
+    # Update segment comment field (or set to None if no comments left) - store as array directly
+    if len(comments_list) == 0:
+        segment.comment = None
+    else:
+        segment.comment = comments_list
+        # Explicitly mark the JSON field as modified so SQLAlchemy detects the change
+        flag_modified(segment, "comment")
+    
+    segment.updated_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(segment)
+    
+    return [CommentResponse(**c) for c in comments_list]
 
 
 @router.post("/documents/{document_id}/segments/bulk-operations", response_model=List[SegmentResponse])

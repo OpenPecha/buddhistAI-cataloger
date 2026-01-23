@@ -13,12 +13,12 @@ import {
   resetSegments as apiResetSegments,
   bulkSegmentOperations as apiBulkSegmentOperations,
   createSegmentsBulk as apiCreateSegmentsBulk,
-  outlinerSegmentToTextSegment,
   type OutlinerDocument,
   type SegmentUpdateRequest,
   type SegmentCreateRequest,
+  addSegmentComment,
+  type CommentCreateRequest,
 } from '@/api/outliner';
-import type { TextSegment } from '@/components/outliner';
 import { toast } from 'sonner';
 
 interface UseOutlinerDocumentOptions {
@@ -215,6 +215,7 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
         author_bdrc_id: null,
         parent_segment_id: segmentToSplit.parent_segment_id,
         is_annotated: false,
+        comments: [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -340,7 +341,8 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
   // Error effect
   useEffect(() => {
     if (loadError && options?.onError) {
-      options.onError(loadError as Error);
+      const error = loadError instanceof Error ? loadError : new Error(String(loadError));
+      options.onError(error);
     }
   }, [loadError, options]);
 
@@ -535,6 +537,7 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
         author_bdrc_id: seg.author_bdrc_id || null,
         parent_segment_id: seg.parent_segment_id || null,
         is_annotated: false,
+        comments: [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }));
@@ -621,6 +624,19 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
     [documentId, bulkSegmentOperationsMutation]
   );
 
+  const createCommentMutation = useMutation({
+    mutationFn: ({ segmentId, comment }: { segmentId: string; comment: CommentCreateRequest }) =>
+      addSegmentComment(segmentId, comment),
+    onSuccess: (_data, variables) => {
+      // Invalidate both document query and comments query for the segment
+      queryClient.invalidateQueries({ queryKey: ['segment-comments', variables.segmentId] });
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to create comment: ${error.message}`);
+    },
+  });
+
+
   return {
     // Document data
     document,
@@ -644,5 +660,6 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
     createSegmentsBulk: handleCreateSegmentsBulk,
     bulkSegmentOperations: handleBulkSegmentOperations,
     refetchDocument: refetch,
+    createCommentMutation,
   };
 };

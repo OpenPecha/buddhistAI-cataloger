@@ -32,13 +32,9 @@ export const Workspace: React.FC = () => {
     textContent,
     isUploading,
     segments,
-    bubbleMenuState,
     cursorPosition,
     aiTextEndingLoading,
     onTextSelection,
-    onBubbleMenuSelect,
-    onSplitSegment,
-    onMergeWithPrevious,
     onAIDetectTextEndings,
     onAITextEndingStop,
     onUndoTextEndingDetection,
@@ -52,21 +48,8 @@ export const Workspace: React.FC = () => {
   
   // Save scroll position immediately when split happens, debounced value for restoration
   const scrollPositionRef = useRef<number | null>(null);
-  const [shouldRestoreScroll, setShouldRestoreScroll] = useDebouncedState<boolean>(
-    false,
-    { wait: 100 }
-  );
-  // Track previous segments count to detect when split completes
-  const prevSegmentsCountRef = useRef(segments.length);
-  const segmentsCountChanged = prevSegmentsCountRef.current !== segments.length;
 
-  // Save scroll position when split is triggered
-  const handleSplitSegmentWithScrollSave = useCallback(() => {
-    if (containerRef.current) {
-      setShouldRestoreScroll(true);
-    }
-    onSplitSegment();
-  }, [onSplitSegment, setShouldRestoreScroll]);
+
 
   // Restore scroll position after segments update (split completes)
   useEffect(() => {
@@ -138,33 +121,9 @@ export const Workspace: React.FC = () => {
                           <SegmentItem
                             segment={segment}
                             index={index}
-                            cursorPosition={cursorPosition}
                           />
 
-                          {/* Split Menu */}
-                          {cursorPosition &&
-                            cursorPosition.segmentId === segment.id &&
-                            cursorPosition.menuPosition && (
-                              <SplitMenu
-                                position={cursorPosition.menuPosition}
-                                segmentId={segment.id}
-                                onSplit={handleSplitSegmentWithScrollSave}
-                                onCancel={() => onMergeWithPrevious(segment.id)}
-                                onClose={() => {}}
-                              />
-                            )}
-
-                          {/* Bubble Menu */}
-                          {bubbleMenuState && bubbleMenuState.segmentId === segment.id && (
-                            <BubbleMenu
-                              position={bubbleMenuState.position}
-                              selectedText={bubbleMenuState.selectedText}
-                              onSelect={(field) =>
-                                onBubbleMenuSelect(field, segment.id, bubbleMenuState.selectedText)
-                              }
-                              onClose={()=>{}}
-                            />
-                          )}
+                         
                         </div>
                       </div>
                     );
