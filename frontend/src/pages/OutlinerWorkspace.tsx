@@ -20,8 +20,8 @@ const OutlinerWorkspace: React.FC = () => {
   // Backend integration hook
   const {
     documentId,
-    textContent: backendTextContent,
-    segments: backendSegments,
+    textContent: currentTextContent,
+    segments:currentSegments,
     isLoading: isLoadingDocument,
     isSaving,
     segmentLoadingStates,
@@ -33,8 +33,6 @@ const OutlinerWorkspace: React.FC = () => {
   } = useOutlinerDocument();
   
   // Use backend data directly
-  const currentTextContent = backendTextContent || '';
-  const currentSegments = backendSegments;
   
   // Set initial activeSegmentId from URL or first segment
   useEffect(() => {

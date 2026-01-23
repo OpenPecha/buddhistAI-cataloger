@@ -4,8 +4,11 @@ import { Scissors } from 'lucide-react';
 import type { SplitMenuProps } from './types';
 
 export const SplitMenu: React.FC<SplitMenuProps> = ({ position, segmentId, onSplit, onCancel, onClose }) => {
+ 
+
   const menuRef = useRef<HTMLDivElement>(null);
   const [viewportPosition, setViewportPosition] = useState({ x: 0, y: 0 });
+  
 
   // Convert relative position to viewport coordinates and adjust for viewport boundaries
   useEffect(() => {
@@ -99,6 +102,7 @@ export const SplitMenu: React.FC<SplitMenuProps> = ({ position, segmentId, onSpl
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [onClose]);
+ // Don't show if document.selection is not present
 
   const menuContent = (
     <div

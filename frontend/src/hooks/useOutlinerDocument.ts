@@ -330,11 +330,6 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
     },
   });
 
-  // Convert segments to TextSegment format
-  const segments: TextSegment[] = document?.segments
-    ? document.segments.map(outlinerSegmentToTextSegment)
-    : [];
-
   // Load document effect
   useEffect(() => {
     if (document && options?.onDocumentLoaded) {
@@ -631,7 +626,7 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
     document,
     documentId,
     textContent: document?.content || '',
-    segments,
+    segments: document?.segments || [],
     isLoading: isLoadingQuery || isLoadingDocument,
     isSaving,
     error: loadError,

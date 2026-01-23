@@ -1,46 +1,28 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Trash2, Loader2, ChevronDown, ChevronRight } from 'lucide-react';
+import { Trash2, Loader2, ChevronDown, ChevronRight, Merge } from 'lucide-react';
 import type { TextSegment, CursorPosition } from './types';
 import { SegmentTextContent } from './SegmentTextContent';
 import { useOutliner } from './OutlinerContext';
-import CommentView from './CommentView';
 
-interface SegmentConfig {
-  index: number;
-  isActive: boolean;
-  isFirstSegment: boolean;
-  isAttached: boolean;
-}
+
 
 interface SegmentItemProps {
   segment: TextSegment;
-  segmentConfig: SegmentConfig;
+  index: number;
   cursorPosition: CursorPosition | null;
-  isCollapsed: boolean;
-  onToggleCollapse: (segmentId: string) => void;
-  onCollapseAll?: () => void;
-  isAllCollapsed?: boolean;
 }
 
 const SegmentItem: React.FC<SegmentItemProps> = ({
   segment,
-  segmentConfig,
+  index,
   cursorPosition,
-  isCollapsed,
-  onToggleCollapse,
-  onCollapseAll,
-  isAllCollapsed,
 }) => {
-  const {
-    index,
-    isActive,
-    isFirstSegment,
-    isAttached,
-  } = segmentConfig;
+
 
   const {
     onSegmentClick,
+    activeSegmentId,
     onCursorChange,
     onActivate,
     onInput,
@@ -52,17 +34,21 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
   
   const isLoading = segmentLoadingStates?.get(segment.id) ?? false;
   const isChecked = segment.status === 'checked';
-  
+  const isFirstSegment = index === 0;
+  const isAttached = isFirstSegment && (segment.is_attached ?? false);
+  const isActive = segment.id === activeSegmentId;
+
+  const [isCollapsed, setIsCollapsed] = useState(segment.id!==activeSegmentId);
   const toggleCollapse = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onToggleCollapse(segment.id);
+    setIsCollapsed(!isCollapsed);
   };
   
-  // Get preview text when collapsed (first 100 characters)
-  const previewText = segment.text.length > 100 
-    ? segment.text.substring(0, 100) + '...' 
-    : segment.text;
   
+  const onCollapseAll = () => {
+    console.log("onCollapseAll");
+  };
+  const isAllCollapsed = false;
   return (
     <div>
       {/* Attach Parent Button and Collapse All Button - only for first segment */}
@@ -102,6 +88,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
       )}
 
       <div
+      id={segment.id}
         data-segment-id={segment.id}
         data-segment-container-id={segment.id}
         onClick={(e) => {
@@ -139,13 +126,9 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
           </div>
         )}
         
-        {/* Cancel Split Button - positioned at top-middle border */}
-        {/* Only show if there's a previous segment to merge with */}
-        <div className="absolute top-4 right-4 z-10">
-          <CommentView comment={segment.comment} />
-        </div>
+        
       
-        {cursorPosition && cursorPosition.segmentId === segment.id && index > 0 && (
+        {activeSegmentId=== segment.id && index > 0 && (
           <button
             type="button"
             onClick={(e) => {
@@ -155,7 +138,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
             className="cancel-split-button cursor-pointer z-100 absolute -top-3 left-1/2 -translate-x-1/2  bg-white border-2 border-red-500 rounded-full p-1.5 shadow-lg hover:bg-red-50 transition-colors"
             title="Merge with previous segment"
           >
-            <Trash2 className="w-4 h-4 text-red-600" />
+            <Merge className="w-4 h-4 text-red-600" />
           </button>
         )}
         <div className="flex items-start gap-3">
@@ -184,22 +167,22 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
             {isCollapsed ? (
               <button
                 type="button"
-                className="text-gray-600 text-sm cursor-pointer py-2 text-left w-full hover:bg-gray-100 rounded px-2 -mx-2 transition-colors"
+                className="text-gray-600 font-monlam text-sm cursor-pointer py-2 text-left w-full hover:bg-gray-100 rounded px-2 -mx-2 transition-colors max-h-[100px] overflow-hidden whitespace-pre-wrap break-words [display:-webkit-box] [WebkitBoxOrient:vertical] [WebkitLineClamp:4]"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onToggleCollapse(segment.id);
                   onActivate(segment.id);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     e.stopPropagation();
-                    onToggleCollapse(segment.id);
                     onActivate(segment.id);
                   }
                 }}
+                tabIndex={0}
+                aria-label="Expand segment"
               >
-                {previewText}
+                {segment.text}
               </button>
             ) : (
               <>

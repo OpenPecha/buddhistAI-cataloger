@@ -1,5 +1,4 @@
-import React, { useRef, useEffect, useCallback } from 'react';
-import { List, useDynamicRowHeight, type RowComponentProps } from "react-window";
+import React, { useRef, useEffect, useCallback, Activity } from 'react';
 import { useDebouncedState } from "@tanstack/react-pacer";
 
 import { BubbleMenu } from './BubbleMenu';
@@ -27,93 +26,12 @@ interface RowData {
 }
 
 
-// const Row = ({ index, style, ...rowData }: RowComponentProps<RowData>) => {
-//   const {
-//     segments,
-//     activeSegmentId,
-//     cursorPosition,
-//     bubbleMenuState,
-//     onSplitSegment,
-//     onMergeWithPrevious,
-//     onBubbleMenuSelect,
-//     collapsedSegments,
-//     toggleSegmentCollapse,
-//     toggleCollapseAll,
-//     isAllCollapsed,
-//   } = rowData;
-//   const segment = segments[index];
-//   const rowRef = useRef<HTMLDivElement>(null);
-//   const contentRef = useRef<HTMLDivElement>(null);
-
-//   const splitter = useCallback(() => {
-//     onSplitSegment();
-//   }, [onSplitSegment]);
-
-//   if (!segment) return null;
-
-//   const isFirstSegment = index === 0;
-//   const isAttached = isFirstSegment && (segment.is_attached ?? false);
-//   const isActive = segment.id === activeSegmentId;
-//   const isCollapsed = collapsedSegments.has(segment.id);
-
-//   // Ensure style includes width for proper layout
-//   const rowStyle: React.CSSProperties = {
-//     ...style,
-//     width: '100%',
-//   };
-//   return (
-//     <div style={rowStyle} ref={rowRef} className="px-6">
-//       <div ref={contentRef} className="relative">
-//         <SegmentItem
-//           segment={segment}
-//           segmentConfig={{
-//             index,
-//             isActive,
-//             isFirstSegment,
-//             isAttached,
-//           }}
-//           cursorPosition={cursorPosition}
-//           isCollapsed={isCollapsed}
-//           onToggleCollapse={toggleSegmentCollapse}
-//           onCollapseAll={isFirstSegment ? toggleCollapseAll : undefined}
-//           isAllCollapsed={isFirstSegment ? isAllCollapsed : undefined}
-//         />
-
-//         {/* Split Menu - positioned relative to segment container */}
-//         {cursorPosition &&
-//           cursorPosition.segmentId === segment.id &&
-//           cursorPosition.menuPosition && (
-//             <SplitMenu
-//               position={cursorPosition.menuPosition}
-//               segmentId={segment.id}
-//               onSplit={splitter}
-//               onCancel={() => onMergeWithPrevious(segment.id)}
-//               onClose={() => {}}
-//             />
-//           )}
-
-//         {/* Bubble Menu - positioned relative to segment container */}
-//         {bubbleMenuState && bubbleMenuState.segmentId === segment.id && (
-//           <BubbleMenu
-//             position={bubbleMenuState.position}
-//             selectedText={bubbleMenuState.selectedText}
-//             onSelect={(field) =>
-//               onBubbleMenuSelect(field, segment.id, bubbleMenuState.selectedText)
-//             }
-//             onClose={() => {}}
-//           />
-//         )}
-//       </div>
-//     </div>
-//   );
-// };
-
 export const Workspace: React.FC = () => {
   const {
+    activeSegmentId,
     textContent,
     isUploading,
     segments,
-    activeSegmentId,
     bubbleMenuState,
     cursorPosition,
     aiTextEndingLoading,
@@ -132,80 +50,6 @@ export const Workspace: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const parentContainerRef = useRef<HTMLDivElement>(null);
   
-  // Manage collapsed state for all segments
-  const [collapsedSegments, setCollapsedSegments] = React.useState<Set<string>>(new Set());
-  
-  // Initialize: all segments collapsed except active one
-  React.useEffect(() => {
-    if (segments.length > 0 && activeSegmentId) {
-      const newCollapsed = new Set<string>();
-      segments.forEach(segment => {
-        if (segment.id !== activeSegmentId) {
-          newCollapsed.add(segment.id);
-        }
-      });
-      setCollapsedSegments(newCollapsed);
-    }
-  }, [segments, activeSegmentId]);
-  
-  // Update collapsed state when active segment changes
-  React.useEffect(() => {
-    if (activeSegmentId) {
-      setCollapsedSegments(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(activeSegmentId); // Expand active segment
-        return newSet;
-      });
-    }
-  }, [activeSegmentId]);
-  
-  const toggleSegmentCollapse = React.useCallback((segmentId: string) => {
-    setCollapsedSegments(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(segmentId)) {
-        newSet.delete(segmentId);
-      } else {
-        newSet.add(segmentId);
-      }
-      return newSet;
-    });
-  }, []);
-  
-  const toggleCollapseAll = React.useCallback(() => {
-    if (segments.length === 0) return;
-    
-    const allCollapsed = segments.every(seg => collapsedSegments.has(seg.id));
-    
-    if (allCollapsed) {
-      // Expand all
-      setCollapsedSegments(new Set());
-    } else {
-      // Collapse all except active
-      const newCollapsed = new Set<string>();
-      segments.forEach(segment => {
-        if (segment.id !== activeSegmentId) {
-          newCollapsed.add(segment.id);
-        }
-      });
-      setCollapsedSegments(newCollapsed);
-    }
-  }, [segments, collapsedSegments, activeSegmentId]);
-  
-  const isAllCollapsed = segments.length > 0 && segments.every(seg => 
-    seg.id === activeSegmentId ? false : collapsedSegments.has(seg.id)
-  );
-  // const [containerHeight] = React.useState(() => {
-  //   // Initialize with a reasonable default
-  //   if (globalThis.window !== undefined) {
-  //     return globalThis.window.innerHeight - 150; // Approximate header + padding
-  //   }
-  //   return 600;
-  // });
- 
-  // const rowHeight = useDynamicRowHeight({
-  //   defaultRowHeight: 50
-  // });
-
   // Save scroll position immediately when split happens, debounced value for restoration
   const scrollPositionRef = useRef<number | null>(null);
   const [shouldRestoreScroll, setShouldRestoreScroll] = useDebouncedState<boolean>(
@@ -228,31 +72,17 @@ export const Workspace: React.FC = () => {
   useEffect(() => {
       // Use requestAnimationFrame to ensure DOM has updated
       setTimeout(() => {  
-        if (containerRef.current && scrollPositionRef.current !== null) {
-          containerRef.current.scrollBy(0, scrollPositionRef.current);
-          // Clear saved position after restoring
-          scrollPositionRef.current = null;
-          setShouldRestoreScroll(false);
+      if(activeSegmentId){
+        const segmentElement = document.getElementById(activeSegmentId);
+        if(segmentElement){
+          segmentElement.scrollIntoView({ behavior: 'smooth' });
         }
+      } 
       }, 100);
         
-    prevSegmentsCountRef.current = segments.length;
-  }, [segments.length, segmentsCountChanged, shouldRestoreScroll, setShouldRestoreScroll]);
+  }, [activeSegmentId]);
 
-  //   const rowProps: RowData = {
-  //   segments,
-  //   activeSegmentId,
-  //   cursorPosition,
-  //   bubbleMenuState,
-  //   segmentLoadingStates,
-  //   onSplitSegment: handleSplitSegmentWithScrollSave,
-  //   onMergeWithPrevious,
-  //   onBubbleMenuSelect,
-  //   collapsedSegments,
-  //   toggleSegmentCollapse,
-  //   toggleCollapseAll,
-  //   isAllCollapsed,
-  // };
+ 
 
   
 
@@ -297,45 +127,18 @@ export const Workspace: React.FC = () => {
             }}
             aria-label="Text workspace content area"
             role="section"
+            onKeyDown={()=>{}}
           >
-            {segments.length > 0 ? 
-              // segments.length > 100 && containerHeight > 0 ? (
-                // Use react-window for large lists (>100 segments)
-                // <List
-                //   rowComponent={Row as any}
-                //   rowProps={rowProps}
-                //   rowHeight={rowHeight}
-                //   style={{ height: containerHeight }}
-                //   rowCount={segments.length}
-                //   className="scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
-                //   overscanCount={5}
-
-                //   />
-              // ) : (
-                // Direct rendering for smaller lists (<=100 segments)
+         <Activity mode={segments.length > 0?"visible":"hidden"}>
                 <div className="scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                   {segments.map((segment, index) => {
-                    const isFirstSegment = index === 0;
-                    const isAttached = isFirstSegment && (segment.is_attached ?? false);
-                    const isActive = segment.id === activeSegmentId;
-                    const isCollapsed = collapsedSegments.has(segment.id);
-                    
                     return (
                       <div key={segment.id} className="px-6">
                         <div className="relative">
                           <SegmentItem
                             segment={segment}
-                            segmentConfig={{
-                              index,
-                              isActive,
-                              isFirstSegment,
-                              isAttached,
-                            }}
+                            index={index}
                             cursorPosition={cursorPosition}
-                            isCollapsed={isCollapsed}
-                            onToggleCollapse={toggleSegmentCollapse}
-                            onCollapseAll={isFirstSegment ? toggleCollapseAll : undefined}
-                            isAllCollapsed={isFirstSegment ? isAllCollapsed : undefined}
                           />
 
                           {/* Split Menu */}
@@ -367,9 +170,9 @@ export const Workspace: React.FC = () => {
                     );
                   })}
                 </div>
-              
-             : segments.length === 0 && textContent ? (
-              <div className="relative">
+            </Activity>
+            <Activity mode={segments.length === 0 && textContent?"visible":"hidden"}>
+            <div className="relative">
                 <ContentDisplay
                   text={textContent}
                   onCursorChange={(element) => {
@@ -380,8 +183,7 @@ export const Workspace: React.FC = () => {
                   onKeyDown={onKeyDown}
                 />
                 {/* Split Menu for content when no segments */}
-                {cursorPosition &&
-                  cursorPosition.segmentId === 'content-no-segments' &&
+                {cursorPosition?.segmentId === 'content-no-segments' &&
                   cursorPosition.menuPosition && (
                     <SplitMenu
                       position={cursorPosition.menuPosition}
@@ -392,7 +194,7 @@ export const Workspace: React.FC = () => {
                     />
                   )}
               </div>
-            ) : null}
+            </Activity>
           </div>
         </div>
    
