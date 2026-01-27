@@ -170,7 +170,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
             {isCollapsed ? (
               <button
                 type="button"
-                className="text-gray-600 font-monlam text-sm cursor-pointer py-2 text-left w-full hover:bg-gray-100 rounded px-2 -mx-2 transition-colors max-h-[100px] overflow-hidden whitespace-pre-wrap break-words [display:-webkit-box] [WebkitBoxOrient:vertical] [WebkitLineClamp:4]"
+                className="text-gray-600 font-monlam cursor-pointer text-sm py-2 text-left w-full rounded px-2 -mx-2 transition-colors max-h-[100px] overflow-hidden whitespace-pre-wrap break-words [display:-webkit-box] [WebkitBoxOrient:vertical] [WebkitLineClamp:4]"
                 onClick={(e) => {
                   e.stopPropagation();
                   onActivate(segment.id);
