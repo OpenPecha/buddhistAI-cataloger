@@ -16,8 +16,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { FileText, Upload, Calendar, BarChart3, Trash2, RotateCcw, Filter, Settings } from 'lucide-react';
-import { usePermission } from '@/hooks/usePermission';
 import { useUser } from '@/hooks/useUser';
+import { Progress } from '@/components/ui/progress';
 
 // Simple modal implementation
 function Modal({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
@@ -115,6 +115,7 @@ const OutlinerUpload: React.FC = () => {
     });
   };
 
+
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
@@ -200,7 +201,6 @@ const OutlinerUpload: React.FC = () => {
                 <TableRow>
                   <TableHead className="font-semibold">Document</TableHead>
                   <TableHead className="font-semibold">Progress</TableHead>
-                  <TableHead className="font-semibold">Segments</TableHead>
                   <TableHead className="font-semibold">Last Updated</TableHead>
                   <TableHead className="font-semibold w-20">Actions</TableHead>
                 </TableRow>
@@ -209,7 +209,7 @@ const OutlinerUpload: React.FC = () => {
                 {displayedDocuments.map((doc) => {
                   const isDeleted = doc.status === 'deleted';
                   const isOwner = doc.user_id === userId || !doc.user_id;
-                  
+                  const checked_percentage = (doc.checked_segments || 0) / (doc.total_segments || 1) * 100;
                   return (
                   <TableRow
                     key={doc.id}
@@ -238,32 +238,14 @@ const OutlinerUpload: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <BarChart3 className="w-4 h-4 text-gray-400" />
                           <span className="font-medium text-sm">Checked: {doc.checked_segments || 0} / {doc.total_segments}</span>
-                          <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-green-600 transition-all"
-                              style={{ width: `${doc.total_segments > 0 ? ((doc.checked_segments || 0) / doc.total_segments) * 100 : 0}%` }}
-                            />
-                          </div>
                         </div>
                         <div className="text-xs text-gray-500">
                           Unchecked: {doc.unchecked_segments || 0}
                         </div>
+                        <Progress value={checked_percentage} />
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="text-sm text-gray-600">
-                        <div>
-                          <span className="font-medium">{doc.checked_segments || 0}</span>
-                          <span className="text-gray-400"> / </span>
-                          <span>{doc.total_segments}</span>
-                          <span className="text-gray-400 ml-1">checked</span>
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          <span className="font-medium">{doc.annotated_segments}</span>
-                          <span className="text-gray-400"> annotated</span>
-                        </div>
-                      </div>
-                    </TableCell>
+              
                     <TableCell>
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Calendar className="w-4 h-4" />

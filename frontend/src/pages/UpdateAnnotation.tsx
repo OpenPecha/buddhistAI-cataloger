@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, X, Upload, FileText, Code, ArrowLeft, Loader2 } from "lucide-react";
-import TextEditorView from "@/components/textCreation/TextEditorView";
+import { AlertCircle, X, Upload, FileText, Code, ArrowLeft } from "lucide-react";
 import InstanceCreationForm from "@/components/InstanceCreationForm";
 import type { InstanceCreationFormRef } from "@/components/InstanceCreationForm";
 import { useText, useInstance, useUpdateInstance, useAnnnotation } from "@/hooks/useTexts";
@@ -11,6 +10,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { calculateAnnotations } from "@/utils/annotationCalculator";
 import { useBibliographyAPI } from "@/hooks/useBibliographyAPI";
 import { validateContentEndsWithTsheg, validateSegmentLimits } from "@/utils/contentValidation";
+import { SegmentUpdateWrapper } from "@/components/segmentUpdate";
 
 const UpdateAnnotation = () => {
   const { text_id, instance_id } = useParams();
@@ -22,8 +22,8 @@ const UpdateAnnotation = () => {
   const { clearAfterSubmission } = useBibliographyAPI();
 
   // Fetch text and instance data
-  const { data: text, isLoading: textLoading } = useText(text_id || "");
-  const { data: instance, isLoading: instanceLoading } = useInstance(instance_id || "");
+  const { data: text, isLoading: textLoading ,isRefetching: textRefetching} = useText(text_id || "");
+  const { data: instance, isLoading: instanceLoading ,isRefetching: instanceRefetching} = useInstance(instance_id || "");
 
   const updateInstanceMutation = useUpdateInstance();
 
@@ -39,16 +39,15 @@ const UpdateAnnotation = () => {
   const {
     data: annotationData,
     isLoading: annotationLoading,
+    isRefetching: annotationRefetching,
   } = useAnnnotation(segmentationAnnotationId);
-
   // State
+
   const [editedContent, setEditedContent] = useState("");
-  const [uploadedFilename, setUploadedFilename] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [activePanel, setActivePanel] = useState<"form" | "editor">("form");
-  const [hasIncipitTitle, setHasIncipitTitle] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState<string>("");
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -154,7 +153,6 @@ const UpdateAnnotation = () => {
           Object.entries(meta.incipit_title).forEach(([lang, value]) => {
             instanceFormRef.current?.addIncipit(value as string, lang);
           });
-          setHasIncipitTitle(true);
         }
 
         // Set alt incipit titles
@@ -172,36 +170,11 @@ const UpdateAnnotation = () => {
   }, [instance, isInitialized, annotationData, segmentationAnnotationId]);
 
   // Handle file upload
-  const handleFileUpload = (content: string, filename: string) => {
-    let lines = content.split("\n");
-    lines = lines.filter(line => line.trim() !== "");
-    const cleanedContent = lines.join("\n");
+  const handleFileUpload = (content: string) => {
+    const lines = content.split("\n");
+    const filteredLines = lines.filter(line => line.trim() !== "");
+    const cleanedContent = filteredLines.join("\n");
     setEditedContent(cleanedContent);
-    setUploadedFilename(filename);
-  };
-
-  // Handle text selection from editor (only instance-related types)
-  const handleEditorTextSelect = (
-    text: string,
-    type: "title" | "alt_title" | "colophon" | "incipit" | "alt_incipit" | "person"
-  ) => {
-    switch (type) {
-      case "colophon":
-        instanceFormRef.current?.addColophon(text);
-        break;
-      case "incipit":
-        instanceFormRef.current?.addIncipit(text);
-        setTimeout(() => {
-          setHasIncipitTitle(instanceFormRef.current?.hasIncipit() || false);
-        }, 100);
-        break;
-      case "alt_incipit":
-        instanceFormRef.current?.addAltIncipit(text);
-        break;
-      // Title, alt_title, and person are not handled in instance form
-      default:
-        break;
-    }
   };
 
   // Handle form submission
@@ -225,14 +198,13 @@ const UpdateAnnotation = () => {
       }
 
       // Calculate annotations from content (this also cleans the content - removes line breaks)
-      const { annotations, cleanedContent } = calculateAnnotations(editedContent);
+      const { annotations } = calculateAnnotations(editedContent);
 
       // Prepare update payload
       const updatePayload = {
         metadata: instanceFormData.metadata,
         annotation: annotations,
         biblography_annotation: instanceFormData.biblography_annotation || [],
-        content: cleanedContent, // Use cleaned content (without line breaks) for API
       };
 
       // Update instance
@@ -257,21 +229,12 @@ const UpdateAnnotation = () => {
     }
   };
 
-  const isLoading = textLoading || instanceLoading || annotationLoading;
+  const isLoading = textLoading || instanceLoading || annotationLoading || textRefetching || instanceRefetching || annotationRefetching;
   const cn = (...classes: Array<string | false | null | undefined>) => {
     return classes.filter(Boolean).join(" ");
   };
 
-  if (isLoading) {
-    return (
-      <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center z-40">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">{t("loading.loadingText")}</p>
-        </div>
-      </div>
-    );
-  }
+
 
   if (!text || !instance) {
     return (
@@ -366,68 +329,35 @@ const UpdateAnnotation = () => {
           )}
         </button>
 
-        {/* LEFT PANEL: Forms */}
-        <div
-          className={cn(
-            "w-full md:w-1/2 h-full overflow-y-auto border-r border-gray-200",
-            "absolute md:relative",
-            "transition-transform duration-300 ease-in-out",
-            activePanel === "form"
-              ? "translate-x-0"
-              : "-translate-x-full md:translate-x-0"
-          )}
-        >
-          <div className="p-8">
-            {/* Header */}
-            <div className="mb-6 flex items-center gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => navigate(`/texts/${text_id}/instances/${instance_id}`)}
-                className="flex items-center gap-2"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                {t("common.back")}
-              </Button>
+      
             
-            </div>
-
-            <div className="space-y-6 relative ">
-              {/* Instance Creation Form */}
-              <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-                <InstanceCreationForm
-                  ref={instanceFormRef}
-                  onSubmit={() => {
-                    // Prevent form submission, handle it manually
-                    handleSubmit();
-                  }}
-                  isSubmitting={isSubmitting}
-                  content={editedContent}
-                  disableSubmit={!!contentValidationError || segmentValidation.invalidCount > 0}
-                  onCancel={() => navigate(`/texts/${text_id}/instances/${instance_id}`)}
-                  instance={instance}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* RIGHT PANEL: Editor */}
         <div
           className={cn(
-            "w-full md:w-1/2 h-full overflow-hidden bg-gray-50",
+            "w-[90%] mx-auto h-full overflow-hidden bg-gray-50",
             "absolute md:relative",
             "transition-transform duration-300 ease-in-out",
             activePanel === "editor"
               ? "translate-x-0"
               : "translate-x-full md:translate-x-0"
           )}
-        >
+        > 
           <div className="h-full flex flex-col">
+        
             {/* Editor Header */}
             <div className="bg-blue-50 border-b border-blue-200 px-4 py-3 ">
               <div className="flex items-center justify-between">
+              <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => navigate(`/texts/${text_id}/instances/${instance_id}`)}
+        className="flex items-center gap-2"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        {t("common.back")}
+      </Button>
                 {!editedContent || editedContent?.trim() === "" ? (
                   <>
                     <p className="text-sm text-gray-600 ">
@@ -455,7 +385,7 @@ const UpdateAnnotation = () => {
                             const reader = new FileReader();
                             reader.onload = (event) => {
                               const content = event.target?.result as string;
-                              handleFileUpload(content, file.name);
+                              handleFileUpload(content);
                             };
                             reader.readAsText(file);
                           }
@@ -486,19 +416,32 @@ const UpdateAnnotation = () => {
 
             {/* Editor */}
             <div className="flex-1 overflow-hidden">
-              <TextEditorView
-                content={editedContent || ""}
-                filename={editedContent ? uploadedFilename : t("editor.editingDocument")}
-                editable={true}
-                onChange={(value) => setEditedContent(value)}
-                onTextSelect={handleEditorTextSelect}
-                isCreatingNewText={false}
-                hasIncipit={hasIncipitTitle}
-                hasTitle={false}
-                allowedTypes={["colophon", "incipit", "alt_incipit"]}
-                validationError={contentValidationError}
-                segmentValidation={segmentValidation}
-              />
+           <SegmentUpdateWrapper
+                content={instance?.content}
+                annotationData={annotationData}
+                />
+            {isLoading && (
+              <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/20 bg-opacity-60">
+                <div className="flex flex-col items-center">
+                  <svg className="animate-spin h-10 w-10 text-white mb-4" viewBox="0 0 24 24" fill="none">
+                    <circle
+                      className="opacity-20"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-80"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                    />
+                  </svg>
+                  <span className="text-white text-lg font-medium">Loading...</span>
+                </div>
+              </div>
+            )}
             </div>
           </div>
         </div>

@@ -45,7 +45,7 @@ export const Workspace: React.FC = () => {
   } = useOutliner();
   const containerRef = useRef<HTMLDivElement>(null);
   const parentContainerRef = useRef<HTMLDivElement>(null);
-  
+
   // Save scroll position immediately when split happens, debounced value for restoration
   const scrollPositionRef = useRef<number | null>(null);
 
@@ -53,19 +53,19 @@ export const Workspace: React.FC = () => {
 
   // Restore scroll position after segments update (split completes)
   useEffect(() => {
-      // Use requestAnimationFrame to ensure DOM has updated
-      setTimeout(() => {  
-      if(activeSegmentId){
+    // Use requestAnimationFrame to ensure DOM has updated
+    setTimeout(() => {
+      if (activeSegmentId) {
         const segmentElement = document.getElementById(activeSegmentId);
-        if(segmentElement){
+        if (segmentElement) {
           segmentElement.scrollIntoView({ behavior: 'smooth' });
         }
-      } 
-      }, 100);
-        
+      }
+    }, 100);
+
   }, [activeSegmentId]);
 
- 
+
 
   const rowHeight = useDynamicRowHeight({
     defaultRowHeight: 50
@@ -84,47 +84,48 @@ export const Workspace: React.FC = () => {
   // }
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-        <div ref={parentContainerRef} className="flex-1 flex flex-col overflow-hidden">
-          {/* Workspace Header */}
-          <WorkspaceHeader
-            headerConfig={{
-              segmentsCount: segments.length,
-              aiTextEndingLoading,
-              hasPreviousSegments: false,
-            }}
-            actions={{
-              onAIDetectTextEndings,
-              onAITextEndingStop,
-              onUndoTextEndingDetection,
-              onResetSegments,
-            }}
-          />
+      <div ref={parentContainerRef} className="flex-1 flex flex-col overflow-hidden">
+        {/* Workspace Header */}
+        <WorkspaceHeader
+          headerConfig={{
+            segmentsCount: segments.length,
+            checkedSegmentsCount: segments.filter((segment) => segment.status !== 'unchecked').length,
+            aiTextEndingLoading,
+            hasPreviousSegments: false,
+          }}
+          actions={{
+            onAIDetectTextEndings,
+            onAITextEndingStop,
+            onUndoTextEndingDetection,
+            onResetSegments,
+          }}
+        />
 
-          {/* Text Display - Virtualized or Direct Rendering */}
-          <div
-            ref={containerRef}
-            className="flex-1 bg-white relative overflow-auto scroll-container"
-            onClick={onTextSelection}
-            style={{ minHeight: 0 }}
-            onScroll={(e) => {
-              const target = e.target as HTMLDivElement;
-              scrollPositionRef.current = target.scrollTop;
-            }}
-            aria-label="Text workspace content area"
-            role="section"
-            onKeyDown={()=>{}}
-          >
-         <Activity mode={segments.length > 0?"visible":"hidden"}>
-                <div className="scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+        {/* Text Display - Virtualized or Direct Rendering */}
+        <div
+          ref={containerRef}
+          className="flex-1 bg-white relative overflow-auto scroll-container"
+          onClick={onTextSelection}
+          style={{ minHeight: 0 }}
+          onScroll={(e) => {
+            const target = e.target as HTMLDivElement;
+            scrollPositionRef.current = target.scrollTop;
+          }}
+          aria-label="Text workspace content area"
+          role="section"
+          onKeyDown={() => { }}
+        >
+          <Activity mode={segments.length > 0 ? "visible" : "hidden"}>
+            <div className="scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
 
-                <List
-      rowComponent={RowComponent}
-      rowCount={segments.length}
-      rowHeight={rowHeight}
-      rowProps={{ segments}}
-    />
+              <List
+                rowComponent={RowComponent}
+                rowCount={segments.length}
+                rowHeight={rowHeight}
+                rowProps={{ segments }}
+              />
 
-                  {/* {segments.map((segment, index) => {
+              {/* {segments.map((segment, index) => {
                     return (
                       <div key={segment.id} className="px-6">
                         <div className="relative">
@@ -138,35 +139,35 @@ export const Workspace: React.FC = () => {
                       </div>
                     );
                   })} */}
-                </div>
-            </Activity>
-            <Activity mode={segments.length === 0 && textContent?"visible":"hidden"}>
+            </div>
+          </Activity>
+          <Activity mode={segments.length === 0 && textContent ? "visible" : "hidden"}>
             <div className="relative">
-                <ContentDisplay
-                  text={textContent}
-                  onCursorChange={(element) => {
-                    // Use the same cursor change handler with special segmentId
-                    onCursorChange('content-no-segments', element);
-                  }}
-                  onInput={onInput}
-                  onKeyDown={onKeyDown}
-                />
-                {/* Split Menu for content when no segments */}
-                {cursorPosition?.segmentId === 'content-no-segments' &&
-                  cursorPosition.menuPosition && (
-                    <SplitMenu
-                      position={cursorPosition.menuPosition}
-                      segmentId="content-no-segments"
-                      onSplit={handleSplitSegmentWithScrollSave}
-                      onCancel={() => {}}
-                      onClose={() => {}}
-                    />
-                  )}
-              </div>
-            </Activity>
-          </div>
+              <ContentDisplay
+                text={textContent}
+                onCursorChange={(element) => {
+                  // Use the same cursor change handler with special segmentId
+                  onCursorChange('content-no-segments', element);
+                }}
+                onInput={onInput}
+                onKeyDown={onKeyDown}
+              />
+              {/* Split Menu for content when no segments */}
+              {cursorPosition?.segmentId === 'content-no-segments' &&
+                cursorPosition.menuPosition && (
+                  <SplitMenu
+                    position={cursorPosition.menuPosition}
+                    segmentId="content-no-segments"
+                    onSplit={handleSplitSegmentWithScrollSave}
+                    onCancel={() => { }}
+                    onClose={() => { }}
+                  />
+                )}
+            </div>
+          </Activity>
         </div>
-   
+      </div>
+
     </div>
   );
 };
@@ -174,7 +175,7 @@ export const Workspace: React.FC = () => {
 
 
 import { type RowComponentProps } from "react-window";
- 
+
 function RowComponent({
   index,
   segments,
@@ -185,11 +186,10 @@ function RowComponent({
   const segment = segments[index];
   return (
     <div style={style}>
-
-    <SegmentItem
-                            segment={segment}
-                            index={index}
-                            />
-                            </div>
+      <SegmentItem
+        segment={segment}
+        index={index}
+      />
+    </div>
   );
 }

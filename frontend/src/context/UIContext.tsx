@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo } from 'react';
 import { useGetSettingsByDomain } from '@/hooks/useSettings';
 import type { Tenant } from '@/api/settings';
+import { hexToHsl, generateColorShades, getForegroundColor } from '@/lib/color-utils';
 
 interface UIContextType {
   tenant: Tenant | undefined;
@@ -50,19 +51,52 @@ export const UIProvider: React.FC<UIProviderProps> = ({ children }) => {
     }
   }, [tenantData, brandName]);
 
-  // Set CSS variables for brand colors
+  // Set CSS variables for brand colors (Shadcn format)
   useEffect(() => {
+    const root = document.documentElement;
+    
     if (tenantData?.settings) {
-      const root = document.documentElement;
-      
+      // Set primary color and its shades
       if (tenantData.settings.brand_primary_color) {
+        const primaryHsl = hexToHsl(tenantData.settings.brand_primary_color);
+        const primaryShades = generateColorShades(tenantData.settings.brand_primary_color);
+        const primaryForeground = getForegroundColor(tenantData.settings.brand_primary_color);
+        
+        // Set main primary color (used by Shadcn components)
+        root.style.setProperty('--primary', primaryHsl);
+        root.style.setProperty('--primary-foreground', primaryForeground);
+        
+        // Set primary color shades
+        Object.entries(primaryShades).forEach(([shade, hslValue]) => {
+          root.style.setProperty(`--color-primary-${shade}`, hslValue);
+        });
+        
+        // Also set the legacy --color-primary variable
         root.style.setProperty('--color-primary', tenantData.settings.brand_primary_color);
+        
+        // Set ring color to match primary
+        root.style.setProperty('--ring', primaryHsl);
       }
       
+      // Set secondary color and its shades
       if (tenantData.settings.brand_secondary_color) {
+        const secondaryHsl = hexToHsl(tenantData.settings.brand_secondary_color);
+        const secondaryShades = generateColorShades(tenantData.settings.brand_secondary_color);
+        const secondaryForeground = getForegroundColor(tenantData.settings.brand_secondary_color);
+        
+        // Set main secondary color (used by Shadcn components)
+        root.style.setProperty('--color-secondary', secondaryHsl);
+        root.style.setProperty('--color-secondary-foreground', secondaryForeground);
+        
+        // Set secondary color shades
+        Object.entries(secondaryShades).forEach(([shade, hslValue]) => {
+          root.style.setProperty(`--color-secondary-${shade}`, hslValue);
+        });
+        
+        // Also set the legacy --color-secondary variable
         root.style.setProperty('--color-secondary', tenantData.settings.brand_secondary_color);
       }
-    }
+    } 
   }, [tenantData]);
 
   const contextValue = useMemo(

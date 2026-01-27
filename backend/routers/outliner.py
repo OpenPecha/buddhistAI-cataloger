@@ -410,7 +410,8 @@ async def list_documents(
         
         unchecked = db.query(func.count(OutlinerSegment.id)).filter(
             OutlinerSegment.document_id == doc.id,
-            OutlinerSegment.status == 'unchecked'
+            OutlinerSegment.status 
+            != 'checked'
         ).scalar() or 0
         
         result.append({

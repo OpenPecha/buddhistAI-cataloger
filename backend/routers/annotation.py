@@ -130,6 +130,8 @@ async def get_annotation(annotation_id: str):
     return response.json()
 
 
+
+
 @router.put("/{annotation_id}/annotation")
 async def update_annotation(annotation_id: str, annotation: UpdateAnnotation):
     """Update an annotation by ID"""

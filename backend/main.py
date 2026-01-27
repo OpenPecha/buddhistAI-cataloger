@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 import uvicorn
 from routers import ai
-from routers import person, text, translation, annotation, bdrc, category, enum, tokenize, aligner_data, admin,outliner
+from routers import person, text, translation, annotation, bdrc, category, enum, tokenize, aligner_data, admin, outliner, segments
 from routers.settings import (
     tenant_router,
     user_router,
@@ -72,6 +72,7 @@ app.include_router(text.router, prefix="/text", tags=["text"])
 app.include_router(bdrc.router, prefix="/bdrc", tags=["bdrc"])
 app.include_router(translation.router, prefix="/instances", tags=["translation"])
 app.include_router(annotation.router, prefix="/v2/annotations", tags=["annotation"])
+app.include_router(segments.router, prefix="/segments", tags=["segments"])
 app.include_router(category.router, prefix="/v2/categories", tags=["category"])
 app.include_router(enum.router, prefix="/v2/enum", tags=["enum"])
 app.include_router(tokenize.router, prefix="/tokenize", tags=["tokenize"])

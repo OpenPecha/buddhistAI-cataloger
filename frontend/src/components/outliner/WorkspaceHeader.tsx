@@ -4,6 +4,7 @@ import { Loader2, Sparkles, Square, RotateCcw, EllipsisVertical, Redo, Undo } fr
 
 interface WorkspaceHeaderConfig {
   segmentsCount: number;
+  checkedSegmentsCount: number;
   aiTextEndingLoading: boolean;
   hasPreviousSegments: boolean;
 }
@@ -24,13 +25,15 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
   headerConfig,
   actions,
 }) => {
-  const { segmentsCount, aiTextEndingLoading, hasPreviousSegments } = headerConfig;
+  const { segmentsCount, aiTextEndingLoading, hasPreviousSegments ,checkedSegmentsCount} = headerConfig;
+  const checked_percentage = (checkedSegmentsCount / segmentsCount) * 100;
   const { onAIDetectTextEndings, onAITextEndingStop, onUndoTextEndingDetection, onResetSegments } = actions;
   return (
     <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
       <div>
         <h2 className="text-lg font-semibold text-gray-900">Text Workspace</h2>
         <p className="text-sm text-gray-600">
+        <Progress  value={checked_percentage}  title={`${checkedSegmentsCount} saved segments`}/>
           {segmentsCount} segment{segmentsCount !== 1 ? 's' : ''}
         </p>
       </div>
@@ -86,6 +89,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
 
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import ExpandAllButton from './ExpandAllButton';
+import { Progress } from '../ui/progress';
 
 
 function Menu({ onResetSegments }: {readonly onResetSegments: () => void }) {
