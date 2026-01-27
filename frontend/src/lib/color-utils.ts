@@ -71,6 +71,80 @@ export function generateColorShades(baseHex: string) {
 }
 
 /**
+ * Converts HSL to hex color
+ * @param hsl - HSL string in format "H S% L%" (e.g., "220 70% 45%")
+ * @returns Hex color string (e.g., "#1b5cc5")
+ */
+export function hslToHex(hsl: string): string {
+  const [h, s, l] = hsl.split(' ').map((val, idx) => {
+    if (idx === 0) return parseInt(val) / 360
+    return parseFloat(val.replace('%', '')) / 100
+  })
+
+  const c = (1 - Math.abs(2 * l - 1)) * s
+  const x = c * (1 - Math.abs(((h * 6) % 2) - 1))
+  const m = l - c / 2
+
+  let r = 0
+  let g = 0
+  let b = 0
+
+  if (h * 6 < 1) {
+    r = c
+    g = x
+    b = 0
+  } else if (h * 6 < 2) {
+    r = x
+    g = c
+    b = 0
+  } else if (h * 6 < 3) {
+    r = 0
+    g = c
+    b = x
+  } else if (h * 6 < 4) {
+    r = 0
+    g = x
+    b = c
+  } else if (h * 6 < 5) {
+    r = x
+    g = 0
+    b = c
+  } else {
+    r = c
+    g = 0
+    b = x
+  }
+
+  r = Math.round((r + m) * 255)
+  g = Math.round((g + m) * 255)
+  b = Math.round((b + m) * 255)
+
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`
+}
+
+/**
+ * Generates hex color shades from a base color
+ * @param baseHex - Base hex color
+ * @returns Object with hex color shades
+ */
+export function generateHexColorShades(baseHex: string) {
+  const hslShades = generateColorShades(baseHex)
+  return {
+    50: hslToHex(hslShades[50]),
+    100: hslToHex(hslShades[100]),
+    200: hslToHex(hslShades[200]),
+    300: hslToHex(hslShades[300]),
+    400: hslToHex(hslShades[400]),
+    500: hslToHex(hslShades[500]),
+    600: hslToHex(hslShades[600]),
+    700: hslToHex(hslShades[700]),
+    800: hslToHex(hslShades[800]),
+    900: hslToHex(hslShades[900]),
+    950: hslToHex(hslShades[950]),
+  }
+}
+
+/**
  * Gets the appropriate foreground color for a given background color
  * @param hex - Hex color string
  * @returns HSL string for foreground color (light or dark based on background lightness)
