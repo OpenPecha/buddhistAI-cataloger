@@ -286,7 +286,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
               onStop={aiSuggestions.onAIStop}
             />
             <hr/>
-            <div className='bg-neutral-200 p-3 rounded-md'>
+            <div className='p-3 rounded-md'>
               
             <Comments segmentId={activeSegmentId || ''} />
               </div>

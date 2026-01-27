@@ -32,7 +32,6 @@ const OutlinerWorkspace: React.FC = () => {
     createSegmentsBulk: createSegmentsBulkBackend,
   } = useOutlinerDocument();
   
-  // Use backend data directly
   
   // Set initial activeSegmentId from URL or first segment
   useEffect(() => {
@@ -62,7 +61,7 @@ const OutlinerWorkspace: React.FC = () => {
   });
 
   // Get active segment
-  const activeSegment = currentSegments.find((seg) => seg.id === activeSegmentId);
+  const activeSegment = currentSegments.find((seg) => seg.id === activeSegmentId) as TextSegment;
 
   // Apply pending bubble menu value when segment becomes active
   useEffect(() => {

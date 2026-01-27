@@ -70,16 +70,16 @@ export const Workspace: React.FC = () => {
   
 
 
-  if (isUploading) {
-    return (
-      <div className="flex flex-1 items-center justify-center bg-white min-h-screen">
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-400"></div>
-          <span className="text-gray-500 text-lg">Loading, please wait...</span>
-        </div>
-      </div>
-    );
-  }
+  // if (isUploading) {
+  //   return (
+  //     <div className="flex flex-1 items-center justify-center bg-white min-h-screen">
+  //       <div className="flex flex-col items-center gap-4">
+  //         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-400"></div>
+  //         <span className="text-gray-500 text-lg">Loading, please wait...</span>
+  //       </div>
+  //     </div>
+  //   );
+  // }
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
         <div ref={parentContainerRef} className="flex-1 flex flex-col overflow-hidden">

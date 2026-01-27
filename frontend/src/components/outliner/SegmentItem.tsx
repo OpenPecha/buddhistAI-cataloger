@@ -66,7 +66,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
   const showSplitMenu = cursorPosition?.segmentId === segment.id && cursorPosition.menuPosition;
   const showBubbleMenu = bubbleMenuState?.segmentId === segment.id;
   return (
-    <div className='relative'>
+    <div className={`relative ${isChecked ? 'opacity-50 ' : 'opacity-100'}`}>
       {/* Attach Parent Button and Collapse All Button - only for first segment */}
       {isFirstSegment && (
         <div className="flex items-center justify-between gap-2 my-3">
@@ -166,7 +166,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
               {index + 1}
             </div>
           </div>
-          <div className="flex-1 relative">
+          <div className={`flex-1 relative ${isChecked ? 'pointer-events-none' : ''}`}>
             {isCollapsed ? (
               <button
                 type="button"
