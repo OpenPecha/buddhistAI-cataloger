@@ -17,14 +17,14 @@ interface AnnotationSidebarProps {
   documentId?: string;
 }
 
-export interface Title{
-  name:string,
-  bdrc_id:string
+export interface Title {
+  name: string,
+  bdrc_id: string
 }
 
-export interface Author{
-  name:string,
-  bdrc_id:string
+export interface Author {
+  name: string,
+  bdrc_id: string
 }
 
 interface PendingChanges {
@@ -48,25 +48,25 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   activeSegment,
   documentId,
 }, ref) => {
-  const {document} = useOutlinerDocument();
+  const { document } = useOutlinerDocument();
   const { updateSegment: updateSegmentMutation, createCommentMutation } = useOutlinerDocument();
   const { user } = useUser();
   const activeSegmentId = activeSegment?.id || null;
   const title = activeSegment?.title || '';
   const author = activeSegment?.author || '';
-  
+
   // Fetch comments separately using useComment hook
   const { comments, isLoading: isLoadingComments } = useComment(activeSegmentId, {
     enabled: !!activeSegmentId,
   });
-  
+
   // Form data that resets when segment changes
-  const [formData, setFormData] = useState<FormDataType>({ title: {name: title, bdrc_id: ''}, author: {name: author, bdrc_id: ''}});
+  const [formData, setFormData] = useState<FormDataType>({ title: { name: title, bdrc_id: '' }, author: { name: author, bdrc_id: '' } });
   // Comment input state
   const [commentContent, setCommentContent] = useState('');
   // Track pending changes per segment
   const pendingChangesRef = useRef<Map<string, FormDataType>>(new Map());
-  
+
   // Refs for field components
   const titleFieldRef = useRef<TitleFieldRef>(null);
   const authorFieldRef = useRef<AuthorFieldRef>(null);
@@ -95,7 +95,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   // Reset formData when segment changes
   useEffect(() => {
     if (activeSegment) {
-      setFormData({ title: {name: title, bdrc_id: ''}, author: {name: author, bdrc_id: ''}});
+      setFormData({ title: { name: title, bdrc_id: '' }, author: { name: author, bdrc_id: '' } });
       setCommentContent(''); // Reset comment input when segment changes
     }
   }, [activeSegment, title, author]);
@@ -160,8 +160,8 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
     onUpdate: handleAIUpdate,
     onTitleChange: handleTitleUpdate,
     onAuthorChange: handleAuthorUpdate,
-    onShowTitleDropdown: () => {},
-    onShowAuthorDropdown: () => {},
+    onShowTitleDropdown: () => { },
+    onShowAuthorDropdown: () => { },
   });
   const onSave = useCallback(async () => {
     // Validate that we have an active segment
@@ -173,7 +173,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
     // Validate form data
     const titleName = formData.title?.name?.trim() || '';
     const authorName = formData.author?.name?.trim() || '';
-    
+
     if (!titleName && !authorName) {
       toast.error('Please provide at least a title or author');
       return;
@@ -215,27 +215,27 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       toast.error(error instanceof Error ? error.message : 'Failed to save annotations');
     }
   }, [activeSegment, activeSegmentId, formData, updateSegmentMutation]);
- 
-  function onUpdate( field: 'title' | 'author', value: Title | Author){
-    if(field === 'title'){
-    setFormData(prev => {
-      const updated = { ...prev, title: value };
-      return updated;
-    });
-  }else if(field === 'author'){
-    setFormData(prev => {
-      const updated = { ...prev, author: value };
-      return updated;
-    });
+
+  function onUpdate(field: 'title' | 'author', value: Title | Author) {
+    if (field === 'title') {
+      setFormData(prev => {
+        const updated = { ...prev, title: value };
+        return updated;
+      });
+    } else if (field === 'author') {
+      setFormData(prev => {
+        const updated = { ...prev, author: value };
+        return updated;
+      });
+    }
   }
+  function resetForm() {
+    setFormData({ title: { name: '', bdrc_id: '' }, author: { name: '', bdrc_id: '' } });
   }
- function resetForm(){
-  setFormData({ title: {name: '', bdrc_id: ''}, author: {name: '', bdrc_id: ''}});
- }
- async function onReset(){
+  async function onReset() {
     resetForm();
-    if(activeSegmentId){
-      const newPayload={
+    if (activeSegmentId) {
+      const newPayload = {
         title: '',
         author: '',
         title_bdrc_id: '',
@@ -249,76 +249,79 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
 
 
   const text_title = document?.filename ? document.filename.replace(/\.[^/.]+$/, '') : '';
+  
+  if (!activeSegment) return <div className="w-96 text-center text-gray-500 py-12">
+    <p>No segment selected</p>
+    <p className="text-sm mt-2">Click on a segment in the workspace to annotate it</p>
+  </div>
+
+
   return (
     <div className="w-96 bg-white border-r border-gray-200 flex flex-col font-monlam-2">
       <div className="p-6 overflow-y-auto flex-1">
-        {activeSegment ? (
-          <div className="flex flex-col flex-1 h-full space-y-6">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">{text_title}</h2>
-              <div className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-md border border-gray-200">
-                <div className="font-medium mb-1">Text:</div>
-                <div className="text-gray-800">{activeSegment.text.slice(0, 100)}...</div>
-              </div>
+
+        <div className="flex flex-col flex-1 h-full space-y-6">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">{text_title}</h2>
+            <div className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-md border border-gray-200">
+              <div className="font-medium mb-1">Text:</div>
+              <div className="text-gray-800">{activeSegment.text.slice(0, 100)}...</div>
             </div>
-
-            <TitleField
-              ref={titleFieldRef}
-              segment={activeSegment}
-              activeSegmentId={activeSegmentId}
-              formData={formData}
-              onUpdate={onUpdate}
-              resetForm={resetForm}
-            />
-
-            <AuthorField
-              ref={authorFieldRef}
-              segment={activeSegment}
-              formData={formData}
-              onUpdate={onUpdate}
-              resetForm={resetForm}
-            />
-
-            <AISuggestionsBox
-              suggestions={aiSuggestions.aiSuggestions}
-              loading={aiSuggestions.aiLoading}
-              onDetect={aiSuggestions.onAIDetect}
-              onStop={aiSuggestions.onAIStop}
-            />
-            <hr/>
-            <div className='p-3 rounded-md'>
-              
-            <Comments segmentId={activeSegmentId || ''} />
-              </div>
           </div>
-        ) : (
-          <div className="text-center text-gray-500 py-12">
-            <p>No segment selected</p>
-            <p className="text-sm mt-2">Click on a segment in the workspace to annotate it</p>
+
+          <TitleField
+            ref={titleFieldRef}
+            segment={activeSegment}
+            activeSegmentId={activeSegmentId}
+            formData={formData}
+            onUpdate={onUpdate}
+            resetForm={resetForm}
+          />
+
+          <AuthorField
+            ref={authorFieldRef}
+            segment={activeSegment}
+            formData={formData}
+            onUpdate={onUpdate}
+            resetForm={resetForm}
+          />
+
+          <AISuggestionsBox
+            suggestions={aiSuggestions.aiSuggestions}
+            loading={aiSuggestions.aiLoading}
+            onDetect={aiSuggestions.onAIDetect}
+            onStop={aiSuggestions.onAIStop}
+          />
+
+
+          <div className="flex gap-2  bg-white">
+            <Button
+              type="button"
+              className='flex-1'
+              onClick={onSave}
+              variant="default"
+              disabled={!activeSegmentId || formData.title.name.trim() === '' || formData.author.name.trim() === ''}
+            >
+              Save
+            </Button>
+            <Button
+              type="button"
+              onClick={onReset}
+              variant="outline"
+              disabled={!activeSegmentId}
+            >
+              Reset
+            </Button>
           </div>
-        )}
+
+          <hr />
+
+          <Comments segmentId={activeSegmentId || ''} />
+        </div>
+
       </div>
 
-      {/* Save Button */}
-      <div className="flex gap-2 p-6 border-t border-gray-200 bg-white">
-        <Button
-          type="button"
-          className='flex-1'
-          onClick={onSave}
-          variant="default"
-          disabled={!activeSegmentId || formData.title.name.trim() === '' || formData.author.name.trim() === ''}
-        >
-          Save
-        </Button>
-        <Button
-          type="button"
-          onClick={onReset}
-          variant="outline"
-          disabled={!activeSegmentId}
-        >
-          Reset
-        </Button>
-      </div>
+
     </div>
   );
 });

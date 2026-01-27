@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { MessageCircle, UserIcon } from 'lucide-react';
 import type { Comment } from '@/api/outliner';
 import { formatDistanceToNow } from 'date-fns';
+import { useUser } from '@/hooks/useUser';
 interface CommentViewProps {
   readonly comments: Comment[];
   readonly showFull?: boolean;
@@ -42,10 +43,11 @@ function CommentView({ comments, showFull = false }: CommentViewProps) {
 const EachComment = ({ comment, index }: { comment: Comment, index: number }) => {
   const utcDate = new Date(comment.timestamp);
   const istDate = new Date(utcDate.getTime() + (5 * 60 + 30) * 60 * 1000);
+  const { user } = useUser();
 
   // Heuristic: treat "me" if username is "You" or similar; for real projects, pass currentUser info down
   // For demo, make messages from "You" right-aligned, others left-aligned
-  const alignRight = comment.username?.toLowerCase?.() === "you"; 
+  const alignRight = comment.username?.toLowerCase?.() === user?.name?.toLowerCase?.(); 
 
   // WhatsApp bubble colors (approx. as Tailwind doesn't have WhatsApp, but custom colors used below)
   const whatsappGreen = alignRight ? "#d9fdd3" : "#fff"; // sent / received background

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useCallback, Activity } from 'react';
 import { useDebouncedState } from "@tanstack/react-pacer";
-
+import { List, useDynamicRowHeight } from "react-window";
 import { BubbleMenu } from './BubbleMenu';
 import { SplitMenu } from './SplitMenu';
 import { SegmentItemMemo as SegmentItem } from './SegmentItem';
@@ -67,7 +67,9 @@ export const Workspace: React.FC = () => {
 
  
 
-  
+  const rowHeight = useDynamicRowHeight({
+    defaultRowHeight: 50
+  });
 
 
   // if (isUploading) {
@@ -114,7 +116,15 @@ export const Workspace: React.FC = () => {
           >
          <Activity mode={segments.length > 0?"visible":"hidden"}>
                 <div className="scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-                  {segments.map((segment, index) => {
+
+                <List
+      rowComponent={RowComponent}
+      rowCount={segments.length}
+      rowHeight={rowHeight}
+      rowProps={{ segments}}
+    />
+
+                  {/* {segments.map((segment, index) => {
                     return (
                       <div key={segment.id} className="px-6">
                         <div className="relative">
@@ -127,7 +137,7 @@ export const Workspace: React.FC = () => {
                         </div>
                       </div>
                     );
-                  })}
+                  })} */}
                 </div>
             </Activity>
             <Activity mode={segments.length === 0 && textContent?"visible":"hidden"}>
@@ -160,3 +170,26 @@ export const Workspace: React.FC = () => {
     </div>
   );
 };
+
+
+
+import { type RowComponentProps } from "react-window";
+ 
+function RowComponent({
+  index,
+  segments,
+  style
+}: RowComponentProps<{
+  segments: TextSegment;
+}>) {
+  const segment = segments[index];
+  return (
+    <div style={style}>
+
+    <SegmentItem
+                            segment={segment}
+                            index={index}
+                            />
+                            </div>
+  );
+}

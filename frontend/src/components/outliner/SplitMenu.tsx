@@ -2,13 +2,12 @@ import React, { useRef, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Scissors } from 'lucide-react';
 import type { SplitMenuProps } from './types';
-
+import useOutsideClick from '@/hooks/useOutsideClick';
 export const SplitMenu: React.FC<SplitMenuProps> = ({ position, segmentId, onSplit, onCancel, onClose }) => {
  
 
-  const menuRef = useRef<HTMLDivElement>(null);
   const [viewportPosition, setViewportPosition] = useState({ x: 0, y: 0 });
-  
+  const menuRef = useOutsideClick(() => onClose());
 
   // Convert relative position to viewport coordinates and adjust for viewport boundaries
   useEffect(() => {
@@ -92,16 +91,7 @@ export const SplitMenu: React.FC<SplitMenuProps> = ({ position, segmentId, onSpl
     return () => cancelAnimationFrame(rafId);
   }, [position, segmentId]);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        onClose();
-      }
-    };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [onClose]);
  // Don't show if document.selection is not present
 
   const menuContent = (
