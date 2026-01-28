@@ -1,25 +1,32 @@
 import { Routes, Route, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
-import TextsPage from './pages/Text';
-import PersonsPage from './pages/Person';
-import TextInstances from './pages/TextInstances';
-import Instance from './pages/Instance';
 import Navigation from './components/Navigation';
-import Index from './pages/Index';
-import Create from './pages/Create';
-import CreateTranslation from './pages/CreateTranslation';
-import CreateCommentary from './pages/CreateCommentary';
-import UpdateAnnotation from './pages/UpdateAnnotation';
-import LoginPage from './pages/LoginPage';
-import Profile from './pages/Profile';
-import Settings from './pages/Settings';
 import ProtectedRoute from './components/ProtectedRoute';
-import AlignmentWorkstation from './components/Aligner/components/AlignmentWorkstation';
-import OutlinerUpload from './pages/OutlinerUpload';
-import OutlinerWorkspace from './pages/OutlinerWorkspace';
 import { getUserByEmail, createUser } from './api/settings';
-import OutlinerAdmin from './pages/Outliner-admin';
+
+// Lazy load page components
+const TextsPage = lazy(() => import('./pages/Text'));
+const PersonsPage = lazy(() => import('./pages/Person'));
+const TextInstances = lazy(() => import('./pages/TextInstances'));
+const Instance = lazy(() => import('./pages/Instance'));
+const Index = lazy(() => import('./pages/Index'));
+const Create = lazy(() => import('./pages/Create'));
+const CreateTranslation = lazy(() => import('./pages/CreateTranslation'));
+const CreateCommentary = lazy(() => import('./pages/CreateCommentary'));
+const UpdateAnnotation = lazy(() => import('./pages/UpdateAnnotation'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Settings = lazy(() => import('./pages/Settings'));
+const AlignmentWorkstation = lazy(() => import('./components/Aligner/components/AlignmentWorkstation'));
+const OutlinerUpload = lazy(() => import('./pages/OutlinerUpload'));
+const OutlinerWorkspace = lazy(() => import('./pages/OutlinerWorkspace'));
+const OutlinerAdmin = lazy(() => import('./pages/Outliner-admin'));
+
+
+
+
+
 
 function App() {
   const location = useLocation();
@@ -77,7 +84,12 @@ function App() {
         
       {!isLoginPage && <Navigation/>}
       <div>
-        <Routes>
+        <Suspense fallback={
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="text-gray-600">Loading...</div>
+          </div>
+        }>
+          <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/profile" element={
             <ProtectedRoute>
@@ -155,6 +167,7 @@ function App() {
             </ProtectedRoute>
           } />
         </Routes>
+        </Suspense>
         </div>
     </div>
     
