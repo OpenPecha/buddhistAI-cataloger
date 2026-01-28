@@ -39,6 +39,7 @@ export const Workspace: React.FC = () => {
     onAITextEndingStop,
     onUndoTextEndingDetection,
     onResetSegments,
+    onSplitSegment,
     onCursorChange,
     onInput,
     onKeyDown,
@@ -124,21 +125,6 @@ export const Workspace: React.FC = () => {
                 rowHeight={rowHeight}
                 rowProps={{ segments }}
               />
-
-              {/* {segments.map((segment, index) => {
-                    return (
-                      <div key={segment.id} className="px-6">
-                        <div className="relative">
-                          <SegmentItem
-                            segment={segment}
-                            index={index}
-                          />
-
-                         
-                        </div>
-                      </div>
-                    );
-                  })} */}
             </div>
           </Activity>
           <Activity mode={segments.length === 0 && textContent ? "visible" : "hidden"}>
@@ -158,7 +144,7 @@ export const Workspace: React.FC = () => {
                   <SplitMenu
                     position={cursorPosition.menuPosition}
                     segmentId="content-no-segments"
-                    onSplit={handleSplitSegmentWithScrollSave}
+                    onSplit={onSplitSegment}
                     onCancel={() => { }}
                     onClose={() => { }}
                   />
