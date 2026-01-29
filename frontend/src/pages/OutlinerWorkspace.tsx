@@ -665,17 +665,7 @@ const OutlinerWorkspace: React.FC = () => {
   }, []);
 
  
-  // Show loading state if document is loading
-  if (isLoadingDocument && !documentId) {
-    return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-          <p className="text-sm text-gray-600">Loading document...</p>
-        </div>
-      </div>
-    );
-  }
+  
 
   // Redirect to upload if no documentId
   if (!documentId) {
@@ -724,7 +714,8 @@ const OutlinerWorkspace: React.FC = () => {
           />
 
           {/* Main Workspace */}
-          <Workspace  />
+        
+          <Workspace  />  
         </div>
       </div>
     </OutlinerProvider>

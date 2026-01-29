@@ -30,7 +30,6 @@ export const Workspace: React.FC = () => {
   const {
     activeSegmentId,
     textContent,
-    isUploading,
     segments,
     cursorPosition,
     aiTextEndingLoading,
@@ -44,6 +43,7 @@ export const Workspace: React.FC = () => {
     onInput,
     onKeyDown,
   } = useOutliner();
+  const { isLoading: isLoadingDocument } = useOutlinerDocument();
   const containerRef = useRef<HTMLDivElement>(null);
   const parentContainerRef = useRef<HTMLDivElement>(null);
 
@@ -101,7 +101,15 @@ export const Workspace: React.FC = () => {
             onResetSegments,
           }}
         />
-
+          {isLoadingDocument && (
+      <div className="h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
+          <p className="text-sm text-gray-600">Loading document...</p>
+        </div>
+      </div>
+    )
+  }
         {/* Text Display - Virtualized or Direct Rendering */}
         <div
           ref={containerRef}
@@ -117,7 +125,7 @@ export const Workspace: React.FC = () => {
           onKeyDown={() => { }}
         >
           <Activity mode={segments.length > 0 ? "visible" : "hidden"}>
-            <div className="scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+            <div className="scrollbar-thin px-2 scrollbar-thumb-gray-300 scrollbar-track-gray-100">
 
               <List
                 rowComponent={RowComponent}
@@ -161,6 +169,7 @@ export const Workspace: React.FC = () => {
 
 
 import { type RowComponentProps } from "react-window";
+import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
 
 function RowComponent({
   index,

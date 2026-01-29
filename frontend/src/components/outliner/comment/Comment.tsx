@@ -11,7 +11,7 @@ function Comments({ segmentId }: { segmentId: string }) {
   });
 if (!segmentId ||segmentId.length === 0) return null;
 return (
-    <div className="flex flex-col justify-end h-full flex-1 ">
+    <div className="flex flex-col justify-end h-full flex-1  pt-4 ">
       {isLoadingComments ? (
         <div className="text-sm text-gray-500">Loading comments...</div>
       ) : (

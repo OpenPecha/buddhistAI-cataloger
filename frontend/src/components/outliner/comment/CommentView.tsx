@@ -27,7 +27,7 @@ function CommentView({ comments, showFull = false }: CommentViewProps) {
           <h3 className="text-sm font-semibold text-gray-900">Comments</h3>
           <span className="text-xs text-gray-500">({comments.length})</span>
         </div>
-        <div className="space-y-3 max-h-[30vh] overflow-y-auto" style={{ position: 'relative' }}>
+        <div className="space-y-3 max-h-[40vh] overflow-y-auto" style={{ position: 'relative' }}>
           {comments.map((c, index) => (
             <EachComment key={`comment-${c.timestamp || index}-${index}`} comment={c} index={index} />
           ))}
@@ -97,7 +97,7 @@ const EachComment = ({ comment, index }: { comment: Comment, index: number }) =>
         <div
           className={`
             whitespace-pre-wrap px-3 pb-1 text-[0.98rem]
-            ${alignRight ? "text-right" : "text-left"}
+            ${alignRight ? "" : "text-left"}
           `}
           style={{
             color: whatsappText,

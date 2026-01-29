@@ -46,7 +46,7 @@ function CommentForm({ segmentId }: { segmentId: string }) {
    
 
     <Field orientation="horizontal">
-      <Input className='w-full bg-white'  value={commentContent} onChange={(e) => setCommentContent(e.target.value)} type="type"  placeholder="Add a comment... (Press Enter to submit)" />
+      <Input className='w-full bg-white'  value={commentContent} onChange={(e) => setCommentContent(e.target.value)} type="type"  placeholder="type your comment here..." />
       <Button onClick={handleCommentSubmit}
       disabled={createCommentMutation.isPending} >        <Send />
       </Button>
