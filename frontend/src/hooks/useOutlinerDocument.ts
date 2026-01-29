@@ -57,7 +57,7 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
     refetchOnReconnect: false,
     refetchIntervalInBackground: false,
   });
-
+  console.log(document)
   // Mutation for uploading document
   const uploadMutation = useMutation({
     mutationFn: ({ file, user_id }: { file: File; user_id?: string }) =>

@@ -25,7 +25,7 @@ class OutlinerDocument(Base):
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    status: Mapped[str | None] = mapped_column(String, nullable=True) #  active ,completed, deleted ,approved ,rejected
+    status: Mapped[str|None] = mapped_column(String, default="active",nullable=True) #  active ,completed, deleted ,approved ,rejected
     
     segments: Mapped[list["OutlinerSegment"]] = relationship(
         "OutlinerSegment",

@@ -383,7 +383,7 @@ async def list_segments(
 ):
     """Get all segments for a document"""
     segments = list_segments_ctrl(db, document_id)
-    
+    print(segments)
     segment_responses = []
     for segment in segments:
         segment_responses.append(_build_segment_response(segment))

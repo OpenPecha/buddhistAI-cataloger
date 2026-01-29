@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { useAuth0 } from '@auth0/auth0-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
 import { OutlinerFileUploadZone } from '@/components/outliner/OutlinerFileUploadZone';
-import { listOutlinerDocuments, updateDocumentStatus, type OutlinerDocumentListItem } from '@/api/outliner';
+import { listOutlinerDocuments, updateDocumentStatus, type OutlineDocumentStatus, type OutlinerDocumentListItem } from '@/api/outliner';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -15,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { FileText, Upload, Calendar, BarChart3, Trash2, RotateCcw, Filter, Settings } from 'lucide-react';
+import { FileText, Upload, Calendar, BarChart3, Trash2, RotateCcw, Filter, Settings, Check, Workflow, Cross, TheaterIcon, Play, CheckLine } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { Progress } from '@/components/ui/progress';
 
@@ -208,17 +207,20 @@ const OutlinerUpload: React.FC = () => {
               <TableBody>
                 {displayedDocuments.map((doc) => {
                   const isDeleted = doc.status === 'deleted';
+                  const isActive=doc.status==='active'||doc.status==='completed';
                   const isOwner = doc.user_id === userId || !doc.user_id;
                   const checked_percentage = (doc.checked_segments || 0) / (doc.total_segments || 1) * 100;
                   return (
                   <TableRow
                     key={doc.id}
                     onClick={() => {
-                      if (!isDeleted) {
+
+                      if (!isDeleted && isActive)  {
                         handleDocumentClick(doc.id);
                       }
                     }}
-                    className={`${isDeleted ? 'opacity-60' : 'cursor-pointer hover:bg-gray-50'} transition-colors`}
+                    className={`${isDeleted ||
+                      !isActive ? 'opacity-60' : 'cursor-pointer hover:bg-gray-50'} transition-colors`}
                   >
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -242,7 +244,11 @@ const OutlinerUpload: React.FC = () => {
                         <div className="text-xs text-gray-500">
                           Unchecked: {doc.unchecked_segments || 0}
                         </div>
+                        <div className='flex gap-2 items-center'>
+
                         <Progress value={checked_percentage} />
+                        <StatusPreview status={doc?.status||''}/>
+                        </div>
                       </div>
                     </TableCell>
               
@@ -292,3 +298,24 @@ const OutlinerUpload: React.FC = () => {
 };
 
 export default OutlinerUpload;
+
+type StatusPreviewProps={
+  status:OutlineDocumentStatus
+}
+
+const StatusPreview = ({status}:StatusPreviewProps) => {
+  const statusIcons = {
+    "completed": Check,
+    "active": Play,
+    "rejected": Cross,
+    "approved": CheckLine
+  };
+  if(status===''||!status) return null;
+  const Icon = statusIcons[status];
+  if (!Icon) return null;
+  return (
+    <div title={status}>
+      <Icon className="w-4 h-4" />
+    </div>
+  );
+};

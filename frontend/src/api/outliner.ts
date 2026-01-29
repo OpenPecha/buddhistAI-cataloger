@@ -3,6 +3,8 @@ import type { TextSegment } from '@/components/outliner/types';
 
 // ==================== Types ====================
 
+export type OutlineDocumentStatus ='completed' | 'active' | 'rejected' | 'approved'|'deleted';
+export type OutlineSegmentStatus="checked"|"unchecked";
 export interface OutlinerDocument {
   id: string;
   content: string;
@@ -25,7 +27,7 @@ export interface OutlinerDocumentListItem {
   progress_percentage: number;
   checked_segments: number;
   unchecked_segments: number;
-  status?: string | null;
+  status?: OutlineDocumentStatus | null;
   created_at: string;
   updated_at: string;
 }
@@ -43,7 +45,7 @@ export interface OutlinerSegment {
   parent_segment_id?: string | null;
   is_annotated: boolean;
   is_attached?: boolean | null;
-  status?: string | null; // checked, unchecked
+  status?: OutlineSegmentStatus | null; // checked, unchecked
   created_at: string;
   updated_at: string;
   comments: Comment[]; // Updated to use comments array
@@ -85,7 +87,7 @@ export interface SegmentUpdateRequest {
   author_bdrc_id?: string;
   parent_segment_id?: string;
   is_attached?: boolean;
-  status?: string; // checked, unchecked
+  status?: OutlineSegmentStatus; // checked, unchecked
   comment?: string | CommentsData | Comment[]; // Can be old string format, CommentsData format, or array format
   comment_content?: string; // New comment content to append
   comment_username?: string; // Username for new comment

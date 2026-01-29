@@ -30,15 +30,15 @@ export function useDocumentActions({
       });
 
       if (response.ok) {
-        await loadDocuments(); // Reload documents
-        await loadStats(); // Reload stats
+        // Only reload documents once - stats will be calculated automatically from documents state
+        await loadDocuments();
       } else {
         console.error('Failed to update document status');
       }
     } catch (error) {
       console.error('Error updating document status:', error);
     }
-  }, [getAccessTokenSilently, loadDocuments, loadStats]);
+  }, [getAccessTokenSilently, loadDocuments]);
 
   const deleteDocument = useCallback(async (documentId: string, selectedDocument: Document | null) => {
     if (!confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
@@ -56,8 +56,8 @@ export function useDocumentActions({
       });
 
       if (response.ok) {
-        await loadDocuments(); // Reload documents
-        await loadStats(); // Reload stats
+        // Only reload documents once - stats will be calculated automatically from documents state
+        await loadDocuments();
         if (selectedDocument?.id === documentId) {
           setSelectedDocument(null);
           setSegments([]);
@@ -68,7 +68,7 @@ export function useDocumentActions({
     } catch (error) {
       console.error('Error deleting document:', error);
     }
-  }, [getAccessTokenSilently, loadDocuments, loadStats, setSelectedDocument, setSegments]);
+  }, [getAccessTokenSilently, loadDocuments, setSelectedDocument, setSegments]);
 
   return {
     updateDocumentStatus,

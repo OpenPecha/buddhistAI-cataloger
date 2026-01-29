@@ -169,22 +169,8 @@ def get_comments_list(segment: OutlinerSegment) -> List[Dict[str, Any]]:
             # Return a copy to avoid mutating the original list
             return list(segment.comment)
         
-        # Handle string format (backward compatibility)
-        if isinstance(segment.comment, str):
-            try:
-                parsed = json.loads(segment.comment)
-                if isinstance(parsed, list):
-                    return parsed
-                elif isinstance(parsed, dict) and isinstance(parsed.get('comments'), list):
-                    return parsed['comments']
-                else:
-                    return [{"content": segment.comment, "username": "Unknown", "timestamp": datetime.utcnow().isoformat()}]
-            except json.JSONDecodeError:
-                return [{"content": segment.comment, "username": "Unknown", "timestamp": datetime.utcnow().isoformat()}]
         
-        # Handle dict format (backward compatibility)
-        if isinstance(segment.comment, dict) and isinstance(segment.comment.get('comments'), list):
-            return segment.comment['comments']
+    
             
     except Exception:
         return [{"content": str(segment.comment), "username": "Unknown", "timestamp": datetime.utcnow().isoformat()}]

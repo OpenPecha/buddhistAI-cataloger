@@ -90,6 +90,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import ExpandAllButton from './ExpandAllButton';
 import { Progress } from '../ui/progress';
+import SubmitToReview from './SubmitToReview';
 
 
 function Menu({ onResetSegments }: {readonly onResetSegments: () => void }) {
@@ -109,7 +110,8 @@ function Menu({ onResetSegments }: {readonly onResetSegments: () => void }) {
           Reset All Segments
         </DropdownMenuItem>
       
-        <ExpandAllButton/>          
+        <ExpandAllButton/>      
+        <SubmitToReview/>    
       </DropdownMenuContent>
     </DropdownMenu>
   );

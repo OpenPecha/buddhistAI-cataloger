@@ -7,7 +7,7 @@ interface UseSegmentActionsProps {
   selectedDocument: Document | null;
   loadSegments: (documentId: string) => Promise<void>;
   loadDocuments: () => Promise<void>;
-  loadStats: () => Promise<void>;
+  loadStats?: () => Promise<void>; // Optional - kept for backward compatibility
 }
 
 export function useSegmentActions({
@@ -35,16 +35,15 @@ export function useSegmentActions({
         if (selectedDocument) {
           await loadSegments(selectedDocument.id);
         }
-        // Reload documents to update progress
+        // Reload documents to update progress - stats will be calculated automatically
         await loadDocuments();
-        await loadStats();
       } else {
         console.error('Failed to update segment');
       }
     } catch (error) {
       console.error('Error updating segment:', error);
     }
-  }, [getAccessTokenSilently, selectedDocument, loadSegments, loadDocuments, loadStats]);
+  }, [getAccessTokenSilently, selectedDocument, loadSegments, loadDocuments]);
 
   const deleteSegment = useCallback(async (segmentId: string) => {
     if (!confirm('Are you sure you want to delete this segment? This action cannot be undone.')) {
@@ -66,16 +65,15 @@ export function useSegmentActions({
         if (selectedDocument) {
           await loadSegments(selectedDocument.id);
         }
-        // Reload documents to update progress
+        // Reload documents to update progress - stats will be calculated automatically
         await loadDocuments();
-        await loadStats();
       } else {
         console.error('Failed to delete segment');
       }
     } catch (error) {
       console.error('Error deleting segment:', error);
     }
-  }, [getAccessTokenSilently, selectedDocument, loadSegments, loadDocuments, loadStats]);
+  }, [getAccessTokenSilently, selectedDocument, loadSegments, loadDocuments]);
 
   return {
     updateSegment,

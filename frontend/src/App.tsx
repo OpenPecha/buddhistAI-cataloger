@@ -19,7 +19,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Settings = lazy(() => import('./pages/Settings'));
 const AlignmentWorkstation = lazy(() => import('./components/Aligner/components/AlignmentWorkstation'));
-const OutlinerUpload = lazy(() => import('./pages/OutlinerUpload'));
+const OutlineDashboard = lazy(() => import('./pages/Dashboard'));
 const OutlinerWorkspace = lazy(() => import('./pages/OutlinerWorkspace'));
 const OutlinerAdmin = lazy(() => import('./pages/Outliner-admin'));
 
@@ -153,7 +153,7 @@ function App() {
           } />
           <Route path="/outliner" element={
             <ProtectedRoute>
-              <OutlinerUpload />
+              <OutlineDashboard />
             </ProtectedRoute>
           } />
           <Route path="/outliner/:documentId" element={
