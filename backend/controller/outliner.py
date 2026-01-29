@@ -164,7 +164,6 @@ def get_document(
             OutlinerSegment.span_end,
             OutlinerSegment.is_attached,
             OutlinerSegment.segment_index,
-            OutlinerSegment.comment,
             OutlinerSegment.id,
             OutlinerSegment.status,
             OutlinerSegment.title,
@@ -404,7 +403,18 @@ def create_segments_bulk(
 
 def list_segments(db: Session, document_id: str) -> List[OutlinerSegment]:
     """Get all segments for a document"""
-    segments = db.query(OutlinerSegment).filter(
+    segments = db.query(
+      OutlinerSegment.span_start,
+            OutlinerSegment.span_end,
+            OutlinerSegment.is_attached,
+            OutlinerSegment.segment_index,
+            OutlinerSegment.id,
+            OutlinerSegment.status,
+            OutlinerSegment.title,
+            OutlinerSegment.author,
+            OutlinerSegment.title_bdrc_id,
+            OutlinerSegment.author_bdrc_id,
+                        ).filter(
         OutlinerSegment.document_id == document_id
     ).order_by(OutlinerSegment.segment_index).all()
     return segments

@@ -13,6 +13,8 @@ from sqlalchemy import func
 from dotenv import load_dotenv
 from models.outliner import OutlinerDocument, OutlinerSegment
 from prompts.ai_prompts import get_title_author_prompt, get_text_boundary_detection_prompt
+from controller.outliner import get_segment
+from utils.outliner_utils import incremental_update_document_progress, get_document_with_cache
 
 load_dotenv(override=True)
 
@@ -381,4 +383,198 @@ def detect_text_endings(content: str, document_id: str, db: Session) -> tuple[Li
         raise HTTPException(
             status_code=500,
             detail=f"Error detecting text endings: {str(e)}"
+        )
+
+
+def segment_and_create_from_parent(
+    db: Session,
+    segment_id: str,
+    content: Optional[str] = None
+) -> tuple[int, List[str]]:
+    """
+    Segment a parent segment and create child segments in the database.
+    
+    Args:
+        db: Database session
+        document_id: The document ID
+        segment_id: The parent segment ID to segment
+        content: Optional content override (if not provided, uses segment text)
+        
+    Returns:
+        Tuple of (number of segments created, list of segment IDs)
+        
+    Raises:
+        HTTPException: If segment not found, validation fails, or creation fails
+    """
+    try:
+        # Get the parent segment
+        parent_segment = get_segment(db, segment_id)
+        document_id = parent_segment.document_id
+        
+        # Verify segment belongs to the document
+        if parent_segment.document_id != document_id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Segment {segment_id} does not belong to document {document_id}"
+            )
+        
+        # Get document content
+        document = get_document_with_cache(db, document_id)
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        # Extract content from segment's span positions
+        segment_start = parent_segment.span_start
+        segment_end = parent_segment.span_end
+        
+        # Validate span positions
+        if segment_start < 0 or segment_end > len(document.content):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid span positions: start={segment_start}, end={segment_end}, document_length={len(document.content)}"
+            )
+        
+        if segment_start >= segment_end:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid span: start ({segment_start}) must be less than end ({segment_end})"
+            )
+        
+        # Extract the segment content
+        segment_content = document.content[segment_start:segment_end]
+        
+        # Use provided content if available, otherwise use extracted content
+        content_to_segment = content if content is not None else segment_content
+        
+        # Perform segmentation: rule-based first, then Gemini if needed
+        rule_based_positions = detect_text_boundaries_rule_based(content_to_segment)
+        if rule_based_positions:
+            relative_positions = rule_based_positions
+        if len(rule_based_positions) == 1:
+            # If only one segment found by rule-based method, proceed with AI detection
+            relative_positions = detect_text_endings_ai(content_to_segment)
+        
+        if not relative_positions:
+            raise HTTPException(
+                status_code=500,
+                detail="Could not detect any text segments"
+            )
+        
+        # Validate segmentation boundaries
+        # First segment should start at position 0 (relative to segment content)
+        if relative_positions[0] != 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid segmentation: first segment does not start at beginning. Expected 0, got {relative_positions[0]}"
+            )
+        
+        # Last segment should end at the end of the segment content
+        content_length = len(content_to_segment)
+        
+        # Calculate end positions for validation
+        end_positions = []
+        for idx, start_pos in enumerate(relative_positions):
+            end_pos = (
+                relative_positions[idx + 1]
+                if idx + 1 < len(relative_positions)
+                else content_length
+            )
+            end_positions.append(end_pos)
+        
+        last_segment_end = end_positions[-1]
+        
+        if last_segment_end != content_length:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid segmentation: last segment does not end at segment boundary. Expected {content_length}, got {last_segment_end}"
+            )
+        
+        # Convert relative positions to absolute positions in document
+        absolute_positions = [segment_start + pos for pos in relative_positions]
+        
+        # Get number of segments to create
+        num_new_segments = len(absolute_positions)
+        parent_index = parent_segment.segment_index
+        
+        # Store parent segment's annotation status for progress tracking
+        parent_was_annotated = parent_segment.is_annotated
+        
+        # Get segments that come after the parent segment
+        # They are currently at indices: parent_index+1, parent_index+2, ...
+        following_segments = db.query(OutlinerSegment).filter(
+            OutlinerSegment.document_id == document_id,
+            OutlinerSegment.segment_index > parent_index
+        ).all()
+        
+        # Delete the parent segment (it will be replaced by child segments)
+        db.delete(parent_segment)
+        
+       
+        for seg in following_segments:
+            seg.segment_index += (num_new_segments - 1)
+        
+        # Create segments in database with absolute positions
+        db_segments = []
+        segment_ids = []
+        
+        for idx, abs_start_pos in enumerate(absolute_positions):
+            abs_end_pos = (
+                absolute_positions[idx + 1]
+                if idx + 1 < len(absolute_positions)
+                else segment_end
+            )
+            
+            # Extract text for this segment
+            segment_text = document.content[abs_start_pos:abs_end_pos]
+            
+            # Generate segment ID
+            segment_uuid = str(uuid.uuid4())
+            segment_ids.append(segment_uuid)
+            
+            # Calculate segment_index: replace parent segment starting at parent_index
+            new_segment_index = parent_index + idx
+            
+            db_segments.append({
+                "id": segment_uuid,
+                "document_id": document_id,
+                "text": segment_text,
+                "segment_index": new_segment_index,
+                "span_start": abs_start_pos,
+                "span_end": abs_end_pos,
+                "parent_segment_id": None,  # Child segments don't need parent_segment_id since parent is deleted
+                "status": "unchecked",
+                "is_annotated": False,
+            })
+        
+        # Bulk insert segments
+        db.bulk_insert_mappings(OutlinerSegment, db_segments)
+        
+     
+        annotated_delta = -1 if parent_was_annotated else 0
+        
+        incremental_update_document_progress(
+            db=db,
+            document_id=document_id,
+            total_delta=num_new_segments - 1,  # -1 for deleted parent, +num_new_segments for new segments
+            annotated_delta=annotated_delta
+        )
+        
+        # Commit all changes
+        db.commit()
+        
+        # Refresh segments to get updated data
+        for seg_id in segment_ids:
+            segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == seg_id).first()
+            if segment:
+                db.refresh(segment)
+        
+        return len(db_segments), segment_ids
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error segmenting and creating segments: {str(e)}"
         )

@@ -562,6 +562,18 @@ const OutlinerWorkspace: React.FC = () => {
   const handleAIDetectTextEndings = useCallback(async () => {
     if (!currentTextContent || currentTextContent.trim().length === 0) return;
 
+    // Require an active segment since segment_id is required by backend
+    if (!activeSegmentId) {
+      console.error('No active segment selected. Please select a segment to segment.');
+      return;
+    }
+
+    const activeSegment = currentSegments.find((seg) => seg.id === activeSegmentId);
+    if (!activeSegment) {
+      console.error('Active segment not found');
+      return;
+    }
+
     // Abort any existing request
     if (aiTextEndingAbortControllerRef.current) {
       aiTextEndingAbortControllerRef.current.abort();
@@ -572,83 +584,24 @@ const OutlinerWorkspace: React.FC = () => {
     aiTextEndingAbortControllerRef.current = abortController;
 
     try {
-      // If no marker found, use AI API approach with React Query
-      // Get the current selected segment text, or use currentTextContent if no segment is selected
-      const activeSegment: TextSegment | undefined = activeSegmentId
-        ? currentSegments.find((seg) => seg.id === activeSegmentId)
-        : undefined
-      const contentToSend = activeSegment ? activeSegment.text : currentTextContent || ''
-
-      // Use React Query mutation for AI detection
+      // Backend handles segmentation and creates child segments
       const data = await aiTextEndings.detectTextEndings({
-        content: contentToSend,
+        content: activeSegment.text,
         document_id: documentId || '',
+        segment_id: activeSegmentId,
         signal: abortController.signal,
       })
 
-      const { starting_positions } = data;
-
-      if (!starting_positions || !Array.isArray(starting_positions) || starting_positions.length === 0) {
-        throw new Error('Invalid response format');
+      // Validate response
+      if (!data.segment_ids || !Array.isArray(data.segment_ids) || data.segment_ids.length === 0) {
+        throw new Error('Invalid response format: no segments created');
       }
 
-      // If an active segment is selected, apply segmentation only to that segment
-      if (activeSegment) {
-        // Find the segment's position in currentSegments array
-        const segmentIndex = currentSegments.findIndex((seg) => seg.id === activeSegmentId);
-        if (segmentIndex === -1) {
-          throw new Error('Active segment not found');
-        }
-
-        // Create new segments from the segment's content using relative positions
-        // The AI positions are relative to the segment's content (starting from 0)
-        const segmentText = activeSegment.text;
-        const segmentTextLength = segmentText.length;
-        const newSegmentsFromSegment: TextSegment[] = [];
-        const timestamp = Date.now();
-        
-        for (let i = 0; i < starting_positions.length; i++) {
-          const relativeStart = Math.max(0, Math.min(starting_positions[i], segmentTextLength));
-          const relativeEnd = i < starting_positions.length - 1 
-            ? Math.max(0, Math.min(starting_positions[i + 1], segmentTextLength))
-            : segmentTextLength;
-
-          const segmentTextPart = segmentText.substring(relativeStart, relativeEnd).trim();
-
-          if (segmentTextPart.length > 0) {
-            newSegmentsFromSegment.push({
-              id: `segment-${timestamp}-${i}`,
-              text: segmentTextPart,
-              comments: [],
-              // Preserve metadata from the original segment for the first new segment
-              ...(i === 0 && {
-                title: activeSegment.title,
-                author: activeSegment.author,
-                title_bdrc_id: activeSegment.title_bdrc_id,
-                author_bdrc_id: activeSegment.author_bdrc_id,
-                parentSegmentId: activeSegment.parentSegmentId || undefined,
-              }),
-            })
-          }
-        }
-
-        if (newSegmentsFromSegment.length === 0) {
-          throw new Error('No valid segments created from AI detection');
-        }
-
-        // Note: Segment splitting should be handled by backend API
-        // For now, this is a placeholder - backend should handle the split
-        console.warn('AI detection on active segment requires backend support');
-        
-        // Set first new segment as active (if backend creates it)
-        if (newSegmentsFromSegment.length > 0) {
-          // Wait for backend to update, then set active segment
-          // This will be handled by query invalidation
-        }
-      } else {
-        // No active segment selected, apply to whole textContent
-        // Note: This should be handled by backend API
-        console.warn('AI detection requires backend support for creating segments');
+      // Backend has created the segments, so we just need to wait for query invalidation
+      // The segments will be refetched automatically via React Query
+      // Set the first created segment as active
+      if (data.segment_ids.length > 0) {
+        setSearchParams({ segmentId: data.segment_ids[0] }, { replace: true });
       }
     } catch (error) {
       // Don't log error if it was aborted
@@ -661,7 +614,7 @@ const OutlinerWorkspace: React.FC = () => {
         aiTextEndingAbortControllerRef.current = null;
       }
     }
-  }, [currentTextContent, currentSegments, createSegmentsFromPositions, activeSegmentId, aiTextEndings, setSearchParams, documentId])
+  }, [currentTextContent, currentSegments, activeSegmentId, aiTextEndings, setSearchParams, documentId])
 
   // Stop AI text ending detection request
   const handleAITextEndingStop = useCallback(() => {

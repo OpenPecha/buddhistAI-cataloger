@@ -507,10 +507,13 @@ export const resetSegments = async (documentId: string): Promise<void> => {
 export interface DetectTextEndingsRequest {
   document_id: string;
   content: string;
+  segment_id: string;
 }
 
 export interface DetectTextEndingsResponse {
-  starting_positions: number[];
+  message: string;
+  segments_created: number;
+  segment_ids: string[];
 }
 
 export const detectTextEndings = async (

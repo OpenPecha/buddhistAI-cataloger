@@ -104,6 +104,23 @@ class DocumentCreate(BaseModel):
     filename: Optional[str] = None
     user_id: Optional[str] = None
 
+class SegmentResponseDocument(BaseModel):
+    id: str
+    text: str
+    segment_index: int
+    span_start: int
+    span_end: int
+    title: Optional[str] = None
+    author: Optional[str] = None
+    title_bdrc_id: Optional[str] = None
+    author_bdrc_id: Optional[str] = None
+    parent_segment_id: Optional[str] = None
+    is_annotated: bool
+    is_attached: Optional[bool] = None
+    status: Optional[str] = None  # checked, unchecked
+
+    class Config:
+        from_attributes = True
 
 class DocumentResponse(BaseModel):
     id: str
@@ -116,7 +133,7 @@ class DocumentResponse(BaseModel):
     status: Optional[str] = None  # active, completed, deleted, approved, rejected
     created_at: datetime
     updated_at: datetime
-    segments: List[SegmentResponse] = []
+    segments: List[SegmentResponseDocument] = []
 
     class Config:
         from_attributes = True

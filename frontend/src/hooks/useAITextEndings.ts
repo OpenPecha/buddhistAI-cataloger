@@ -15,12 +15,12 @@ export const useAITextEndings = (options?: UseAITextEndingsOptions) => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: ({ content,document_id, signal }: { content: string; document_id: string; signal?: AbortSignal }) =>
-      detectTextEndings({ content, document_id: options?.documentId }, signal),
-    onSuccess: (data) => {
-      if (options?.documentId) {
-        // Invalidate document query to refetch updated segments
-        queryClient.invalidateQueries({ queryKey: ['outliner-document', options.documentId] });
+    mutationFn: ({ content, document_id, segment_id, signal }: { content: string; document_id: string; segment_id: string; signal?: AbortSignal }) =>
+      detectTextEndings({ content, document_id, segment_id }, signal),
+    onSuccess: (data, variables) => {
+      // Invalidate document query to refetch updated segments
+      if (variables.document_id) {
+        queryClient.invalidateQueries({ queryKey: ['outliner-document', variables.document_id] });
       }
       options?.onSuccess?.(data);
     },
