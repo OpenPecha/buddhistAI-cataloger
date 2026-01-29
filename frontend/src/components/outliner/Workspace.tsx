@@ -1,49 +1,21 @@
-import React, { useRef, useEffect, useCallback, Activity } from 'react';
-import { useDebouncedState } from "@tanstack/react-pacer";
-import { List, useDynamicRowHeight } from "react-window";
-import { BubbleMenu } from './BubbleMenu';
-import { SplitMenu } from './SplitMenu';
-import { SegmentItemMemo as SegmentItem } from './SegmentItem';
-import { WorkspaceHeader } from './WorkspaceHeader';
-import { ContentDisplay } from './ContentDisplay';
-import { useOutliner } from './OutlinerContext';
-import type { TextSegment, CursorPosition, BubbleMenuState } from './types';
-
-// Row component data passed via itemData
-interface RowData {
-  segments: TextSegment[];
-  activeSegmentId: string | null;
-  cursorPosition: CursorPosition | null;
-  bubbleMenuState: BubbleMenuState | null;
-  segmentLoadingStates: Map<string, boolean>;
-  onSplitSegment: () => void;
-  onMergeWithPrevious: (segmentId: string) => void;
-  onBubbleMenuSelect: (field: 'title' | 'author', segmentId: string, text: string) => void;
-  collapsedSegments: Set<string>;
-  toggleSegmentCollapse: (segmentId: string) => void;
-  toggleCollapseAll: () => void;
-  isAllCollapsed: boolean;
-}
-
+import React, { useRef, useEffect, Activity } from 'react'
+import { List, useDynamicRowHeight } from 'react-window'
+import { SegmentItemMemo as SegmentItem } from './SegmentItem'
+import { WorkspaceHeader } from './WorkspaceHeader'
+import { useDocument, useSelection,  useActions } from './contexts'
+import { useOutlinerDocument } from '@/hooks/useOutlinerDocument'
+import type { TextSegment } from './types'
 
 export const Workspace: React.FC = () => {
+  const { activeSegmentId, segments, aiTextEndingLoading } = useDocument()
+  const { onTextSelection } = useSelection()
   const {
-    activeSegmentId,
-    textContent,
-    segments,
-    cursorPosition,
-    aiTextEndingLoading,
-    onTextSelection,
     onAIDetectTextEndings,
     onAITextEndingStop,
     onUndoTextEndingDetection,
     onResetSegments,
-    onSplitSegment,
-    onCursorChange,
-    onInput,
-    onKeyDown,
-  } = useOutliner();
-  const { isLoading: isLoadingDocument } = useOutlinerDocument();
+  } = useActions()
+  const { isLoading: isLoadingDocument } = useOutlinerDocument()
   const containerRef = useRef<HTMLDivElement>(null);
   const parentContainerRef = useRef<HTMLDivElement>(null);
 
@@ -73,16 +45,7 @@ export const Workspace: React.FC = () => {
   });
 
 
-  // if (isUploading) {
-  //   return (
-  //     <div className="flex flex-1 items-center justify-center bg-white min-h-screen">
-  //       <div className="flex flex-col items-center gap-4">
-  //         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-400"></div>
-  //         <span className="text-gray-500 text-lg">Loading, please wait...</span>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+ 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div ref={parentContainerRef} className="flex-1 flex flex-col overflow-hidden">
@@ -135,30 +98,7 @@ export const Workspace: React.FC = () => {
               />
             </div>
           </Activity>
-          <Activity mode={segments.length === 0 && textContent ? "visible" : "hidden"}>
-            <div className="relative">
-              <ContentDisplay
-                text={textContent}
-                onCursorChange={(element) => {
-                  // Use the same cursor change handler with special segmentId
-                  onCursorChange('content-no-segments', element);
-                }}
-                onInput={onInput}
-                onKeyDown={onKeyDown}
-              />
-              {/* Split Menu for content when no segments */}
-              {cursorPosition?.segmentId === 'content-no-segments' &&
-                cursorPosition.menuPosition && (
-                  <SplitMenu
-                    position={cursorPosition.menuPosition}
-                    segmentId="content-no-segments"
-                    onSplit={onSplitSegment}
-                    onCancel={() => { }}
-                    onClose={() => { }}
-                  />
-                )}
-            </div>
-          </Activity>
+      
         </div>
       </div>
 
@@ -168,23 +108,19 @@ export const Workspace: React.FC = () => {
 
 
 
-import { type RowComponentProps } from "react-window";
-import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
+import { type RowComponentProps } from 'react-window'
 
 function RowComponent({
   index,
   segments,
-  style
+  style,
 }: RowComponentProps<{
-  segments: TextSegment;
+  segments: TextSegment[]
 }>) {
-  const segment = segments[index];
+  const segment = segments[index]
   return (
     <div style={style}>
-      <SegmentItem
-        segment={segment}
-        index={index}
-      />
+      <SegmentItem segment={segment} index={index} />
     </div>
-  );
+  )
 }

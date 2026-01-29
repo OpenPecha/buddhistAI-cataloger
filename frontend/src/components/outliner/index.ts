@@ -1,10 +1,12 @@
-export * from './types';
-export * from './constants';
-export * from './utils';
-export { BubbleMenu } from './BubbleMenu';
-export { SplitMenu } from './SplitMenu';
-export { SegmentTextContent } from './SegmentTextContent';
-export { AnnotationSidebar } from './AnnotationSidebar';
-export { WorkspaceHeader } from './WorkspaceHeader';
-export { SegmentItem } from './SegmentItem';
-export { Workspace } from './Workspace';
+export * from './types'
+export * from './constants'
+export * from './utils'
+export * from './contexts'
+export { BubbleMenu } from './BubbleMenu'
+export { SplitMenu } from './SplitMenu'
+export { SegmentTextContent } from './SegmentTextContent'
+export { AnnotationSidebar } from './AnnotationSidebar'
+export { WorkspaceHeader } from './WorkspaceHeader'
+export { SegmentItem } from './SegmentItem'
+export { Workspace } from './Workspace'
+export { OutlinerProvider, useOutliner } from './OutlinerContext'

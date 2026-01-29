@@ -1,15 +1,22 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
-import { useAITextEndings } from '@/hooks/useAITextEndings';
+import { useOutlinerDocument } from '@/hooks/useOutlinerDocument'
+import { useAITextEndings } from '@/hooks/useAITextEndings'
+import { outlinerSegmentToTextSegment } from '@/api/outliner'
 import type {
   TextSegment,
   BubbleMenuState,
   CursorPosition,
-} from '@/components/outliner';
+} from '@/components/outliner'
 import { AnnotationSidebar, type AnnotationSidebarRef } from '@/components/outliner/AnnotationSidebar';
 import { Workspace } from '@/components/outliner/Workspace';
-import { OutlinerProvider } from '@/components/outliner/OutlinerContext';
+import { OutlinerProvider } from '@/components/outliner/OutlinerContext'
+import {
+  DocumentProvider,
+  SelectionProvider,
+  CursorProvider,
+  ActionsProvider,
+} from '@/components/outliner/contexts'
 
 const OutlinerWorkspace: React.FC = () => {
   const navigate = useNavigate();
@@ -21,7 +28,7 @@ const OutlinerWorkspace: React.FC = () => {
   const {
     documentId,
     textContent: currentTextContent,
-    segments:currentSegments,
+    segments: backendSegments,
     isLoading: isLoadingDocument,
     isSaving,
     segmentLoadingStates,
@@ -30,7 +37,13 @@ const OutlinerWorkspace: React.FC = () => {
     mergeSegments: mergeSegmentsBackend,
     resetSegments: resetSegmentsBackend,
     createSegmentsBulk: createSegmentsBulkBackend,
-  } = useOutlinerDocument();
+  } = useOutlinerDocument()
+
+  // Convert OutlinerSegment[] to TextSegment[]
+  const currentSegments: TextSegment[] = useMemo(
+    () => backendSegments.map(outlinerSegmentToTextSegment),
+    [backendSegments]
+  )
   
   
   // Set initial activeSegmentId from URL or first segment
@@ -535,7 +548,8 @@ const OutlinerWorkspace: React.FC = () => {
           newSegments.push({
             id: `segment-${timestamp}-${i}`,
             text: segmentText,
-          });
+            comments: [],
+          })
         }
       }
 
@@ -560,17 +574,17 @@ const OutlinerWorkspace: React.FC = () => {
     try {
       // If no marker found, use AI API approach with React Query
       // Get the current selected segment text, or use currentTextContent if no segment is selected
-      const activeSegment = activeSegmentId
+      const activeSegment: TextSegment | undefined = activeSegmentId
         ? currentSegments.find((seg) => seg.id === activeSegmentId)
-        : null;
-      const contentToSend = activeSegment ? activeSegment.text : currentTextContent;
+        : undefined
+      const contentToSend = activeSegment ? activeSegment.text : currentTextContent || ''
 
       // Use React Query mutation for AI detection
       const data = await aiTextEndings.detectTextEndings({
         content: contentToSend,
-        document_id:documentId,
+        document_id: documentId || '',
         signal: abortController.signal,
-      });
+      })
 
       const { starting_positions } = data;
 
@@ -605,15 +619,16 @@ const OutlinerWorkspace: React.FC = () => {
             newSegmentsFromSegment.push({
               id: `segment-${timestamp}-${i}`,
               text: segmentTextPart,
+              comments: [],
               // Preserve metadata from the original segment for the first new segment
               ...(i === 0 && {
                 title: activeSegment.title,
                 author: activeSegment.author,
                 title_bdrc_id: activeSegment.title_bdrc_id,
                 author_bdrc_id: activeSegment.author_bdrc_id,
-                parentSegmentId: activeSegment.parentSegmentId,
+                parentSegmentId: activeSegment.parentSegmentId || undefined,
               }),
-            });
+            })
           }
         }
 
@@ -646,7 +661,7 @@ const OutlinerWorkspace: React.FC = () => {
         aiTextEndingAbortControllerRef.current = null;
       }
     }
-  }, [currentTextContent, currentSegments, createSegmentsFromPositions, activeSegmentId, aiTextEndings, setSearchParams]);
+  }, [currentTextContent, currentSegments, createSegmentsFromPositions, activeSegmentId, aiTextEndings, setSearchParams, documentId])
 
   // Stop AI text ending detection request
   const handleAITextEndingStop = useCallback(() => {
@@ -674,52 +689,98 @@ const OutlinerWorkspace: React.FC = () => {
   }
 
   return (
-    <OutlinerProvider
+    <DocumentProvider
       value={{
         textContent: currentTextContent,
         segments: currentSegments,
         activeSegmentId,
-        bubbleMenuState,
-        cursorPosition,
         aiTextEndingLoading: aiTextEndings.isLoading,
         segmentLoadingStates: segmentLoadingStates || new Map(),
-        onFileUpload: () => {},
-        onFileUploadToBackend: undefined,
         isUploading: isLoadingDocument || isSaving,
-        onTextSelection: handleTextSelection,
-        onSegmentClick: handleSegmentClick,
-        onCursorChange: handleCursorChange,
-        onActivate: (segmentId: string) => setSearchParams({ segmentId }, { replace: true }),
-        onInput: handleContentEditableInput,
-        onKeyDown: handleContentEditableKeyDown,
-        onAttachParent: handleAttachParent,
-        onMergeWithPrevious: handleMergeWithPrevious,
-        onBubbleMenuSelect: handleBubbleMenuSelect,
-        onSplitSegment: handleSplitSegment,
-        onAIDetectTextEndings: handleAIDetectTextEndings,
-        onAITextEndingStop: handleAITextEndingStop,
-        onUndoTextEndingDetection: handleUndoTextEndingDetection,
-        onSegmentStatusUpdate: handleSegmentStatusUpdate,
-        onResetSegments: resetSegmentsBackend,
       }}
     >
-      <div className="flex flex-col bg-gray-50" style={{ height: 'calc(100vh - 4rem)' }}>
-        {/* Main Content */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* Sidebar */}
-          <AnnotationSidebar
-            ref={annotationSidebarRef}
-            activeSegment={activeSegment}
-            documentId={documentId || undefined}
-          />
+      <SelectionProvider
+        value={{
+          bubbleMenuState,
+          setBubbleMenuState,
+          onTextSelection: handleTextSelection,
+          onBubbleMenuSelect: handleBubbleMenuSelect,
+        }}
+      >
+        <CursorProvider
+          value={{
+            cursorPosition,
+            setCursorPosition,
+            onCursorChange: handleCursorChange,
+          }}
+        >
+          <ActionsProvider
+            value={{
+              onFileUpload: () => {},
+              onFileUploadToBackend: undefined,
+              onSegmentClick: handleSegmentClick,
+              onActivate: (segmentId: string) => setSearchParams({ segmentId }, { replace: true }),
+              onInput: handleContentEditableInput,
+              onKeyDown: handleContentEditableKeyDown,
+              onAttachParent: handleAttachParent,
+              onMergeWithPrevious: handleMergeWithPrevious,
+              onSplitSegment: handleSplitSegment,
+              onAIDetectTextEndings: handleAIDetectTextEndings,
+              onAITextEndingStop: handleAITextEndingStop,
+              onUndoTextEndingDetection: handleUndoTextEndingDetection,
+              onSegmentStatusUpdate: handleSegmentStatusUpdate,
+              onResetSegments: resetSegmentsBackend,
+            }}
+          >
+            <OutlinerProvider
+              value={{
+                textContent: currentTextContent,
+                segments: currentSegments,
+                activeSegmentId,
+                bubbleMenuState,
+                cursorPosition,
+                aiTextEndingLoading: aiTextEndings.isLoading,
+                segmentLoadingStates: segmentLoadingStates || new Map(),
+                onFileUpload: () => {},
+                onFileUploadToBackend: undefined,
+                isUploading: isLoadingDocument || isSaving,
+                onTextSelection: handleTextSelection,
+                onSegmentClick: handleSegmentClick,
+                onCursorChange: handleCursorChange,
+                onActivate: (segmentId: string) => setSearchParams({ segmentId }, { replace: true }),
+                onInput: handleContentEditableInput,
+                onKeyDown: handleContentEditableKeyDown,
+                onAttachParent: handleAttachParent,
+                onMergeWithPrevious: handleMergeWithPrevious,
+                onBubbleMenuSelect: handleBubbleMenuSelect,
+                onSplitSegment: handleSplitSegment,
+                onAIDetectTextEndings: handleAIDetectTextEndings,
+                onAITextEndingStop: handleAITextEndingStop,
+                onUndoTextEndingDetection: handleUndoTextEndingDetection,
+                onSegmentStatusUpdate: handleSegmentStatusUpdate,
+                onResetSegments: resetSegmentsBackend,
+              }}
+            >
+              <div className="flex flex-col bg-gray-50" style={{ height: 'calc(100vh - 4rem)' }}>
+                {/* Main Content */}
+                <div className="flex-1 flex overflow-hidden">
+                  {/* Sidebar */}
+                  <AnnotationSidebar
+                    ref={annotationSidebarRef}
+                    activeSegment={activeSegment}
+                    documentId={documentId || undefined}
+                  />
 
-          {/* Main Workspace */}
-        
-          <Workspace  />  
-        </div>
-      </div>
-    </OutlinerProvider>
-  );
+                  {/* Main Workspace */}
+                  <Workspace />
+                </div>
+              </div>
+            </OutlinerProvider>
+          </ActionsProvider>
+        </CursorProvider>
+      </SelectionProvider>
+    </DocumentProvider>
+  )
 };
 
 export default OutlinerWorkspace;

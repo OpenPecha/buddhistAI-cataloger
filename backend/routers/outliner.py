@@ -277,6 +277,24 @@ async def get_document(
 ):
     """Get a document by ID with all its segments"""
     document = get_document_ctrl(db, document_id, include_segments)
+    
+    # If segments are requested but none exist, create a single segment covering the entire document
+    if include_segments:
+        segments_exist = hasattr(document, 'segment_list') and document.segment_list and len(document.segment_list) > 0
+        if not segments_exist:
+            # Create a single segment from 0 to length of text
+            text_length = len(document.content)
+            create_segment_ctrl(
+                db=db,
+                document_id=document_id,
+                segment_index=0,
+                span_start=0,
+                span_end=text_length,
+                text=None  # Will be auto-extracted from document content
+            )
+            # Re-fetch document with the newly created segment
+            document = get_document_ctrl(db, document_id, include_segments)
+    
     return document
 
 

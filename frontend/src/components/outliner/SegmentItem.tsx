@@ -1,18 +1,18 @@
-import React, { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Loader2, ChevronDown, ChevronRight, Merge } from 'lucide-react';
-import type { TextSegment } from './types';
-import { SegmentTextContent } from './SegmentTextContent';
-import { useOutliner } from './OutlinerContext';
-import { SplitMenu } from './SplitMenu';
-import { BubbleMenu } from './BubbleMenu';
-import Emitter from '@/events';
+import React, { useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Loader2, ChevronDown, ChevronRight, Merge } from 'lucide-react'
+import type { TextSegment } from './types'
+import { SegmentTextContent } from './SegmentTextContent'
+import { useDocument, useSelection, useCursor, useActions } from './contexts'
+import { SplitMenu } from './SplitMenu'
+import { BubbleMenu } from './BubbleMenu'
+import Emitter from '@/events'
 
 
 
 interface SegmentItemProps {
-  segment: TextSegment;
-  index: number;
+  segment: TextSegment
+  index: number
 }
 
 const SegmentItem: React.FC<SegmentItemProps> = ({
@@ -21,52 +21,49 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
 }) => {
 
 
+  // Use new contexts
+  const { activeSegmentId, segmentLoadingStates } = useDocument()
+  const { cursorPosition, onCursorChange } = useCursor()
   const {
     onSegmentClick,
-    activeSegmentId,
-    onCursorChange,
     onActivate,
     onInput,
     onKeyDown,
     onAttachParent,
     onMergeWithPrevious,
-    segmentLoadingStates,
-    cursorPosition,
-    bubbleMenuState,
-    onBubbleMenuSelect,
     onSplitSegment,
-  } = useOutliner();
+  } = useActions()
   
-  const isLoading = segmentLoadingStates?.get(segment.id) ?? false;
-  const isChecked = segment.status === 'checked';
-  const isFirstSegment = index === 0;
-  const isAttached = isFirstSegment && (segment.is_attached ?? false);
-  const isActive = segment.id === activeSegmentId;
+  const isLoading = segmentLoadingStates?.get(segment.id) ?? false
+  const isChecked = segment.status === 'checked'
+  const isFirstSegment = index === 0
+  const isAttached = isFirstSegment && (segment.is_attached ?? false)
+  const isActive = segment.id === activeSegmentId
 
-  const [isCollapsed, setIsCollapsed] = useState(segment.id!==activeSegmentId);
+  const [isCollapsed, setIsCollapsed] = useState(segment.id !== activeSegmentId)
   const toggleCollapse = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsCollapsed(!isCollapsed);
-  };
+    e.stopPropagation()
+    setIsCollapsed(!isCollapsed)
+  }
 
   useEffect(() => {
     const handleSegmentsExpand = (expand: boolean) => {
       if (segment.id !== activeSegmentId) {
-        setIsCollapsed(expand);
+        setIsCollapsed(expand)
       }
-    };
+    }
 
-    Emitter.on('segments:expand', handleSegmentsExpand);
+    Emitter.on('segments:expand', handleSegmentsExpand)
     return () => {
-      Emitter.off('segments:expand', handleSegmentsExpand);
-    };
-  }, []);
+      Emitter.off('segments:expand', handleSegmentsExpand)
+    }
+  }, [segment.id, activeSegmentId])
   
   
-  const showSplitMenu = cursorPosition?.segmentId === segment.id && cursorPosition.menuPosition;
-  const showBubbleMenu = bubbleMenuState?.segmentId === segment.id;
+  
+
   return (
-    <div className={`relative `}>
+    <div className="relative">
       {/* Attach Parent Button and Collapse All Button - only for first segment */}
       {isFirstSegment && (
         <div className="flex items-center justify-between gap-2 my-3">
@@ -75,8 +72,8 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
             variant={isAttached ? 'default' : 'outline'}
             size="sm"
             onClick={(e) => {
-              e.stopPropagation();
-              onAttachParent();
+              e.stopPropagation()
+              onAttachParent()
             }}
             className={`text-xs ${
               isAttached
@@ -102,26 +99,24 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
             !(e.target as HTMLElement).closest('.cancel-split-button') &&
             !(e.target as HTMLElement).closest('.collapse-button')
           ) {
-            onSegmentClick(segment.id, e);
+            onSegmentClick(segment.id, e)
           }
         }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onSegmentClick(segment.id);
+            e.preventDefault()
+            onSegmentClick(segment.id)
           }
         }}
         role="button"
         tabIndex={0}
-        className={`
-          mb-4 p-4 rounded-lg border-2 cursor-pointer transition-all relative
-          ${isChecked ? 'opacity-50 ' : 'opacity-100'}
-          ${
-            isActive
-              ? 'border-blue-500 bg-blue-50 shadow-md'
-              : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
-          }
-        `}
+        className={`mb-4 p-4 rounded-lg border-2 cursor-pointer transition-all relative ${
+          isChecked ? 'opacity-50' : 'opacity-100'
+        } ${
+          isActive
+            ? 'border-blue-500 bg-blue-50 shadow-md'
+            : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
+        }`}
       >
         {/* Loading Spinner - positioned on the right side */}
         {isLoading && (
@@ -132,12 +127,12 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
         
         
       
-        {activeSegmentId=== segment.id && index > 0 && (
+        {activeSegmentId === segment.id && index > 0 && (
           <button
             type="button"
             onClick={(e) => {
-              e.stopPropagation();
-              onMergeWithPrevious(segment.id);
+              e.stopPropagation()
+              onMergeWithPrevious(segment.id)
             }}
             className="cancel-split-button cursor-pointer z-100 absolute -top-3 left-1/2 -translate-x-1/2  bg-white border-2 border-red-500 rounded-full p-1.5 shadow-lg hover:bg-red-50 transition-colors"
             title="Merge with previous segment"
@@ -173,14 +168,14 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
                 type="button"
                 className="text-gray-600 font-monlam cursor-pointer text-sm py-2 text-left w-full rounded px-2 -mx-2 transition-colors max-h-[100px] overflow-hidden whitespace-pre-wrap break-words [display:-webkit-box] [WebkitBoxOrient:vertical] [WebkitLineClamp:4]"
                 onClick={(e) => {
-                  e.stopPropagation();
-                  onActivate(segment.id);
+                  e.stopPropagation()
+                  onActivate(segment.id)
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onActivate(segment.id);
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onActivate(segment.id)
                   }
                 }}
                 tabIndex={0}
@@ -230,33 +225,20 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
       </div>
       
       {/* Split Menu - positioned relative to segment container */}
-      {showSplitMenu && (
-          <SplitMenu
-            position={cursorPosition.menuPosition}
-            segmentId={segment.id}
-            onSplit={onSplitSegment}
-            onCancel={() => onMergeWithPrevious(segment.id)}
-            onClose={() => {}}
-          />
-        )}
+        <SplitMenu
+          segmentId={segment.id}
+        />
 
       {/* Bubble Menu - positioned relative to segment container */}
-      {showBubbleMenu && (
         <BubbleMenu
-          position={bubbleMenuState.position}
           segmentId={segment.id}
-          selectedText={bubbleMenuState.selectedText}
-          onSelect={(field) =>
-            onBubbleMenuSelect(field, segment.id, bubbleMenuState.selectedText)
-          }
-          onClose={() => {}}
+          
         />
-      )}
     </div>
-  );
-};
+  )
+}
 
-export const SegmentItemMemo = React.memo(SegmentItem);
+export const SegmentItemMemo = React.memo(SegmentItem)
 
 
 

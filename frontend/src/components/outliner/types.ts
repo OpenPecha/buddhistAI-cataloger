@@ -14,19 +14,11 @@ export interface TextSegment {
 }
 
 export interface BubbleMenuProps {
-  position: { x: number; y: number };
   segmentId: string;
-  onSelect: (field: 'title' | 'author') => void;
-  onClose: () => void;
-  selectedText?: string;
 }
 
 export interface SplitMenuProps {
-  position: { x: number; y: number };
   segmentId: string;
-  onSplit: () => void;
-  onCancel: () => void;
-  onClose: () => void;
 }
 
 export interface SegmentTextContentProps {

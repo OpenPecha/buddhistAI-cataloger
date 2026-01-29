@@ -1,119 +1,92 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import Emitter from '@/events';
 import type { BubbleMenuProps } from './types';
+import { useMenuPosition } from './hooks/useMenuPosition';
+import { useSelection } from './contexts';
 
-export const BubbleMenu: React.FC<BubbleMenuProps> = ({ position, segmentId, onSelect, onClose, selectedText }) => {
-  const menuRef = useRef<HTMLDivElement>(null);
-  const [viewportPosition, setViewportPosition] = useState({ x: 0, y: 0 });
+const DEFAULT_POSITION = { x: 0, y: 0 };
+
+export const BubbleMenu: React.FC<BubbleMenuProps> = ({ segmentId }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const { bubbleMenuState, onBubbleMenuSelect } = useSelection();
   
-  // Function to reset the current window selection
-  const resetWindowSelection = () => {
-    const selection = window.getSelection?.();
-    if (selection && typeof selection.removeAllRanges === "function") {
-      selection.removeAllRanges();
-    }
+  // Memoize position by comparing actual values, not object reference
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const position = useMemo(() => {
+    if (!bubbleMenuState?.position) return DEFAULT_POSITION;
+    return bubbleMenuState.position;
+  }, [bubbleMenuState?.position?.x, bubbleMenuState?.position?.y]);
+  
+  const selectedText = bubbleMenuState?.selectedText ?? '';
+  
+  // Track previous values to prevent unnecessary updates
+  const prevValuesRef = useRef<{
+    segmentId?: string;
+    positionX?: number;
+    positionY?: number;
+  }>({});
+  
+  const { viewportPosition, menuRef } = useMenuPosition({
+    position,
+    segmentId,
+    menuWidth: 150,
+    menuHeight: 120,
+  });
+
+  const onSelect = (field: 'title' | 'author') => {
+    onBubbleMenuSelect(field, segmentId, selectedText);
   };
-  
-  // Convert relative position to viewport coordinates and adjust for viewport boundaries
+
+  // Show menu when bubbleMenuState exists and matches this segment
+  // Compare specific values to prevent infinite loops
   useEffect(() => {
-    const segmentContainer = document.querySelector(
-      `[data-segment-container-id="${segmentId}"]`
-    ) as HTMLElement;
-
-    if (segmentContainer) {
-      const containerRect = segmentContainer.getBoundingClientRect();
-      const menuWidth = 150; // Approximate menu width
-      const menuHeight = 120; // Approximate menu height
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      const margin = 8;
-
-      let x = containerRect.left + position.x;
-      let y = containerRect.top + position.y;
-
-      // Adjust horizontal position if menu would overflow
-      if (x + menuWidth + margin > viewportWidth) {
-        x = viewportWidth - menuWidth - margin;
-      }
-      if (x < margin) {
-        x = margin;
-      }
-
-      // Adjust vertical position if menu would overflow
-      if (y + menuHeight + margin > viewportHeight) {
-        y = viewportHeight - menuHeight - margin;
-      }
-      if (y < margin) {
-        y = margin;
-      }
-
-      setViewportPosition({ x, y });
-    } else {
-      // Fallback: use position as-is (assumes it's already viewport coordinates)
-      setViewportPosition(position);
+    const currentSegmentId = bubbleMenuState?.segmentId;
+    const currentPosition = bubbleMenuState?.position;
+    const currentX = currentPosition?.x;
+    const currentY = currentPosition?.y;
+    
+    const prev = prevValuesRef.current;
+    
+    // Only update if values actually changed
+    const segmentIdChanged = prev.segmentId !== currentSegmentId;
+    const positionChanged = prev.positionX !== currentX || prev.positionY !== currentY;
+    
+    if (segmentIdChanged || positionChanged) {
+      const showBubbleMenu = currentSegmentId === segmentId && !!currentPosition;
+      setIsVisible(showBubbleMenu);
+      
+      // Update ref with current values
+      prevValuesRef.current = {
+        segmentId: currentSegmentId,
+        positionX: currentX,
+        positionY: currentY,
+      };
     }
-  }, [position, segmentId]);
-
-  // Fine-tune position after menu is rendered
-  useEffect(() => {
-    const adjustPosition = () => {
-      if (menuRef.current) {
-        const menuRect = menuRef.current.getBoundingClientRect();
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        const margin = 8;
-
-        let finalX = menuRect.left;
-        let finalY = menuRect.top;
-
-        // Fine-tune horizontal position
-        if (finalX + menuRect.width + margin > viewportWidth) {
-          finalX = viewportWidth - menuRect.width - margin;
-        }
-        if (finalX < margin) {
-          finalX = margin;
-        }
-
-        // Fine-tune vertical position
-        if (finalY + menuRect.height + margin > viewportHeight) {
-          finalY = viewportHeight - menuRect.height - margin;
-        }
-        if (finalY < margin) {
-          finalY = margin;
-        }
-
-        if (finalX !== menuRect.left || finalY !== menuRect.top) {
-          setViewportPosition({ x: finalX, y: finalY });
-        }
-      }
-    };
-
-    // Use requestAnimationFrame to ensure menu is rendered
-    const rafId = requestAnimationFrame(() => {
-      adjustPosition();
-    });
-
-    return () => cancelAnimationFrame(rafId);
-  }, [position, segmentId]);
+  }, [
+    bubbleMenuState?.segmentId,
+    bubbleMenuState?.position?.x,
+    bubbleMenuState?.position?.y,
+    segmentId,
+  ]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        onClose();
+        setIsVisible(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [onClose]);
+  }, [menuRef]);
 
   const handleTitleSelect = () => {
     if (selectedText) {
       Emitter.emit('bubbleMenu:updateTitle', selectedText);
     }
     onSelect('title');
-    resetWindowSelection()
+    setIsVisible(false)
   };
 
   const handleAuthorSelect = () => {
@@ -121,10 +94,13 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({ position, segmentId, onS
       Emitter.emit('bubbleMenu:updateAuthor', selectedText);
     }
     onSelect('author');
-    resetWindowSelection()
-
+    setIsVisible(false)
   };
 
+  const showBubbleMenu = bubbleMenuState?.segmentId === segmentId && !!bubbleMenuState?.position;
+  
+  if (!isVisible || !showBubbleMenu) return null;
+  
   const menuContent = (
     <div
       ref={menuRef}
