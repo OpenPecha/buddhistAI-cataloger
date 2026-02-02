@@ -37,6 +37,7 @@ def create_document(
         user_id=user_id,
         total_segments=0,
         annotated_segments=0,
+        status='active',
         progress_percentage=0.0
     )
     db.add(db_document)
