@@ -22,9 +22,6 @@ export const Workspace: React.FC = () => {
   // Save scroll position immediately when split happens, debounced value for restoration
   const scrollPositionRef = useRef<number | null>(null);
 
-
-
-  // Restore scroll position after segments update (split completes)
   useEffect(() => {
     // Use requestAnimationFrame to ensure DOM has updated
     setTimeout(() => {
@@ -89,7 +86,6 @@ export const Workspace: React.FC = () => {
         >
           <Activity mode={segments.length > 0 ? "visible" : "hidden"}>
             <div className="scrollbar-thin px-2 scrollbar-thumb-gray-300 scrollbar-track-gray-100">
-
               <List
                 rowComponent={RowComponent}
                 rowCount={segments.length}
