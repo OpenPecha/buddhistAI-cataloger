@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Book, Globe, Users, Loader2 } from 'lucide-react';
 import type { OpenPechaText } from '@/types/text';
-import type { Person, PersonName } from '@/types/person';
+import type {  PersonName } from '@/types/person';
 import { Badge } from './ui/badge';
 import { TableRow, TableCell } from './ui/table';
 import { useTranslation } from 'react-i18next';
@@ -11,7 +11,6 @@ import { getLanguageColor, getLanguageLabel } from '@/utils/getLanguageLabel';
 
 
 
-import { API_URL } from '@/config/api';
 import { getBdrclink } from '@/lib/bdrclink';
 
 interface TextListCardProps {
@@ -41,6 +40,7 @@ const TextListCard = ({ text }: TextListCardProps) => {
       root: t('textsPage.rootText'),
       translation: t('textsPage.translation'),
       commentary: t('textsPage.commentary'),
+      translation_source:"Source",
       none:"No Aligned Text"
     };
     return labels[type] || type;
@@ -52,7 +52,8 @@ const TextListCard = ({ text }: TextListCardProps) => {
     const colors: Record<string, string> = {
       root: 'bg-purple-100 text-purple-800',
       translation: 'bg-green-100 text-green-800',
-      commentary: 'bg-yellow-100 text-yellow-800'
+      commentary: 'bg-yellow-100 text-yellow-800',
+      translation_source: 'bg-blue-100 text-blue-800'
     };
     return colors[type] || 'bg-gray-100 text-gray-800';
   };
@@ -86,11 +87,13 @@ const TextListCard = ({ text }: TextListCardProps) => {
       </TableCell>
       
       <TableCell>
+      {text.bdrc && (
         <a href={getBdrclink(text.bdrc)} target="_blank" rel="noopener noreferrer">
           <Badge className="bg-secondary-700 flex items-center gap-2">
             {text.bdrc}
           </Badge>
         </a>
+      )}
       </TableCell>
       
       {/* Type Column */}

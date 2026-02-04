@@ -40,10 +40,17 @@ const TextCard = ({
           <Book className="w-4 h-4 text-muted-foreground group-hover:text-blue-500 transition-smooth mt-1 shrink-0" />
           <div className="flex-1">
             <div style={{
-              fontSize: '16px',
+              fontSize: '18px',
               lineHeight: 'normal',
-            }} className=" text-2xl font-monlam group-hover:text-blue-500 transition-smooth">
+            }} className="  flex gap-2 font-monlam group-hover:text-blue-500 transition-smooth">
               {title}
+
+                {/* Annotation Status Column */}
+        {isAnnotationAvailable ? (
+          <CheckCircleIcon className="w-5 h-5 text-green-500" />
+        ) : (
+          <CircleXIcon className="w-5 h-5 text-red-500" />
+        )}
             </div>
           
           </div>
@@ -64,14 +71,7 @@ const TextCard = ({
         </Badge>
       </TableCell>
 
-      {/* Annotation Status Column */}
-      <TableCell>
-        {isAnnotationAvailable ? (
-          <CheckCircleIcon className="w-5 h-5 text-green-500" />
-        ) : (
-          <CircleXIcon className="w-5 h-5 text-red-500" />
-        )}
-      </TableCell>
+    
 
       {/* Action Column */}
       <TableCell className="text-right">
@@ -87,7 +87,7 @@ const TextCard = ({
             navigate(`/align/${sourceInstanceId}/${instanceId}`)
           }}
         >
-          <PermissionButton isLoading={isFetchingPermission} icon={null} text={!isAnnotationAvailable ? "Align Text" : "update Alignment"} />
+          <PermissionButton isLoading={isFetchingPermission} icon={null} text={!isAnnotationAvailable ? "Align" : "update"} />
         </Button>
       </TableCell>
     </TableRow>

@@ -3,10 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, X,  FileText, Code, ArrowLeft, Loader2 } from "lucide-react";
 import type { InstanceCreationFormRef } from "@/components/InstanceCreationForm";
-import { useText, useInstance, useUpdateInstance, useAnnnotation, useUpdateText } from "@/hooks/useTexts";
+import { useText, useInstance, useAnnnotation, useUpdateText } from "@/hooks/useTexts";
 import { useTranslation } from "react-i18next";
-import { useAuth0 } from "@auth0/auth0-react";
-import { useBibliographyAPI } from "@/hooks/useBibliographyAPI";
 import { SegmentUpdateWrapper } from "@/components/segmentUpdate";
 import type { OpenPechaText, Title as TitleType } from "@/types/text";
 import Title from "@/components/formComponent/Title";
@@ -17,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Person } from "@/types/person";
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
+import { SkeletonLarger } from "@/components/ui/skeleton";
 
 
 const UpdateAnnotation = () => {
@@ -227,22 +226,7 @@ const UpdateAnnotation = () => {
       <Panel defaultSize={35} minSize={25} className="min-h-0">
        {isFetching ? 
        (
-         <div className="flex flex-col gap-4 p-6 h-full">
-           <div className="bg-white rounded-lg shadow px-6 py-8 w-full animate-pulse">
-             <div className="h-6 bg-gray-200 rounded w-2/3 mb-4"></div>
-             <div className="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
-             <div className="h-4 bg-gray-200 rounded w-1/3 mb-6"></div>
-
-             <div className="h-5 bg-gray-200 rounded w-full mb-4"></div>
-             <div className="h-10 bg-gray-200 rounded w-full mb-6"></div>
-
-             <div className="h-5 bg-gray-200 rounded w-2/3 mb-4"></div>
-             <div className="h-10 bg-gray-200 rounded w-full mb-6"></div>
-
-             <div className="h-7 bg-gray-200 rounded w-24 mb-4"></div>
-             <div className="h-12 bg-gray-200 rounded w-full"></div>
-           </div>
-         </div>
+         <SkeletonLarger />
        )
        :(
        <UpdateTextForm text={text} activePanel={activePanel} />
@@ -258,7 +242,7 @@ const UpdateAnnotation = () => {
         {/* RIGHT PANEL: Editor */}
         <div
           className={cn(
-            "w-[90%] mx-auto h-full overflow-hidden bg-gray-50",
+            "w-full mx-auto h-full overflow-hidden bg-gray-50",
             "absolute md:relative",
             "transition-transform duration-300 ease-in-out",
             activePanel === "editor"
@@ -269,7 +253,7 @@ const UpdateAnnotation = () => {
           <div className="h-full flex flex-col">
         
             {/* Editor Header */}
-            <div className="bg-blue-50 border-b border-blue-200 px-4 py-3 ">
+            <div className=" px-4 py-3 ">
               <div className="flex items-center justify-between">
               <Button
         type="button"
@@ -287,10 +271,14 @@ const UpdateAnnotation = () => {
 
             {/* Editor */}
             <div className="flex-1 overflow-hidden">
+              {isFetching ? (
+                <SkeletonLarger />
+              ) : (
            <SegmentUpdateWrapper
                 content={instance?.content}
                 annotationData={annotationData}
                 />
+              )}
             {isLoading && (
               <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/20 bg-opacity-60">
                 <div className="flex flex-col items-center">

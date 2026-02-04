@@ -46,7 +46,7 @@ export function SegmentUpdateWrapper({ content, annotationData }: SegmentUpdateW
   }
 
   return (
-    <div className="flex flex-col p-4 gap-2 font-monlam overflow-auto max-h-[90vh]">
+    <div className="flex flex-col p-4 gap-2 font-monlam overflow-auto max-h-[90vh] border-t-4 border-double border-red-200">
       {segments.map((segment, index) => (
         <EachSegment 
           key={sortedAnnotations[index]?.id || index} 

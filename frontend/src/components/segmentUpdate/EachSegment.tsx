@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useUpdateSegmentContent } from "@/hooks/useTexts";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
+import { Loader2, Pencil } from "lucide-react";
+import {Skeleton} from "../ui/skeleton";
 
 interface EachSegmentProps {
   readonly segment: string;
@@ -44,6 +45,11 @@ export function EachSegment({ segment, segmentId }: EachSegmentProps) {
     }
   };
 
+  if (isLoading) {
+    return (
+      <Skeleton />
+    );
+  }
 
 
   if (!segmentId) {
@@ -56,7 +62,7 @@ export function EachSegment({ segment, segmentId }: EachSegmentProps) {
   }
 
   return (
-    <div className="flex items-center gap-2 p-2 border-b border-gray-200 last:border-b-0">
+    <div className="flex group items-start gap-2 p-2 border-b border-gray-200 last:border-b-0">
       {isEditing ? (
         <>
           <input
@@ -97,10 +103,10 @@ export function EachSegment({ segment, segmentId }: EachSegmentProps) {
           <Button
             onClick={handleEditClick}
             variant="outline"
+            className="opacity-0 cursor-pointer group-hover:opacity-100"
             size="sm"
-            className="px-2 py-1 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 text-xs"
           >
-            Edit
+            <Pencil className="w-4 h-4" />
           </Button>
         </>
       )}

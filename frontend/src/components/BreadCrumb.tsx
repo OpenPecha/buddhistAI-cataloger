@@ -26,9 +26,11 @@ interface BreadCrumbProps {
 }
 
 const BreadCrumb: React.FC<BreadCrumbProps> = ({ items, className = '',textname,instancename,personname }) => {
-  const { t } = useTranslation();
+  const { t,i18n } = useTranslation();
   const location = useLocation();
   const params = useParams();
+  const currentLanguage = i18n.language;
+  const isTibetan = currentLanguage === 'bo';
   // Generate breadcrumb items based on current route
   const generateBreadcrumbs = (): BreadcrumbItem[] => {
     const pathSegments = location.pathname.split('/').filter(Boolean);
@@ -73,9 +75,8 @@ const BreadCrumb: React.FC<BreadCrumbProps> = ({ items, className = '',textname,
   };
 
   const breadcrumbItems = items || generateBreadcrumbs();
-
   return (
-    <Breadcrumb className={className+" "}>
+    <Breadcrumb className={className+" "+ (isTibetan ? "font-monlam" : "")}>
       <BreadcrumbList>
         {breadcrumbItems.map((item, index) => (
           <React.Fragment key={`breadcrumb-${item.label}-${index}`}>

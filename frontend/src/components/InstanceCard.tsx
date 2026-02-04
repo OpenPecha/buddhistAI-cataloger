@@ -8,6 +8,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BookOpenText, PencilIcon, TextWrap } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
 import PermissionButton from './PermissionButton';
+import { cn } from '@/lib/utils';
 
 interface InstanceCardProps {
   instance: OpenPechaTextInstance;
@@ -116,6 +117,8 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
     });
   };
 
+  const buttonClass= "group cursor-pointer relative px-4 sm:px-5 py-2 sm:py-2.5  text-white text-sm sm:text-base font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2 w-full sm:w-auto"
+
   return (
     <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm border border-gray-200 overflow-hidden">
       {/* Header */}
@@ -124,7 +127,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
           <div className="flex items-center gap-3 min-w-0">
             <BookOpenText className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
             <div className="min-w-0">
-              <h3 className="text-lg sm:text-xl font-bold text-gray-900  break-words">{title_text}</h3>
+              <h3 className="text-lg font-monlam sm:text-xl font-bold text-gray-900  break-words">{title_text}</h3>
             </div>
           </div>
           
@@ -135,8 +138,8 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
               onClick={() => {
                 navigate(`/texts/${text_id}/instances/${instance_id}/translation`);
               }}
-              className="group relative px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-sky-400 to-cyan-500 hover:from-sky-500 hover:to-cyan-600 text-white text-sm sm:text-base font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2 w-full sm:w-auto"
-            >
+              className={cn(buttonClass, "bg-gradient-to-r from-sky-400 to-cyan-500 hover:from-sky-500 hover:to-cyan-600")}
+               >
               
               <PermissionButton isLoading={isFetchingPermission} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
@@ -148,8 +151,8 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
               onClick={() => {
                 navigate(`/texts/${text_id}/instances/${instance_id}/commentary`);
               }}
-              className="group relative px-4 sm:px-5 py-2 sm:py-2.5 bg-gradient-to-r from-emerald-400 to-green-500 hover:from-emerald-500 hover:to-green-600 text-white text-sm sm:text-base font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2 w-full sm:w-auto"
-            >
+              className={cn(buttonClass, "bg-gradient-to-r from-emerald-400 to-green-500 hover:from-emerald-500 hover:to-green-600")}
+              >
 
               <PermissionButton isLoading={isFetchingPermission} icon={
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -162,13 +165,13 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
          
 
             <Button
+            variant="ghost"
               disabled={!isAdmin ||!instance.content}
               onClick={() => {
                 navigate(`/texts/${text_id}/instances/${instance_id}/edit`);
               }}
-              className="group relative px-5 py-2.5 bg-linear-to-r from-sky-400 to-cyan-500 hover:from-sky-500 hover:to-cyan-600 text-white font-medium rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200 flex items-center gap-2"
-            >
-              <PermissionButton isLoading={isFetchingPermission} icon={<PencilIcon className="w-4 h-4" />} text="Edit" />
+              >
+              <PermissionButton isLoading={isFetchingPermission} icon={<PencilIcon className="w-4 h-4 text-neutral-500" />} text={""} />
             </Button>
           </div>
         </div>
@@ -176,7 +179,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
 
       {/* Content Text with Line Breaks Applied */}
       {instance.content && (
-        <div className="p-4 sm:p-6">
+        <div className="p-4 sm:p-6  border-t-4 border-double border-red-200">
           {/* Loading State for Annotation */}
           {segmentationAnnotationId && isLoadingAnnotation && (
             <div className="flex flex-col items-center justify-center py-16 bg-linear-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
