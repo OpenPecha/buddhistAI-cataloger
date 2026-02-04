@@ -8,6 +8,7 @@ import {
   fetchTextInstances,
   fetchTexts,
   updateInstance,
+  updateText,
 } from "@/api/texts";
 import { updateSegmentContent } from "@/api/segments";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -147,6 +148,24 @@ export const useUpdateSegmentContent = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["annotation"] });
       queryClient.invalidateQueries({ queryKey: ["instance"] });
+    }
+  });
+};
+
+export const useUpdateText = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      textId,
+      textData
+    }: {
+      textId: string;
+      textData: any;
+    }) => updateText(textId, textData),
+    onSuccess: (_, { textId }) => {
+      queryClient.invalidateQueries({ queryKey: ["text", textId] });
+      queryClient.invalidateQueries({ queryKey: ["texts"] });
     }
   });
 };

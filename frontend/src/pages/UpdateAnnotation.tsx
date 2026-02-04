@@ -1,31 +1,34 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, X, Upload, FileText, Code, ArrowLeft } from "lucide-react";
-import InstanceCreationForm from "@/components/InstanceCreationForm";
+import { AlertCircle, X,  FileText, Code, ArrowLeft, Loader2 } from "lucide-react";
 import type { InstanceCreationFormRef } from "@/components/InstanceCreationForm";
-import { useText, useInstance, useUpdateInstance, useAnnnotation } from "@/hooks/useTexts";
+import { useText, useInstance, useUpdateInstance, useAnnnotation, useUpdateText } from "@/hooks/useTexts";
 import { useTranslation } from "react-i18next";
 import { useAuth0 } from "@auth0/auth0-react";
-import { calculateAnnotations } from "@/utils/annotationCalculator";
 import { useBibliographyAPI } from "@/hooks/useBibliographyAPI";
-import { validateContentEndsWithTsheg, validateSegmentLimits } from "@/utils/contentValidation";
 import { SegmentUpdateWrapper } from "@/components/segmentUpdate";
+import type { OpenPechaText, Title as TitleType } from "@/types/text";
+import Title from "@/components/formComponent/Title";
+import AlternativeTitle from "@/components/formComponent/AlternativeTitle";
+import Contributor, { type ContributorItem } from "@/components/formComponent/Contributor";
+import Copyright from "@/components/formComponent/Copyright";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import type { Person } from "@/types/person";
+import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
+
 
 const UpdateAnnotation = () => {
   const { text_id, instance_id } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const { user } = useAuth0();
   const instanceFormRef = useRef<InstanceCreationFormRef>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const { clearAfterSubmission } = useBibliographyAPI();
 
   // Fetch text and instance data
   const { data: text, isLoading: textLoading ,isRefetching: textRefetching} = useText(text_id || "");
   const { data: instance, isLoading: instanceLoading ,isRefetching: instanceRefetching} = useInstance(instance_id || "");
 
-  const updateInstanceMutation = useUpdateInstance();
 
   // Find segmentation annotation ID from instance.annotations array
   const segmentationAnnotationRef =
@@ -44,40 +47,13 @@ const UpdateAnnotation = () => {
   // State
 
   const [editedContent, setEditedContent] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [activePanel, setActivePanel] = useState<"form" | "editor">("form");
-  const [selectedLanguage, setSelectedLanguage] = useState<string>("");
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Content validation - get language from text data
-  useEffect(() => {
-    if (text?.language) {
-      setSelectedLanguage(text.language);
-    }
-  }, [text]);
 
-  const contentValidationError = useMemo(() => {
-    const isValidMessage = validateContentEndsWithTsheg(selectedLanguage, editedContent);
-    return isValidMessage;
-  }, [selectedLanguage, editedContent]);
 
-  const [segmentValidation, setSegmentValidation] = useState<{
-    invalidSegments: Array<{ index: number; length: number }>;
-    invalidCount: number;
-  }>({ invalidSegments: [], invalidCount: 0 });
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const validation = validateSegmentLimits(editedContent);
-      setSegmentValidation({
-        invalidSegments: validation.invalidSegments.map(seg => ({ index: seg.index, length: seg.length })),
-        invalidCount: validation.invalidCount,
-      });
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [editedContent]);
+  
 
   // Helper function to reconstruct content with segmentation line breaks
   const reconstructContentWithSegmentation = (
@@ -169,72 +145,26 @@ const UpdateAnnotation = () => {
     }
   }, [instance, isInitialized, annotationData, segmentationAnnotationId]);
 
-  // Handle file upload
-  const handleFileUpload = (content: string) => {
-    const lines = content.split("\n");
-    const filteredLines = lines.filter(line => line.trim() !== "");
-    const cleanedContent = filteredLines.join("\n");
-    setEditedContent(cleanedContent);
-  };
+ 
 
-  // Handle form submission
-  const handleSubmit = async () => {
-    setError(null);
-    setIsSubmitting(true);
+  
 
-    try {
-      if (!text_id || !instance_id || !instance) {
-        throw new Error("Missing required data");
-      }
-
-      if (!editedContent || editedContent.trim() === "") {
-        throw new Error("Content cannot be empty");
-      }
-
-      // Get instance form data
-      const instanceFormData = instanceFormRef.current?.getFormData();
-      if (!instanceFormData) {
-        throw new Error("Invalid instance form data");
-      }
-
-      // Calculate annotations from content (this also cleans the content - removes line breaks)
-      const { annotations } = calculateAnnotations(editedContent);
-
-      // Prepare update payload
-      const updatePayload = {
-        metadata: instanceFormData.metadata,
-        annotation: annotations,
-        biblography_annotation: instanceFormData.biblography_annotation || [],
-      };
-
-      // Update instance
-      await updateInstanceMutation.mutateAsync({
-        textId: text_id,
-        instanceId: instance_id,
-        instanceData: updatePayload,
-        user: JSON.stringify(user || {}),
-      });
-
-      clearAfterSubmission();
-      setSuccess(true);
-
-      // Navigate back after a short delay
-      setTimeout(() => {
-        navigate(`/texts/${text_id}/instances/${instance_id}`);
-      }, 2000);
-    } catch (err: any) {
-      setError(err.message || t("messages.updateError"));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const isLoading = textLoading || instanceLoading || annotationLoading || textRefetching || instanceRefetching || annotationRefetching;
+  const isLoading = textLoading || instanceLoading || annotationLoading ;
+  const isFetching = textRefetching || instanceRefetching || annotationRefetching;
   const cn = (...classes: Array<string | false | null | undefined>) => {
     return classes.filter(Boolean).join(" ");
   };
 
-
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 text-gray-400 mx-auto mb-4 animate-spin"  />
+          <p className="text-gray-600">Loading text and instance data...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!text || !instance) {
     return (
@@ -247,28 +177,10 @@ const UpdateAnnotation = () => {
     );
   }
 
+  
   return (
     <>
-      {/* Success Message */}
-      {success && (
-        <div className="fixed top-20 right-6 z-50 animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="bg-white rounded-lg shadow-lg border border-green-200 px-4 py-3 flex items-center gap-3 max-w-sm">
-            <div className="w-5 h-5 text-green-500 flex-shrink-0">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <span className="text-sm font-medium text-gray-800">
-              {t("messages.updateSuccess") || "Updated successfully!"}
-            </span>
-          </div>
-        </div>
-      )}
+    
 
       {/* Error Toast */}
       {error && (
@@ -286,29 +198,10 @@ const UpdateAnnotation = () => {
         </div>
       )}
 
-      {/* Loading Screen - Show while submitting */}
-      {isSubmitting && (
-        <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50 flex items-center justify-center z-50">
-          <div className="text-center max-w-md mx-auto px-6">
-            <div className="relative mb-8">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-32 h-32 bg-gradient-to-br from-emerald-400 to-green-500 rounded-full opacity-20 animate-ping"></div>
-              </div>
-              <div className="relative flex items-center justify-center">
-                <div className="w-24 h-24 bg-gradient-to-br from-emerald-500 to-green-600 rounded-2xl shadow-2xl flex items-center justify-center">
-                  <FileText className="w-12 h-12 text-white" />
-                </div>
-              </div>
-            </div>
-            <h2 className="text-3xl font-bold text-gray-800 mb-3 animate-pulse">
-              Please Wait while we update the text
-            </h2>
-          </div>
-        </div>
-      )}
+   
 
       {/* Two-Panel Layout */}
-      <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gradient-to-br from-blue-50 to-indigo-100 flex">
+      <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gradient-to-br from-blue-50 to-indigo-100 flex overflow-hidden">
         {/* Mobile Toggle Button */}
         <button
           onClick={() =>
@@ -329,9 +222,39 @@ const UpdateAnnotation = () => {
           )}
         </button>
 
-      
-            
 
+        <PanelGroup direction="horizontal" className="flex-1">
+      <Panel defaultSize={35} minSize={25} className="min-h-0">
+       {isFetching ? 
+       (
+         <div className="flex flex-col gap-4 p-6 h-full">
+           <div className="bg-white rounded-lg shadow px-6 py-8 w-full animate-pulse">
+             <div className="h-6 bg-gray-200 rounded w-2/3 mb-4"></div>
+             <div className="h-4 bg-gray-200 rounded w-1/2 mb-3"></div>
+             <div className="h-4 bg-gray-200 rounded w-1/3 mb-6"></div>
+
+             <div className="h-5 bg-gray-200 rounded w-full mb-4"></div>
+             <div className="h-10 bg-gray-200 rounded w-full mb-6"></div>
+
+             <div className="h-5 bg-gray-200 rounded w-2/3 mb-4"></div>
+             <div className="h-10 bg-gray-200 rounded w-full mb-6"></div>
+
+             <div className="h-7 bg-gray-200 rounded w-24 mb-4"></div>
+             <div className="h-12 bg-gray-200 rounded w-full"></div>
+           </div>
+         </div>
+       )
+       :(
+       <UpdateTextForm text={text} activePanel={activePanel} />
+       )}
+      </Panel>
+      
+      {/* Resize handle between panels */}
+      <PanelResizeHandle className="w-1 bg-gray-200 hover:bg-blue-400 transition-colors duration-200 cursor-col-resize flex items-center justify-center group">
+        <div className="w-0.5 h-8 bg-gray-400 rounded-full opacity-40 group-hover:opacity-100 group-hover:bg-blue-500 transition-all"></div>
+      </PanelResizeHandle>
+      
+      <Panel defaultSize={65} minSize={30} className="min-h-0">
         {/* RIGHT PANEL: Editor */}
         <div
           className={cn(
@@ -358,59 +281,7 @@ const UpdateAnnotation = () => {
         <ArrowLeft className="w-4 h-4" />
         {t("common.back")}
       </Button>
-                {!editedContent || editedContent?.trim() === "" ? (
-                  <>
-                    <p className="text-sm text-gray-600 ">
-                      {t("create.startTyping")}
-                    </p>
-                    <div>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".txt"
-                        onChange={(e) => {
-                          const files = e.target.files;
-                          if (files && files.length > 0) {
-                            const file = files[0];
-                            if (file.size < 1024) {
-                              alert(t("create.fileTooSmall"));
-                              e.target.value = "";
-                              return;
-                            }
-                            if (!file.name.endsWith(".txt")) {
-                              alert(t("create.uploadTxtOnly"));
-                              e.target.value = "";
-                              return;
-                            }
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              const content = event.target?.result as string;
-                              handleFileUpload(content);
-                            };
-                            reader.readAsText(file);
-                          }
-                          e.target.value = "";
-                        }}
-                        className="hidden"
-                      />
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => {
-                          fileInputRef.current?.click();
-                        }}
-                        className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white flex items-center gap-2"
-                      >
-                        <Upload className="w-4 h-4" />
-                        {t("create.uploadFile")}
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <span className="text-xs text-gray-500">
-                    {editedContent?.length} {t("create.characters")}
-                  </span>
-                )}
+               
               </div>
             </div>
 
@@ -445,9 +316,289 @@ const UpdateAnnotation = () => {
             </div>
           </div>
         </div>
+      </Panel>
+    </PanelGroup>
+
       </div>
     </>
   );
 };
 
 export default UpdateAnnotation;
+
+
+const UpdateTextForm = ({ text, activePanel }: { text: OpenPechaText; activePanel: "form" | "editor" }) => {
+  const { t } = useTranslation();
+  const { text_id } = useParams();
+  const updateTextMutation = useUpdateText();
+  
+  const [titles, setTitles] = useState<TitleType[]>([]);
+  const [altTitles, setAltTitles] = useState<TitleType[][]>([]);
+  const [bdrc, setBdrc] = useState("");
+  const [wiki, setWiki] = useState("");
+  const [copyright, setCopyright] = useState<string>("Unknown");
+  const [license, setLicense] = useState<string>("unknown");
+  const [contributors, setContributors] = useState<ContributorItem[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  const cn = (...classes: Array<string | false | null | undefined>) => {
+    return classes.filter(Boolean).join(" ");
+  };
+
+  // Initialize form with existing text data
+  useEffect(() => {
+    if (text) {
+      // Initialize titles
+      if (text.title) {
+        const titleArray: TitleType[] = Object.entries(text.title).map(([lang, value]) => ({
+          language: lang,
+          value: value,
+        }));
+        setTitles(titleArray);
+      }
+
+      // Initialize alt_titles
+      if (text.alt_titles && Array.isArray(text.alt_titles) && text.alt_titles.length > 0) {
+        const altTitlesArray: TitleType[][] = text.alt_titles.map((altTitle) =>
+          Object.entries(altTitle).map(([lang, value]) => ({
+            language: lang,
+            value: value,
+          }))
+        );
+        setAltTitles(altTitlesArray);
+      }
+
+      // Initialize other fields
+      if (text.bdrc) setBdrc(text.bdrc);
+      if (text.wiki) setWiki(text.wiki);
+    }
+  }, [text]);
+
+  // Initialize contributors - create minimal person objects from contribution data
+  // Full person data will be fetched by Contributor component if needed
+  useEffect(() => {
+    if (text?.contributions && Array.isArray(text.contributions)) {
+      const contributorsArray: ContributorItem[] = text.contributions.map((contrib) => {
+        // Create minimal person object from contribution data
+        // The Contributor component can fetch full person data if needed
+        const person: Person = {
+          id: contrib.person_id || "",
+          bdrc: contrib.person_bdrc_id || "",
+          name: contrib.person_name || {},
+          alt_names: null,
+          wiki: null,
+        };
+
+        return {
+          person,
+          role: contrib.role as "translator" | "author",
+        };
+      });
+      
+      setContributors(contributorsArray);
+    }
+  }, [text]);
+
+  const handleSubmit = async () => {
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      if (!text_id) {
+        throw new Error("Missing text ID");
+      }
+
+      // Build title object from titles array
+      const title: Record<string, string> = {};
+      titles.forEach((titleEntry) => {
+        if (titleEntry.language && titleEntry.value.trim()) {
+          title[titleEntry.language] = titleEntry.value.trim();
+        }
+      });
+
+      // Build contributions array
+      const contributionsArray = contributors?.map((contributor) => {
+        const personBdrcId = contributor.person!.bdrc || contributor.person!.id;
+        return {
+          person_bdrc_id: personBdrcId,
+          person_id: contributor.person!.id,
+          role: contributor.role,
+        };
+      });
+
+      // Build update payload (only include fields that have values)
+      const updatePayload: any = {};
+
+      if (Object.keys(title).length > 0) {
+        updatePayload.title = title;
+      }
+      if (bdrc.trim()) {
+        updatePayload.bdrc = bdrc.trim();
+      }
+      if (wiki.trim()) {
+        updatePayload.wiki = wiki.trim();
+      }
+      if (copyright && copyright !== "Unknown") {
+        updatePayload.copyright = copyright.trim();
+      }
+      if (license && license !== "unknown") {
+        updatePayload.license = license.trim();
+      }
+      
+      if (contributionsArray && contributionsArray.length > 0) {
+        updatePayload.contributions = contributionsArray;
+      }
+      // Note: alt_title in UpdateText is Dict[str, List[str]], but we're using alt_titles format
+      // We'll convert it if needed, but for now skip it as it's a different format
+
+      await updateTextMutation.mutateAsync({
+        textId: text_id,
+        textData: updatePayload,
+      });
+
+      setSuccess(true);
+      setTimeout(() => {
+        setSuccess(false);
+      }, 3000);
+    } catch (err: any) {
+      setError(err.message || t("messages.updateError"));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      className={cn(
+        " mx-auto h-full overflow-y-auto bg-white",
+        "absolute md:relative",
+        "transition-transform duration-300 ease-in-out",
+        activePanel === "form"
+          ? "translate-x-0"
+          : "-translate-x-full md:translate-x-0"
+      )}
+    >
+      <div className="p-6 space-y-6">
+        {/* Header */}
+        <div className="border-b pb-4">
+          <h2 className="text-2xl font-bold text-gray-800">{t("common.updateText") || "Update Text"}</h2>
+          <p className="text-sm text-gray-600 mt-1">{t("common.updateTextDescription") || "Update text metadata"}</p>
+        </div>
+
+        {/* Success Message */}
+        {success && (
+          <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex items-center gap-3">
+            <div className="w-5 h-5 text-green-500 flex-shrink-0">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
+            <span className="text-sm font-medium text-gray-800">
+              {t("messages.updateSuccess") || "Text updated successfully!"}
+            </span>
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-center gap-3">
+            <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+            <span className="text-sm font-medium text-gray-800">{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="ml-auto text-gray-400 hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Title Field */}
+        <div>
+          <Title setTitles={setTitles} errors={undefined} initialTitles={titles} />
+        </div>
+
+        {/* Alternative Titles Field */}
+        <div>
+          <AlternativeTitle altTitles={altTitles} setAltTitles={setAltTitles} titles={titles} />
+        </div>
+
+        {/* BDRC Field */}
+        <div>
+          <Label htmlFor="bdrc" className="mb-2">
+            {t("textForm.bdrcWorkId")}
+          </Label>
+          <Input
+            id="bdrc"
+            type="text"
+            value={bdrc}
+            onChange={(e) => setBdrc(e.target.value)}
+            placeholder={t("textForm.enterBdrcId") || "Enter BDRC Work ID"}
+          />
+        </div>
+
+        {/* Wiki Field */}
+        <div>
+          <Label htmlFor="wiki" className="mb-2">
+            {t("wiki") || "Wiki"}
+          </Label>
+          <Input
+            id="wiki"
+            type="text"
+            value={wiki}
+            onChange={(e) => setWiki(e.target.value)}
+          />
+        </div>
+
+     
+
+        {/* Copyright and License */}
+        <div>
+          <Copyright
+            copyright={copyright}
+            setCopyright={setCopyright}
+            license={license}
+            setLicense={setLicense}
+          />
+        </div>
+
+        {/* Contributors */}
+        <div>
+          <Contributor
+            contributors={contributors}
+            setContributors={setContributors}
+          />
+        </div>
+
+        {/* Submit Button */}
+        <div className="flex gap-4 pt-4 border-t">
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+            className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white"
+          >
+            {isSubmitting ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                {t("common.saving") || "Saving..."}
+              </>
+            ) : (
+              t("common.save") || "Save"
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};

@@ -4,6 +4,7 @@
     "error": "Error",
     "success": "Success",
     "save": "Save",
+    "saving": "Saving...",
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
@@ -22,7 +23,9 @@
     "remove": "Remove",
     "select": "Select",
     "upload": "Upload",
-    "download": "Download"
+    "download": "Download",
+    "updateText": "Update Text",
+    "updateTextDescription": "Update text metadata"
   },
   "header": {
     "title": "OpenPecha Text Cataloger",

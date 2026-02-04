@@ -335,6 +335,28 @@ export const updateInstance = async (textId: string, instanceId: string, instanc
   }
 };
 
+export const updateText = async (textId: string, textData: any): Promise<any> => {
+  try {
+    const response = await fetch(`${API_URL}/text/${textId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(textData),
+    });
+    
+    return await handleApiResponse(response, {
+      400: 'Invalid text data. Please check all required fields and try again.',
+      404: 'Text not found. It may have been deleted or the link is incorrect.'
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unable to update text. Please check your connection and try again.');
+  }
+};
+
 
 export const fetchEnums = async (type: string): Promise<any> => {
   try {

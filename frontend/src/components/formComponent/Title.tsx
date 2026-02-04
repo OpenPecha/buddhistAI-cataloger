@@ -5,7 +5,7 @@ import { Loader2, Plus, X } from 'lucide-react';
 import { detectLanguage } from '@/utils/languageDetection';
 import { useLanguage } from '@/hooks/useEnum';
 import type { Title as TitleType } from '@/types/text';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useDebouncedCallback } from '@tanstack/react-pacer';
 
 
@@ -18,11 +18,24 @@ interface LanguageOption {
 type TitleProps = {
  readonly setTitles: (titles: TitleType[]) => void;
  readonly errors: string | undefined;
+ readonly initialTitles?: TitleType[];
 }
 
-function Title({setTitles, errors}: TitleProps) {
-  const [formTitle,setFormTitle] = useState<TitleType[]>([]);
+function Title({setTitles, errors, initialTitles}: TitleProps) {
+  const [formTitle,setFormTitle] = useState<TitleType[]>(initialTitles || []);
   const {data: LANGUAGE_OPTIONS,isLoading: isLoadingLanguageOptions} = useLanguage();
+  const prevInitialTitlesRef = useRef<TitleType[] | undefined>(initialTitles);
+  const isInternalUpdateRef = useRef(false);
+
+  // Sync formTitle with initialTitles prop when it changes externally
+  useEffect(() => {
+    if (initialTitles && JSON.stringify(prevInitialTitlesRef.current) !== JSON.stringify(initialTitles)) {
+      isInternalUpdateRef.current = false;
+      setFormTitle(initialTitles);
+      setTitles(initialTitles);
+      prevInitialTitlesRef.current = initialTitles;
+    }
+  }, [initialTitles, setTitles]);
 
   const updateTitlesDebounced = useDebouncedCallback((data) => {
     setTitles(data);
@@ -31,13 +44,16 @@ function Title({setTitles, errors}: TitleProps) {
   });
 
   function addTitle() {
-    setFormTitle([...formTitle, { language: "", value: "" }])
-    updateTitlesDebounced(formTitle);
+    isInternalUpdateRef.current = true;
+    const newTitles = [...formTitle, { language: "", value: "" }];
+    setFormTitle(newTitles);
+    updateTitlesDebounced(newTitles);
   }
   function removeTitle(index: number) {
-    setFormTitle(formTitle.filter((_, i) => i !== index))
-    updateTitlesDebounced(formTitle);
-
+    isInternalUpdateRef.current = true;
+    const newTitles = formTitle.filter((_, i) => i !== index);
+    setFormTitle(newTitles);
+    updateTitlesDebounced(newTitles);
   }
   function updateTitles(e: React.ChangeEvent<HTMLSelectElement>,index: number) {
         const selectedLang = e.target.value;
@@ -59,12 +75,11 @@ function Title({setTitles, errors}: TitleProps) {
         });
         } else {
           // No conflict, just update normally
+          isInternalUpdateRef.current = true;
           const newTitles = [...formTitle];
           newTitles[index].language = selectedLang;
-          setFormTitle(prev => {
-            updateTitlesDebounced(prev);
-            return newTitles;
-          });
+          setFormTitle(newTitles);
+          updateTitlesDebounced(newTitles);
       }
 
   }
@@ -73,6 +88,7 @@ function Title({setTitles, errors}: TitleProps) {
 
 
  function updateTitleValue(e: React.ChangeEvent<HTMLInputElement>,index: number) {
+        isInternalUpdateRef.current = true;
         const newTitles = [...formTitle];
         newTitles[index].value = e.target.value;
         
@@ -91,6 +107,7 @@ function Title({setTitles, errors}: TitleProps) {
               const adjustedIndex = index > existingIndex ? index - 1 : index;
               updatedTitles[adjustedIndex].language = detectedLang;
               setFormTitle(updatedTitles);
+              updateTitlesDebounced(updatedTitles);
               return;
             } else {
               newTitles[index].language = detectedLang;
@@ -111,9 +128,10 @@ function Title({setTitles, errors}: TitleProps) {
      <div className="flex items-center justify-between mb-2">
        <Label
          htmlFor="title"
-         className="mb-2"
+         className="mb-2 flex flex-col gap-1 items-start"
        >
-         {t("textForm.title")} <span className="text-red-500">*</span> ({t("textForm.atLeastOneRequired")})
+         <div className="flex items-center gap-1"><span>{t("textForm.title")}</span>          <span className="text-red-500">*</span></div> 
+         <div className="text-xs text-gray-500">{t("textForm.atLeastOneRequired")}</div>
        </Label>
        <Button
          type="button"

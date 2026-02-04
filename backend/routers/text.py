@@ -66,6 +66,16 @@ class CreateText(BaseModel):
     license: Optional[str] = None
 
 
+class UpdateText(BaseModel):
+    title: Optional[Dict[str, str]] = None
+    bdrc: Optional[str] = None
+    wiki: Optional[str] = None
+    copyright: Optional[str] = None
+    license: Optional[str] = None
+    contributions: Optional[List[Contribution]] = None
+    date: Optional[str] = None
+    alt_title: Optional[Dict[str, List[str]]] = None
+
 class Annotation(BaseModel):
     annotation_id: str
     type: str
@@ -229,6 +239,31 @@ async def get_text(id: str):
     
     try:
         response = requests.get(f"{API_ENDPOINT}/texts/{id}")
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out after 30 seconds"
+        )
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error connecting to OpenPecha API: {str(e)}"
+        )
+
+
+@router.put("/{id}")
+async def update_text(id: str, text: UpdateText):
+    if not API_ENDPOINT:
+        raise HTTPException(
+            status_code=500, 
+            detail="OPENPECHA_ENDPOINT environment variable is not set"
+        )
+    
+    try:
+        response = requests.put(f"{API_ENDPOINT}/texts/{id}", json=text.model_dump(exclude_none=True))
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
         return response.json()
