@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { SEGMENT_CHAR_LIMIT } from '@/utils/contentValidation';
 import { useTranslation } from 'react-i18next';
 
@@ -23,6 +23,15 @@ interface FormattedTextDisplayProps {
  * - invalidSegments: Array of segment indices that exceed character limit
  * - invalidCount: Total count of invalid segments
  */
+
+const tibetanRegex = /[\u0F00-\u0FFF]/g;
+const isMostlyTibetan = (content: string) => {
+  if (!content) return false;
+  const matches = content.match(tibetanRegex);
+  // "Most" means more than half of the characters are Tibetan
+  return matches ? (matches.length / content.length) > 0.5 : false;
+};
+
 const FormattedTextDisplay: React.FC<FormattedTextDisplayProps> = ({ 
   content, 
   lines, 
@@ -57,6 +66,7 @@ const FormattedTextDisplay: React.FC<FormattedTextDisplayProps> = ({
   
   const contentLines = getFormattedLines();
   
+  
   // Create a Set for quick lookup of invalid segment indices
   const invalidSegmentSet = new Set(invalidSegments.map(seg => seg.index));
   if (contentLines.length === 0) {
@@ -66,9 +76,10 @@ const FormattedTextDisplay: React.FC<FormattedTextDisplayProps> = ({
       </div>
     );
   }
-
+  
+  const isTibetan = isMostlyTibetan(contentLines.join('\n') || '');
   return (
-    <div className="h-full">
+    <div className={`h-full ${isTibetan ? 'font-monlam' : ''}`}>
       {/* Summary of invalid segments */}
       {invalidCount > 0 && (
         <div className="sticky top-0 z-10 bg-red-50 border-b-2 border-red-300 px-4 py-3 mb-2">

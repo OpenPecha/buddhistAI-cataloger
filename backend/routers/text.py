@@ -16,6 +16,7 @@ TRANSLATION_BACKEND_URL = os.getenv("TRANSLATION_BACKEND_URL")
 class Contribution(BaseModel):
     person_id: Optional[str] = None
     person_bdrc_id: Optional[str] = None
+    person_name: Optional[Dict[str, str]] = None
     ai_id: Optional[str] = None
     role: str
 

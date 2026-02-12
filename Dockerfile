@@ -9,7 +9,7 @@ FROM base as backend-stage
 COPY backend/requirements.txt ./backend/
 RUN apt-get update && apt-get install -y git
 RUN pip install --upgrade pip setuptools wheel
-RUN pip install --no-cache-dir -r backend/requirements.txt
+RUN pip install --no-cache-dir --no-build-isolation -r backend/requirements.txt
 COPY backend/ ./backend/
 RUN chmod +x ./backend/entrypoint.sh
 

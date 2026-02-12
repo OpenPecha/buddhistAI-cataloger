@@ -9,6 +9,19 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+
+    <script>
+        (function () {
+    try {
+      const primary = localStorage.getItem("brand_primary_color") || "#4b14b2";
+      const secondary = localStorage.getItem("brand_secondary_color") || "#6119e6";
+
+      const root = document.documentElement; // <html>
+      root.style.setProperty("--primary", primary);
+      root.style.setProperty("--secondary", secondary);
+    } catch (e) {}
+  })();
+  </script>
    
   </body>
 </html>

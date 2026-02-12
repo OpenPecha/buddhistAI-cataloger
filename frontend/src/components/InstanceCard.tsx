@@ -4,11 +4,12 @@ import { useAnnnotation, useText } from '@/hooks/useTexts';
 import { Button } from './ui/button';
 import FormattedTextDisplay from './FormattedTextDisplay';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { BookOpenText, PencilIcon, TextWrap } from 'lucide-react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { BookOpenText, PencilIcon } from 'lucide-react';
 import { usePermission } from '@/hooks/usePermission';
 import PermissionButton from './PermissionButton';
 import { cn } from '@/lib/utils';
+import AudioPlayer from './AudioPlayer';
 
 interface InstanceCardProps {
   instance: OpenPechaTextInstance;
@@ -127,7 +128,10 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
           <div className="flex items-center gap-3 min-w-0">
             <BookOpenText className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0" />
             <div className="min-w-0">
-              <h3 className="text-lg font-monlam sm:text-xl font-bold text-gray-900  break-words">{title_text}</h3>
+              <h3 className="text-lg font-monlam sm:text-xl font-bold text-gray-900  break-words flex items-center gap-2">
+                {title_text}
+             <AudioPlayer  content={instance.content} />
+              </h3>
             </div>
           </div>
           
