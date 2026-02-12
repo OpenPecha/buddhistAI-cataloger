@@ -6,14 +6,13 @@ FastAPI backend for managing OpenPecha texts and persons.
 
 ### Prerequisites
 
-- Python 3.12+
-- Poetry (install via `pip install poetry` or follow [official instructions](https://python-poetry.org/docs/#installation))
+- Python 3.11+
 
 ### Installation
 
 1. Install dependencies:
 ```bash
-poetry install
+pip install -r requirements.txt
 ```
 
 2. Set up environment variables:
@@ -24,12 +23,12 @@ cp .env.example .env
 
 3. Run database migrations:
 ```bash
-poetry run alembic upgrade head
+alembic upgrade head
 ```
 
 4. Start the development server:
 ```bash
-poetry run uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 Or use the convenience script:
@@ -40,13 +39,13 @@ chmod +x start.sh
 
 ## Development
 
-- Run migrations: `poetry run alembic upgrade head`
-- Create migration: `poetry run alembic revision --autogenerate -m "description"`
-- Run tests: `poetry run pytest` (if configured)
+- Run migrations: `alembic upgrade head`
+- Create migration: `alembic revision --autogenerate -m "description"`
+- Run tests: `pytest` (if configured)
 
 ## Docker
 
-The Dockerfile uses Poetry for dependency management. Build and run:
+Build and run:
 
 ```bash
 docker build -t cataloger-backend .

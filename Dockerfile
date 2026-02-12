@@ -1,28 +1,29 @@
 # Base image
-FROM python:3.12 as base
+FROM python:3.12 as backend-stage
 
-# Set working directory
-WORKDIR /app
-
-# Backend stage
-FROM base as backend-stage
-RUN apt-get update && apt-get install -y git && \
-    pip install --upgrade pip setuptools wheel && \
-    pip install poetry
-COPY backend/pyproject.toml backend/poetry.lock* ./backend/
 WORKDIR /app/backend
-RUN poetry config virtualenvs.create false && \
-    poetry install --no-interaction --no-ansi --no-root
-COPY backend/ ./backend/
-RUN chmod +x ./backend/entrypoint.sh
 
-# Final image
-FROM backend-stage
+# OS deps
+RUN apt-get update && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first (cache-friendly)
+COPY backend/requirements.txt .
+
+# Upgrade pip and install setuptools with pkg_resources (required by pyewts)
+RUN python -m pip install --upgrade pip && \
+    pip install "setuptools<81" wheel
+
+# Install pyewts first with --no-build-isolation to use system setuptools
+RUN pip install --no-build-isolation pyewts
+
+# Install remaining deps
+RUN pip install -r requirements.txt
+
+# Copy code
+COPY backend/ .
+RUN chmod +x ./entrypoint.sh
 
 EXPOSE 8000
-
-# Set entrypoint
 ENTRYPOINT ["/bin/bash", "/app/backend/entrypoint.sh"]
-
-# Start backend services
-CMD ["poetry", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

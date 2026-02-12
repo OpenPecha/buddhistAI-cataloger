@@ -3,7 +3,7 @@ node_modules
 backend/__pycache__
 backend/routers/__pycache__
 .venv
-
+backend/venv
 __pycache__
 dependencies
 backend/dependencies

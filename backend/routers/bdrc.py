@@ -11,7 +11,6 @@ import os
 from dotenv import load_dotenv
 import pyewts
 
-from routers.person import get_person, Person
 load_dotenv(override=True)
 
 router = APIRouter()

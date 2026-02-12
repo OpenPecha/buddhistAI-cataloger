@@ -2,7 +2,7 @@
 set -e
 
 echo "Running database migrations..."
-poetry run alembic upgrade head
+python -m alembic upgrade head
 
 echo "Starting application..."
 exec "$@"
