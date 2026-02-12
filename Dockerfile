@@ -6,10 +6,13 @@ WORKDIR /app
 
 # Backend stage
 FROM base as backend-stage
-COPY backend/requirements.txt ./backend/
-RUN apt-get update && apt-get install -y git
-RUN pip install --upgrade pip setuptools wheel
-RUN pip install --no-cache-dir --no-build-isolation -r backend/requirements.txt
+RUN apt-get update && apt-get install -y git && \
+    pip install --upgrade pip setuptools wheel && \
+    pip install poetry
+COPY backend/pyproject.toml backend/poetry.lock* ./backend/
+WORKDIR /app/backend
+RUN poetry config virtualenvs.create false && \
+    poetry install --no-interaction --no-ansi --no-root
 COPY backend/ ./backend/
 RUN chmod +x ./backend/entrypoint.sh
 
@@ -22,4 +25,4 @@ EXPOSE 8000
 ENTRYPOINT ["/bin/bash", "/app/backend/entrypoint.sh"]
 
 # Start backend services
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["poetry", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
