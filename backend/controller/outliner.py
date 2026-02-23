@@ -180,6 +180,12 @@ def get_document(
 
     return document
 
+def get_document_by_filename(db: Session, filename: str) -> OutlinerDocument:
+    """Get a document by filename"""
+    document = db.query(OutlinerDocument).filter(OutlinerDocument.filename == filename).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return document
 
 def update_document_content(
     db: Session,
@@ -1053,3 +1059,47 @@ def delete_segment_comment(
     db.refresh(segment)
     
     return comments_list
+
+
+
+# ==================== BDRC Operations ====================
+
+from bdrc.main import get_new_volume
+from bdrc.volume import VolumeInput, update_volume
+
+
+async def assign_volume(db: Session, user_id: str) -> OutlinerDocument:
+    """Assign a volume to a document"""
+    volume_data = await get_new_volume()
+    work_id = volume_data["w_id"]
+    instance_id = volume_data["i_id"]
+    i_version = volume_data["i_version"]
+    chunks = volume_data["chunks"]
+    text = ""
+    for chunk in chunks:
+        if chunk["text_bo"] is not None:
+            text += chunk["text_bo"]
+            
+    # create a new document with the text
+    if text is None or user_id is None:
+        raise HTTPException(status_code=400, detail="Text or user_id is required")
+    # check if the document already exists
+    filename = f"volume_{work_id}_{instance_id}_{i_version}"
+    document =get_document_by_filename(db, filename)
+    if document:
+        raise HTTPException(status_code=400, detail="Document already exists")
+    
+    document = create_document(
+        db=db,
+        content=text,
+        filename=filename,
+        user_id=user_id
+    )
+    
+    # update the volume status to "in_progress"
+    try:
+        await update_volume(work_id, instance_id, VolumeInput(status="in_progress"))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error updating volume status: {e}")    
+    
+    return document

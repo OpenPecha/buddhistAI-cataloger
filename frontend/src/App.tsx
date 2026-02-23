@@ -161,7 +161,7 @@ function App() {
               <OutlinerWorkspace />
             </ProtectedRoute>
           } />
-          <Route path="/outliner-admin" element={
+          <Route path="/outliner" element={
             <ProtectedRoute>
               <OutlinerAdmin />
             </ProtectedRoute>
