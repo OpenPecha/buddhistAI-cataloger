@@ -29,6 +29,7 @@ from controller.outliner import (
     add_segment_comment as add_segment_comment_ctrl,
     update_segment_comment as update_segment_comment_ctrl,
     delete_segment_comment as delete_segment_comment_ctrl,
+    assign_volume as assign_volume_ctrl,
 )
 from utils.outliner_utils import get_comments_list
 
@@ -630,3 +631,12 @@ async def get_document_progress(
 ):
     """Get progress statistics for a document"""
     return get_document_progress_ctrl(db, document_id)
+
+
+@router.post("/assign_volume")
+async def assign_volume(user_id: str, db: Session = Depends(get_db)):
+    """Assign a volume to a document"""
+    # get a "new" status  volume
+    document = await assign_volume_ctrl(db, user_id)
+    return document
+    
