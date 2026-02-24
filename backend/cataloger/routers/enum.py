@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query
 from dotenv import load_dotenv
-from controller.enum import get_enum
+from cataloger.controller.enum import get_enum
 load_dotenv(override=True)
 
 router = APIRouter()

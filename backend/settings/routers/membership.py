@@ -6,10 +6,10 @@ from datetime import datetime
 import uuid
 
 from core.database import get_db
-from models.membership import TenantMembership
-from models.user import User
-from models.tenant import Tenant
-from models.role import Role
+from settings.models.membership import TenantMembership
+from user.models.user import User
+from settings.models.tenant import Tenant
+from settings.models.role import Role
 
 router = APIRouter()
 

@@ -4,7 +4,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from datetime import datetime
 from core.database import get_db
-from controller.outliner import (
+from outliner.controller.outliner import (
     create_document as create_document_ctrl,
     upload_document as upload_document_ctrl,
     list_documents as list_documents_ctrl,
@@ -30,8 +30,9 @@ from controller.outliner import (
     update_segment_comment as update_segment_comment_ctrl,
     delete_segment_comment as delete_segment_comment_ctrl,
     assign_volume as assign_volume_ctrl,
+    approve_document as approve_document_ctrl,
 )
-from utils.outliner_utils import get_comments_list
+from outliner.utils.outliner_utils import get_comments_list
 
 router = APIRouter()
 
@@ -640,3 +641,12 @@ async def assign_volume(user_id: str, db: Session = Depends(get_db)):
     document = await assign_volume_ctrl(db, user_id)
     return document
     
+    
+@router.post("/documents/{document_id}/approve")
+async def approve_document(
+    document_id: str,
+    db: Session = Depends(get_db)
+):
+    """Approve all segments for a document"""
+    #get document from database
+    return await approve_document_ctrl(db, document_id)

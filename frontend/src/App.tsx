@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation,Link } from 'react-router-dom';
 import { useEffect, lazy, Suspense } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import Navigation from './components/Navigation';
@@ -21,7 +21,9 @@ const Settings = lazy(() => import('./pages/Settings'));
 const AlignmentWorkstation = lazy(() => import('./components/Aligner/components/AlignmentWorkstation'));
 const OutlineDashboard = lazy(() => import('./pages/Dashboard'));
 const OutlinerWorkspace = lazy(() => import('./pages/OutlinerWorkspace'));
-const OutlinerAdmin = lazy(() => import('./pages/Outliner-admin'));
+const OutlinerAdminDashboard = lazy(() => import('./pages/OutlinerAdminDashboard'));
+const OutlinerAdminDocument = lazy(() => import('./pages/OutlinerAdminDocument'));
+const OutlinerAdminSegment = lazy(() => import('./pages/OutlinerAdminSegment'));
 
 
 
@@ -163,17 +165,20 @@ function App() {
           } />
           <Route path="/outliner-admin" element={
             <ProtectedRoute>
-              <OutlinerAdmin />
+              <OutlinerAdminNav />
+              <OutlinerAdminDashboard />
             </ProtectedRoute>
           } />
           <Route path="/outliner-admin/documents" element={
             <ProtectedRoute>
-              <OutlinerAdmin />
+              <OutlinerAdminNav />
+              <OutlinerAdminDocument />
             </ProtectedRoute>
           } />
-          <Route path="/outliner-admin/segments" element={
+          <Route path="/outliner-admin/documents/:documentId" element={
             <ProtectedRoute>
-              <OutlinerAdmin />
+              <OutlinerAdminNav />
+              <OutlinerAdminSegment />
             </ProtectedRoute>
           } />
         </Routes>
@@ -186,6 +191,32 @@ function App() {
 
   );
 }
+
+
+const OutlinerAdminNav = () => {
+  const location = useLocation();
+  const adminLinks = [
+    { to: "/outliner-admin", label: "Overview" },
+    { to: "/outliner-admin/documents", label: "Documents" },
+  ];
+
+  return (
+    <div className="absolute top-2 left-1/2 -translate-x-1/2 flex space-x-4 mb-6 justify-center bg-white rounded-md px-2 py-1">
+      {adminLinks.map(({ to, label }) => (
+        <Link
+          key={to}
+          to={to}
+          className={` text-sm ${
+            location.pathname === to
+              && "text-gray-600 bg-gray-200 rounded-md px-2 py-1 " 
+          }`}
+        >
+          {label}
+        </Link>
+      ))}
+    </div>
+  );
+};
 
 
 export default App;

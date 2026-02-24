@@ -6,7 +6,7 @@ from datetime import datetime
 import uuid
 
 from core.database import get_db
-from models.tenant import Tenant
+from settings.models.tenant import Tenant
 
 router = APIRouter()
 

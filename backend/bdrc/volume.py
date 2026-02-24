@@ -10,24 +10,24 @@ BDRC_BACKEND_URL = os.getenv("BDRC_BACKEND_URL", "")
 APPLICATION_JSON = "application/json"
 TIMEOUT_ERROR_MSG = "Request to BDRC API timed out"
 
-STATUS = Literal["new", "in_progress", "review", "completed"]
+STATUS = Literal["active", "in_progress","in_review", "reviewed"]
 # Pydantic models for volume update
 class SegmentInput(BaseModel):
-    id: Optional[str] = None
     cstart: int
     cend: int
-    segment_type: str
-    parent_segment: Optional[str] = None
     title_bo: Optional[str] = None
     author_name_bo: Optional[str] = None
+    mw_id: Optional[str] = None
+    wa_id: Optional[str] = None
+    part_type: Optional[Literal["text", "editorial"]] = None
 
 
 class VolumeInput(BaseModel):
-    i_version: Optional[str] = None
-    etext_source: Optional[str] = None
-    volume_number: Optional[int] = None
-    status: STATUS = "new"
-    pages: Optional[List[Dict[str, Any]]] = None
+    rep_id: Optional[str] = None
+    vol_id: Optional[str] = None
+    vol_version: Optional[str] = None
+    status: STATUS
+    base_text: Optional[str] = None
     segments: Optional[List[SegmentInput]] = None
 
 # Async HTTP client with connection pooling (reused across requests)
@@ -89,20 +89,19 @@ async def get_volumes(
 
 
 async def get_volume(
-    work_id: str,
-    instance_id: str
+    volume_id: str
 ) -> Dict[str, Any]:
     """
     Fetch a specific volume from BDRC API by work ID and instance ID
     
     Args:
         work_id: The work ID (e.g., "W00CHZ0103344")
-        instance_id: The instance ID (e.g., "I1CZ39")
+        volume_id: The volume ID (e.g., "V1CZ39")
     
     Returns:
         Dictionary containing volume details
     """
-    url = f"{BDRC_BACKEND_URL}/volumes/{work_id}/{instance_id}"
+    url = f"{BDRC_BACKEND_URL}/volumes/{volume_id}"
     
     headers = {
         "accept": APPLICATION_JSON
@@ -123,22 +122,20 @@ async def get_volume(
 
 
 async def update_volume(
-    work_id: str,
-    instance_id: str,
+    volume_id: str,
     volume_data: VolumeInput
 ) -> Dict[str, Any]:
     """
-    Update a specific volume in BDRC API by work ID and instance ID
+    Update a specific volume in BDRC API by volume ID
     
     Args:
-        work_id: The work ID (e.g., "W00CHZ0103344")
-        instance_id: The instance ID (e.g., "I1CZ39")
+        volume_id: The volume ID (e.g., "V1CZ39")
         volume_data: VolumeInput object containing the update data
     
     Returns:
         Dictionary containing updated volume details
     """
-    url = f"{BDRC_BACKEND_URL}/volumes/{work_id}/{instance_id}"
+    url = f"{BDRC_BACKEND_URL}/volumes/{volume_id}"
     
     headers = {
         "accept": APPLICATION_JSON,
@@ -150,7 +147,36 @@ async def update_volume(
     
     try:
         client = await get_http_client()
-        response = await client.put(url, json=payload, headers=headers)
+        response = await client.post(url, json=payload, headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except httpx.HTTPStatusError as e:
+        error_msg = f"HTTP error {e.response.status_code}: {e.response.text}"
+        raise RuntimeError(error_msg) from e
+    except httpx.TimeoutException as e:
+        raise TimeoutError(TIMEOUT_ERROR_MSG) from e
+    except httpx.RequestError as e:
+        raise ConnectionError(f"Error connecting to BDRC API: {str(e)}") from e
+
+
+async def update_volume_status(
+    volume_id: str,
+    status: STATUS
+) -> Dict[str, Any]:
+    """
+    Update the status of a specific volume in BDRC API by volume ID
+    """
+    url = f"{BDRC_BACKEND_URL}/volumes/{volume_id}/status"
+    print(f"updating volume status to {status} for volume {volume_id}")
+    headers = {
+        "accept": APPLICATION_JSON
+    }
+    params = {
+        "new_status": status
+    }
+    try:
+        client = await get_http_client()
+        response = await client.patch(url, params=params, headers=headers)
         response.raise_for_status()
         return response.json()
     except httpx.HTTPStatusError as e:

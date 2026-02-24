@@ -11,10 +11,10 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from dotenv import load_dotenv
-from models.outliner import OutlinerDocument, OutlinerSegment
-from prompts.ai_prompts import get_title_author_prompt, get_text_boundary_detection_prompt
-from controller.outliner import get_segment
-from utils.outliner_utils import incremental_update_document_progress, get_document_with_cache
+from outliner.models.outliner import OutlinerDocument, OutlinerSegment
+from cataloger.prompts.ai_prompts import get_title_author_prompt, get_text_boundary_detection_prompt
+from outliner.controller.outliner import get_segment
+from outliner.utils.outliner_utils import incremental_update_document_progress, get_document_with_cache
 
 load_dotenv(override=True)
 

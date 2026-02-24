@@ -4,16 +4,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 import uvicorn
-from routers import ai
-from routers import person, text, translation, annotation, bdrc, category, enum, tokenize, aligner_data, admin, outliner, segments
-from routers.settings import (
+from cataloger.routers import ai, person, text, translation, annotation, bdrc, category, enum, tokenize, aligner_data, admin, segments
+from outliner.routers import router as outliner_router
+from settings.routers import (
     tenant_router,
-    user_router,
     role_router,
     permission_router,
     tenant_settings_router,
     membership_router
 )
+from user.routers import user_router
 from dotenv import load_dotenv
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
@@ -78,7 +78,7 @@ app.include_router(enum.router, prefix="/v2/enum", tags=["enum"])
 app.include_router(tokenize.router, prefix="/tokenize", tags=["tokenize"])
 app.include_router(aligner_data.router, prefix="/aligner-data", tags=["aligner-data"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
-app.include_router(outliner.router, prefix="/outliner", tags=["outliner"])
+app.include_router(outliner_router, prefix="/outliner", tags=["outliner"])
 
 app.include_router(ai.router, prefix="/ai", tags=["ai"])
 

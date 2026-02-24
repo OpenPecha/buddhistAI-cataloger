@@ -45,6 +45,7 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
     data: document,
     isLoading: isLoadingQuery,
     error: loadError,
+    isRefetching: isRefetchingQuery,
     refetch,
   } = useQuery<OutlinerDocument>({
     queryKey: ['outliner-document', documentId],
@@ -120,7 +121,6 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
       queryClient.invalidateQueries({ queryKey: ['outliner-document', documentId] });
     },
   });
-
   // Mutation for bulk segment updates - track loading for all affected segments
   const bulkUpdateSegmentsMutation = useMutation({
     mutationFn: ({
@@ -646,7 +646,8 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
     isSaving,
     error: loadError,
     segmentLoadingStates: segmentLoadingStates || new Map(), // Map of segmentId -> loading boolean
-
+    updateSegmentLoading: updateSegmentMutation.isPending,
+    isRefetching: isRefetchingQuery,
     // Actions
     uploadFile: handleUploadFile,
     createDocument: handleCreateDocument,

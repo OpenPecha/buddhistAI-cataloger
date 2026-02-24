@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 import uuid
 
 from core.database import get_db
-from models.permission import Permission
+from settings.models.permission import Permission
 
 router = APIRouter()
 

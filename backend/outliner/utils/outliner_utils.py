@@ -11,7 +11,7 @@ from core.redis import (
     set_document_content_in_cache,
     invalidate_document_content_cache
 )
-from models.outliner import OutlinerDocument, OutlinerSegment
+from outliner.models.outliner import OutlinerDocument, OutlinerSegment
 
 
 def remove_escape_chars_except_newline(text: str) -> str:

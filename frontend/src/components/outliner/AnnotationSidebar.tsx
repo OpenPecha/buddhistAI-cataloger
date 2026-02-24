@@ -11,6 +11,7 @@ import { useUser } from '@/hooks/useUser';
 import CommentView from './comment/CommentView';
 import { toast } from 'sonner';
 import Comments from './comment/Comment';
+import { Loader2, RotateCcw, Save, X } from 'lucide-react';
 
 interface AnnotationSidebarProps {
   activeSegment: TextSegment | undefined;
@@ -49,21 +50,14 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   documentId,
 }, ref) => {
   const { document } = useOutlinerDocument();
-  const { updateSegment: updateSegmentMutation, createCommentMutation } = useOutlinerDocument();
-  const { user } = useUser();
+  const { updateSegment: updateSegmentMutation, updateSegmentLoading, isRefetching } = useOutlinerDocument();
   const activeSegmentId = activeSegment?.id || null;
   const title = activeSegment?.title || '';
   const author = activeSegment?.author || '';
 
-  // Fetch comments separately using useComment hook
-  const { comments, isLoading: isLoadingComments } = useComment(activeSegmentId, {
-    enabled: !!activeSegmentId,
-  });
 
   // Form data that resets when segment changes
   const [formData, setFormData] = useState<FormDataType>({ title: { name: title, bdrc_id: '' }, author: { name: author, bdrc_id: '' } });
-  // Comment input state
-  const [commentContent, setCommentContent] = useState('');
   // Track pending changes per segment
   const pendingChangesRef = useRef<Map<string, FormDataType>>(new Map());
 
@@ -96,7 +90,6 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   useEffect(() => {
     if (activeSegment) {
       setFormData({ title: { name: title, bdrc_id: '' }, author: { name: author, bdrc_id: '' } });
-      setCommentContent(''); // Reset comment input when segment changes
     }
   }, [activeSegment, title, author]);
 
@@ -245,11 +238,20 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       await updateSegmentMutation(activeSegmentId, newPayload);
     }
   }
+  async function onUnknown() {
+    if (activeSegmentId) {
+      const newPayload = {
+        title: '',
+        author: '',
+        title_bdrc_id: '',
+        author_bdrc_id: '',
+        status: 'checked'
+      }
+      await updateSegmentMutation(activeSegmentId, newPayload);
+    }
+  }
 
 
-
-  const text_title = document?.filename ? document.filename.replace(/\.[^/.]+$/, '') : '';
-  
   if (!activeSegment) return <div className="w-96 text-center text-gray-500 py-12">
     <p>No segment selected</p>
     <p className="text-sm mt-2">Click on a segment in the workspace to annotate it</p>
@@ -262,58 +264,83 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
 
         <div className="flex flex-col flex-1 h-full space-y-6">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">{text_title}</h2>
             <div className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-md border border-gray-200">
               <div className="font-medium mb-1">Text:</div>
               <div className="text-gray-800">{activeSegment.text.slice(0, 100)}...</div>
             </div>
           </div>
+          <div className="relative flex flex-col gap-4">
+            {(updateSegmentLoading || isRefetching) && (
+              <div className="absolute inset-0 z-20 flex items-center justify-center bg-white bg-opacity-60">
+                <Loader2 className="w-6 h-6 animate-spin text-gray-600" />
+              </div>
+            )}
+            {
+              activeSegment.status === 'unchecked' && (
+                <>
+                  <AISuggestionsBox
+                    suggestions={aiSuggestions.aiSuggestions}
+                    loading={aiSuggestions.aiLoading}
+                    onDetect={aiSuggestions.onAIDetect}
+                    onStop={aiSuggestions.onAIStop}
+                  />
+                  <TitleField
+                    ref={titleFieldRef}
+                    segment={activeSegment}
+                    activeSegmentId={activeSegmentId}
+                    formData={formData}
+                    onUpdate={onUpdate}
+                    resetForm={resetForm}
+                  />
 
-          <TitleField
-            ref={titleFieldRef}
-            segment={activeSegment}
-            activeSegmentId={activeSegmentId}
-            formData={formData}
-            onUpdate={onUpdate}
-            resetForm={resetForm}
-          />
-
-          <AuthorField
-            ref={authorFieldRef}
-            segment={activeSegment}
-            formData={formData}
-            onUpdate={onUpdate}
-            resetForm={resetForm}
-          />
-
-          <AISuggestionsBox
-            suggestions={aiSuggestions.aiSuggestions}
-            loading={aiSuggestions.aiLoading}
-            onDetect={aiSuggestions.onAIDetect}
-            onStop={aiSuggestions.onAIStop}
-          />
+                  <AuthorField
+                    ref={authorFieldRef}
+                    segment={activeSegment}
+                    formData={formData}
+                    onUpdate={onUpdate}
+                    resetForm={resetForm}
+                  />
+                </>
+              )
+            }
+          </div>
 
 
           <div className="flex gap-2  bg-white">
-            <Button
-              type="button"
-              className='flex-1'
-              onClick={onSave}
-              variant="default"
-              disabled={!activeSegmentId || formData.title.name.trim() === '' || formData.author.name.trim() === ''}
-            >
-              Save
-            </Button>
-            <Button
-              type="button"
-              onClick={onReset}
-              variant="outline"
-              disabled={!activeSegmentId}
-            >
-              Reset
-            </Button>
-          </div>
+            {
+              activeSegment.status !== 'checked' ?
+                <>
+                  <Button
+                    type="button"
+                    className='flex-1'
+                    onClick={onSave}
+                    variant="default"
+                    disabled={!activeSegmentId || formData.title.name.trim() === '' || formData.author.name.trim() === ''}
+                  >
+                    <Save />Save
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={onUnknown}
+                    variant="outline"
+                    disabled={!activeSegmentId}
+                  >
+                    <X /> Unknown
+                  </Button>
+                </>
+                :
+                <Button
+                  type="button"
+                  onClick={onReset}
+                  variant="outline"
+                  disabled={!activeSegmentId}
+                  className='w-full'
+                >
+                  <RotateCcw /> Reset
+                </Button>
 
+            }
+          </div>
           <hr />
 
           <Comments segmentId={activeSegmentId || ''} />

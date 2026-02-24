@@ -26,7 +26,7 @@ function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/login" state={{ returnTo: location.pathname }} replace />;
   }
 
-  return <>{children}</>;
+  return <div className="relative">{children}</div>;
 }
 
 export default ProtectedRoute;

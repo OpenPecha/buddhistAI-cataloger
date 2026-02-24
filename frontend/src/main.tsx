@@ -29,7 +29,7 @@ createRoot(document.getElementById('root')!).render(
       }}
       cacheLocation='localstorage'
       useRefreshTokens={true}
-      useRefreshTokensFallback={false}
+      useRefreshTokensFallback={true}
     >  
     <QueryClientProvider client={queryClient}>
       <UIProvider>

@@ -1,14 +1,16 @@
 
 
 
-from bdrc.volume import get_volume, get_volumes
+from bdrc.volume import STATUS, get_volume, get_volumes, update_volume_status
 
 
 async def get_new_volume():
-    volume = await get_volumes(status="new",limit=1)
+    volume = await get_volumes(status="active",limit=1)
     # merge the volume text and load in database
     volume_item=volume["items"][0]
-    work_id = volume_item["w_id"]
-    instance_id = volume_item["i_id"]
-    volume_data = await get_volume(work_id, instance_id)
+    volume_id = volume_item["id"]
+    volume_data = await get_volume(volume_id)
     return volume_data
+
+async def update_volume_status(volume_id: str, status: STATUS):
+    await update_volume_status(volume_id, status)

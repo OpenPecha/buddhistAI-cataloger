@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from sqlalchemy.orm import Session
 from core.database import get_db
-from controller.ai import generate_title_author, detect_text_endings, segment_and_create_from_parent
+from cataloger.controller.ai import generate_title_author, detect_text_endings, segment_and_create_from_parent
 
 router = APIRouter()
 
