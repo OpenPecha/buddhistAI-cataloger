@@ -8,8 +8,9 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import func
-from models.outliner import OutlinerDocument, OutlinerSegment
-from utils.outliner_utils import (
+from sqlalchemy.orm.session import identity
+from outliner.models.outliner import OutlinerDocument, OutlinerSegment
+from outliner.utils.outliner_utils import (
     get_document_with_cache,
     update_document_progress,
     incremental_update_document_progress,
@@ -1071,9 +1072,6 @@ from bdrc.volume import VolumeInput, update_volume
 async def assign_volume(db: Session, user_id: str) -> OutlinerDocument:
     """Assign a volume to a document"""
     volume_data = await get_new_volume()
-    work_id = volume_data["w_id"]
-    instance_id = volume_data["i_id"]
-    i_version = volume_data["i_version"]
     chunks = volume_data["chunks"]
     text = ""
     for chunk in chunks:
@@ -1084,22 +1082,29 @@ async def assign_volume(db: Session, user_id: str) -> OutlinerDocument:
     if text is None or user_id is None:
         raise HTTPException(status_code=400, detail="Text or user_id is required")
     # check if the document already exists
-    filename = f"volume_{work_id}_{instance_id}_{i_version}"
-    document =get_document_by_filename(db, filename)
+    volume_id = volume_data["id"]
+    document = None
+    print(f"filename: {volume_id}")
+    document =get_document_by_filename(db, volume_id)
     if document:
-        raise HTTPException(status_code=400, detail="Document already exists")
+        raise HTTPException(status_code=400, detail="Document already exists with id: {document.id}")
     
-    document = create_document(
-        db=db,
-        content=text,
-        filename=filename,
-        user_id=user_id
-    )
-    
+    if document is None:
+        document = create_document(
+            db=db,
+            content=text,
+            filename=volume_id,
+            user_id=user_id
+        )
+        return text
+    else:
+        raise HTTPException(status_code=400, detail="Document not able to create")
+   
     # update the volume status to "in_progress"
-    try:
-        await update_volume(work_id, instance_id, VolumeInput(status="in_progress"))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error updating volume status: {e}")    
     
-    return document
+    
+    # try:
+    #     await update_volume(work_id, volume_id, VolumeInput(status="in_progress"))
+    # except Exception as e:
+    #     raise HTTPException(status_code=500, detail=f"Error updating volume status: {e}")    
+    

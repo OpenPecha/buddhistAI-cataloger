@@ -6,7 +6,7 @@ from datetime import datetime
 import uuid
 
 from core.database import get_db
-from models.user import User
+from user.models.user import User
 
 router = APIRouter()
 

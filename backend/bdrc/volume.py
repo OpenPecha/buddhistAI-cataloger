@@ -90,19 +90,19 @@ async def get_volumes(
 
 async def get_volume(
     work_id: str,
-    instance_id: str
+    volume_id: str
 ) -> Dict[str, Any]:
     """
     Fetch a specific volume from BDRC API by work ID and instance ID
     
     Args:
         work_id: The work ID (e.g., "W00CHZ0103344")
-        instance_id: The instance ID (e.g., "I1CZ39")
+        volume_id: The volume ID (e.g., "V1CZ39")
     
     Returns:
         Dictionary containing volume details
     """
-    url = f"{BDRC_BACKEND_URL}/volumes/{work_id}/{instance_id}"
+    url = f"{BDRC_BACKEND_URL}/volumes/{work_id}/{volume_id}"
     
     headers = {
         "accept": APPLICATION_JSON

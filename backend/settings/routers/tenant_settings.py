@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 import uuid
 
 from core.database import get_db
-from models.tenant_settings import TenantSettings
-from models.tenant import Tenant
+from settings.models.tenant_settings import TenantSettings
+from settings.models.tenant import Tenant
 
 router = APIRouter()
 

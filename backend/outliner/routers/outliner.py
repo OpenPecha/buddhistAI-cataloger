@@ -4,7 +4,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from datetime import datetime
 from core.database import get_db
-from controller.outliner import (
+from outliner.controller.outliner import (
     create_document as create_document_ctrl,
     upload_document as upload_document_ctrl,
     list_documents as list_documents_ctrl,
@@ -31,7 +31,7 @@ from controller.outliner import (
     delete_segment_comment as delete_segment_comment_ctrl,
     assign_volume as assign_volume_ctrl,
 )
-from utils.outliner_utils import get_comments_list
+from outliner.utils.outliner_utils import get_comments_list
 
 router = APIRouter()
 

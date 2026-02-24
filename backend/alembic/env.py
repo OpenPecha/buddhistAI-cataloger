@@ -6,13 +6,13 @@ from dotenv import load_dotenv
 from alembic import context
 
 from core.database import Base
-from models.tenant import Tenant
-from models.user import User
-from models.tenant_settings import TenantSettings
-from models.membership import TenantMembership
-from models.role import Role
-from models.permission import Permission
-from models.outliner import OutlinerDocument, OutlinerSegment
+from settings.models.tenant import Tenant
+from user.models.user import User
+from settings.models.tenant_settings import TenantSettings
+from settings.models.membership import TenantMembership
+from settings.models.role import Role
+from settings.models.permission import Permission
+from outliner.models.outliner import OutlinerDocument, OutlinerSegment
 
 import os
 load_dotenv()

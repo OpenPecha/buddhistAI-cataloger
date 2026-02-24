@@ -16,41 +16,34 @@ export const AISuggestionsBox: React.FC<AISuggestionsBoxProps> = ({
   onDetect,
   onStop,
 }) => {
+
+
+  const button_classname: string = "h-auto p-0 hover:bg-transparent hover:text-primary float-right absolute right-0 top-0 cursor-pointer";
+
   return (
     <>
-      {/* AI Auto-detect Button */}
-      <div className="flex gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onDetect}
-          disabled={loading}
-          className="flex-1 flex items-center justify-center gap-2"
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Analyzing...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4" />
-              Auto-detect Title & Author
-            </>
-          )}
-        </Button>
-        {loading && (
+       
+        {loading ?(
           <Button
             type="button"
-            variant="outline"
+            variant="ghost"
             onClick={onStop}
-            className="px-3 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+            className={button_classname}
             title="Stop AI suggestion"
           >
             <Square className="w-4 h-4" />
           </Button>
-        )}
-      </div>
+        ): <Button
+        type="button"
+        variant="ghost"
+        onClick={onDetect}
+        disabled={loading}
+        title="Detect Title & Author"
+        className={button_classname}
+      >
+      
+            <Sparkles className="w-4 h-4" />
+      </Button>}
 
       
     </>

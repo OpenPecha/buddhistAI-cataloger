@@ -164,6 +164,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
           </div>
           <div className={`flex-1 relative ${isChecked ? 'pointer-events-none' : ''}`}>
             {isCollapsed ? (
+              <>
               <button
                 type="button"
                 className="text-gray-600  font-monlam cursor-pointer text-lg py-2 text-left w-full rounded px-2 -mx-2 transition-colors max-h-[100px] overflow-hidden whitespace-pre-wrap break-words [display:-webkit-box] [WebkitBoxOrient:vertical] [WebkitLineClamp:4]"
@@ -183,6 +184,13 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
               >
                 {segment.text.slice(0,200) +"..."}
               </button>
+                <TitleAndAuthor
+                title={segment.title}
+                author={segment.author}
+                title_bdrc_id={segment.title_bdrc_id}
+                author_bdrc_id={segment.author_bdrc_id}
+              />
+              </>
             ) : (
               <>
                 <SegmentTextContent
@@ -195,29 +203,12 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
                   onInput={onInput}
                   onKeyDown={onKeyDown}
                 />
-                {(segment.title ||
-                  segment.author ||
-                  segment.title_bdrc_id ||
-                  segment.author_bdrc_id) && (
-                  <div className="mt-3 pt-3 border-t border-gray-200 flex flex-wrap gap-2">
-                    {segment.title && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-md bg-yellow-100 text-yellow-800 text-xs font-medium">
-                        📄 {segment.title}
-                        {segment.title_bdrc_id && (
-                          <span className="ml-1 text-green-600">({segment.title_bdrc_id})</span>
-                        )}
-                      </span>
-                    )}
-                    {segment.author && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-md bg-purple-100 text-purple-800 text-xs font-medium">
-                        👤 {segment.author}
-                        {segment.author_bdrc_id && (
-                          <span className="ml-1 text-green-600">({segment.author_bdrc_id})</span>
-                        )}
-                      </span>
-                    )}
-                  </div>
-                )}
+                <TitleAndAuthor
+                  title={segment.title}
+                  author={segment.author}
+                  title_bdrc_id={segment.title_bdrc_id}
+                  author_bdrc_id={segment.author_bdrc_id}
+                />
               </>
             )}
           </div>
@@ -240,5 +231,42 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
 
 export const SegmentItemMemo = React.memo(SegmentItem)
 
+
+type TitleAndAuthorProps = {
+  title?: string
+  author?: string
+  title_bdrc_id?: string
+  author_bdrc_id?: string
+}
+
+const TitleAndAuthor = ({
+  title,
+  author,
+  title_bdrc_id,
+  author_bdrc_id,
+}: TitleAndAuthorProps) => {
+  if (!title && !author && !title_bdrc_id && !author_bdrc_id) return null
+
+  return (
+    <div className="mt-3 pt-3 border-t border-gray-200 flex flex-wrap gap-2">
+      {title && (
+        <span className="inline-flex items-center px-2 py-1 rounded-md bg-yellow-100 text-yellow-800 text-xs font-medium">
+          📄 {title}
+          {title_bdrc_id && (
+            <span className="ml-1 text-green-600">({title_bdrc_id})</span>
+          )}
+        </span>
+      )}
+      {author && (
+        <span className="inline-flex items-center px-2 py-1 rounded-md bg-purple-100 text-purple-800 text-xs font-medium">
+          👤 {author}
+          {author_bdrc_id && (
+            <span className="ml-1 text-green-600">({author_bdrc_id})</span>
+          )}
+        </span>
+      )}
+    </div>
+  )
+}
 
 
