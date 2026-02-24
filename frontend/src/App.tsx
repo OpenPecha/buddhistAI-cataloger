@@ -166,6 +166,16 @@ function App() {
               <OutlinerAdmin />
             </ProtectedRoute>
           } />
+          <Route path="/outliner-admin/documents" element={
+            <ProtectedRoute>
+              <OutlinerAdmin />
+            </ProtectedRoute>
+          } />
+          <Route path="/outliner-admin/segments" element={
+            <ProtectedRoute>
+              <OutlinerAdmin />
+            </ProtectedRoute>
+          } />
         </Routes>
         </Suspense>
         </div>
