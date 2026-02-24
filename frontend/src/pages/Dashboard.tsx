@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
 import { OutlinerFileUploadZone } from '@/components/outliner/OutlinerFileUploadZone';
-import { listOutlinerDocuments, updateDocumentStatus, type OutlineDocumentStatus, type OutlinerDocumentListItem } from '@/api/outliner';
+import { listOutlinerDocuments, updateDocumentStatus, assignVolume, type OutlineDocumentStatus, type OutlinerDocumentListItem } from '@/api/outliner';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -80,6 +80,28 @@ const OutlinerUpload: React.FC = () => {
     },
   });
 
+  // Assign volume mutation
+  const assignWorkMutation = useMutation({
+    mutationFn: () => assignVolume(userId!),
+    onSuccess: (document) => {
+      queryClient.invalidateQueries({ queryKey: ['outliner-documents', userId] });
+      toast.success(`Work assigned successfully! Document: ${document.filename || document.id}`);
+      // Navigate to the assigned document
+      navigate(`/outliner/${document.id}`);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to assign work');
+    },
+  });
+
+  const assignWork = () => {
+    if (!userId) {
+      toast.error('User ID is required');
+      return;
+    }
+    assignWorkMutation.mutate();
+  };
+
   const handleFileUpload = async (file: File) => {
     await uploadFile(file, userId);
     // Refetch documents list after upload
@@ -133,12 +155,18 @@ const OutlinerUpload: React.FC = () => {
               <Filter className="w-4 h-4" />
               {showDeleted ? 'Show Active' : 'Show Deleted'}
             </Button>
-            <Button
+            {/* <Button
               onClick={() => setShowUpload(true)}
               className="flex items-center gap-2"
             >
               <Upload className="w-4 h-4" />
               Upload New
+            </Button> */}
+            <Button 
+              onClick={assignWork}
+              disabled={assignWorkMutation.isPending || !userId}
+            >
+              {assignWorkMutation.isPending ? 'Assigning...' : 'Assign me a work'}
             </Button>
             {isAdmin && (
             <Link to="/outliner-admin">

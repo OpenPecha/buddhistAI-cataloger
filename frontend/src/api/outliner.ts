@@ -504,6 +504,17 @@ export const resetSegments = async (documentId: string): Promise<void> => {
   }
 };
 
+export const assignVolume = async (user_id: string): Promise<OutlinerDocument> => {
+  const params = new URLSearchParams();
+  params.append('user_id', user_id);
+  
+  const response = await fetch(`${API_URL}/outliner/assign_volume?${params.toString()}`, {
+    method: 'POST',
+  });
+
+  return handleApiResponse(response);
+};
+
 // ==================== AI Endpoints ====================
 
 export interface DetectTextEndingsRequest {

@@ -1072,6 +1072,8 @@ from bdrc.volume import SegmentInput, VolumeInput, get_volume, update_volume, up
 async def assign_volume(db: Session, user_id: str) -> OutlinerDocument:
     """Assign a volume to a document"""
     volume_data = await get_new_volume()
+    if volume_data is None:
+        raise HTTPException(status_code=404, detail="No active volume found")
     chunks = volume_data["chunks"]
     text = ""
     for chunk in chunks:
@@ -1084,7 +1086,6 @@ async def assign_volume(db: Session, user_id: str) -> OutlinerDocument:
     # check if the document already exists
     volume_id = volume_data["id"]
     document = None
-    print(f"filename: {volume_id}")
     try: 
         document =get_document_by_filename(db, volume_id)
     except Exception as e:
