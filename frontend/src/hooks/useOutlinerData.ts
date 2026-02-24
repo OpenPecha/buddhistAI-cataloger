@@ -1,5 +1,7 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useQuery } from '@tanstack/react-query';
+import { useParams } from 'react-router-dom';
 import type { Document, Segment, DocumentStats } from '../components/admin/shared/types';
 
 /**
@@ -28,19 +30,20 @@ function calculateStats(documents: Document[]): DocumentStats {
   }, { total: 0, active: 0, completed: 0, approved: 0, rejected: 0 });
 }
 
-export function useOutlinerData() {
+/**
+ * Hook for fetching documents list
+ */
+export function useDocuments() {
   const { getAccessTokenSilently } = useAuth0();
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [segments, setSegments] = useState<Segment[]>([]);
-  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadingSegments, setLoadingSegments] = useState(false);
 
-  // Calculate stats from documents state - no need to fetch separately
-  const stats = useMemo(() => calculateStats(documents), [documents]);
-
-  const loadDocuments = useCallback(async () => {
-    try {
+  const {
+    data: documents = [],
+    isLoading,
+    error,
+    refetch
+  } = useQuery<Document[]>({
+    queryKey: ['outliner-admin-documents'],
+    queryFn: async () => {
       const token = await getAccessTokenSilently();
       const response = await fetch('/api/outliner/documents', {
         headers: {
@@ -48,18 +51,42 @@ export function useOutlinerData() {
           'Content-Type': 'application/json'
         }
       });
-      if (response.ok) {
-        const data = await response.json();
-        setDocuments(data);
+      if (!response.ok) {
+        throw new Error('Failed to fetch documents');
       }
-    } catch (error) {
-      console.error('Error loading documents:', error);
-    }
-  }, [getAccessTokenSilently]);
+      return response.json();
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
-  const loadSegments = useCallback(async (documentId: string) => {
-    try {
-      setLoadingSegments(true);
+  const stats = useMemo(() => calculateStats(documents), [documents]);
+
+  return {
+    documents,
+    stats,
+    isLoading,
+    error,
+    refetch
+  };
+}
+
+/**
+ * Hook for fetching segments for a specific document
+ */
+export function useSegments(documentId: string | undefined) {
+  const { getAccessTokenSilently } = useAuth0();
+
+  const {
+    data: segments = [],
+    isLoading,
+    error,
+    refetch
+  } = useQuery<Segment[]>({
+    queryKey: ['outliner-admin-segments', documentId],
+    queryFn: async () => {
+      if (!documentId) {
+        throw new Error('Document ID is required');
+      }
       const token = await getAccessTokenSilently();
       const response = await fetch(`/api/outliner/documents/${documentId}/segments`, {
         headers: {
@@ -67,54 +94,88 @@ export function useOutlinerData() {
           'Content-Type': 'application/json'
         }
       });
-      if (response.ok) {
-        const data = await response.json();
-        setSegments(data);
+      if (!response.ok) {
+        throw new Error('Failed to fetch segments');
       }
-    } catch (error) {
-      console.error('Error loading segments:', error);
-    } finally {
-      setLoadingSegments(false);
-    }
-  }, [getAccessTokenSilently]);
+      return response.json();
+    },
+    enabled: !!documentId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
-  // Removed loadStats - stats are now calculated from documents state
-  // Kept for backward compatibility but it's now a no-op
-  const loadStats = useCallback(async () => {
-    // Stats are automatically calculated from documents state
-    // This function is kept for backward compatibility but does nothing
-  }, []);
+  return {
+    segments,
+    isLoading,
+    error,
+    refetch
+  };
+}
 
-  const loadInitialData = useCallback(async () => {
-    try {
-      setLoading(true);
-      // Only fetch documents once - stats will be calculated automatically
-      await loadDocuments();
-    } catch (error) {
-      console.error('Error loading admin data:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [loadDocuments]);
+/**
+ * Hook for fetching a single document by ID
+ */
+export function useDocument(documentId: string | undefined) {
+  const { getAccessTokenSilently } = useAuth0();
 
-  const handleDocumentSelect = useCallback((document: Document) => {
-    setSelectedDocument(document);
-    loadSegments(document.id);
-  }, [loadSegments]);
+  const {
+    data: document,
+    isLoading,
+    error,
+    refetch
+  } = useQuery<Document>({
+    queryKey: ['outliner-admin-document', documentId],
+    queryFn: async () => {
+      if (!documentId) {
+        throw new Error('Document ID is required');
+      }
+      const token = await getAccessTokenSilently();
+      const response = await fetch(`/api/outliner/documents/${documentId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch document');
+      }
+      return response.json();
+    },
+    enabled: !!documentId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  return {
+    document,
+    isLoading,
+    error,
+    refetch
+  };
+}
+
+/**
+ * Legacy hook - kept for backward compatibility
+ * Use useDocuments, useSegments, or useDocument instead
+ * @deprecated Use individual hooks instead
+ */
+export function useOutlinerData() {
+  const { documentId } = useParams<{ documentId?: string }>();
+  const { documents, stats, isLoading: loadingDocuments } = useDocuments();
+  const { segments, isLoading: loadingSegments } = useSegments(documentId);
+  const { document: selectedDocument } = useDocument(documentId);
 
   return {
     documents,
     segments,
-    selectedDocument,
+    selectedDocument: selectedDocument || null,
     stats,
-    loading,
+    loading: loadingDocuments,
     loadingSegments,
-    loadInitialData,
-    loadDocuments,
-    loadSegments,
-    loadStats, // Kept for backward compatibility
-    handleDocumentSelect,
-    setSelectedDocument,
-    setSegments
+    loadInitialData: async () => {}, // No-op for backward compatibility
+    loadDocuments: async () => {}, // No-op for backward compatibility
+    loadSegments: async () => {}, // No-op for backward compatibility
+    loadStats: async () => {}, // No-op for backward compatibility
+    handleDocumentSelect: () => {}, // No-op for backward compatibility
+    setSelectedDocument: () => {}, // No-op for backward compatibility
+    setSegments: () => {} // No-op for backward compatibility
   };
 }

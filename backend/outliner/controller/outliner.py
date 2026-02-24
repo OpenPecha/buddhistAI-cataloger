@@ -1066,7 +1066,7 @@ def delete_segment_comment(
 # ==================== BDRC Operations ====================
 
 from bdrc.main import get_new_volume
-from bdrc.volume import VolumeInput, update_volume
+from bdrc.volume import SegmentInput, VolumeInput, get_volume, update_volume, update_volume_status
 
 
 async def assign_volume(db: Session, user_id: str) -> OutlinerDocument:
@@ -1085,26 +1085,70 @@ async def assign_volume(db: Session, user_id: str) -> OutlinerDocument:
     volume_id = volume_data["id"]
     document = None
     print(f"filename: {volume_id}")
-    document =get_document_by_filename(db, volume_id)
+    try: 
+        document =get_document_by_filename(db, volume_id)
+    except Exception as e:
+        print(f"document already exists: {e}")
     if document:
         raise HTTPException(status_code=400, detail="Document already exists with id: {document.id}")
     
-    if document is None:
-        document = create_document(
+    document = create_document(
             db=db,
             content=text,
             filename=volume_id,
             user_id=user_id
         )
-        return text
-    else:
-        raise HTTPException(status_code=400, detail="Document not able to create")
    
     # update the volume status to "in_progress"
+    await update_volume_status(volume_id, "in_progress")
+    return text
     
     
-    # try:
-    #     await update_volume(work_id, volume_id, VolumeInput(status="in_progress"))
-    # except Exception as e:
-    #     raise HTTPException(status_code=500, detail=f"Error updating volume status: {e}")    
     
+    
+    
+# ==================== Approval Operations ====================
+
+async def approve_document(db: Session, document_id: str) -> OutlinerDocument:
+    document = get_document(db, document_id , include_segments=True)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    volume_id=document.filename
+    #get volume from bdrc
+    volume = await get_volume(volume_id)
+    
+  
+    rep_id=volume["rep_id"]
+    vol_id=volume["vol_id"]
+    vol_version=volume["vol_version"]
+    status="reviewed"
+    base_text=document.content
+    db_segments=document.segments
+    segment_inputs = []
+    for segment in db_segments:
+        segment_start=int(segment.span_start)
+        segment_end=int(segment.span_end)
+        segment_title=segment.title
+        segment_author=segment.author
+        mw_id=f'{volume["mw_id"]}_{segment.id}'
+        wa_id=segment.title_bdrc_id or ''
+        segment_inputs.append(SegmentInput(
+            cstart=segment_start,
+            cend=segment_end,
+            title_bo=segment_title,
+            author_name_bo=segment_author,
+            mw_id=mw_id,
+            wa_id=wa_id,
+            part_type="text" if wa_id != '' else "editorial"
+        ))
+    
+    response_bdrc = await update_volume(volume_id, VolumeInput(
+        rep_id=rep_id,
+        vol_id=vol_id,
+        vol_version=vol_version,
+        status=status,
+        base_text=base_text,
+        segments=segment_inputs
+    ))
+    return response_bdrc

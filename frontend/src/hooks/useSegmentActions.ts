@@ -1,22 +1,17 @@
 import { useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
-import type { Document, Segment } from '../components/admin/shared/types';
-
+import { useQueryClient } from '@tanstack/react-query';
+import type { Segment } from '../components/admin/shared/types';
 
 interface UseSegmentActionsProps {
-  selectedDocument: Document | null;
-  loadSegments: (documentId: string) => Promise<void>;
-  loadDocuments: () => Promise<void>;
-  loadStats?: () => Promise<void>; // Optional - kept for backward compatibility
+  documentId?: string | null;
 }
 
 export function useSegmentActions({
-  selectedDocument,
-  loadSegments,
-  loadDocuments,
-  loadStats
-}: UseSegmentActionsProps) {
+  documentId
+}: UseSegmentActionsProps = {}) {
   const { getAccessTokenSilently } = useAuth0();
+  const queryClient = useQueryClient();
 
   const updateSegment = useCallback(async (segmentId: string, updates: Partial<Segment>) => {
     try {
@@ -31,19 +26,19 @@ export function useSegmentActions({
       });
 
       if (response.ok) {
-        // Reload segments for the current document
-        if (selectedDocument) {
-          await loadSegments(selectedDocument.id);
+        // Invalidate segments query to refetch updated data
+        if (documentId) {
+          queryClient.invalidateQueries({ queryKey: ['outliner-admin-segments', documentId] });
         }
-        // Reload documents to update progress - stats will be calculated automatically
-        await loadDocuments();
+        // Also invalidate documents to update progress
+        queryClient.invalidateQueries({ queryKey: ['outliner-admin-documents'] });
       } else {
         console.error('Failed to update segment');
       }
     } catch (error) {
       console.error('Error updating segment:', error);
     }
-  }, [getAccessTokenSilently, selectedDocument, loadSegments, loadDocuments]);
+  }, [getAccessTokenSilently, queryClient, documentId]);
 
   const deleteSegment = useCallback(async (segmentId: string) => {
     if (!confirm('Are you sure you want to delete this segment? This action cannot be undone.')) {
@@ -61,19 +56,19 @@ export function useSegmentActions({
       });
 
       if (response.ok) {
-        // Reload segments for the current document
-        if (selectedDocument) {
-          await loadSegments(selectedDocument.id);
+        // Invalidate segments query to refetch updated data
+        if (documentId) {
+          queryClient.invalidateQueries({ queryKey: ['outliner-admin-segments', documentId] });
         }
-        // Reload documents to update progress - stats will be calculated automatically
-        await loadDocuments();
+        // Also invalidate documents to update progress
+        queryClient.invalidateQueries({ queryKey: ['outliner-admin-documents'] });
       } else {
         console.error('Failed to delete segment');
       }
     } catch (error) {
       console.error('Error deleting segment:', error);
     }
-  }, [getAccessTokenSilently, selectedDocument, loadSegments, loadDocuments]);
+  }, [getAccessTokenSilently, queryClient, documentId]);
 
   return {
     updateSegment,

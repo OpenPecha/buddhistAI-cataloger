@@ -30,6 +30,7 @@ from outliner.controller.outliner import (
     update_segment_comment as update_segment_comment_ctrl,
     delete_segment_comment as delete_segment_comment_ctrl,
     assign_volume as assign_volume_ctrl,
+    approve_document as approve_document_ctrl,
 )
 from outliner.utils.outliner_utils import get_comments_list
 
@@ -640,3 +641,12 @@ async def assign_volume(user_id: str, db: Session = Depends(get_db)):
     document = await assign_volume_ctrl(db, user_id)
     return document
     
+    
+@router.post("/documents/{document_id}/approve")
+async def approve_document(
+    document_id: str,
+    db: Session = Depends(get_db)
+):
+    """Approve all segments for a document"""
+    #get document from database
+    return await approve_document_ctrl(db, document_id)
