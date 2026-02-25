@@ -39,6 +39,8 @@ export interface User {
   name?: string | null;
   picture?: string | null;
   created_at: string;
+  role: string;
+  permissions: string[];
 }
 
 export interface UserCreate {

@@ -89,7 +89,11 @@ function SegmentRow({
       <TableCell className="px-6 py-4 max-w-xs">
         <div
           className="text-sm text-gray-900 cursor-pointer hover:text-blue-600"
-          onClick={() => onToggleExpansion(segment.id)}
+          onClick={(e) =>{
+            e.stopPropagation();
+            onToggleExpansion(segment.id)
+          }
+          } 
         >
           <span className="truncate block">
             {segment.text.substring(0, 100)}...

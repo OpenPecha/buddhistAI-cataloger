@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { SegmentsTab } from '../components/admin';
 import {
   useDocument,
-  useSegments,
 } from '../hooks';
 
 function OutlinerAdminSegment() {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { FileText, Upload, Calendar, BarChart3, Trash2, RotateCcw, Filter, Settings, Check, Workflow, Cross, TheaterIcon, Play, CheckLine } from 'lucide-react';
+import { FileText,  Calendar, BarChart3, Settings,  } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { Progress } from '@/components/ui/progress';
 import { formatDistanceToNow } from 'date-fns';
@@ -40,11 +40,12 @@ function Modal({ open, onClose, children }: { open: boolean; onClose: () => void
 
 const OutlinerUpload: React.FC = () => {
   const {user}= useUser();
-  const isAdmin = user?.role === 'admin';
+  const hasPermission = user?.permissions?.includes('outliner') && (user.role==='admin' || user.role==='reviewer' || user.role==='annotator');
+  const isAdminOrReviewer = user?.role==='admin' || user?.role==='reviewer';
+
   const userId = user?.id;
   const navigate = useNavigate();
   const [showUpload, setShowUpload] = useState(false);
-  const [showDeleted, setShowDeleted] = useState(false);
   const { uploadFile, isLoading } = useOutlinerDocument();
   const queryClient = useQueryClient();
   // Fetch documents list with optional deleted filter
@@ -54,29 +55,12 @@ const OutlinerUpload: React.FC = () => {
     enabled: !!userId,
   });
 
-  // Filter documents based on current view
-
-  // Delete document mutation
-  // const deleteDocumentMutation = useMutation({
-  //   mutationFn: (documentId: string) => updateDocumentStatus(documentId, 'deleted', userId),
-  //   onSuccess: () => {
-  //     // Refetch documents list after deletion
-  //     queryClient.invalidateQueries({ queryKey: ['outliner-documents', userId] });
-  //   },
-  // });
-
-  // Restore document mutation
-  // const restoreDocumentMutation = useMutation({
-  //   mutationFn: (documentId: string) => updateDocumentStatus(documentId, 'active', userId),
-  //   onSuccess: () => {
-  //     // Refetch documents list after restoration
-  //     queryClient.invalidateQueries({ queryKey: ['outliner-documents', userId] });
-  //     toast.success('Document restored successfully');
-  //   },
-  //   onError: (error: Error) => {
-  //     toast.error(error.message || 'Failed to restore document');
-  //   },
-  // });
+  useEffect(() => {
+  if(user && !hasPermission){
+    toast.error('You are not authorized to access this page');
+    navigate('/');
+  }
+  }, [user, hasPermission, navigate]);
 
 
   const assignWorkMutation = useMutation({
@@ -114,19 +98,7 @@ const OutlinerUpload: React.FC = () => {
     navigate(`/outliner/${documentId}`);
   };
 
-  // const handleDeleteClick = async (e: React.MouseEvent, documentId: string) => {
-  //   e.stopPropagation(); // Prevent row click
-  //   if (globalThis.confirm('Are you sure you want to delete this document?')) {
-  //     await deleteDocumentMutation.mutateAsync(documentId);
-  //   }
-  // };
 
-  // const handleRestoreClick = async (e: React.MouseEvent, documentId: string) => {
-  //   e.stopPropagation(); // Prevent row click
-  //   await restoreDocumentMutation.mutateAsync(documentId);
-  // };
-
- 
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -145,7 +117,7 @@ const OutlinerUpload: React.FC = () => {
             >
               {assignWorkMutation.isPending ? 'Assigning...' : 'Assign me a work'}
             </Button>
-            {isAdmin && (
+            {isAdminOrReviewer && (
             <Link to="/outliner-admin">
              <Button variant="outline" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
@@ -277,24 +249,3 @@ const OutlinerUpload: React.FC = () => {
 };
 
 export default OutlinerUpload;
-
-type StatusPreviewProps={
-  status:OutlineDocumentStatus
-}
-
-const StatusPreview = ({status}:StatusPreviewProps) => {
-  const statusIcons = {
-    "completed": Check,
-    "active": Play,
-    "rejected": Cross,
-    "approved": CheckLine
-  };
-  if(status===''||!status) return null;
-  const Icon = statusIcons[status];
-  if (!Icon) return null;
-  return (
-    <div title={status}>
-      <Icon className="w-4 h-4" />
-    </div>
-  );
-};

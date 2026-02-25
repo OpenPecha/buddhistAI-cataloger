@@ -4,6 +4,9 @@ import { useAuth0 } from '@auth0/auth0-react';
 import Navigation from './components/Navigation';
 import ProtectedRoute from './components/ProtectedRoute';
 import { getUserByEmail, createUser } from './api/settings';
+import OutlinerAdminUsers from './pages/OutlinerAdminUsers';
+import { useUser } from './hooks/useUser';
+import { toast } from 'sonner';
 
 // Lazy load page components
 const TextsPage = lazy(() => import('./pages/Text'));
@@ -181,6 +184,12 @@ function App() {
               <OutlinerAdminSegment />
             </ProtectedRoute>
           } />
+          <Route path="/outliner-admin/users" element={
+            <ProtectedRoute>
+              <OutlinerAdminNav />
+              <OutlinerAdminUsers />
+            </ProtectedRoute>
+          } />
         </Routes>
         </Suspense>
         </div>
@@ -195,15 +204,22 @@ function App() {
 
 const OutlinerAdminNav = () => {
   const location = useLocation();
+  const { user } = useUser();
+  const isAdmin = user?.role === 'admin';
   const adminLinks = [
     { to: "/outliner-admin", label: "Overview" },
     { to: "/outliner-admin/documents", label: "Documents" },
+    { to: "/outliner-admin/users", label: "Users" },
   ];
 
   return (
     <div className="absolute top-2 left-1/2 -translate-x-1/2 flex space-x-4 mb-6 justify-center bg-white rounded-md px-2 py-1">
-      {adminLinks.map(({ to, label }) => (
+      {adminLinks.map(({ to, label }) => {
+        if(!isAdmin && label === "Users") return null;
+
+        return(
         <Link
+      
           key={to}
           to={to}
           className={` text-sm ${
@@ -213,7 +229,7 @@ const OutlinerAdminNav = () => {
         >
           {label}
         </Link>
-      ))}
+      )})}
     </div>
   );
 };
