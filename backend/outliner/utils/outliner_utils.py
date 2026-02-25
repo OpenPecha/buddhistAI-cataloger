@@ -54,30 +54,6 @@ def get_document_with_cache(db: Session, document_id: str) -> Optional[OutlinerD
         return document
 
 
-def update_document_progress(db: Session, document_id: str):
-    """
-    Recalculate and update document progress using COUNT queries.
-    DEPRECATED: Use incremental_update_document_progress for better performance.
-    Kept for backward compatibility with endpoints that need full recalculation.
-    """
-    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
-    if not document:
-        return
-    
-    # Count total and annotated segments
-    total = db.query(func.count(OutlinerSegment.id)).filter(
-        OutlinerSegment.document_id == document_id
-    ).scalar()
-    
-    annotated = db.query(func.count(OutlinerSegment.id)).filter(
-        OutlinerSegment.document_id == document_id,
-        OutlinerSegment.is_annotated == True
-    ).scalar()
-    
-    document.total_segments = total
-    document.annotated_segments = annotated
-    document.update_progress()
-    # Note: Don't commit here - let the caller handle transaction
 
 
 def incremental_update_document_progress(

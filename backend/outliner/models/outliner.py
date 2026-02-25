@@ -17,11 +17,6 @@ class OutlinerDocument(Base):
     order: Mapped[int] = mapped_column(Integer, nullable=True,default=0)
     category: Mapped[str | None] = mapped_column(String, nullable=True,default='uncategorized')
     
-    # Progress tracking
-    total_segments: Mapped[int] = mapped_column(Integer, default=0)  # Total number of segments
-    annotated_segments: Mapped[int] = mapped_column(Integer, default=0)  # Segments with title/author
-    progress_percentage: Mapped[float] = mapped_column(Float, default=0.0)  # 0-100
-    
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

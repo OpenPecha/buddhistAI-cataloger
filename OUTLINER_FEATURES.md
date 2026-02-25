@@ -115,7 +115,6 @@ Helper functions for:
   - `set_document_content_in_cache()`: Cache document content
   - `invalidate_document_content_cache()`: Clear cache
 - **Progress Tracking**:
-  - `update_document_progress()`: Full recalculation (deprecated)
   - `incremental_update_document_progress()`: Optimized incremental updates
   - `get_annotation_status_delta()`: Calculate annotation change delta
 - **Text Processing**:

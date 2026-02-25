@@ -51,7 +51,7 @@ const OutlinerUpload: React.FC = () => {
   // Fetch documents list with optional deleted filter
   const { data: documents = [], isLoading: isLoadingDocuments, refetch } = useQuery<OutlinerDocumentListItem[]>({
     queryKey: ['outliner-documents', userId],
-    queryFn: () => listOutlinerDocuments(userId, 0, 100),
+    queryFn: () => listOutlinerDocuments(userId, 0, 10),
     enabled: !!userId,
   });
 
@@ -98,7 +98,7 @@ const OutlinerUpload: React.FC = () => {
     navigate(`/outliner/${documentId}`);
   };
 
-
+  
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -169,6 +169,8 @@ const OutlinerUpload: React.FC = () => {
                   const isDeleted = doc.status === 'deleted';
                   const isActive=doc.status==='active'||doc.status==='completed';
                   const checked_percentage = (doc.checked_segments || 0) / (doc.total_segments || 1) * 100;
+                  const utcDate = new Date(doc.updated_at);
+                  const timestamp = new Date(utcDate.getTime() + (5 * 60 + 30) * 60 * 1000);
                   return (
                   <TableRow
                     key={doc.id}
@@ -193,7 +195,7 @@ const OutlinerUpload: React.FC = () => {
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-2">
                           <BarChart3 className="w-4 h-4 text-gray-400" />
-                          <span className="font-medium text-sm">Checked: {doc.checked_segments || 0} / {doc.total_segments+1}</span>
+                          <span className="font-medium text-sm">Checked: {doc.checked_segments || 0} / {doc.total_segments}</span>
                         </div>
                         
                         <div className='flex gap-2 items-center'>
@@ -205,7 +207,7 @@ const OutlinerUpload: React.FC = () => {
                     <TableCell>
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Calendar className="w-4 h-4" />
-                        {formatDistanceToNow(new Date(doc.updated_at), { addSuffix: true })}
+                        {formatDistanceToNow(new Date(timestamp), { addSuffix: true })}
 
                       </div>
                     </TableCell>

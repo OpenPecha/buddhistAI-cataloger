@@ -12,7 +12,6 @@ from sqlalchemy.orm.session import identity
 from outliner.models.outliner import OutlinerDocument, OutlinerSegment
 from outliner.utils.outliner_utils import (
     get_document_with_cache,
-    update_document_progress,
     incremental_update_document_progress,
     get_annotation_status_delta,
     get_comments_list,
@@ -132,13 +131,22 @@ def list_documents(
             OutlinerSegment.status != 'checked'
         ).scalar() or 0
         
+        total = db.query(func.count(OutlinerSegment.id)).filter(
+            OutlinerSegment.document_id == doc.id
+        ).scalar() or 0
+        
+        annotated = db.query(func.count(OutlinerSegment.id)).filter(
+            OutlinerSegment.document_id == doc.id,
+            OutlinerSegment.is_annotated == True
+        ).scalar() or 0
+        
         result.append({
             "id": doc.id,
             "filename": doc.filename,
             "user_id": doc.user_id,
-            "total_segments": doc.total_segments,
-            "annotated_segments": doc.annotated_segments,
-            "progress_percentage": doc.progress_percentage,
+            "total_segments": total,
+            "annotated_segments": annotated,
+            "progress_percentage": (annotated / total) * 100 if total > 0 else 0,
             "checked_segments": checked,
             "unchecked_segments": unchecked,
             "status": doc.status,
@@ -305,8 +313,6 @@ def reset_segments(db: Session, document_id: str) -> None:
     # Delete all segments for this document
     db.query(OutlinerSegment).filter(OutlinerSegment.document_id == document_id).delete()
     
-    # Update document progress
-    update_document_progress(db, document_id)
     db.commit()
 
 
@@ -355,7 +361,6 @@ def create_segment(
     db_segment.update_annotation_status()
     
     db.add(db_segment)
-    update_document_progress(db, document_id)
     db.commit()
     db.refresh(db_segment)
     
@@ -401,7 +406,6 @@ def create_segments_bulk(
         db_segments.append(db_segment)
         db.add(db_segment)
     
-    update_document_progress(db, document_id)
     db.commit()
 
     for seg in db_segments:
@@ -563,9 +567,7 @@ def update_segments_bulk(
         segment.updated_at = datetime.utcnow()
         updated_segments.append(segment)
     
-    # Update progress for all affected documents
-    for doc_id in document_ids:
-        update_document_progress(db, doc_id)
+  
     
     db.commit()
 
@@ -673,7 +675,6 @@ def split_segment(
         seg.segment_index += 1
     
     db.add(new_segment)
-    update_document_progress(db, segment.document_id)
     db.commit()
     db.refresh(segment)
     db.refresh(new_segment)
@@ -720,21 +721,24 @@ def merge_segments(
     first_segment.parent_segment_id = merged_parent_id
     first_segment.update_annotation_status()
     
+    # Get IDs of segments to be deleted (all except the first)
+    segments_to_delete_ids = [seg.id for seg in segments[1:]]
+    
     # Delete other segments and update indices
     for seg in segments[1:]:
         db.delete(seg)
     
-    # Update indices of following segments
+    # Update indices of following segments (exclude segments being deleted)
     following_segments = db.query(OutlinerSegment).filter(
         OutlinerSegment.document_id == document_id,
-        OutlinerSegment.segment_index > first_segment.segment_index
+        OutlinerSegment.segment_index > first_segment.segment_index,
+        ~OutlinerSegment.id.in_(segments_to_delete_ids)  # Exclude segments being deleted
     ).all()
     
     shift_amount = len(segments) - 1
     for seg in following_segments:
         seg.segment_index -= shift_amount
     
-    update_document_progress(db, document_id)
     db.commit()
     db.refresh(first_segment)
 
@@ -761,7 +765,6 @@ def delete_segment(db: Session, segment_id: str) -> None:
     for seg in following_segments:
         seg.segment_index -= 1
     
-    update_document_progress(db, document_id)
     db.commit()
 
 
@@ -782,7 +785,6 @@ def update_segment_status(
     segment.status = status
     segment.updated_at = datetime.utcnow()
     
-    update_document_progress(db, segment.document_id)
     db.commit()
     db.refresh(segment)
     
@@ -936,8 +938,6 @@ def bulk_segment_operations(
         
         result_segments.extend(new_segments)
     
-    # Update document progress
-    update_document_progress(db, document_id)
     
     # Commit all changes in a single transaction
     db.commit()
