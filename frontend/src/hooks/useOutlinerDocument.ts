@@ -282,6 +282,8 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
       
       // Refetch to ensure consistency with server state (in case server made different changes)
       queryClient.invalidateQueries({ queryKey: ['outliner-document', documentId] });
+      // Also invalidate documents list so Dashboard shows updated segment counts
+      queryClient.invalidateQueries({ queryKey: ['outliner-documents'] });
       toast.success('Segment split successfully');
     },
   });
@@ -306,6 +308,8 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
       });
       // Only update UI on success
       queryClient.invalidateQueries({ queryKey: ['outliner-document', documentId] });
+      // Also invalidate documents list so Dashboard shows updated segment counts
+      queryClient.invalidateQueries({ queryKey: ['outliner-documents'] });
       toast.success('Segments merged successfully');
     },
     onError: (error: Error, segmentIds) => {
@@ -484,6 +488,8 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
     onSuccess: () => {
       // Refetch to ensure consistency with server state
       queryClient.invalidateQueries({ queryKey: ['outliner-document', documentId] });
+      // Also invalidate documents list so Dashboard shows updated segment counts
+      queryClient.invalidateQueries({ queryKey: ['outliner-documents'] });
       toast.success('Segments reset successfully');
     },
   });
@@ -570,6 +576,8 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
     onSuccess: (data) => {
       // Refetch to ensure consistency with server state (server IDs will replace temp IDs)
       queryClient.invalidateQueries({ queryKey: ['outliner-document', documentId] });
+      // Also invalidate documents list so Dashboard shows updated segment counts
+      queryClient.invalidateQueries({ queryKey: ['outliner-documents'] });
       toast.success(`Created ${data.length} segment${data.length > 1 ? 's' : ''} successfully`);
     },
   });

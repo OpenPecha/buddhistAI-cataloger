@@ -110,7 +110,7 @@ const OutlinerUpload: React.FC = () => {
        
                 <Button 
               onClick={assignWork}
-              disabled={assignWorkMutation.isPending || !userId }
+              disabled={assignWorkMutation.isPending || !userId || documents.some(doc => doc.status === 'active' && doc.checked_segments < doc.total_segments)}
             >
               {assignWorkMutation.isPending ? 'Assigning...' : 'Assign me a work'}
             </Button>
