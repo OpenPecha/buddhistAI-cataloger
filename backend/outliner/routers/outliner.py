@@ -142,6 +142,9 @@ class DocumentListResponse(BaseModel):
     id: str
     filename: Optional[str] = None
     user_id: Optional[str] = None
+    total_segments: int
+    annotated_segments: int
+    progress_percentage: float
     checked_segments: int  # Number of checked segments
     unchecked_segments: int  # Number of unchecked segments
     status: Optional[str] = None  # active, completed, deleted, approved, rejected

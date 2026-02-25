@@ -49,7 +49,7 @@ const OutlinerUpload: React.FC = () => {
   const { uploadFile, isLoading } = useOutlinerDocument();
   const queryClient = useQueryClient();
   // Fetch documents list with optional deleted filter
-  const { data: documents = [], isLoading: isLoadingDocuments, refetch } = useQuery<OutlinerDocumentListItem[]>({
+  const { data: documents = [] , isLoading: isLoadingDocuments, refetch } = useQuery<OutlinerDocumentListItem[]>({
     queryKey: ['outliner-documents', userId],
     queryFn: () => listOutlinerDocuments(userId, 0, 10),
     enabled: !!userId,
@@ -97,9 +97,6 @@ const OutlinerUpload: React.FC = () => {
   const handleDocumentClick = (documentId: string) => {
     navigate(`/outliner/${documentId}`);
   };
-
-  
-
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
@@ -210,34 +207,6 @@ const OutlinerUpload: React.FC = () => {
                         {formatDistanceToNow(new Date(timestamp), { addSuffix: true })}
 
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      {/* <div className="flex items-center gap-2">
-                        {isDeleted && isOwner && (
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={(e) => handleRestoreClick(e, doc.id)}
-                            disabled={restoreDocumentMutation.isPending}
-                            className="text-green-600 hover:text-green-700 hover:bg-green-50"
-                            title="Restore document"
-                          >
-                            <RotateCcw className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {!isDeleted && (
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={(e) => handleDeleteClick(e, doc.id)}
-                            disabled={deleteDocumentMutation.isPending}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                            title="Delete document"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div> */}
                     </TableCell>
                   </TableRow>
                 )})}
