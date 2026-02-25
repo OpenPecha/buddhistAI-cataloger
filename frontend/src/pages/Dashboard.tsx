@@ -17,6 +17,7 @@ import {
 import { FileText, Upload, Calendar, BarChart3, Trash2, RotateCcw, Filter, Settings, Check, Workflow, Cross, TheaterIcon, Play, CheckLine } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { Progress } from '@/components/ui/progress';
+import { formatDistanceToNow } from 'date-fns';
 
 // Simple modal implementation
 function Modal({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
@@ -48,37 +49,34 @@ const OutlinerUpload: React.FC = () => {
   const queryClient = useQueryClient();
   // Fetch documents list with optional deleted filter
   const { data: documents = [], isLoading: isLoadingDocuments, refetch } = useQuery<OutlinerDocumentListItem[]>({
-    queryKey: ['outliner-documents', userId, showDeleted],
-    queryFn: () => listOutlinerDocuments(userId, 0, 100, showDeleted),
+    queryKey: ['outliner-documents', userId],
+    queryFn: () => listOutlinerDocuments(userId, 0, 100),
     enabled: !!userId,
   });
 
   // Filter documents based on current view
-  const displayedDocuments = showDeleted
-    ? documents.filter(doc => doc.status === 'deleted')
-    : documents.filter(doc => doc.status !== 'deleted');
 
   // Delete document mutation
-  const deleteDocumentMutation = useMutation({
-    mutationFn: (documentId: string) => updateDocumentStatus(documentId, 'deleted', userId),
-    onSuccess: () => {
-      // Refetch documents list after deletion
-      queryClient.invalidateQueries({ queryKey: ['outliner-documents', userId] });
-    },
-  });
+  // const deleteDocumentMutation = useMutation({
+  //   mutationFn: (documentId: string) => updateDocumentStatus(documentId, 'deleted', userId),
+  //   onSuccess: () => {
+  //     // Refetch documents list after deletion
+  //     queryClient.invalidateQueries({ queryKey: ['outliner-documents', userId] });
+  //   },
+  // });
 
   // Restore document mutation
-  const restoreDocumentMutation = useMutation({
-    mutationFn: (documentId: string) => updateDocumentStatus(documentId, 'active', userId),
-    onSuccess: () => {
-      // Refetch documents list after restoration
-      queryClient.invalidateQueries({ queryKey: ['outliner-documents', userId] });
-      toast.success('Document restored successfully');
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Failed to restore document');
-    },
-  });
+  // const restoreDocumentMutation = useMutation({
+  //   mutationFn: (documentId: string) => updateDocumentStatus(documentId, 'active', userId),
+  //   onSuccess: () => {
+  //     // Refetch documents list after restoration
+  //     queryClient.invalidateQueries({ queryKey: ['outliner-documents', userId] });
+  //     toast.success('Document restored successfully');
+  //   },
+  //   onError: (error: Error) => {
+  //     toast.error(error.message || 'Failed to restore document');
+  //   },
+  // });
 
 
   const assignWorkMutation = useMutation({
@@ -116,29 +114,19 @@ const OutlinerUpload: React.FC = () => {
     navigate(`/outliner/${documentId}`);
   };
 
-  const handleDeleteClick = async (e: React.MouseEvent, documentId: string) => {
-    e.stopPropagation(); // Prevent row click
-    if (globalThis.confirm('Are you sure you want to delete this document?')) {
-      await deleteDocumentMutation.mutateAsync(documentId);
-    }
-  };
+  // const handleDeleteClick = async (e: React.MouseEvent, documentId: string) => {
+  //   e.stopPropagation(); // Prevent row click
+  //   if (globalThis.confirm('Are you sure you want to delete this document?')) {
+  //     await deleteDocumentMutation.mutateAsync(documentId);
+  //   }
+  // };
 
-  const handleRestoreClick = async (e: React.MouseEvent, documentId: string) => {
-    e.stopPropagation(); // Prevent row click
-    await restoreDocumentMutation.mutateAsync(documentId);
-  };
+  // const handleRestoreClick = async (e: React.MouseEvent, documentId: string) => {
+  //   e.stopPropagation(); // Prevent row click
+  //   await restoreDocumentMutation.mutateAsync(documentId);
+  // };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
+ 
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -150,24 +138,10 @@ const OutlinerUpload: React.FC = () => {
             <p className="text-gray-600">Manage your text documents and annotations</p>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              onClick={() => setShowDeleted(!showDeleted)}
-              variant={showDeleted ? "default" : "outline"}
-              className="flex items-center gap-2"
-            >
-              <Filter className="w-4 h-4" />
-              {showDeleted ? 'Show Active' : 'Show Deleted'}
-            </Button>
-            {/* <Button
-              onClick={() => setShowUpload(true)}
-              className="flex items-center gap-2"
-            >
-              <Upload className="w-4 h-4" />
-              Upload New
-            </Button> */}
+       
                 <Button 
               onClick={assignWork}
-              disabled={assignWorkMutation.isPending || !userId}
+              disabled={assignWorkMutation.isPending || !userId }
             >
               {assignWorkMutation.isPending ? 'Assigning...' : 'Assign me a work'}
             </Button>
@@ -202,29 +176,13 @@ const OutlinerUpload: React.FC = () => {
             </div>
           </div>
         )}
-        {!isLoadingDocuments && displayedDocuments.length === 0 && (
+        {!isLoadingDocuments && documents.length === 0 && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
             <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              {showDeleted ? 'No deleted documents' : 'No documents yet'}
-            </h2>
-            <p className="text-gray-600 mb-6">
-              {showDeleted 
-                ? 'You don\'t have any deleted documents' 
-                : 'Get started by uploading your first document'}
-            </p>
-            {!showDeleted && (
-              <Button
-                onClick={() => setShowUpload(true)}
-                className="flex items-center gap-2 mx-auto"
-              >
-                <Upload className="w-4 h-4" />
-                Upload Your First Document
-              </Button>
-            )}
+            Get started by uploading your first document
           </div>
         )}
-        {!isLoadingDocuments && displayedDocuments.length > 0 && (
+        {!isLoadingDocuments && documents.length > 0 && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
             <Table>
               <TableHeader>
@@ -232,14 +190,12 @@ const OutlinerUpload: React.FC = () => {
                   <TableHead className="font-semibold">Document</TableHead>
                   <TableHead className="font-semibold">Progress</TableHead>
                   <TableHead className="font-semibold">Last Updated</TableHead>
-                  <TableHead className="font-semibold w-20">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {displayedDocuments.map((doc) => {
+                {documents.map((doc) => {
                   const isDeleted = doc.status === 'deleted';
                   const isActive=doc.status==='active'||doc.status==='completed';
-                  const isOwner = doc.user_id === userId || !doc.user_id;
                   const checked_percentage = (doc.checked_segments || 0) / (doc.total_segments || 1) * 100;
                   return (
                   <TableRow
@@ -256,29 +212,20 @@ const OutlinerUpload: React.FC = () => {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <FileText className="w-5 h-5 text-blue-600" />
-                        <div>
                           <div className="font-medium text-gray-900">
                             {doc.filename || 'Untitled Document'}
                           </div>
-                          <div className="text-sm text-gray-500 mt-0.5">
-                            {doc.total_segments} segment{doc.total_segments === 1 ? '' : 's'}
-                          </div>
-                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-2">
                           <BarChart3 className="w-4 h-4 text-gray-400" />
-                          <span className="font-medium text-sm">Checked: {doc.checked_segments || 0} / {doc.total_segments}</span>
+                          <span className="font-medium text-sm">Checked: {doc.checked_segments || 0} / {doc.total_segments+1}</span>
                         </div>
-                        <div className="text-xs text-gray-500">
-                          Unchecked: {doc.unchecked_segments || 0}
-                        </div>
+                        
                         <div className='flex gap-2 items-center'>
-
                         <Progress value={checked_percentage} />
-                        <StatusPreview status={doc?.status||''}/>
                         </div>
                       </div>
                     </TableCell>
@@ -286,11 +233,12 @@ const OutlinerUpload: React.FC = () => {
                     <TableCell>
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Calendar className="w-4 h-4" />
-                        {formatDate(doc.updated_at)}
+                        {formatDistanceToNow(new Date(doc.updated_at), { addSuffix: true })}
+
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      {/* <div className="flex items-center gap-2">
                         {isDeleted && isOwner && (
                           <Button
                             variant="ghost"
@@ -315,7 +263,7 @@ const OutlinerUpload: React.FC = () => {
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         )}
-                      </div>
+                      </div> */}
                     </TableCell>
                   </TableRow>
                 )})}

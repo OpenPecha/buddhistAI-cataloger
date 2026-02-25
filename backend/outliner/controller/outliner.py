@@ -1072,6 +1072,8 @@ from bdrc.volume import SegmentInput, VolumeInput, get_volume, update_volume, up
 async def assign_volume(db: Session, user_id: str) -> OutlinerDocument:
     """Assign a volume to a document"""
     volume_data = await get_new_volume()
+    if volume_data is None:
+        raise HTTPException(status_code=400, detail="No volume found")
     chunks = volume_data["chunks"]
     text = ""
     for chunk in chunks:
@@ -1101,7 +1103,7 @@ async def assign_volume(db: Session, user_id: str) -> OutlinerDocument:
    
     # update the volume status to "in_progress"
     await update_volume_status(volume_id, "in_progress")
-    return text
+    return document
     
     
     
@@ -1151,4 +1153,6 @@ async def approve_document(db: Session, document_id: str) -> OutlinerDocument:
         base_text=base_text,
         segments=segment_inputs
     ))
+    
+    update_document_status(db, document_id, "approved")
     return response_bdrc
