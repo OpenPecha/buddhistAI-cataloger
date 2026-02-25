@@ -444,6 +444,18 @@ export const deleteSegmentComment = async (
   return handleApiResponse(response);
 };
 
+export const assignVolume = async (user_id: string): Promise<OutlinerDocument> => {
+  const params = new URLSearchParams();
+  params.append('user_id', user_id);
+  
+  const response = await fetch(`${API_URL}/outliner/assign_volume?${params.toString()}`, {
+    method: 'POST',
+  });
+
+  return handleApiResponse(response);
+};
+
+
 export const updateDocumentStatus = async (
   documentId: string,
   status: string,
