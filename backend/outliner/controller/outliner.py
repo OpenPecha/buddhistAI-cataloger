@@ -35,10 +35,7 @@ def create_document(
         content=content,
         filename=filename,
         user_id=user_id,
-        total_segments=0,
-        annotated_segments=0,
         status='active',
-        progress_percentage=0.0
     )
     db.add(db_document)
     db.commit()
@@ -144,9 +141,6 @@ def list_documents(
             "id": doc.id,
             "filename": doc.filename,
             "user_id": doc.user_id,
-            "total_segments": total,
-            "annotated_segments": annotated,
-            "progress_percentage": (annotated / total) * 100 if total > 0 else 0,
             "checked_segments": checked,
             "unchecked_segments": unchecked,
             "status": doc.status,
@@ -295,11 +289,8 @@ def get_document_progress(db: Session, document_id: str) -> Dict[str, Any]:
     
     return {
         "document_id": document_id,
-        "total_segments": document.total_segments,
-        "annotated_segments": document.annotated_segments,
         "checked_segments": checked or 0,
         "unchecked_segments": unchecked or 0,
-        "progress_percentage": document.progress_percentage,
         "updated_at": document.updated_at
     }
 
