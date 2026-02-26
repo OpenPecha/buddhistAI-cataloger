@@ -140,13 +140,14 @@ async def create_translation(instance_id: str, translation: CreateTranslation):
     
     try:
         payload = translation.model_dump(exclude_none=True)
-        user = payload.pop("user", None)
+        payload.pop("user", None)
       
         response = requests.post(
             f"{API_ENDPOINT}/instances/{instance_id}/translation", 
             json=payload,
             timeout=30
         )
+        
         if response.status_code != 201:
             raise HTTPException(status_code=response.status_code, detail=response.text)
         
