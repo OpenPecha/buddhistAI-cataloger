@@ -22,19 +22,6 @@ export const Workspace: React.FC = () => {
   // Save scroll position immediately when split happens, debounced value for restoration
   const scrollPositionRef = useRef<number | null>(null);
 
-  useEffect(() => {
-    // Use requestAnimationFrame to ensure DOM has updated
-    setTimeout(() => {
-      if (activeSegmentId) {
-        const segmentElement = document.getElementById(activeSegmentId);
-        if (segmentElement) {
-          segmentElement.scrollIntoView({ behavior: 'smooth' });
-        }
-      }
-    }, 100);
-
-  }, [activeSegmentId]);
-
 
 
   const rowHeight = useDynamicRowHeight({
