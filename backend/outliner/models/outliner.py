@@ -29,13 +29,7 @@ class OutlinerDocument(Base):
         order_by="OutlinerSegment.segment_index"
     )
 
-    def update_progress(self):
-        """Recalculate progress based on annotated segments"""
-        if self.total_segments > 0:
-            self.progress_percentage = (self.annotated_segments / self.total_segments) * 100
-        else:
-            self.progress_percentage = 0.0
-        self.updated_at = datetime.utcnow()
+ 
 
 
 class OutlinerSegment(Base):

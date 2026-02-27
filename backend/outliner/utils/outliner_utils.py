@@ -76,33 +76,14 @@ def incremental_update_document_progress(
     
     Performance: 1 SELECT + 1 UPDATE instead of 2 COUNT queries + 1 SELECT + 1 UPDATE
     """
-    if total_delta == 0 and annotated_delta == 0:
-        # No change needed, but still update progress percentage in case it's stale
-        document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
-        if document:
-            document.update_progress()
-        return
-    
+
     # PERFORMANCE FIX: Fetch document once, update in memory
     # This is still much faster than COUNT queries on large segment tables
     document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
     if not document:
         return  # Document doesn't exist, skip update
     
-    # Update counters atomically
-    document.total_segments += total_delta
-    document.annotated_segments += annotated_delta
     
-    # Ensure counters don't go negative (safety check)
-    if document.total_segments < 0:
-        document.total_segments = 0
-    if document.annotated_segments < 0:
-        document.annotated_segments = 0
-    if document.annotated_segments > document.total_segments:
-        document.annotated_segments = document.total_segments
-    
-    # Recalculate progress percentage
-    document.update_progress()
     # Note: Don't commit here - let the caller handle transaction
 
 

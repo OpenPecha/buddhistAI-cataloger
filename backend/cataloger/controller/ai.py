@@ -328,7 +328,6 @@ def create_segments_from_positions(
         OutlinerSegment.document_id == document_id,
         OutlinerSegment.is_annotated == True
     ).scalar() or 0
-    document.update_progress()
     
     # Commit all changes
     db.commit()
