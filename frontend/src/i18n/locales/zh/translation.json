@@ -44,7 +44,20 @@
     "description": "编目与管理藏传佛教文本",
     "totalTexts": "文本总数",
     "totalPersons": "人物总数",
-    "recentActivity": "最近活动"
+    "recentActivity": "最近活动",
+    "heroHeadline": "编目藏传佛教文本",
+    "heroTagline": "浏览、创建并管理文本与贡献者。关联 BDRC、添加元数据，参与 OpenPecha 编目协作。",
+    "browseTexts": "浏览文本",
+    "browsePersons": "浏览人物",
+    "featureTextsTitle": "文本",
+    "featureTextsDescription": "搜索与浏览文本目录。查看版本、对齐，创建译文或注释。",
+    "featurePersonsTitle": "人物",
+    "featurePersonsDescription": "作者、译者与注释者。管理人物记录并关联到文本。",
+    "statsCatalog": "文本目录",
+    "statsPersons": "贡献者",
+    "statsOpen": "开源",
+    "catalogSectionTitle": "开始使用",
+    "catalogSectionHint": "选择下方板块浏览或管理内容。"
   },
   "text": {
     "title": "文本",

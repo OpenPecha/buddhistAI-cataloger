@@ -44,7 +44,20 @@
     "description": "Catalog and manage Tibetan Buddhist texts",
     "totalTexts": "Total Texts",
     "totalPersons": "Total Persons",
-    "recentActivity": "Recent Activity"
+    "recentActivity": "Recent Activity",
+    "heroHeadline": "Catalog Tibetan Buddhist Texts",
+    "heroTagline": "Browse, create, and manage texts and their contributors. Link to BDRC, add metadata, and collaborate on the OpenPecha catalog.",
+    "browseTexts": "Browse Texts",
+    "browsePersons": "Browse Persons",
+    "featureTextsTitle": "Texts",
+    "featureTextsDescription": "Search and browse the text catalog. View instances, alignments, and create translations or commentaries.",
+    "featurePersonsTitle": "Persons",
+    "featurePersonsDescription": "Authors, translators, and commentators. Manage person records and link them to texts.",
+    "statsCatalog": "Text Catalog",
+    "statsPersons": "Contributors",
+    "statsOpen": "Open Source",
+    "catalogSectionTitle": "Get started",
+    "catalogSectionHint": "Choose a section below to browse or manage content."
   },
   "text": {
     "title": "Text",
