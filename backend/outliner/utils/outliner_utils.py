@@ -59,8 +59,6 @@ def get_document_with_cache(db: Session, document_id: str) -> Optional[OutlinerD
 def incremental_update_document_progress(
     db: Session,
     document_id: str,
-    total_delta: int = 0,
-    annotated_delta: int = 0
 ):
     """
     PERFORMANCE OPTIMIZED: Incrementally update document progress without COUNT queries.

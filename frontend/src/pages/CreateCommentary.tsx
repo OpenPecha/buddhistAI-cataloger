@@ -225,7 +225,6 @@ const CreateCommentary = () => {
 
       // Prepare commentary data
       const commentaryData: any = {
-        bdrc: bdrcId,
         language,
         content: cleanedContent,
         title,
@@ -236,6 +235,10 @@ const CreateCommentary = () => {
         license: copyright === "Unknown" ? "unknown" : license,
         category_id: categoryId && categoryId.trim() !== '' ? categoryId : null
       };
+
+      if (bdrcId && bdrcId.trim() !== '') {
+        commentaryData.bdrc = bdrcId;
+      }
       // Add alt_titles if any exist
       if (altTitles.length > 0) {
         commentaryData.alt_titles = altTitles.filter(t => t.trim() !== '');
