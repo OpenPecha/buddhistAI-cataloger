@@ -34,7 +34,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
     error: annotationError
   } = useAnnnotation(segmentationAnnotationId);
   const {data:text} = useText(text_id || '');
-  const title_text = text?.title?.tib || text?.title?.bo || text?.title?.en || t('instance.content');
+  const title_text = text?.title?.tib || text?.title?.bo || text?.title?.en || text?.title?.sa || text?.title?.pi || t('instance.content');
   const toggleAnnotation = (annotationType: string) => {
     setExpandedAnnotations(prev => 
       prev.includes(annotationType) 

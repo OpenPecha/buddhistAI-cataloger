@@ -142,7 +142,7 @@ function TextInstances() {
     );
   }
 
-  const title = text?.title?.bo || text?.title?.en || text?.title?.sa || t('textInstances.untitled');
+  const title = text?.title?.bo || text?.title?.en || text?.title?.sa || text?.title?.pi|| t('textInstances.untitled');
 
   const textWithoutAlignmentExists = relatedInstances.some((relatedInstance: RelatedInstance) => !relatedInstance.annotation);
   // Helper function to get title - always get the first value from dictionary
