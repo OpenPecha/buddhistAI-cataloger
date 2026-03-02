@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import {  useNavigate } from "react-router-dom";
 import TextList from "@/components/TextList";
 import TextFilter from "@/components/TextFilter";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const TextsPage = () => {
   const { t } = useTranslation();
@@ -73,9 +74,7 @@ const TextsPage = () => {
     setOffset(0);
   };
 
-  const handleCreateClick = () => {
-    navigate("/create");
-  };
+  
 
   // Determine what to display
   const displayTexts = filteredFoundText ? [filteredFoundText] : texts;
@@ -114,13 +113,22 @@ const TextsPage = () => {
             </div>
           </div>
         )}
-        {isLoading && <div className="flex justify-center items-center h-64 bg-white rounded-lg shadow-md mx-1 sm:mx-0">
-            <div className="text-center px-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-              <p className="text-sm sm:text-base text-gray-600">{t('textsPage.loadingTexts')}</p>
+        {isLoading && (
+          <div className="bg-white rounded-lg shadow-md mx-1 sm:mx-0 overflow-hidden">
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <div className="h-5 bg-gray-200 rounded w-16 animate-pulse" />
+                <div className="h-5 bg-gray-200 rounded w-24 animate-pulse" />
+                <div className="h-5 bg-gray-200 rounded w-14 animate-pulse" />
+                <div className="h-5 bg-gray-200 rounded w-20 animate-pulse" />
+                <div className="h-5 bg-gray-200 rounded w-24 animate-pulse ml-auto" />
+              </div>
             </div>
+            {['sk1', 'sk2', 'sk3', 'sk4', 'sk5', 'sk6', 'sk7', 'sk8'].map((id) => (
+              <Skeleton key={id} />
+            ))}
           </div>
-          }
+        )}
           { error && (
           <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mx-1 sm:mx-0">
             <div className="text-center">

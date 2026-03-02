@@ -36,12 +36,13 @@ const TextListCard = ({ text }: TextListCardProps) => {
   }
 
   const getTypeLabel = (type: string): string => {
+    if (type === "none") return "";
     const labels: Record<string, string> = {
       root: t('textsPage.rootText'),
       translation: t('textsPage.translation'),
       commentary: t('textsPage.commentary'),
       translation_source:"Source",
-      none:"No Aligned Text"
+      none:"-"
     };
     return labels[type] || type;
   };
@@ -86,22 +87,17 @@ const TextListCard = ({ text }: TextListCardProps) => {
         )}
       </TableCell>
       
-      <TableCell>
-      {text.bdrc && (
-        <a href={getBdrclink(text.bdrc)} target="_blank" rel="noopener noreferrer">
-          <Badge className="bg-secondary-700 flex items-center gap-2">
-            {text.bdrc}
-          </Badge>
-        </a>
-      )}
-      </TableCell>
+    
       
       {/* Type Column */}
+
       <TableCell>
+        {getTypeLabel(text.type) && (
         <Badge className={`${getTypeColor(text.type)} flex items-center gap-2 w-fit`}>
-          <Book className="w-4 h-4" />
-          <span className="font-medium">{getTypeLabel(text.type)}</span>
-        </Badge>
+            <Book className="w-4 h-4" />
+            <span className="font-medium">{getTypeLabel(text.type)}</span>
+          </Badge>
+        )}
       </TableCell>
       
       {/* Language Column */}

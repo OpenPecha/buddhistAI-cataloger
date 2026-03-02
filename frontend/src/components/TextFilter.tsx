@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getLanguageLabel } from "@/utils/getLanguageLabel";
+import { Input } from './ui/input';
 
 type Param = {
   title: string;
@@ -66,7 +67,7 @@ function TextFilter({ param, setParam, clearSearch }: PropTextFilter) {
       <div className="flex flex-col sm:flex-row gap-3">
         {/* Search Input */}
         <div className="relative flex-1">
-          <input
+          <Input
             id="text-search"
             type="text"
             value={textSearch}
