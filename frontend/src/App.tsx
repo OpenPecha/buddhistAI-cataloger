@@ -70,7 +70,7 @@ function App() {
    
 
   <div
-    className="absolute inset-0 z-0"
+    className="absolute inset-0 -z-10"
     style={{
       backgroundImage: `
         linear-gradient(to right, #e2e8f0 1px, transparent 1px),
