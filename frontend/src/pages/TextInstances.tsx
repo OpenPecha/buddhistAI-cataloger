@@ -44,12 +44,38 @@ function TextInstances() {
     refetch: refetchRelated,
   } = useRelatedInstances(criticalInstance?.id || null);
 
-  // Loading state for instances
+  // Loading state for instances - skeleton loader
   if (isLoadingInstances) {
     return (
-      <div className="flex items-center justify-center min-h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        <span className="ml-2 text-gray-600">{t('textInstances.loadingTextDetails')}</span>
+      <div className="container mx-auto py-16 space-y-6 animate-pulse">
+        {/* Breadcrumb skeleton */}
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-16 bg-gray-200 rounded" />
+          <span className="text-gray-400">/</span>
+          <div className="h-4 w-32 bg-gray-200 rounded" />
+        </div>
+        <div className="sticky top-0 bg-white z-10 flex flex-col gap-4">
+          <div className="flex justify-between items-center px-2 sm:px-0">
+            <div className="h-8 w-3/4 max-w-md bg-gray-200 rounded" />
+            <div className="h-9 w-24 bg-gray-200 rounded" />
+          </div>
+          <div className="grid gap-6 px-2 sm:px-0">
+            {[1, 2, 3].map((id) => (
+              <div
+                key={id}
+                className="bg-white rounded-lg shadow-md border border-gray-200 p-4 sm:p-6"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+                  <div className="flex-1 space-y-2">
+                    <div className="h-5 bg-gray-200 rounded w-3/4" />
+                    <div className="h-4 w-20 bg-gray-200 rounded" />
+                  </div>
+                </div>
+                <div className="h-4 w-full bg-gray-100 rounded" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

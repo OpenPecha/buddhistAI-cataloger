@@ -67,22 +67,24 @@ function App() {
   return (
 
     <div className="min-h-screen w-full  relative text-gray-900">
-    {/* Diagonal Grid with Light */}
-    
-      <div
-    className="absolute inset-0 pointer-events-none -z-10"
+   
+
+  <div
+    className="absolute inset-0 z-0"
     style={{
       backgroundImage: `
-        linear-gradient(45deg, transparent 49%, #e5e7eb 49%, #e5e7eb 51%, transparent 51%),
-        linear-gradient(-45deg, transparent 49%, #e5e7eb 49%, #e5e7eb 51%, transparent 51%)
+        linear-gradient(to right, #e2e8f0 1px, transparent 1px),
+        linear-gradient(to bottom, #e2e8f0 1px, transparent 1px)
       `,
-      backgroundSize: "40px 40px",
-       WebkitMaskImage:
-            "radial-gradient(ellipse 100% 80% at 50% 100%, #000 50%, transparent 90%)",
-          maskImage:
-            "radial-gradient(ellipse 100% 80% at 50% 100%, #000 50%, transparent 90%)",
+      backgroundSize: "20px 30px",
+      WebkitMaskImage:
+        "radial-gradient(ellipse 70% 60% at 50% 100%, #000 60%, transparent 100%)",
+      maskImage:
+        "radial-gradient(ellipse 70% 60% at 50% 100%, #000 60%, transparent 100%)",
     }}
   />
+
+
     <div className="h-screen overflow-auto  text-xl z-10"
       >
 

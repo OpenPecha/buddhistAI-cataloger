@@ -81,14 +81,14 @@ const TextsPage = () => {
   const showPagination = !filteredFoundText;
 
   return (
-    <div className="container mx-auto py-16  space-y-4 sm:space-y-6 px-2 sm:px-0">
+    <div className="container  mx-auto py-16  space-y-4 sm:space-y-6 px-2 sm:px-0">
       {/* Header */}
       <div className={`flex flex-col sm:flex-row justify-between items-center sm:items-center gap-3 sm:gap-0`}>
         <h2 className="text-xl sm:text-2xl font-bold text-gray-800 text-center sm:text-left">{t('textsPage.title')}</h2>
       </div>
 
       {/* Content */}
-      <div className="space-y-4">
+      <div className="space-y-4 bg-white ">
       <TextFilter param={param} setParam={setParam} clearSearch={clearSearch}  />
         
 
@@ -145,7 +145,7 @@ const TextsPage = () => {
 
         {/* Text Cards Section with Loading/Error States */}
          {!isLoading && displayTexts.length === 0  && (
-          <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mx-1 sm:mx-0">
+          <div className="bg-white  rounded-lg shadow-lg p-4 sm:p-8 mx-1 sm:mx-0">
             <div className="text-center text-gray-500">
               <p className="text-base sm:text-lg">{t('textsPage.noTextsFound')}</p>
             </div>
