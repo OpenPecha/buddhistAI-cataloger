@@ -59,30 +59,23 @@ def get_document_with_cache(db: Session, document_id: str) -> Optional[OutlinerD
 def incremental_update_document_progress(
     db: Session,
     document_id: str,
+    total_delta: int = 0,
+    annotated_delta: int = 0,
 ):
     """
-    PERFORMANCE OPTIMIZED: Incrementally update document progress without COUNT queries.
+    Placeholder for incremental document progress updates.
     
-    This function updates document progress counters atomically using the current
-    values plus deltas, avoiding expensive COUNT(*) queries.
+    Currently a no-op — progress is computed via COUNT queries in get_documents.
+    Once cached progress columns are added to OutlinerDocument, this function
+    will apply deltas atomically instead.
     
     Args:
         db: Database session
         document_id: Document ID to update
         total_delta: Change in total_segments count (+1 for create, -1 for delete, 0 for update)
         annotated_delta: Change in annotated_segments count (+1 when annotation added, -1 when removed, 0 for no change)
-    
-    Performance: 1 SELECT + 1 UPDATE instead of 2 COUNT queries + 1 SELECT + 1 UPDATE
     """
-
-    # PERFORMANCE FIX: Fetch document once, update in memory
-    # This is still much faster than COUNT queries on large segment tables
-    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
-    if not document:
-        return  # Document doesn't exist, skip update
-    
-    
-    # Note: Don't commit here - let the caller handle transaction
+    pass
 
 
 def get_annotation_status_delta(

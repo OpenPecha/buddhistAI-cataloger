@@ -4,7 +4,7 @@ import type { TextSegment } from '@/components/outliner/types';
 // ==================== Types ====================
 
 export type OutlineDocumentStatus ='completed' | 'active' | 'rejected' | 'approved'|'deleted';
-export type OutlineSegmentStatus="checked"|"unchecked";
+export type OutlineSegmentStatus="checked"|"unchecked"|"approved";
 export interface OutlinerDocument {
   id: string;
   content: string;

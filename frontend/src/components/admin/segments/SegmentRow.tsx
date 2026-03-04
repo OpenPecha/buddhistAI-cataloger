@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
+import { useParams } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { updateSegment } from '@/api/outliner';
+import { toast } from 'sonner';
 import type { Segment } from '../shared/types';
 
 interface SegmentRowProps {
@@ -18,31 +21,33 @@ function SegmentRow({
   onToggleExpansion,
   onSegmentClick,
 }: SegmentRowProps) {
-  const {
-    isSaving,
-    updateSegment: updateSegmentBackend,
-  } = useOutlinerDocument();
+  const { documentId } = useParams<{ documentId: string }>();
+  const queryClient = useQueryClient();
+  const [isSaving, setIsSaving] = useState(false);
 
- 
+  const statusMutation = useMutation({
+    mutationFn: (newStatus: 'approved' | 'unchecked') =>
+      updateSegment(segment.id, { status: newStatus }),
+    onSuccess: (_data, newStatus) => {
+      queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] });
+      toast.success(newStatus === 'approved' ? 'Segment approved' : 'Segment reset');
+    },
+    onError: (error: Error, newStatus) => {
+      toast.error(
+        `Failed to ${newStatus === 'approved' ? 'approve' : 'reset'} segment: ${error.message}`
+      );
+    },
+    onSettled: () => setIsSaving(false),
+  });
 
-  const handleSave = async () => {
-    try {
-      await updateSegmentBackend(segment.id, {
-        status: 'approved',
-      });
-    } catch(e) {
-      console.warn(e);
-    }
+  const handleSave = () => {
+    setIsSaving(true);
+    statusMutation.mutate('approved');
   };
 
-  const handleReset = async () => {
-    try {
-      await updateSegmentBackend(segment.id,{
-        status:"unchecked",
-      })
-    } catch(e){
-      console.warn(e)
-    }
+  const handleReset = () => {
+    setIsSaving(true);
+    statusMutation.mutate('unchecked');
   };
 
 
@@ -144,7 +149,7 @@ function SegmentRow({
             disabled={isSaving}
             variant="outline"
           >
-            {isSaving ? 'Saving...' : 'Save'}
+            {isSaving ? 'Saving...' : 'Approve'}
           </Button>
         ) : (segment.status === 'approved' &&
           <Button size="sm" onClick={handleReset} disabled={isSaving} variant="outline">

@@ -39,11 +39,13 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
 
 export const listUsers = async (
   skip: number = 0,
-  limit: number = 100
+  limit: number = 100,
+  role?: string
 ): Promise<PaginatedUserResponse> => {
   const params = new URLSearchParams();
   params.append('skip', skip.toString());
   params.append('limit', limit.toString());
+  if (role) params.append('role', role);
 
   const response = await fetch(`${API_URL}/settings/users?${params.toString()}`);
   return handleApiResponse(response);

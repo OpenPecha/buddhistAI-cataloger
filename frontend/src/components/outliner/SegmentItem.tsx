@@ -35,7 +35,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
   } = useActions()
   
   const isLoading = segmentLoadingStates?.get(segment.id) ?? false
-  const isChecked = segment.status === 'checked'
+  const isChecked = segment.status === 'checked' || segment.status === 'approved'
   const isFirstSegment = index === 0
   const isAttached = isFirstSegment && (segment.is_attached ?? false)
   const isActive = segment.id === activeSegmentId

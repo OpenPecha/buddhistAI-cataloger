@@ -261,16 +261,18 @@ async def upload_document(
 @router.get("/documents", response_model=List[DocumentListResponse])
 async def list_documents(
     user_id: Optional[str] = None,
+    status: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
     include_deleted: bool = False,
     db: Session = Depends(get_db)
 ):
     """
-    List all outliner documents, optionally filtered by user and deletion status.
-    
+    List all outliner documents, optionally filtered by user, status, and deletion status.
+
     Args:
-        user_id: Filter documents by user ID
+        user_id: Filter documents by user ID (annotator)
+        status: Filter by document status (active, completed, approved)
         skip: Number of documents to skip (pagination)
         limit: Maximum number of documents to return
         include_deleted: If False (default), exclude deleted documents. If True, include all documents.
@@ -278,6 +280,7 @@ async def list_documents(
     result = list_documents_ctrl(
         db=db,
         user_id=user_id,
+        status=status,
         skip=skip,
         limit=limit,
         include_deleted=include_deleted

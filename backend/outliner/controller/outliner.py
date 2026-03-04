@@ -89,16 +89,18 @@ def upload_document(
 def list_documents(
     db: Session,
     user_id: Optional[str] = None,
+    status: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
     include_deleted: bool = False
 ) -> List[Dict[str, Any]]:
     """
-    List all outliner documents, optionally filtered by user and deletion status.
-    
+    List all outliner documents, optionally filtered by user, status, and deletion status.
+
     Args:
         db: Database session
         user_id: Filter documents by user ID
+        status: Filter documents by status (active, completed, approved, etc.)
         skip: Number of documents to skip (pagination)
         limit: Maximum number of documents to return
         include_deleted: If False (default), exclude deleted documents. If True, include all documents.
@@ -106,7 +108,10 @@ def list_documents(
     query = db.query(OutlinerDocument)
     if user_id:
         query = query.filter(OutlinerDocument.user_id == user_id)
-    
+
+    if status:
+        query = query.filter(OutlinerDocument.status == status)
+
     # Filter out deleted documents by default
     if not include_deleted:
         query = query.filter(

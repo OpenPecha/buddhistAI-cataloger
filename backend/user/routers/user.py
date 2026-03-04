@@ -51,13 +51,25 @@ class PaginatedUserResponse(BaseModel):
 
 
 @router.get("", response_model=PaginatedUserResponse)
-async def get_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    """Get all users with pagination"""
-    # Get total count
-    total = db.query(func.count(User.id)).scalar()
-    
-    # Get paginated users
-    users = db.query(User).order_by(User.created_at.desc()).offset(skip).limit(limit).all()
+async def get_users(
+    skip: int = 0,
+    limit: int = 100,
+    role: Optional[str] = None,
+    permission: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Get all users with pagination, optionally filtered by role and permission."""
+    query = db.query(User)
+
+    if role:
+        query = query.filter(User.role == role)
+
+    if permission:
+        query = query.filter(User.permissions.contains(permission))
+
+    total = query.count()
+
+    users = query.order_by(User.created_at.desc()).offset(skip).limit(limit).all()
     
     # Convert permissions from string to list if needed
     user_responses = []

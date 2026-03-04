@@ -4,8 +4,9 @@ import { useUsers, useUserActions } from '../hooks';
 
 function OutlinerAdminUsers() {
   const [skip, setSkip] = useState(0);
+  const [roleFilter, setRoleFilter] = useState('');
   const limit = 20;
-  const { users, total, isLoading } = useUsers({ skip, limit });
+  const { users, total, isLoading } = useUsers({ skip, limit, role: roleFilter || undefined });
   const { updateUser, deleteUser } = useUserActions();
 
   const handleUserUpdate = async (
@@ -33,6 +34,11 @@ function OutlinerAdminUsers() {
     setSkip(newSkip);
   };
 
+  const handleRoleFilterChange = (role: string) => {
+    setRoleFilter(role);
+    setSkip(0);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -57,6 +63,8 @@ function OutlinerAdminUsers() {
           skip={skip}
           limit={limit}
           onPageChange={handlePageChange}
+          roleFilter={roleFilter}
+          onRoleFilterChange={handleRoleFilterChange}
         />
       </div>
     </div>
