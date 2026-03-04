@@ -4,7 +4,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { updateSegment } from '@/api/outliner';
+import { updateSegment, rejectSegment } from '@/api/outliner';
 import { toast } from 'sonner';
 import type { Segment } from '../shared/types';
 
@@ -40,9 +40,26 @@ function SegmentRow({
     onSettled: () => setIsSaving(false),
   });
 
+  const rejectMutation = useMutation({
+    mutationFn: () => rejectSegment(segment.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] });
+      toast.success('Segment rejected');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to reject segment: ${error.message}`);
+    },
+    onSettled: () => setIsSaving(false),
+  });
+
   const handleSave = () => {
     setIsSaving(true);
     statusMutation.mutate('approved');
+  };
+
+  const handleReject = () => {
+    setIsSaving(true);
+    rejectMutation.mutate();
   };
 
   const handleReset = () => {
@@ -69,10 +86,17 @@ function SegmentRow({
       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
         {segment.status === 'approved' ? (
           <span
-            className="inline-block rounded-full bg-blue-100 text-blue-800 px-2 py-1 text-xs font-semibold mr-1"
+            className="inline-block rounded-full bg-blue-100 text-blue-800 px-2 py-1 text-xs font-semibold"
             title="Segment approved"
           >
             Approved
+          </span>
+        ) : segment.status === 'rejected' ? (
+          <span
+            className="inline-block rounded-full bg-red-100 text-red-800 px-2 py-1 text-xs font-semibold"
+            title="Segment rejected"
+          >
+            Rejected{(segment.rejection_count ?? 0) > 1 ? ` (${segment.rejection_count}x)` : ''}
           </span>
         ) : (
           <span
@@ -143,19 +167,34 @@ function SegmentRow({
       </TableCell>
       <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium">
         {segment.status === 'checked' ? (
-          <Button
-            size="sm"
-            onClick={handleSave}
-            disabled={isSaving}
-            variant="outline"
-          >
-            {isSaving ? 'Saving...' : 'Approve'}
-          </Button>
-        ) : (segment.status === 'approved' &&
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={isSaving}
+              variant="outline"
+            >
+              {isSaving ? 'Saving...' : 'Approve'}
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleReject}
+              disabled={isSaving}
+              variant="outline"
+              className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+            >
+              Reject
+            </Button>
+          </div>
+        ) : segment.status === 'approved' ? (
           <Button size="sm" onClick={handleReset} disabled={isSaving} variant="outline">
             Reset
           </Button>
-        )}
+        ) : segment.status === 'rejected' ? (
+          <Button size="sm" onClick={handleReset} disabled={isSaving} variant="outline">
+            Reset
+          </Button>
+        ) : null}
       </TableCell>
     </TableRow>
     {isExpanded && (

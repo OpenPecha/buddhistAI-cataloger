@@ -1,8 +1,24 @@
-from sqlalchemy import String, Text, Integer, Float, DateTime, ForeignKey, Index,JSON
+from enum import Enum as PyEnum
+from sqlalchemy import String, Text, Integer, Float, DateTime, ForeignKey, Index, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 import uuid
 from core.database import Base
+
+
+class SegmentStatus(str, PyEnum):
+    UNCHECKED = "unchecked"
+    CHECKED = "checked"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+SEGMENT_STATUS_TRANSITIONS = {
+    SegmentStatus.UNCHECKED: {SegmentStatus.CHECKED},
+    SegmentStatus.CHECKED: {SegmentStatus.APPROVED, SegmentStatus.REJECTED},
+    SegmentStatus.REJECTED: {SegmentStatus.CHECKED},
+    SegmentStatus.APPROVED: {SegmentStatus.UNCHECKED},
+}
 
 
 class OutlinerDocument(Base):
@@ -60,7 +76,7 @@ class OutlinerSegment(Base):
         ForeignKey("outliner_segments.id", ondelete="SET NULL"),
         nullable=True
     )
-    status: Mapped[str | None] = mapped_column(String, nullable=True) # checked, unchecked
+    status: Mapped[str | None] = mapped_column(String, nullable=True) # checked, unchecked, approved, rejected
     # Status tracking
     is_annotated: Mapped[bool] = mapped_column(default=False)  # Has title or author
     comment: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)  # Can be array of comments or dict (for backward compatibility)
@@ -83,6 +99,40 @@ class OutlinerSegment(Base):
         Index("ix_outliner_segments_span", "document_id", "span_start", "span_end"),
     )
 
+    rejections: Mapped[list["SegmentRejection"]] = relationship(
+        "SegmentRejection",
+        back_populates="segment",
+        cascade="all, delete-orphan",
+        order_by="SegmentRejection.created_at"
+    )
+
     def update_annotation_status(self):
         """Update is_annotated flag based on title/author presence"""
         self.is_annotated = bool(self.title or self.author)
+
+
+class SegmentRejection(Base):
+    """Records each rejection event for annotator quality tracking"""
+    __tablename__ = "segment_rejections"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    segment_id: Mapped[str] = mapped_column(
+        String,
+        ForeignKey("outliner_segments.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    user_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True
+    )
+    reviewer_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    segment: Mapped["OutlinerSegment"] = relationship("OutlinerSegment", back_populates="rejections")

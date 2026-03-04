@@ -5,7 +5,7 @@ import type { Document } from '../components/admin/shared/types';
 import {
   useDocuments,
   useDocumentActions,
-  useAnnotators,
+  useOutlinerUsers,
 } from '../hooks';
 import type { DocumentFilters } from '../hooks';
 
@@ -23,7 +23,7 @@ function OutlinerAdminDocument() {
 
   const { documents, isLoading, isFetching } = useDocuments(filters);
   const { deleteDocument } = useDocumentActions();
-  const { annotators, isLoading: annotatorsLoading } = useAnnotators();
+  const { users: annotators, isLoading: annotatorsLoading } = useOutlinerUsers();
 
   const handleFilterChange = useCallback(
     (newStatus?: string, newAnnotator?: string) => {

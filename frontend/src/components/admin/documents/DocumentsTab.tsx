@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { Document } from '../shared/types';
-import type { Annotator } from '../../../hooks/useAnnotators';
+import type { OutlinerUser } from '../../../hooks/useOutlinerUsers';
 import DocumentRow from './DocumentRow';
 
 const STATUS_OPTIONS = [
@@ -15,7 +15,7 @@ interface DocumentsTabProps {
   isFetching: boolean;
   onDocumentSelect: (document: Document) => void;
   onDocumentDelete: (documentId: string) => void;
-  annotators: Annotator[];
+  annotators: OutlinerUser[];
   annotatorsLoading: boolean;
   currentStatus?: string;
   currentAnnotator?: string;

@@ -37,7 +37,8 @@ export const Workspace: React.FC = () => {
         <WorkspaceHeader
           headerConfig={{
             segmentsCount: segments.length,
-            checkedSegmentsCount: segments.filter((segment) => segment.status !== 'unchecked').length,
+            checkedSegmentsCount: segments.filter((segment) => segment.status === 'checked' || segment.status === 'approved').length,
+            rejectedSegmentsCount: segments.filter((segment) => segment.status === 'rejected').length,
             aiTextEndingLoading,
             hasPreviousSegments: false,
           }}

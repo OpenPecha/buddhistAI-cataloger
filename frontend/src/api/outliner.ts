@@ -4,7 +4,7 @@ import type { TextSegment } from '@/components/outliner/types';
 // ==================== Types ====================
 
 export type OutlineDocumentStatus ='completed' | 'active' | 'rejected' | 'approved'|'deleted';
-export type OutlineSegmentStatus="checked"|"unchecked"|"approved";
+export type OutlineSegmentStatus="checked"|"unchecked"|"approved"|"rejected";
 export interface OutlinerDocument {
   id: string;
   content: string;
@@ -45,10 +45,11 @@ export interface OutlinerSegment {
   parent_segment_id?: string | null;
   is_annotated: boolean;
   is_attached?: boolean | null;
-  status?: OutlineSegmentStatus | null; // checked, unchecked
+  status?: OutlineSegmentStatus | null;
+  rejection_count?: number;
   created_at: string;
   updated_at: string;
-  comments: Comment[]; // Updated to use comments array
+  comments: Comment[];
 }
 
 export interface DocumentCreateRequest {
@@ -476,9 +477,36 @@ export const updateDocumentStatus = async (
   return handleApiResponse(response);
 };
 
+export const rejectSegment = async (
+  segmentId: string,
+  reviewerId?: string
+): Promise<OutlinerSegment> => {
+  const params = new URLSearchParams();
+  if (reviewerId) params.append('reviewer_id', reviewerId);
+  const qs = params.toString();
+  const url = `${API_URL}/outliner/segments/${segmentId}/reject${qs ? `?${qs}` : ''}`;
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  return handleApiResponse(response);
+};
+
+export const rejectSegmentsBulk = async (
+  segmentIds: string[],
+  reviewerId?: string
+): Promise<OutlinerSegment[]> => {
+  const response = await fetch(`${API_URL}/outliner/segments/bulk-reject`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ segment_ids: segmentIds, reviewer_id: reviewerId }),
+  });
+  return handleApiResponse(response);
+};
+
 export const updateSegmentStatus = async (
   segmentId: string,
-  status: 'checked' | 'unchecked'
+  status: 'checked' | 'unchecked' | 'approved' | 'rejected'
 ): Promise<{ message: string; segment_id: string; status: string }> => {
   const response = await fetch(`${API_URL}/outliner/segments/${segmentId}/status`, {
     method: 'PUT',
@@ -514,6 +542,29 @@ export const resetSegments = async (documentId: string): Promise<void> => {
   if (!response.ok) {
     await handleApiResponse(response);
   }
+};
+
+// ==================== Dashboard Stats ====================
+
+export interface DashboardStats {
+  document_count: number;
+  total_segments: number;
+  segments_with_title_or_author: number;
+  rejection_count: number;
+}
+
+export const getDashboardStats = async (
+  user_id?: string,
+  start_date?: string,
+  end_date?: string,
+): Promise<DashboardStats> => {
+  const params = new URLSearchParams();
+  if (user_id) params.append('user_id', user_id);
+  if (start_date) params.append('start_date', start_date);
+  if (end_date) params.append('end_date', end_date);
+  const qs = params.toString();
+  const response = await fetch(`${API_URL}/outliner/dashboard/stats${qs ? `?${qs}` : ''}`);
+  return handleApiResponse(response);
 };
 
 // ==================== AI Endpoints ====================
@@ -591,6 +642,7 @@ export const outlinerSegmentToTextSegment = (segment: OutlinerSegment): TextSegm
     parentSegmentId: segment.parent_segment_id || undefined,
     is_attached: segment.is_attached ?? undefined,
     status: segment.status || undefined,
+    rejection_count: segment.rejection_count ?? 0,
     comments: segment.comments,
   };
 };

@@ -2,8 +2,9 @@
 Utility functions for outliner operations.
 """
 import re
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from core.redis import (
@@ -11,7 +12,7 @@ from core.redis import (
     set_document_content_in_cache,
     invalidate_document_content_cache
 )
-from outliner.models.outliner import OutlinerDocument, OutlinerSegment
+from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentStatus, SEGMENT_STATUS_TRANSITIONS
 
 
 def remove_escape_chars_except_newline(text: str) -> str:
@@ -124,3 +125,30 @@ def get_comments_list(segment: OutlinerSegment) -> List[Dict[str, Any]]:
         return [{"content": str(segment.comment), "username": "Unknown", "timestamp": datetime.utcnow().isoformat()}]
     
     return []
+
+
+VALID_SEGMENT_STATUSES = {s.value for s in SegmentStatus}
+
+
+def validate_segment_status_transition(
+    current_status: Optional[str],
+    new_status: str
+) -> Tuple[bool, str]:
+    """
+    Validate that a segment status transition is allowed.
+    
+    Returns:
+        (is_valid, error_message) tuple
+    """
+    if new_status not in VALID_SEGMENT_STATUSES:
+        return False, f"Invalid status '{new_status}'. Must be one of: {', '.join(VALID_SEGMENT_STATUSES)}"
+    
+    current = SegmentStatus(current_status) if current_status else SegmentStatus.UNCHECKED
+    target = SegmentStatus(new_status)
+    
+    allowed = SEGMENT_STATUS_TRANSITIONS.get(current, set())
+    if target not in allowed:
+        allowed_str = ', '.join(s.value for s in allowed) if allowed else 'none'
+        return False, f"Cannot transition from '{current.value}' to '{target.value}'. Allowed transitions: {allowed_str}"
+    
+    return True, ""

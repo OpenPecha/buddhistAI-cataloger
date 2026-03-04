@@ -2,15 +2,15 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth0 } from '@auth0/auth0-react';
 import type { PaginatedUserResponse } from '../api/user';
 
-export interface Annotator {
+export interface OutlinerUser {
   id: string;
   name: string | null;
 }
 
 /**
- * Hook for fetching users with the annotator role and outliner permission
+ * Hook for fetching all users with the outliner permission (any role).
  */
-export function useAnnotators() {
+export function useOutlinerUsers() {
   const { getAccessTokenSilently } = useAuth0();
 
   const {
@@ -19,11 +19,10 @@ export function useAnnotators() {
     error,
     refetch
   } = useQuery<PaginatedUserResponse>({
-    queryKey: ['outliner-annotators'],
+    queryKey: ['outliner-users'],
     queryFn: async () => {
       const token = await getAccessTokenSilently();
       const params = new URLSearchParams({
-        role: 'annotator',
         permission: 'outliner',
         limit: '200'
       });
@@ -34,20 +33,20 @@ export function useAnnotators() {
         }
       });
       if (!response.ok) {
-        throw new Error('Failed to fetch annotators');
+        throw new Error('Failed to fetch outliner users');
       }
       return response.json();
     },
     staleTime: 10 * 60 * 1000,
   });
 
-  const annotators: Annotator[] = (data?.items || []).map((u) => ({
+  const users: OutlinerUser[] = (data?.items || []).map((u) => ({
     id: u.id,
     name: u.name ?? null
   }));
 
   return {
-    annotators,
+    users,
     isLoading,
     error,
     refetch

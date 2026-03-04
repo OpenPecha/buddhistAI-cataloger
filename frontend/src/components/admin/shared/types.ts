@@ -27,7 +27,8 @@ export interface Segment {
   is_annotated: boolean;
   is_attached?: boolean | null;
   status?: string | null;
-  comments?: Comment[]; // Optional - comments are fetched separately
+  rejection_count?: number;
+  comments?: Comment[];
   created_at: string;
   updated_at: string;
 }

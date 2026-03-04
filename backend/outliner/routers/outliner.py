@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
 from pydantic import BaseModel, Field
 from typing import List, Optional
 from sqlalchemy.orm import Session
@@ -31,6 +31,10 @@ from outliner.controller.outliner import (
     delete_segment_comment as delete_segment_comment_ctrl,
     assign_volume as assign_volume_ctrl,
     approve_document as approve_document_ctrl,
+    reject_segment as reject_segment_ctrl,
+    reject_segments_bulk as reject_segments_bulk_ctrl,
+    get_segment_rejection_count as get_segment_rejection_count_ctrl,
+    get_dashboard_stats as get_dashboard_stats_ctrl,
 )
 from outliner.utils.outliner_utils import get_comments_list
 
@@ -92,13 +96,19 @@ class SegmentResponse(BaseModel):
     parent_segment_id: Optional[str] = None
     is_annotated: bool
     is_attached: Optional[bool] = None
-    status: Optional[str] = None  # checked, unchecked
+    status: Optional[str] = None
+    rejection_count: int = 0
     comments: Optional[List[CommentResponse]] = None
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class BulkRejectRequest(BaseModel):
+    segment_ids: List[str]
+    reviewer_id: Optional[str] = None
 
 
 class DocumentCreate(BaseModel):
@@ -187,9 +197,16 @@ class SegmentStatusUpdate(BaseModel):
 
 # ==================== Helper Functions ====================
 
-def _build_segment_response(segment) -> SegmentResponse:
+def _build_segment_response(segment, db: Session = None) -> SegmentResponse:
     """Helper to build SegmentResponse from segment model"""
     comments_list = get_comments_list(segment)
+    
+    rejection_count = 0
+    if hasattr(segment, 'rejections') and segment.rejections is not None:
+        rejection_count = len(segment.rejections)
+    elif db is not None:
+        rejection_count = get_segment_rejection_count_ctrl(db, segment.id)
+    
     return SegmentResponse(
         id=segment.id,
         text=segment.text,
@@ -204,6 +221,7 @@ def _build_segment_response(segment) -> SegmentResponse:
         is_annotated=segment.is_annotated,
         is_attached=segment.is_attached,
         status=segment.status,
+        rejection_count=rejection_count,
         comments=[CommentResponse(**c) for c in comments_list] if comments_list else None,
         created_at=segment.created_at,
         updated_at=segment.updated_at
@@ -359,7 +377,7 @@ async def create_segment(
         author_bdrc_id=segment.author_bdrc_id,
         parent_segment_id=segment.parent_segment_id
     )
-    return _build_segment_response(db_segment)
+    return _build_segment_response(db_segment, db)
 
 
 @router.post("/documents/{document_id}/segments/bulk", response_model=List[SegmentResponse], status_code=201)
@@ -374,7 +392,7 @@ async def create_segments_bulk(
     
     segment_responses = []
     for segment in db_segments:
-        segment_responses.append(_build_segment_response(segment))
+        segment_responses.append(_build_segment_response(segment, db))
     return segment_responses
 
 
@@ -385,10 +403,9 @@ async def list_segments(
 ):
     """Get all segments for a document"""
     segments = list_segments_ctrl(db, document_id)
-    print(segments)
     segment_responses = []
     for segment in segments:
-        segment_responses.append(_build_segment_response(segment))
+        segment_responses.append(_build_segment_response(segment, db))
     return segment_responses
 
 
@@ -399,7 +416,7 @@ async def get_segment(
 ):
     """Get a single segment by ID"""
     segment = get_segment_ctrl(db, segment_id)
-    return _build_segment_response(segment)
+    return _build_segment_response(segment, db)
 
 
 @router.put("/segments/{segment_id}", response_model=SegmentResponse)
@@ -436,7 +453,7 @@ async def update_segment(
         comment_content=segment_update.comment_content,
         comment_username=segment_update.comment_username
     )
-    return _build_segment_response(segment)
+    return _build_segment_response(segment, db)
 
 
 @router.put("/segments/bulk", response_model=List[SegmentResponse])
@@ -450,7 +467,7 @@ async def update_segments_bulk(
     
     segment_responses = []
     for segment in updated_segments:
-        segment_responses.append(_build_segment_response(segment))
+        segment_responses.append(_build_segment_response(segment, db))
     return segment_responses
 
 
@@ -470,7 +487,7 @@ async def split_segment(
     
     segment_responses = []
     for seg in segments:
-        segment_responses.append(_build_segment_response(seg))
+        segment_responses.append(_build_segment_response(seg, db))
     return segment_responses
 
 
@@ -481,7 +498,7 @@ async def merge_segments(
 ):
     """Merge multiple segments into one"""
     first_segment = merge_segments_ctrl(db, merge_request.segment_ids)
-    return _build_segment_response(first_segment)
+    return _build_segment_response(first_segment, db)
 
 
 @router.delete("/segments/{segment_id}", status_code=204)
@@ -575,7 +592,7 @@ async def bulk_segment_operations(
     
     segment_responses = []
     for seg in result_segments:
-        segment_responses.append(_build_segment_response(seg))
+        segment_responses.append(_build_segment_response(seg, db))
     return segment_responses
 
 
@@ -642,11 +659,51 @@ async def assign_volume(user_id: str, db: Session = Depends(get_db)):
     return document
     
     
+@router.put("/segments/{segment_id}/reject", response_model=SegmentResponse)
+async def reject_segment(
+    segment_id: str,
+    reviewer_id: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Reject a checked segment"""
+    segment = reject_segment_ctrl(db, segment_id, reviewer_id)
+    return _build_segment_response(segment, db)
+
+
+@router.put("/segments/bulk-reject", response_model=List[SegmentResponse])
+async def reject_segments_bulk(
+    request: BulkRejectRequest,
+    db: Session = Depends(get_db)
+):
+    """Reject multiple checked segments at once"""
+    segments = reject_segments_bulk_ctrl(db, request.segment_ids, request.reviewer_id)
+    return [_build_segment_response(seg, db) for seg in segments]
+
+
 @router.post("/documents/{document_id}/approve")
 async def approve_document(
     document_id: str,
     db: Session = Depends(get_db)
 ):
     """Approve all segments for a document"""
-    #get document from database
     return await approve_document_ctrl(db, document_id)
+
+
+# ==================== Dashboard Stats ====================
+
+class DashboardStatsResponse(BaseModel):
+    document_count: int
+    total_segments: int
+    segments_with_title_or_author: int
+    rejection_count: int
+
+
+@router.get("/dashboard/stats", response_model=DashboardStatsResponse)
+async def get_dashboard_stats(
+    user_id: Optional[str] = Query(None, description="Filter by annotator user ID"),
+    start_date: Optional[datetime] = Query(None, description="Start of date range (ISO format)"),
+    end_date: Optional[datetime] = Query(None, description="End of date range (ISO format)"),
+    db: Session = Depends(get_db),
+):
+    """Return aggregate stats for the admin overview dashboard."""
+    return get_dashboard_stats_ctrl(db, user_id=user_id, start_date=start_date, end_date=end_date)

@@ -5,4 +5,7 @@ export { useDocumentActions } from './useDocumentActions';
 export { useSegmentActions } from './useSegmentActions';
 export { useUsers, useUser } from './useUserData';
 export { useUserActions } from './useUserActions';
-export { useAnnotators } from './useAnnotators';
+export { useOutlinerUsers } from './useOutlinerUsers';
+export type { OutlinerUser } from './useOutlinerUsers';
+export { useDashboardStats } from './useDashboardStats';
+export type { DashboardStatsFilters } from './useDashboardStats';

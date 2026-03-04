@@ -8,6 +8,7 @@ import type { Document, Segment, DocumentStats } from '../components/admin/share
  * Calculate stats from documents array
  */
 function calculateStats(documents: Document[]): DocumentStats {
+  console.log('documents', documents);
   return documents.reduce((acc: DocumentStats, doc: Document) => {
     acc.total++;
     switch (doc.status) {

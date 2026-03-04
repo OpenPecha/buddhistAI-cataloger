@@ -9,8 +9,9 @@ export interface TextSegment {
   author_bdrc_id?: string;
   parentSegmentId?: string;
   is_attached?: boolean | null;
-  status?: string | null; // checked, unchecked
-  comments: Comment[]; // Updated to use comments array
+  status?: string | null;
+  rejection_count?: number;
+  comments: Comment[];
 }
 
 export interface BubbleMenuProps {
