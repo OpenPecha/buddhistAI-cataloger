@@ -8,6 +8,7 @@ import type { Document, Segment, DocumentStats } from '../components/admin/share
  * Calculate stats from documents array
  */
 function calculateStats(documents: Document[]): DocumentStats {
+  console.log('documents', documents);
   return documents.reduce((acc: DocumentStats, doc: Document) => {
     acc.total++;
     switch (doc.status) {
@@ -30,22 +31,34 @@ function calculateStats(documents: Document[]): DocumentStats {
   }, { total: 0, active: 0, completed: 0, approved: 0, rejected: 0 });
 }
 
+export interface DocumentFilters {
+  status?: string;
+  userId?: string;
+}
+
 /**
- * Hook for fetching documents list
+ * Hook for fetching documents list with optional filters
  */
-export function useDocuments() {
+export function useDocuments(filters: DocumentFilters = {}) {
   const { getAccessTokenSilently } = useAuth0();
+  const { status, userId } = filters;
 
   const {
     data: documents = [],
     isLoading,
+    isFetching,
     error,
     refetch
   } = useQuery<Document[]>({
-    queryKey: ['outliner-admin-documents'],
+    queryKey: ['outliner-admin-documents', { status, userId }],
     queryFn: async () => {
       const token = await getAccessTokenSilently();
-      const response = await fetch('/api/outliner/documents', {
+      const params = new URLSearchParams();
+      if (status) params.append('status', status);
+      if (userId) params.append('user_id', userId);
+      const qs = params.toString();
+      const url = `/api/outliner/documents${qs ? `?${qs}` : ''}`;
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -56,7 +69,7 @@ export function useDocuments() {
       }
       return response.json();
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
   });
 
   const stats = useMemo(() => calculateStats(documents), [documents]);
@@ -65,6 +78,7 @@ export function useDocuments() {
     documents,
     stats,
     isLoading,
+    isFetching,
     error,
     refetch
   };

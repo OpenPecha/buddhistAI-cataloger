@@ -2,8 +2,9 @@
 Utility functions for outliner operations.
 """
 import re
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from core.redis import (
@@ -11,7 +12,7 @@ from core.redis import (
     set_document_content_in_cache,
     invalidate_document_content_cache
 )
-from outliner.models.outliner import OutlinerDocument, OutlinerSegment
+from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentStatus, SEGMENT_STATUS_TRANSITIONS
 
 
 def remove_escape_chars_except_newline(text: str) -> str:
@@ -59,30 +60,23 @@ def get_document_with_cache(db: Session, document_id: str) -> Optional[OutlinerD
 def incremental_update_document_progress(
     db: Session,
     document_id: str,
+    total_delta: int = 0,
+    annotated_delta: int = 0,
 ):
     """
-    PERFORMANCE OPTIMIZED: Incrementally update document progress without COUNT queries.
+    Placeholder for incremental document progress updates.
     
-    This function updates document progress counters atomically using the current
-    values plus deltas, avoiding expensive COUNT(*) queries.
+    Currently a no-op — progress is computed via COUNT queries in get_documents.
+    Once cached progress columns are added to OutlinerDocument, this function
+    will apply deltas atomically instead.
     
     Args:
         db: Database session
         document_id: Document ID to update
         total_delta: Change in total_segments count (+1 for create, -1 for delete, 0 for update)
         annotated_delta: Change in annotated_segments count (+1 when annotation added, -1 when removed, 0 for no change)
-    
-    Performance: 1 SELECT + 1 UPDATE instead of 2 COUNT queries + 1 SELECT + 1 UPDATE
     """
-
-    # PERFORMANCE FIX: Fetch document once, update in memory
-    # This is still much faster than COUNT queries on large segment tables
-    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
-    if not document:
-        return  # Document doesn't exist, skip update
-    
-    
-    # Note: Don't commit here - let the caller handle transaction
+    pass
 
 
 def get_annotation_status_delta(
@@ -131,3 +125,30 @@ def get_comments_list(segment: OutlinerSegment) -> List[Dict[str, Any]]:
         return [{"content": str(segment.comment), "username": "Unknown", "timestamp": datetime.utcnow().isoformat()}]
     
     return []
+
+
+VALID_SEGMENT_STATUSES = {s.value for s in SegmentStatus}
+
+
+def validate_segment_status_transition(
+    current_status: Optional[str],
+    new_status: str
+) -> Tuple[bool, str]:
+    """
+    Validate that a segment status transition is allowed.
+    
+    Returns:
+        (is_valid, error_message) tuple
+    """
+    if new_status not in VALID_SEGMENT_STATUSES:
+        return False, f"Invalid status '{new_status}'. Must be one of: {', '.join(VALID_SEGMENT_STATUSES)}"
+    
+    current = SegmentStatus(current_status) if current_status else SegmentStatus.UNCHECKED
+    target = SegmentStatus(new_status)
+    
+    allowed = SEGMENT_STATUS_TRANSITIONS.get(current, set())
+    if target not in allowed:
+        allowed_str = ', '.join(s.value for s in allowed) if allowed else 'none'
+        return False, f"Cannot transition from '{current.value}' to '{target.value}'. Allowed transitions: {allowed_str}"
+    
+    return True, ""

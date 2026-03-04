@@ -5,6 +5,7 @@ import type { User, PaginatedUserResponse } from '../api/user';
 interface UseUsersOptions {
   skip?: number;
   limit?: number;
+  role?: string;
 }
 
 /**
@@ -12,7 +13,7 @@ interface UseUsersOptions {
  */
 export function useUsers(options: UseUsersOptions = {}) {
   const { getAccessTokenSilently } = useAuth0();
-  const { skip = 0, limit = 100 } = options;
+  const { skip = 0, limit = 100, role } = options;
 
   const {
     data,
@@ -20,10 +21,12 @@ export function useUsers(options: UseUsersOptions = {}) {
     error,
     refetch
   } = useQuery<PaginatedUserResponse>({
-    queryKey: ['users', skip, limit],
+    queryKey: ['users', skip, limit, role],
     queryFn: async () => {
       const token = await getAccessTokenSilently();
-      const response = await fetch(`/api/settings/users?skip=${skip}&limit=${limit}`, {
+      const params = new URLSearchParams({ skip: String(skip), limit: String(limit) });
+      if (role) params.append('role', role);
+      const response = await fetch(`/api/settings/users?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

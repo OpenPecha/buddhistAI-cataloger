@@ -5,6 +5,7 @@ import { Loader2, Sparkles, Square, RotateCcw, EllipsisVertical, Redo, Undo } fr
 interface WorkspaceHeaderConfig {
   segmentsCount: number;
   checkedSegmentsCount: number;
+  rejectedSegmentsCount: number;
   aiTextEndingLoading: boolean;
   hasPreviousSegments: boolean;
 }
@@ -25,18 +26,23 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
   headerConfig,
   actions,
 }) => {
-  const { segmentsCount, aiTextEndingLoading, hasPreviousSegments ,checkedSegmentsCount} = headerConfig;
-  const checked_percentage = (checkedSegmentsCount / segmentsCount) * 100;
+  const { segmentsCount, aiTextEndingLoading, hasPreviousSegments, checkedSegmentsCount, rejectedSegmentsCount } = headerConfig;
+  const checked_percentage = segmentsCount > 0 ? (checkedSegmentsCount / segmentsCount) * 100 : 0;
   const { onAIDetectTextEndings, onAITextEndingStop, onUndoTextEndingDetection, onResetSegments } = actions;
   const [isAllExpanded, setIsAllExpanded] = useState(false);
   return (
     <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
       <div>
         <h2 className="text-lg font-semibold text-gray-900">Text Workspace</h2>
-        <p className="text-sm text-gray-600">
-        <Progress  value={checked_percentage}  title={`${checkedSegmentsCount} saved segments`}/>
-          {segmentsCount} segment{segmentsCount !== 1 ? 's' : ''}
-        </p>
+        <div className="text-sm text-gray-600">
+          <Progress value={checked_percentage} title={`${checkedSegmentsCount} saved segments`}/>
+          <span>{segmentsCount} segment{segmentsCount !== 1 ? 's' : ''}</span>
+          {rejectedSegmentsCount > 0 && (
+            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+              {rejectedSegmentsCount} need{rejectedSegmentsCount === 1 ? 's' : ''} revision
+            </span>
+          )}
+        </div>
       </div>
       <div className="flex items-center gap-2">
         {/* AI Text Ending Detection Button */}

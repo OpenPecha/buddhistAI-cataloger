@@ -1,13 +1,22 @@
 import type { Document } from '../shared/types';
 
+const STATUS_LABEL: Record<string, string> = {
+  active: 'Annotating',
+  completed: 'Annotated',
+  approved: 'Reviewed',
+  rejected: 'Rejected',
+};
+
 interface DocumentRowProps {
   readonly document: Document;
-   readonly onStatusChange: (documentId: string, newStatus: string) => void;
+  readonly annotatorName?: string;
   readonly onSelect: (document: Document) => void;
- readonly onDelete: (documentId: string) => void;
+  readonly onDelete: (documentId: string) => void;
 }
 
-function DocumentRow({ document, onStatusChange, onSelect, onDelete }: DocumentRowProps) {
+function DocumentRow({ document, annotatorName, onSelect, onDelete }: DocumentRowProps) {
+  const statusKey = document.status || 'active';
+
   return (
     <tr className="hover:bg-gray-50">
       <td className="px-6 py-4 whitespace-nowrap">
@@ -18,30 +27,23 @@ function DocumentRow({ document, onStatusChange, onSelect, onDelete }: DocumentR
           ID: {document.id.slice(0, 8)}...
         </div>
       </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="flex items-center">
-          <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-            <div
-              className="bg-blue-600 h-2 rounded-full"
-              style={{ width: `${document.progress_percentage}%` }}
-            ></div>
-          </div>
-          <span className="text-sm text-gray-600">
-            {Math.round(document.progress_percentage)}%
-          </span>
-        </div>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        {annotatorName}
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
-        <select
-          value={document.status || 'active'}
-          onChange={(e) => onStatusChange(document.id, e.target.value)}
-          className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        <span
+          className={`inline-flex px-2 py-1 text-sm font-medium rounded ${
+            statusKey === 'completed'
+              ? 'bg-green-100 text-green-800'
+              : statusKey === 'approved'
+              ? 'bg-blue-100 text-blue-800'
+              : statusKey === 'rejected'
+              ? 'bg-red-100 text-red-800'
+              : 'bg-yellow-100 text-yellow-800'
+          }`}
         >
-          <option value="active">Active</option>
-          <option value="completed">Completed</option>
-          <option value="approved">Approved</option>
-          <option value="rejected">Rejected</option>
-        </select>
+          {STATUS_LABEL[statusKey] || statusKey}
+        </span>
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
         {document.annotated_segments}/{document.total_segments}

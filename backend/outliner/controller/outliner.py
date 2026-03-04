@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import func
 from sqlalchemy.orm.session import identity
-from outliner.models.outliner import OutlinerDocument, OutlinerSegment
+from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentRejection
 from outliner.utils.outliner_utils import (
     get_document_with_cache,
     incremental_update_document_progress,
@@ -17,7 +17,8 @@ from outliner.utils.outliner_utils import (
     get_comments_list,
     remove_escape_chars_except_newline,
     set_document_content_in_cache,
-    invalidate_document_content_cache
+    invalidate_document_content_cache,
+    validate_segment_status_transition,
 )
 
 
@@ -89,16 +90,18 @@ def upload_document(
 def list_documents(
     db: Session,
     user_id: Optional[str] = None,
+    status: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
     include_deleted: bool = False
 ) -> List[Dict[str, Any]]:
     """
-    List all outliner documents, optionally filtered by user and deletion status.
-    
+    List all outliner documents, optionally filtered by user, status, and deletion status.
+
     Args:
         db: Database session
         user_id: Filter documents by user ID
+        status: Filter documents by status (active, completed, approved, etc.)
         skip: Number of documents to skip (pagination)
         limit: Maximum number of documents to return
         include_deleted: If False (default), exclude deleted documents. If True, include all documents.
@@ -106,7 +109,10 @@ def list_documents(
     query = db.query(OutlinerDocument)
     if user_id:
         query = query.filter(OutlinerDocument.user_id == user_id)
-    
+
+    if status:
+        query = query.filter(OutlinerDocument.status == status)
+
     # Filter out deleted documents by default
     if not include_deleted:
         query = query.filter(
@@ -491,9 +497,9 @@ def update_segment(
         # Store as array directly
         segment.comment = existing_comments
     if status is not None:
-        # Validate status value
-        if status not in ['checked', 'unchecked', 'approved']:
-            raise HTTPException(status_code=400, detail="Status must be 'checked' or 'unchecked'")
+        is_valid, error_msg = validate_segment_status_transition(segment.status, status)
+        if not is_valid:
+            raise HTTPException(status_code=422, detail=error_msg)
         segment.status = status
     
     # Update annotation status flag
@@ -552,9 +558,9 @@ def update_segments_bulk(
         if segment_update.get('is_attached') is not None:
             segment.is_attached = segment_update['is_attached']
         if segment_update.get('status') is not None:
-            # Validate status value
-            if segment_update['status'] not in ['checked', 'unchecked']:
-                continue  # Skip invalid status updates
+            is_valid, _ = validate_segment_status_transition(segment.status, segment_update['status'])
+            if not is_valid:
+                continue
             segment.status = segment_update['status']
         
         segment.update_annotation_status()
@@ -767,14 +773,14 @@ def update_segment_status(
     segment_id: str,
     status: str
 ) -> Dict[str, str]:
-    """Update segment status (checked/unchecked)"""
-    # Validate status value
-    if status not in ['checked', 'unchecked', 'approved']:
-        raise HTTPException(status_code=400, detail="Status must be 'checked' or 'unchecked'")
-    
+    """Update segment status with transition validation"""
     segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
     if not segment:
         raise HTTPException(status_code=404, detail="Segment not found")
+    
+    is_valid, error_msg = validate_segment_status_transition(segment.status, status)
+    if not is_valid:
+        raise HTTPException(status_code=422, detail=error_msg)
     
     segment.status = status
     segment.updated_at = datetime.utcnow()
@@ -874,11 +880,9 @@ def bulk_segment_operations(
             if 'is_attached' in update_data and update_data['is_attached'] is not None:
                 segment.is_attached = update_data['is_attached']
             if 'status' in update_data and update_data['status'] is not None:
-                if update_data['status'] not in ['checked', 'unchecked']:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=f"Invalid status: {update_data['status']}. Must be 'checked' or 'unchecked'"
-                    )
+                is_valid, error_msg = validate_segment_status_transition(segment.status, update_data['status'])
+                if not is_valid:
+                    raise HTTPException(status_code=422, detail=error_msg)
                 segment.status = update_data['status']
             if 'span_start' in update_data and update_data['span_start'] is not None:
                 segment.span_start = update_data['span_start']
@@ -1057,6 +1061,137 @@ def delete_segment_comment(
 
 
 
+# ==================== Rejection Operations ====================
+
+def reject_segment(
+    db: Session,
+    segment_id: str,
+    reviewer_id: Optional[str] = None
+) -> OutlinerSegment:
+    """Reject a checked segment and record the rejection event"""
+    segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
+    if not segment:
+        raise HTTPException(status_code=404, detail="Segment not found")
+    
+    is_valid, error_msg = validate_segment_status_transition(segment.status, "rejected")
+    if not is_valid:
+        raise HTTPException(status_code=422, detail=error_msg)
+    
+    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == segment.document_id).first()
+    annotator_id = document.user_id if document else None
+    
+    rejection = SegmentRejection(
+        id=str(uuid.uuid4()),
+        segment_id=segment_id,
+        user_id=annotator_id,
+        reviewer_id=reviewer_id,
+    )
+    db.add(rejection)
+    
+    segment.status = "rejected"
+    segment.updated_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(segment)
+    return segment
+
+
+def reject_segments_bulk(
+    db: Session,
+    segment_ids: List[str],
+    reviewer_id: Optional[str] = None
+) -> List[OutlinerSegment]:
+    """Reject multiple checked segments at once"""
+    if not segment_ids:
+        raise HTTPException(status_code=400, detail="segment_ids is required")
+    
+    segments = db.query(OutlinerSegment).filter(
+        OutlinerSegment.id.in_(segment_ids)
+    ).all()
+    
+    if not segments:
+        raise HTTPException(status_code=404, detail="No segments found")
+    
+    doc_ids = {seg.document_id for seg in segments}
+    documents = db.query(OutlinerDocument).filter(OutlinerDocument.id.in_(doc_ids)).all()
+    doc_user_map = {doc.id: doc.user_id for doc in documents}
+    
+    rejected_segments = []
+    for segment in segments:
+        is_valid, _ = validate_segment_status_transition(segment.status, "rejected")
+        if not is_valid:
+            continue
+        
+        rejection = SegmentRejection(
+            id=str(uuid.uuid4()),
+            segment_id=segment.id,
+            user_id=doc_user_map.get(segment.document_id),
+            reviewer_id=reviewer_id,
+        )
+        db.add(rejection)
+        segment.status = "rejected"
+        segment.updated_at = datetime.utcnow()
+        rejected_segments.append(segment)
+    
+    db.commit()
+    for seg in rejected_segments:
+        db.refresh(seg)
+    
+    return rejected_segments
+
+
+def get_segment_rejection_count(db: Session, segment_id: str) -> int:
+    """Get the number of times a segment has been rejected"""
+    return db.query(func.count(SegmentRejection.id)).filter(
+        SegmentRejection.segment_id == segment_id
+    ).scalar() or 0
+
+
+def get_dashboard_stats(
+    db: Session,
+    user_id: Optional[str] = None,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+) -> Dict[str, Any]:
+    """Aggregate dashboard statistics, optionally scoped by user and date range."""
+    doc_query = db.query(OutlinerDocument.id).filter(
+        (OutlinerDocument.status != "deleted") | (OutlinerDocument.status.is_(None))
+    )
+    if user_id:
+        doc_query = doc_query.filter(OutlinerDocument.user_id == user_id)
+    if start_date:
+        doc_query = doc_query.filter(OutlinerDocument.created_at >= start_date)
+    if end_date:
+        doc_query = doc_query.filter(OutlinerDocument.created_at <= end_date)
+
+    doc_ids_subq = doc_query.subquery()
+
+    document_count = db.query(func.count()).select_from(doc_ids_subq).scalar() or 0
+
+    seg_base = db.query(OutlinerSegment).filter(
+        OutlinerSegment.document_id.in_(db.query(doc_ids_subq.c.id))
+    )
+
+    total_segments = seg_base.with_entities(func.count(OutlinerSegment.id)).scalar() or 0
+
+    segments_with_title_or_author = seg_base.filter(
+        (OutlinerSegment.title.isnot(None) & (OutlinerSegment.title != ""))
+        | (OutlinerSegment.author.isnot(None) & (OutlinerSegment.author != ""))
+    ).with_entities(func.count(OutlinerSegment.id)).scalar() or 0
+
+    seg_ids_subq = seg_base.with_entities(OutlinerSegment.id).subquery()
+    rejection_count = db.query(func.count(SegmentRejection.id)).filter(
+        SegmentRejection.segment_id.in_(db.query(seg_ids_subq.c.id))
+    ).scalar() or 0
+
+    return {
+        "document_count": document_count,
+        "total_segments": total_segments,
+        "segments_with_title_or_author": segments_with_title_or_author,
+        "rejection_count": rejection_count,
+    }
+
+
 # ==================== BDRC Operations ====================
 
 from bdrc.main import get_new_volume
@@ -1109,6 +1244,16 @@ async def approve_document(db: Session, document_id: str) -> OutlinerDocument:
     document = get_document(db, document_id , include_segments=True)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
+    
+    non_approved = db.query(func.count(OutlinerSegment.id)).filter(
+        OutlinerSegment.document_id == document_id,
+        OutlinerSegment.status != 'approved'
+    ).scalar() or 0
+    if non_approved > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot approve document: {non_approved} segment(s) are not yet approved"
+        )
     
     volume_id=document.filename
     #get volume from bdrc

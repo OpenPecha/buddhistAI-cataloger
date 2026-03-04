@@ -12,7 +12,7 @@ from settings.models.tenant_settings import TenantSettings
 from settings.models.membership import TenantMembership
 from settings.models.role import Role
 from settings.models.permission import Permission
-from outliner.models.outliner import OutlinerDocument, OutlinerSegment
+from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentRejection
 
 import os
 load_dotenv()

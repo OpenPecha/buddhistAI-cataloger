@@ -35,7 +35,8 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
   } = useActions()
   
   const isLoading = segmentLoadingStates?.get(segment.id) ?? false
-  const isChecked = segment.status === 'checked'
+  const isChecked = segment.status === 'checked' || segment.status === 'approved'
+  const isRejected = segment.status === 'rejected'
   const isFirstSegment = index === 0
   const isAttached = isFirstSegment && (segment.is_attached ?? false)
   const isActive = segment.id === activeSegmentId
@@ -113,9 +114,11 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
         className={`mb-4 p-4 rounded-lg border-2 cursor-pointer transition-all relative ${
           isChecked ? 'opacity-50' : 'opacity-100'
         } ${
-          isActive
-            ? 'border-blue-500 bg-blue-50 shadow-md'
-            : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
+          isRejected
+            ? 'border-red-400 bg-red-50'
+            : isActive
+              ? 'border-blue-500 bg-blue-50 shadow-md'
+              : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
         }`}
       >
         {/* Loading Spinner - positioned on the right side */}
@@ -155,14 +158,21 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
               )}
             </button>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-              isChecked 
-                ? 'bg-green-600 text-white' 
-                : 'bg-gray-200 text-gray-600'
+              isRejected
+                ? 'bg-red-500 text-white'
+                : isChecked 
+                  ? 'bg-green-600 text-white' 
+                  : 'bg-gray-200 text-gray-600'
             }`}>
               {index + 1}
             </div>
+            {isRejected && (
+              <span className="text-[10px] font-semibold text-red-600" title={`Rejected${(segment.rejection_count ?? 0) > 1 ? ` ${segment.rejection_count} times` : ''}`}>
+                Rejected{(segment.rejection_count ?? 0) > 1 ? ` (${segment.rejection_count}x)` : ''}
+              </span>
+            )}
           </div>
-          <div className={`flex-1 relative ${isChecked ? 'pointer-events-none' : ''}`}>
+          <div className={`flex-1 relative ${isChecked && !isRejected ? 'pointer-events-none' : ''}`}>
             {isCollapsed ? (
               <>
               <button

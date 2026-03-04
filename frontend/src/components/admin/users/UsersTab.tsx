@@ -9,6 +9,8 @@ interface UsersTabProps {
   skip: number;
   limit: number;
   onPageChange: (newSkip: number) => void;
+  roleFilter: string;
+  onRoleFilterChange: (role: string) => void;
 }
 
 function UsersTab({
@@ -18,7 +20,9 @@ function UsersTab({
   total,
   skip,
   limit,
-  onPageChange
+  onPageChange,
+  roleFilter,
+  onRoleFilterChange
 }: UsersTabProps) {
   const currentPage = Math.floor(skip / limit) + 1;
   const totalPages = Math.ceil(total / limit);
@@ -46,8 +50,19 @@ function UsersTab({
               <h3 className="text-xl font-semibold text-gray-900">User Management</h3>
               <p className="text-gray-600 mt-1">Manage user roles and permissions</p>
             </div>
-            <div className="text-sm text-gray-600">
-              Showing {skip + 1}-{Math.min(skip + limit, total)} of {total} users
+            <div className="flex items-center gap-4">
+              <select
+                value={roleFilter}
+                onChange={(e) => onRoleFilterChange(e.target.value)}
+                className="px-3 py-2 text-sm border border-gray-300 rounded-md bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">All Roles</option>
+                <option value="annotator">Annotator</option>
+                <option value="reviewer">Reviewer</option>
+              </select>
+              <div className="text-sm text-gray-600">
+                Showing {total === 0 ? 0 : skip + 1}-{Math.min(skip + limit, total)} of {total} users
+              </div>
             </div>
           </div>
         </div>
