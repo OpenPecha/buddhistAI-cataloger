@@ -1,31 +1,31 @@
 import Emitter from "@/events";
 import { Button } from "../ui/button";
-import { useState } from "react";
 import { Expand, ListCollapse } from "lucide-react";
 
-function  ExpandAllButton() {
+interface ExpandAllButtonProps {
+  readonly isAllExpanded: boolean;
+  readonly setIsAllExpanded: (v: boolean) => void;
+}
 
-    const [isAllExpanded, setIsAllExpanded] = useState(false);
-    
-    const onExpandAll = (expand: boolean) => {
-      Emitter.emit('segments:expand', expand);
+function ExpandAllButton({ isAllExpanded, setIsAllExpanded }: ExpandAllButtonProps) {
+    const toggleAllExpanded = (e: React.MouseEvent) => {
+      e.stopPropagation();;
+      setIsAllExpanded(!isAllExpanded);
+      Emitter.emit('segments:expand', isAllExpanded);
     };
+
     return (
       <Button
         type="button"
         variant="ghost"
         size="sm"
         className="w-full flex justify-start"
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsAllExpanded(!isAllExpanded);
-          onExpandAll(isAllExpanded);
-        }}
+        onClick={toggleAllExpanded}
       >
-        {isAllExpanded ?  <ListCollapse/>:<Expand/> }
+        {isAllExpanded ? <ListCollapse/> : <Expand/>}
         {isAllExpanded ? 'Collapse All' : 'Expand All'}
       </Button>
     );
   }
-  
-  export default ExpandAllButton;
+
+export default ExpandAllButton;

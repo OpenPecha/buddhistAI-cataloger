@@ -22,7 +22,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
 
 
   // Use new contexts
-  const { activeSegmentId, segmentLoadingStates } = useDocument()
+  const { activeSegmentId, segmentLoadingStates, segments } = useDocument()
   const { cursorPosition, onCursorChange } = useCursor()
   const {
     onSegmentClick,
@@ -40,7 +40,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
   const isAttached = isFirstSegment && (segment.is_attached ?? false)
   const isActive = segment.id === activeSegmentId
 
-  const [isCollapsed, setIsCollapsed] = useState(segment.id !== activeSegmentId)
+  const [isCollapsed, setIsCollapsed] = useState(segments.length === 1 ? false : segment.id !== activeSegmentId)
   const toggleCollapse = (e: React.MouseEvent) => {
     e.stopPropagation()
     setIsCollapsed(!isCollapsed)

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, Sparkles, Square, RotateCcw, EllipsisVertical, Redo, Undo } from 'lucide-react';
 
@@ -28,6 +28,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
   const { segmentsCount, aiTextEndingLoading, hasPreviousSegments ,checkedSegmentsCount} = headerConfig;
   const checked_percentage = (checkedSegmentsCount / segmentsCount) * 100;
   const { onAIDetectTextEndings, onAITextEndingStop, onUndoTextEndingDetection, onResetSegments } = actions;
+  const [isAllExpanded, setIsAllExpanded] = useState(false);
   return (
     <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
       <div>
@@ -79,7 +80,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
           </Button>
         )}
 
-         {segmentsCount > 0 && <Menu onResetSegments={onResetSegments}/>}
+         {segmentsCount > 0 && <Menu onResetSegments={onResetSegments} isAllExpanded={isAllExpanded} setIsAllExpanded={setIsAllExpanded}/>}
      
       </div>
     </div>
@@ -93,7 +94,7 @@ import { Progress } from '../ui/progress';
 import SubmitToReview from './SubmitToReview';
 
 
-function Menu({ onResetSegments }: {readonly onResetSegments: () => void }) {
+function Menu({ onResetSegments, isAllExpanded, setIsAllExpanded }: {readonly onResetSegments: () => void; readonly isAllExpanded: boolean; readonly setIsAllExpanded: (v: boolean) => void }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -110,7 +111,7 @@ function Menu({ onResetSegments }: {readonly onResetSegments: () => void }) {
           Reset All Segments
         </DropdownMenuItem>
       
-        <ExpandAllButton/>      
+        <ExpandAllButton isAllExpanded={isAllExpanded} setIsAllExpanded={setIsAllExpanded}/>      
         <SubmitToReview/>    
       </DropdownMenuContent>
     </DropdownMenu>

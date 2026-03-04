@@ -1,4 +1,5 @@
-import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react'
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { UnsavedChangesDialog } from '@/components/outliner/UnsavedChangesDialog';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument'
 import { useAITextEndings } from '@/hooks/useAITextEndings'
@@ -60,6 +61,12 @@ const OutlinerWorkspace: React.FC = () => {
   
   // Store pending bubble menu value to apply when segment becomes active
   const pendingBubbleMenuValueRef = useRef<{ field: 'title' | 'author'; segmentId: string; text: string } | null>(null);
+
+  // Unsaved changes dialog state
+  const [unsavedChangesDialog, setUnsavedChangesDialog] = useState<{
+    open: boolean;
+    pendingSegmentId: string | null;
+  }>({ open: false, pendingSegmentId: null });
 
   // AI text ending detection hook
   const aiTextEndingAbortControllerRef = useRef<AbortController | null>(null);
@@ -192,14 +199,52 @@ const OutlinerWorkspace: React.FC = () => {
     }
   }, [currentSegments]);
 
-  // Handle segment click - update URL
+  // Handle segment click - update URL (with unsaved changes check)
   const handleSegmentClick = useCallback((segmentId: string, event?: React.MouseEvent) => {
+    // If clicking the same segment, do nothing special
+    if (segmentId === activeSegmentId) {
+      setBubbleMenuState(null);
+      if (!event || !(event.target as HTMLElement).closest('.segment-text-content')) {
+        setCursorPosition(null);
+      }
+      return;
+    }
+
+    // Check if there are unsaved changes
+    if (annotationSidebarRef.current?.isDirty()) {
+      setUnsavedChangesDialog({ open: true, pendingSegmentId: segmentId });
+      return;
+    }
+
     setSearchParams({ segmentId }, { replace: true });
     setBubbleMenuState(null);
     if (!event || !(event.target as HTMLElement).closest('.segment-text-content')) {
       setCursorPosition(null);
     }
-  }, [setSearchParams]);
+  }, [setSearchParams, activeSegmentId]);
+
+  // Handle unsaved changes dialog actions
+  const handleUnsavedChangesSave = useCallback(async () => {
+    await annotationSidebarRef.current?.save();
+    const pendingSegmentId = unsavedChangesDialog.pendingSegmentId;
+    setUnsavedChangesDialog({ open: false, pendingSegmentId: null });
+    if (pendingSegmentId) {
+      setSearchParams({ segmentId: pendingSegmentId }, { replace: true });
+    }
+  }, [unsavedChangesDialog.pendingSegmentId, setSearchParams]);
+
+  const handleUnsavedChangesDiscard = useCallback(() => {
+    annotationSidebarRef.current?.resetDirtyState();
+    const pendingSegmentId = unsavedChangesDialog.pendingSegmentId;
+    setUnsavedChangesDialog({ open: false, pendingSegmentId: null });
+    if (pendingSegmentId) {
+      setSearchParams({ segmentId: pendingSegmentId }, { replace: true });
+    }
+  }, [unsavedChangesDialog.pendingSegmentId, setSearchParams]);
+
+  const handleUnsavedChangesCancel = useCallback(() => {
+    setUnsavedChangesDialog({ open: false, pendingSegmentId: null });
+  }, []);
 
   // Handle cursor position change in contentEditable
   const handleCursorChange = useCallback((segmentId: string, element: HTMLDivElement) => {
@@ -524,6 +569,22 @@ const OutlinerWorkspace: React.FC = () => {
     };
   }, []);
 
+  // Browser beforeunload warning for unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (annotationSidebarRef.current?.isDirty()) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
   // Helper function to create segments from starting positions
   const createSegmentsFromPositions = useCallback(
     (startingPositions: number[]): TextSegment[] => {
@@ -722,11 +783,21 @@ const OutlinerWorkspace: React.FC = () => {
                     ref={annotationSidebarRef}
                     activeSegment={activeSegment}
                     documentId={documentId || undefined}
+                    segments={currentSegments}
+                    onSegmentClick={(segmentId) => handleSegmentClick(segmentId)}
                   />
 
                   {/* Main Workspace */}
                   <Workspace />
                 </div>
+
+                {/* Unsaved Changes Dialog */}
+                <UnsavedChangesDialog
+                  open={unsavedChangesDialog.open}
+                  onSave={handleUnsavedChangesSave}
+                  onDiscard={handleUnsavedChangesDiscard}
+                  onCancel={handleUnsavedChangesCancel}
+                />
               </div>
             </OutlinerProvider>
           </ActionsProvider>
