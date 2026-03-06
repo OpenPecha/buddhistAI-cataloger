@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, Sparkles, Square, RotateCcw, EllipsisVertical, Redo, Undo } from 'lucide-react';
+import { Loader2, Sparkles, Square, EllipsisVertical, Undo } from 'lucide-react';
 
 interface WorkspaceHeaderConfig {
   segmentsCount: number;
@@ -87,7 +87,18 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
         )}
 
          {segmentsCount > 0 && <Menu onResetSegments={onResetSegments} isAllExpanded={isAllExpanded} setIsAllExpanded={setIsAllExpanded}/>}
-     
+         {segmentsCount > 0 && (
+          <SubmitToReview
+            disabled={checked_percentage < 100 || rejectedSegmentsCount > 0}
+            disabledReason={
+              rejectedSegmentsCount > 0
+                ? `${rejectedSegmentsCount} segment${rejectedSegmentsCount !== 1 ? 's' : ''} need${rejectedSegmentsCount === 1 ? 's' : ''} revision`
+                : checked_percentage < 100
+                  ? `${segmentsCount - checkedSegmentsCount} segment${segmentsCount - checkedSegmentsCount !== 1 ? 's' : ''} not yet saved`
+                  : undefined
+            }
+          />
+        )}
       </div>
     </div>
   );
@@ -117,8 +128,7 @@ function Menu({ onResetSegments, isAllExpanded, setIsAllExpanded }: {readonly on
           Reset All Segments
         </DropdownMenuItem>
       
-        <ExpandAllButton isAllExpanded={isAllExpanded} setIsAllExpanded={setIsAllExpanded}/>      
-        <SubmitToReview/>    
+        <ExpandAllButton isAllExpanded={isAllExpanded} setIsAllExpanded={setIsAllExpanded}/>
       </DropdownMenuContent>
     </DropdownMenu>
   );

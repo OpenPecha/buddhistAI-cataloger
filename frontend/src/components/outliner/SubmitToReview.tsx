@@ -1,17 +1,18 @@
-
 import { Button } from "../ui/button";
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { updateDocumentStatus } from '@/api/outliner';
 import { toast } from 'sonner';
-import { useDocument } from './contexts';
+import { Send, Loader2 } from 'lucide-react';
 
-function SubmitToReview() {
+interface SubmitToReviewProps {
+  disabled?: boolean;
+  disabledReason?: string;
+}
+
+function SubmitToReview({ disabled, disabledReason }: SubmitToReviewProps) {
     const { documentId } = useParams<{ documentId: string }>();
     const navigate = useNavigate();
-    const { segments } = useDocument();
-
-    const rejectedCount = segments.filter(s => s.status === 'rejected').length;
 
     const updateStatusMutation = useMutation({
         mutationFn: () => updateDocumentStatus(documentId!, 'completed'),
@@ -29,26 +30,27 @@ function SubmitToReview() {
             toast.error('Document ID not found');
             return;
         }
-        if (rejectedCount > 0) {
-            toast.error(`Cannot submit: ${rejectedCount} segment(s) are rejected and need revision`);
-            return;
-        }
         updateStatusMutation.mutate();
     }
+
+    const isLoading = updateStatusMutation.isPending;
+
     return (
       <Button
         type="button"
-        variant="ghost"
-        size="sm"
-        className="w-full flex justify-start"
-        onClick={(e) => {
-          e.stopPropagation();
-          handleStatusUpdate()
-        }}
+        disabled={disabled || isLoading}
+        title={disabled ? disabledReason : 'Submit to Review'}
+        className="flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        onClick={handleStatusUpdate}
       >
-        Submit to Review
+        {isLoading ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : (
+          <Send className="w-4 h-4" />
+        )}
+        Submit
       </Button>
     );
-  }
-  
-  export default SubmitToReview;
+}
+
+export default SubmitToReview;
