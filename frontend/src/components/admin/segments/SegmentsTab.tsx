@@ -144,7 +144,7 @@ function SegmentsTab({
                   className="cursor-pointer"
                   title={statusCounts.approved !== segments.length ? `${segments.length - statusCounts.approved} segment(s) are not yet approved` : 'Approve document'}
                 >
-                  {isApproving ? 'Approving...' : 'Approve All'}
+                  {isApproving ? 'Approving...' : 'Submit'}
                 </Button>
               </div>
             </CardDescription>
