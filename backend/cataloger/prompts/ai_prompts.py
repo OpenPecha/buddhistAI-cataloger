@@ -20,6 +20,8 @@ Instructions:
 2. Extract title and author if they are explicitly mentioned in the text (keep them in their original language)
 3. If title is not found, suggest an appropriate title based on the content's theme, subject matter, and context (in the same language as the content)
 4. If author is not found, suggest an author name if there are clues (signatures, colophons, style indicators, etc.), otherwise use null (in the same language as the content)
+5. It give priority to the title found at the beginning of a text
+6. Prioritize Tibetan over Chinese/English/Hindi if multiple title or author are detected
 
 Fields to provide:
 - title: The extracted title if explicitly mentioned, otherwise null
