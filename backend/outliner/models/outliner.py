@@ -1,5 +1,5 @@
 from enum import Enum as PyEnum
-from sqlalchemy import String, Text, Integer, Float, DateTime, ForeignKey, Index, JSON
+from sqlalchemy import String, Text, Integer, Float, DateTime, ForeignKey, Index, JSON, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 import uuid
@@ -11,6 +11,12 @@ class SegmentStatus(str, PyEnum):
     CHECKED = "checked"
     APPROVED = "approved"
     REJECTED = "rejected"
+
+class SegmentLabels(str, PyEnum):
+    FRONT_MATTER = "front matter"
+    TOC = "TOC"
+    TEXT = "text"
+    BACK_MATTER = "back matter"
 
 
 SEGMENT_STATUS_TRANSITIONS = {
@@ -65,7 +71,7 @@ class OutlinerSegment(Base):
     segment_index: Mapped[int] = mapped_column(Integer, nullable=False)  # Order in document
     span_start: Mapped[int] = mapped_column(Integer, nullable=False)  # Character position in full text
     span_end: Mapped[int] = mapped_column(Integer, nullable=False)  # Character position in full text
-    
+    label: Mapped[SegmentLabels | None] = mapped_column(Enum(SegmentLabels), nullable=True)
     # Annotations
     title: Mapped[str | None] = mapped_column(String, nullable=True)
     author: Mapped[str | None] = mapped_column(String, nullable=True)

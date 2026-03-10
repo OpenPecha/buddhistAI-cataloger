@@ -78,6 +78,7 @@ class SegmentUpdate(BaseModel):
     parent_segment_id: Optional[str] = None
     is_attached: Optional[bool] = None
     status: Optional[str] = None  # checked, unchecked
+    label: Optional[str] = None  # FRONT_MATTER, TOC, TEXT, BACK_MATTER
     comment: Optional[str] = None  # Deprecated: kept for backward compatibility
     comment_content: Optional[str] = None  # New comment content to append
     comment_username: Optional[str] = None  # Username for new comment
@@ -97,6 +98,7 @@ class SegmentResponse(BaseModel):
     is_annotated: bool
     is_attached: Optional[bool] = None
     status: Optional[str] = None
+    label: Optional[str] = None  # FRONT_MATTER, TOC, TEXT, BACK_MATTER
     rejection_count: int = 0
     comments: Optional[List[CommentResponse]] = None
     created_at: datetime
@@ -130,6 +132,7 @@ class SegmentResponseDocument(BaseModel):
     is_annotated: bool
     is_attached: Optional[bool] = None
     status: Optional[str] = None  # checked, unchecked
+    label: Optional[str] = None  # FRONT_MATTER, TOC, TEXT, BACK_MATTER
 
     class Config:
         from_attributes = True
@@ -207,6 +210,7 @@ def _build_segment_response(segment, db: Session = None) -> SegmentResponse:
     elif db is not None:
         rejection_count = get_segment_rejection_count_ctrl(db, segment.id)
     
+    label_value = segment.label.name if segment.label is not None else None
     return SegmentResponse(
         id=segment.id,
         text=segment.text,
@@ -221,6 +225,7 @@ def _build_segment_response(segment, db: Session = None) -> SegmentResponse:
         is_annotated=segment.is_annotated,
         is_attached=segment.is_attached,
         status=segment.status,
+        label=label_value,
         rejection_count=rejection_count,
         comments=[CommentResponse(**c) for c in comments_list] if comments_list else None,
         created_at=segment.created_at,
@@ -332,6 +337,23 @@ async def get_document(
             # Re-fetch document with the newly created segment
             document = get_document_ctrl(db, document_id, include_segments)
     
+    # Build response from segment_list so serialization does not depend on lazy-loaded document.segments
+    # (avoids empty segments in production when session/relationship timing differs)
+    if include_segments and hasattr(document, 'segment_list') and document.segment_list:
+        segments_resp = [
+            SegmentResponseDocument(**{k: s[k] for k in SegmentResponseDocument.model_fields if k in s})
+            for s in document.segment_list
+        ]
+        return DocumentResponse(
+            id=document.id,
+            content=document.content,
+            filename=document.filename,
+            user_id=document.user_id,
+            status=getattr(document, 'status', None),
+            created_at=document.created_at,
+            updated_at=document.updated_at,
+            segments=segments_resp,
+        )
     return document
 
 
@@ -449,6 +471,7 @@ async def update_segment(
         parent_segment_id=segment_update.parent_segment_id,
         is_attached=segment_update.is_attached,
         status=segment_update.status,
+        label=segment_update.label,
         comment=segment_update.comment,
         comment_content=segment_update.comment_content,
         comment_username=segment_update.comment_username

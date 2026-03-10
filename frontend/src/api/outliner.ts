@@ -32,6 +32,8 @@ export interface OutlinerDocumentListItem {
   updated_at: string;
 }
 
+export type SegmentLabel = 'FRONT_MATTER' | 'TOC' | 'TEXT' | 'BACK_MATTER';
+
 export interface OutlinerSegment {
   id: string;
   text: string;
@@ -46,6 +48,7 @@ export interface OutlinerSegment {
   is_annotated: boolean;
   is_attached?: boolean | null;
   status?: OutlineSegmentStatus | null;
+  label?: SegmentLabel | null;
   rejection_count?: number;
   created_at: string;
   updated_at: string;
@@ -89,6 +92,7 @@ export interface SegmentUpdateRequest {
   parent_segment_id?: string;
   is_attached?: boolean;
   status?: OutlineSegmentStatus; // checked, unchecked
+  label?: SegmentLabel; // FRONT_MATTER, TOC, TEXT, BACK_MATTER
   comment?: string | CommentsData | Comment[]; // Can be old string format, CommentsData format, or array format
   comment_content?: string; // New comment content to append
   comment_username?: string; // Username for new comment
@@ -642,6 +646,7 @@ export const outlinerSegmentToTextSegment = (segment: OutlinerSegment): TextSegm
     parentSegmentId: segment.parent_segment_id || undefined,
     is_attached: segment.is_attached ?? undefined,
     status: segment.status || undefined,
+    label: segment.label ?? undefined,
     rejection_count: segment.rejection_count ?? 0,
     comments: segment.comments,
   };

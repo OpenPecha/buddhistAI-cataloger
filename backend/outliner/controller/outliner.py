@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import func
 from sqlalchemy.orm.session import identity
-from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentRejection
+from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentRejection, SegmentLabels
 from outliner.utils.outliner_utils import (
     get_document_with_cache,
     incremental_update_document_progress,
@@ -171,24 +171,31 @@ def get_document(
         raise HTTPException(status_code=404, detail="Document not found")
     
     if include_segments:
-        # Load only selected fields for each segment
+        # Load only selected fields for each segment (include text so response does not rely on lazy-loaded relationship)
         segments = db.query(
+            OutlinerSegment.id,
+            OutlinerSegment.text,
+            OutlinerSegment.segment_index,
             OutlinerSegment.span_start,
             OutlinerSegment.span_end,
-            OutlinerSegment.is_attached,
-            OutlinerSegment.segment_index,
-            OutlinerSegment.id,
-            OutlinerSegment.status,
             OutlinerSegment.title,
             OutlinerSegment.author,
             OutlinerSegment.title_bdrc_id,
             OutlinerSegment.author_bdrc_id,
-            OutlinerSegment.comment
+            OutlinerSegment.parent_segment_id,
+            OutlinerSegment.is_annotated,
+            OutlinerSegment.is_attached,
+            OutlinerSegment.status,
+            OutlinerSegment.label,
         ).filter(
             OutlinerSegment.document_id == document_id
         ).order_by(OutlinerSegment.segment_index).all()
-        # Instead of assigning a list of dicts directly (which breaks SQLAlchemy relations), store the segments as an extra attribute for serialization
-        document.segment_list = [dict(segment._asdict()) for segment in segments]
+        # Store as segment_list so router can serialize without touching document.segments (avoids lazy-load timing issues in production)
+        def _segment_to_dict(segment):
+            d = segment._asdict()
+            d['label'] = segment.label.name if segment.label else None
+            return d
+        document.segment_list = [_segment_to_dict(segment) for segment in segments]
 
     return document
 
@@ -441,6 +448,7 @@ def update_segment(
     parent_segment_id: Optional[str] = None,
     is_attached: Optional[bool] = None,
     status: Optional[str] = None,
+    label: Optional[str] = None,
     comment: Optional[str] = None,
     comment_content: Optional[str] = None,
     comment_username: Optional[str] = None
@@ -501,6 +509,14 @@ def update_segment(
         if not is_valid:
             raise HTTPException(status_code=422, detail=error_msg)
         segment.status = status
+    if label is not None:
+        try:
+            segment.label = SegmentLabels[label]
+        except KeyError:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Invalid label. Must be one of: {', '.join(s.name for s in SegmentLabels)}"
+            )
     
     # Update annotation status flag
     segment.update_annotation_status()
@@ -562,7 +578,11 @@ def update_segments_bulk(
             if not is_valid:
                 continue
             segment.status = segment_update['status']
-        
+        if segment_update.get('label') is not None:
+            try:
+                segment.label = SegmentLabels[segment_update['label']]
+            except KeyError:
+                pass
         segment.update_annotation_status()
         segment.updated_at = datetime.utcnow()
         updated_segments.append(segment)

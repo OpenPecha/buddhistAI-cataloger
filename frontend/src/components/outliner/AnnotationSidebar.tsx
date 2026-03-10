@@ -1,6 +1,8 @@
-import { forwardRef, useImperativeHandle, useRef, useEffect, useState, useCallback } from 'react';
+import { forwardRef, useImperativeHandle, useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import type { TextSegment } from './types';
+import { segmentLabelDisplay } from './segment-label';
+import { FilterSegments, type LabelFilterValue } from './FilterSegments';
 import { TitleField, type TitleFieldRef } from './sidebarFields/TitleField';
 import { AuthorField, type AuthorFieldRef } from './sidebarFields/AuthorField';
 import { AISuggestionsBox } from './AISuggestionsBox';
@@ -8,8 +10,9 @@ import { useAISuggestions } from '@/hooks/useAISuggestions';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
 import { toast } from 'sonner';
 import Comments from './comment/Comment';
-import { Loader2, RotateCcw, Save, X } from 'lucide-react';
+import { Loader2, RotateCcw, Save, User, X } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+
 
 interface AnnotationSidebarProps {
   activeSegment: TextSegment | undefined;
@@ -305,6 +308,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
             <div className="text-gray-800">{activeSegment.text.slice(0, 100)}...</div>
           </div>
         </div>
+       
         <div className="relative flex flex-col gap-4">
           {(updateSegmentLoading || isRefetching) && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-white bg-opacity-60">
@@ -389,26 +393,52 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
     </div>
   );
 
+  const isMetadataDisabled = !activeSegment || activeSegment?.label !== 'TEXT';
+  const [activeTab, setActiveTab] = useState('outlines');
+  const [labelFilter, setLabelFilter] = useState<LabelFilterValue[]>([]);
+
+  const filteredSegments = useMemo(() => {
+    if (labelFilter.length === 0) return segments;
+    const set = new Set(labelFilter);
+    return segments.filter((seg) =>
+      seg.label ? set.has(seg.label) : set.has('none')
+    );
+  }, [segments, labelFilter]);
+
+  useEffect(() => {
+    if (isMetadataDisabled && activeTab === 'metadata') {
+      setActiveTab('outlines');
+    }
+  }, [isMetadataDisabled, activeTab]);
+
   return (
     <div className="w-96 bg-white border-r border-gray-200 flex flex-col font-monlam-2">
-      <Tabs defaultValue="metadata" className="flex flex-col flex-1 overflow-hidden">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
         <TabsList className="w-full shrink-0 border-b border-gray-200 rounded-none">
-          <TabsTrigger value="metadata">Metadata</TabsTrigger>
-          <TabsTrigger value="text">Text</TabsTrigger>
+          <TabsTrigger value="outlines">Outlines</TabsTrigger>
+          <span
+            title={isMetadataDisabled ? 'Only available for text segment' : undefined}
+            className={`flex-1 flex ${isMetadataDisabled ? 'inline-flex ' : undefined}`}
+          >
+            <TabsTrigger value="metadata" disabled={isMetadataDisabled}>
+              Metadata
+            </TabsTrigger>
+          </span>
         </TabsList>
 
-        <TabsContent value="metadata" className="flex-1 overflow-hidden">
-          {metadataContent}
-        </TabsContent>
+      
 
-        <TabsContent value="text" className="flex-1 overflow-auto">
+        <TabsContent value="outlines" className="flex-1 overflow-auto">
           <div className="p-4 space-y-1">
-            {segments.length === 0 ? (
+            <FilterSegments value={labelFilter} onChange={setLabelFilter} />
+            {filteredSegments.length === 0 ? (
               <div className="text-center text-gray-500 py-12">
-                <p className="text-sm">No segments available</p>
+                <p className="text-sm">
+                  {segments.length === 0 ? 'No segments available' : 'No segments match the selected labels'}
+                </p>
               </div>
             ) : (
-              segments.map((seg, index) => {
+              filteredSegments.map((seg, index) => {
                 const isActive = seg.id === activeSegmentId;
                 return (
                   <button
@@ -433,20 +463,27 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
                         <p className={`text-sm leading-snug font-monlam ${
                           isActive ? 'text-blue-900' : 'text-gray-700'
                         } ${seg.status === 'checked' ? 'opacity-50' : ''}`}>
-                          {seg.text.length > 80
+                          { seg.title? seg.title : seg.text.length > 80
                             ? seg.text.slice(0, 80) + '...'
                             : seg.text}
                         </p>
-                        {(seg.title || seg.author) && (
-                          <div className="flex flex-wrap gap-1.5 mt-1.5">
-                            {seg.title && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs">
-                                {seg.title}
+                        {(seg.label || seg.title || seg.author) && (
+                          <div className="flex flex-wrap gap-2 mt-2 items-center justify-between">
+                            
+                            {seg.author ? (
+                              <span
+                                className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-violet-50 border border-violet-200 text-violet-900 text-xs font-semibold"
+                                title="Author"
+                              >
+                               <User/> <span> {seg.author}</span>
                               </span>
-                            )}
-                            {seg.author && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 text-xs">
-                                {seg.author}
+                            ):<div/>}
+                            {seg.label && (
+                              <span
+                                className=" inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-slate-50 border border-slate-200 text-slate-700 text-xs"
+                                title="Label"
+                              >
+                                {segmentLabelDisplay(seg.label)}
                               </span>
                             )}
                           </div>
@@ -458,6 +495,9 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
               })
             )}
           </div>
+        </TabsContent>
+        <TabsContent value="metadata" className="flex-1 overflow-hidden">
+          {metadataContent}
         </TabsContent>
       </Tabs>
     </div>

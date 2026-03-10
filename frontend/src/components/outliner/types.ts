@@ -1,5 +1,8 @@
 import type { Comment } from '@/api/outliner';
 
+/** Segment label enum: FRONT_MATTER, TOC, TEXT, BACK_MATTER */
+export type SegmentLabel = 'FRONT_MATTER' | 'TOC' | 'TEXT' | 'BACK_MATTER';
+
 export interface TextSegment {
   id: string;
   text: string;
@@ -10,6 +13,7 @@ export interface TextSegment {
   parentSegmentId?: string;
   is_attached?: boolean | null;
   status?: string | null;
+  label?: SegmentLabel | null;
   rejection_count?: number;
   comments: Comment[];
 }
