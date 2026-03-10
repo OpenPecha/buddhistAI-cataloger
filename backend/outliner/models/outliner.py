@@ -21,7 +21,7 @@ class SegmentLabels(str, PyEnum):
 
 SEGMENT_STATUS_TRANSITIONS = {
     SegmentStatus.UNCHECKED: {SegmentStatus.CHECKED},
-    SegmentStatus.CHECKED: {SegmentStatus.APPROVED, SegmentStatus.REJECTED},
+    SegmentStatus.CHECKED: {SegmentStatus.APPROVED, SegmentStatus.REJECTED, SegmentStatus.UNCHECKED},
     SegmentStatus.REJECTED: {SegmentStatus.CHECKED},
     SegmentStatus.APPROVED: {SegmentStatus.UNCHECKED},
 }

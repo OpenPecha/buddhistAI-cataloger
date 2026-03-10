@@ -31,7 +31,7 @@ export const AISuggestionsBox: React.FC<AISuggestionsBoxProps> = ({
             className={button_classname}
             title="Stop AI suggestion"
           >
-            <Square className="w-4 h-4" />
+            <Square className="w-4 h-4 fill-current" fill="currentColor" />
           </Button>
         ): <Button
         type="button"
