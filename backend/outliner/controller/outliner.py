@@ -10,6 +10,7 @@ from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import func
 from sqlalchemy.orm.session import identity
 from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentRejection, SegmentLabels
+from core.redis import invalidate_document_content_cache
 from outliner.utils.outliner_utils import (
     get_document_with_cache,
     incremental_update_document_progress,
@@ -17,7 +18,6 @@ from outliner.utils.outliner_utils import (
     get_comments_list,
     remove_escape_chars_except_newline,
     set_document_content_in_cache,
-    invalidate_document_content_cache,
     validate_segment_status_transition,
 )
 
@@ -186,6 +186,7 @@ def get_document(
             OutlinerSegment.is_annotated,
             OutlinerSegment.is_attached,
             OutlinerSegment.status,
+            OutlinerSegment.is_supplied_title,
             OutlinerSegment.label,
         ).filter(
             OutlinerSegment.document_id == document_id
@@ -451,7 +452,8 @@ def update_segment(
     label: Optional[str] = None,
     comment: Optional[str] = None,
     comment_content: Optional[str] = None,
-    comment_username: Optional[str] = None
+    comment_username: Optional[str] = None,
+    is_supplied_title: Optional[bool] = None
 ) -> OutlinerSegment:
     """
     PERFORMANCE OPTIMIZED: Update a segment's content or annotations.
@@ -517,7 +519,9 @@ def update_segment(
                 status_code=422,
                 detail=f"Invalid label. Must be one of: {', '.join(s.name for s in SegmentLabels)}"
             )
-    
+    if is_supplied_title is not None:
+        segment.is_supplied_title = is_supplied_title
+
     # Update annotation status flag
     segment.update_annotation_status()
     new_is_annotated = segment.is_annotated
@@ -583,6 +587,8 @@ def update_segments_bulk(
                 segment.label = SegmentLabels[segment_update['label']]
             except KeyError:
                 pass
+        if segment_update.get('is_supplied_title') is not None:
+            segment.is_supplied_title = segment_update['is_supplied_title']
         segment.update_annotation_status()
         segment.updated_at = datetime.utcnow()
         updated_segments.append(segment)

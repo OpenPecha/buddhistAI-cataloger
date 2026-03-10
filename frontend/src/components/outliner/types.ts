@@ -15,6 +15,7 @@ export interface TextSegment {
   status?: string | null;
   label?: SegmentLabel | null;
   rejection_count?: number;
+  is_supplied_title?: boolean | null;
   comments: Comment[];
 }
 

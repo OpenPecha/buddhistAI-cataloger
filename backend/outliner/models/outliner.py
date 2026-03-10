@@ -1,5 +1,5 @@
 from enum import Enum as PyEnum
-from sqlalchemy import String, Text, Integer, Float, DateTime, ForeignKey, Index, JSON, Enum
+from sqlalchemy import Boolean, String, Text, Integer, Float, DateTime, ForeignKey, Index, JSON, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 import uuid
@@ -74,6 +74,7 @@ class OutlinerSegment(Base):
     label: Mapped[SegmentLabels | None] = mapped_column(Enum(SegmentLabels), nullable=True)
     # Annotations
     title: Mapped[str | None] = mapped_column(String, nullable=True)
+    is_supplied_title: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
     author: Mapped[str | None] = mapped_column(String, nullable=True)
     title_bdrc_id: Mapped[str | None] = mapped_column(String, nullable=True)
     author_bdrc_id: Mapped[str | None] = mapped_column(String, nullable=True)

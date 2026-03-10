@@ -82,6 +82,7 @@ class SegmentUpdate(BaseModel):
     comment: Optional[str] = None  # Deprecated: kept for backward compatibility
     comment_content: Optional[str] = None  # New comment content to append
     comment_username: Optional[str] = None  # Username for new comment
+    is_supplied_title: Optional[bool] = None  # Title supplied by annotator (not from source)
 
 
 class SegmentResponse(BaseModel):
@@ -100,6 +101,7 @@ class SegmentResponse(BaseModel):
     status: Optional[str] = None
     label: Optional[str] = None  # FRONT_MATTER, TOC, TEXT, BACK_MATTER
     rejection_count: int = 0
+    is_supplied_title: Optional[bool] = None
     comments: Optional[List[CommentResponse]] = None
     created_at: datetime
     updated_at: datetime
@@ -133,6 +135,7 @@ class SegmentResponseDocument(BaseModel):
     is_attached: Optional[bool] = None
     status: Optional[str] = None  # checked, unchecked
     label: Optional[str] = None  # FRONT_MATTER, TOC, TEXT, BACK_MATTER
+    is_supplied_title: Optional[bool] = None  # Title supplied by annotator (not from source)
 
     class Config:
         from_attributes = True
@@ -144,6 +147,7 @@ class DocumentResponse(BaseModel):
     user_id: Optional[str] = None
     status: Optional[str] = None  # active, completed, deleted, approved, rejected
     created_at: datetime
+    is_supplied_title: Optional[bool] = None
     updated_at: datetime
     segments: List[SegmentResponseDocument] = []
 
@@ -227,6 +231,7 @@ def _build_segment_response(segment, db: Session = None) -> SegmentResponse:
         status=segment.status,
         label=label_value,
         rejection_count=rejection_count,
+        is_supplied_title=segment.is_supplied_title,
         comments=[CommentResponse(**c) for c in comments_list] if comments_list else None,
         created_at=segment.created_at,
         updated_at=segment.updated_at
@@ -352,9 +357,20 @@ async def get_document(
             status=getattr(document, 'status', None),
             created_at=document.created_at,
             updated_at=document.updated_at,
+            is_supplied_title=getattr(document, 'is_supplied_title', None),
             segments=segments_resp,
         )
-    return document
+    return DocumentResponse(
+        id=document.id,
+        content=document.content,
+        filename=document.filename,
+        user_id=document.user_id,
+        status=getattr(document, 'status', None),
+        created_at=document.created_at,
+        updated_at=document.updated_at,
+        is_supplied_title=getattr(document, 'is_supplied_title', None),
+        segments=[],
+    )
 
 
 @router.put("/documents/{document_id}/content")
@@ -474,7 +490,8 @@ async def update_segment(
         label=segment_update.label,
         comment=segment_update.comment,
         comment_content=segment_update.comment_content,
-        comment_username=segment_update.comment_username
+        comment_username=segment_update.comment_username,
+        is_supplied_title=segment_update.is_supplied_title
     )
     return _build_segment_response(segment, db)
 

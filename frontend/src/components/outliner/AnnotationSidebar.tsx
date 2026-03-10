@@ -73,17 +73,21 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   const [isDirtyState, setIsDirtyState] = useState(false);
   const originalFormDataRef = useRef<FormDataType>({ title: { name: '', bdrc_id: '' }, author: { name: '', bdrc_id: '' } });
 
+  // Local state for "title supplied by annotator" checkbox; only persisted on save
+  const [suppliedTitleChecked, setSuppliedTitleChecked] = useState(false);
+
   // Refs for field components
   const titleFieldRef = useRef<TitleFieldRef>(null);
   const authorFieldRef = useRef<AuthorFieldRef>(null);
 
-  // Reset formData when segment changes
+  // Reset formData and is_supplied_title checkbox when segment changes
   useEffect(() => {
     if (activeSegment) {
       const initialFormData = { title: { name: title, bdrc_id: '' }, author: { name: author, bdrc_id: '' } };
       setFormData(initialFormData);
       originalFormDataRef.current = initialFormData;
       setIsDirtyState(false);
+      setSuppliedTitleChecked(activeSegment.is_supplied_title ?? false);
     }
   }, [activeSegment, title, author]);
 
@@ -184,6 +188,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       title_bdrc_id?: string;
       author_bdrc_id?: string;
       status?: string;
+      is_supplied_title?: boolean;
     } = {};
 
     if (titleName) {
@@ -191,6 +196,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       if (formData.title?.bdrc_id) {
         updatePayload.title_bdrc_id = formData.title.bdrc_id;
       }
+      updatePayload.is_supplied_title = suppliedTitleChecked;
     }
 
     if (authorName) {
@@ -215,7 +221,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       console.error('Failed to save annotations:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to save annotations');
     }
-  }, [activeSegment, activeSegmentId, formData, updateSegmentMutation]);
+  }, [activeSegment, activeSegmentId, formData, suppliedTitleChecked, updateSegmentMutation]);
 
   // Expose methods via ref
   useImperativeHandle(ref, () => ({
@@ -301,12 +307,18 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
 
   const metadataContent = activeSegment ? (
     <div className="p-6 overflow-y-auto flex-1">
-      <div className="flex flex-col flex-1 h-full space-y-6">
+      <div className="flex relative flex-col flex-1 h-full space-y-6">
         <div>
-          <div className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-md border border-gray-200">
+          <div className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-md ">
             <div className="font-medium mb-1">Text:</div>
             <div className="text-gray-800">{activeSegment.text.slice(0, 100)}...</div>
           </div>
+           <AISuggestionsBox
+                  suggestions={aiSuggestions.aiSuggestions}
+                  loading={aiSuggestions.aiLoading}
+                  onDetect={aiSuggestions.onAIDetect}
+                  onStop={aiSuggestions.onAIStop}
+           />
         </div>
        
         <div className="relative flex flex-col gap-4">
@@ -318,12 +330,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
           {
             activeSegment.status !== 'checked'  && (
               <>
-                <AISuggestionsBox
-                  suggestions={aiSuggestions.aiSuggestions}
-                  loading={aiSuggestions.aiLoading}
-                  onDetect={aiSuggestions.onAIDetect}
-                  onStop={aiSuggestions.onAIStop}
-                />
+               
                 <TitleField
                   ref={titleFieldRef}
                   segment={activeSegment}
@@ -331,6 +338,8 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
                   formData={formData}
                   onUpdate={onUpdate}
                   resetForm={resetForm}
+                  suppliedTitleChecked={suppliedTitleChecked}
+                  onSuppliedTitleChange={setSuppliedTitleChecked}
                 />
 
                 <AuthorField

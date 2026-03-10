@@ -10,7 +10,6 @@ from sqlalchemy import func
 from core.redis import (
     get_document_content_from_cache,
     set_document_content_in_cache,
-    invalidate_document_content_cache
 )
 from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentStatus, SEGMENT_STATUS_TRANSITIONS
 

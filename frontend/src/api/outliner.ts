@@ -50,6 +50,7 @@ export interface OutlinerSegment {
   status?: OutlineSegmentStatus | null;
   label?: SegmentLabel | null;
   rejection_count?: number;
+  is_supplied_title?: boolean | null;
   created_at: string;
   updated_at: string;
   comments: Comment[];
@@ -96,6 +97,7 @@ export interface SegmentUpdateRequest {
   comment?: string | CommentsData | Comment[]; // Can be old string format, CommentsData format, or array format
   comment_content?: string; // New comment content to append
   comment_username?: string; // Username for new comment
+  is_supplied_title?: boolean; // Title supplied by annotator (not from source)
 }
 
 export interface BulkSegmentUpdateRequest {
@@ -648,6 +650,7 @@ export const outlinerSegmentToTextSegment = (segment: OutlinerSegment): TextSegm
     status: segment.status || undefined,
     label: segment.label ?? undefined,
     rejection_count: segment.rejection_count ?? 0,
+    is_supplied_title: segment.is_supplied_title ?? undefined,
     comments: segment.comments,
   };
 };

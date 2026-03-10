@@ -13,6 +13,8 @@ interface TitleFieldProps {
   formData: FormDataType;
   onUpdate: (field: 'title' | 'author', value: Title | Author) => void;
   resetForm: () => void;
+  suppliedTitleChecked: boolean;
+  onSuppliedTitleChange: (checked: boolean) => void;
 }
 
 export interface TitleFieldRef {
@@ -26,6 +28,8 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
   formData,
   onUpdate,
   resetForm,
+  suppliedTitleChecked,
+  onSuppliedTitleChange,
 }, ref) => {
   const titleSearch = formData?.title?.name || '';
   const setTitleSearch = (value: string) => {
@@ -68,13 +72,28 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
 
   return (
     <div>
-      <Label htmlFor="title" className="mb-2">Title</Label>
+      <div className="flex items-center gap-2  justify-between" >
+      <Label htmlFor="title" className="">Title</Label>
+        
+        <div className="flex items-center gap-2 mb-2"> 
+          <input
+          type="checkbox"
+          id="supplied-title"
+          checked={suppliedTitleChecked}
+          onChange={(e) => onSuppliedTitleChange(e.target.checked)}
+          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+          />
+        <Label htmlFor="supplied-title" className="text-sm text-gray-500 font-normal cursor-pointer">
+          supplied
+        </Label>
+          </div>
+      </div>
       <Input
         ref={inputRef}
         id="title"
         value={titleSearch}
         onChange={(e) => setTitleSearch(e.target.value)}
-        placeholder="Enter title"
+        placeholder={suppliedTitleChecked ? 'Title supplied by the annotator' : 'Enter title'}
         className="w-full"
       />
       <div className="relative mt-2">
