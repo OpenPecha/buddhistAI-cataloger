@@ -156,7 +156,7 @@ const TextCreation = () => {
   const createInstanceMutation = useCreateTextInstance();
   
   // BDRC search for texts
-  const { results: bdrcResults, isLoading: isLoadingBdrc } = useBdrcSearch(debouncedTextSearch, "Instance",  1000);
+  const { results: bdrcResults, isLoading: isLoadingBdrc } = useBdrcSearch(debouncedTextSearch, "Work",  1000);
 
   // Debounce text search and track attempts
   useEffect(() => {

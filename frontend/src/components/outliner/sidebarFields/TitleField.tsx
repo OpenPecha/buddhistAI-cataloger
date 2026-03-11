@@ -43,7 +43,7 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
 
   const { results: titleResults, isLoading: titleLoading } = useBdrcSearch(
     titleSearch,
-    'Instance',
+    'Work',
     1000,
     () => { bdrcInputRef.current?.focus(); },
     isBdrcFocused
@@ -97,7 +97,8 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
         className="w-full"
       />
       <div className="relative mt-2">
-        <Label htmlFor="title-bdrc-id" className="mb-1 text-xs text-gray-500">BDRC ID</Label>
+        <Label htmlFor="title-bdrc-id" className="mb-1 text-xs text-gray-500">BDRC ID</Label> 
+       
         <div className="relative">
           <Input
             ref={bdrcInputRef}
@@ -109,6 +110,13 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
             placeholder="Focus to search BDRC..."
             className="w-full pr-8 text-sm"
           />
+           {
+            isBdrcFocused && (
+              <span className={`text-xs ${titleResults.length === 0 ? 'text-red-500' : 'text-gray-500'}`}>
+                found: {titleResults.length}
+              </span>
+            )
+           }
           {titleLoading && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
               <Loader2 className="w-4 h-4 animate-spin text-gray-400" />

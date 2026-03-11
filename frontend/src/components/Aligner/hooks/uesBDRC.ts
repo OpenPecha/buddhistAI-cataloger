@@ -27,7 +27,7 @@ export interface BdrcSearchResult {
  * @returns search results and loading state
  */
 
-export function useBdrcSearch(searchQuery: string, type: "Instance" | "Person" = "Instance", debounceMs: number = 1000) {
+export function useBdrcSearch(searchQuery: string, type: "Work" | "Person" = "Work", debounceMs: number = 1000) {
   const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
 
   // Debounce the search query

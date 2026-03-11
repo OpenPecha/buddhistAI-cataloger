@@ -33,7 +33,7 @@ export const useSegmentAnnotations = ({
   // BDRC search hooks
   const { results: titleResults, isLoading: titleLoading } = useBdrcSearch(
     titleSearchQuery,
-    'Instance',
+    'Work',
     1000,
     () => {
       titleInputRef.current?.focus();

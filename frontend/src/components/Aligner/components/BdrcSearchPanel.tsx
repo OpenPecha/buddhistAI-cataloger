@@ -40,7 +40,7 @@ export function BdrcSearchPanel({
   const { t } = useTranslation();
   const { results: bdrcResults, isLoading: isLoadingBdrc, error: bdrcError } = useBdrcSearch(
     bdrcSearchQuery,
-    "Instance",
+    "Work",
     1000
   );
 

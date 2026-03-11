@@ -33,7 +33,7 @@ export interface BdrcSearchResult {
  * @returns search results and loading state
  */
 
-export function useBdrcSearch(searchQuery: string, type: string = "Instance", debounceMs: number = 1000,callback: () => void | null=()=>{},enabled: boolean = true) {
+export function useBdrcSearch(searchQuery: string, type: string = "Work", debounceMs: number = 1000,callback: () => void | null=()=>{},enabled: boolean = true) {
   const [debouncedValue, setDebouncedValue, debouncer] = useDebouncedState(
     searchQuery,
     { wait: debounceMs }

@@ -49,7 +49,7 @@ const PublishForm: React.FC<PublishFormProps> = ({
   
   // BDRC search hooks
   const { results: authorResults, isLoading: isLoadingAuthors } = useBdrcSearch(authorSearchQuery, "Person", 300);
-  const { results: titleResults, isLoading: isLoadingTitles } = useBdrcSearch(titleSearchQuery, "Instance", 300);
+  const { results: titleResults, isLoading: isLoadingTitles } = useBdrcSearch(titleSearchQuery, "Work", 300);
 
 
   // Handle category selection
