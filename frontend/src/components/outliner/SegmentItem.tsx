@@ -121,8 +121,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
             !(e.target as HTMLElement).closest('.split-menu') &&
             !(e.target as HTMLElement).closest('.bubble-menu') &&
             !(e.target as HTMLElement).closest('.cancel-split-button') &&
-            !(e.target as HTMLElement).closest('.collapse-button') &&
-            !(e.target as HTMLElement).closest('.segment-label-bar')
+            !(e.target as HTMLElement).closest('.collapse-button')
           ) {
             onSegmentClick(segment.id, e)
           }
@@ -148,7 +147,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
         {/* Segment label - at top of each segment */}
         <div className="segment-label-bar flex items-center gap-2 mb-3 pb-2 border-b border-gray-200">
           <span className="text-xs font-medium text-gray-500 shrink-0">Label</span>
-          {isUpdatingLabel ? (
+          {isUpdatingLabel && activeSegmentId === segment.id ? (
             <div className="z-10">
             <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
             </div>

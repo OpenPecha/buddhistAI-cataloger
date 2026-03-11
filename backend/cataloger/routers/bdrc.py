@@ -4,6 +4,8 @@ from typing import List, Optional, Dict, Any, Literal
 from dotenv import load_dotenv
 
 from bdrc import search as bdrc_search_module
+from bdrc import work as bdrc_work_module
+from bdrc import person as bdrc_person_module
 
 load_dotenv(override=True)
 
@@ -38,6 +40,25 @@ class BdrcSearchRequest(BaseModel):
     size: int = 20
     filter: List[Any] = []
     type: Literal["Work", "Person"] = "Work"  # Can be "Instance", "Text", "Volume", "Person"
+
+
+class CreateWorkRequest(BaseModel):
+    """Request body for creating a work via BDRC OTAPI POST /api/v1/works."""
+
+    pref_label_bo: Optional[str] = None
+    alt_label_bo: Optional[List[str]] = None
+    authors: Optional[List[str]] = None
+    versions: Optional[List[str]] = None
+    modified_by: Optional[str] = None
+
+
+class CreatePersonRequest(BaseModel):
+    """Request body for creating a person via BDRC OTAPI POST /api/v1/persons."""
+
+    pref_label_bo: Optional[str] = None
+    alt_label_bo: Optional[List[str]] = None
+    dates: Optional[str] = None
+    modified_by: Optional[str] = None
 
 
 def _normalize_person_results(raw: Dict[str, Any], max_results: int = 10) -> List[Dict[str, Any]]:
@@ -116,6 +137,49 @@ async def bdrc_search(request: BdrcSearchRequest):
             return work_details[from_offset : from_offset + size]
 
         return []
+    except TimeoutError:
+        raise HTTPException(status_code=504, detail="Request to BDRC API timed out")
+    except ConnectionError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/works")
+async def create_work(request: CreateWorkRequest):
+    """Create a work in BDRC via OTAPI POST /api/v1/works."""
+    try:
+        result = await bdrc_work_module.create_work(
+            pref_label_bo=request.pref_label_bo,
+            alt_label_bo=request.alt_label_bo,
+            authors=request.authors,
+            versions=request.versions,
+            modified_by=request.modified_by,
+        )
+        return result
+    except TimeoutError:
+        raise HTTPException(status_code=504, detail="Request to BDRC API timed out")
+    except ConnectionError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/persons")
+async def create_person(request: CreatePersonRequest):
+    """Create a person in BDRC via OTAPI POST /api/v1/persons."""
+    try:
+        result = await bdrc_person_module.create_person(
+            pref_label_bo=request.pref_label_bo,
+            alt_label_bo=request.alt_label_bo,
+            dates=request.dates,
+            modified_by=request.modified_by,
+        )
+        return result
     except TimeoutError:
         raise HTTPException(status_code=504, detail="Request to BDRC API timed out")
     except ConnectionError as e:

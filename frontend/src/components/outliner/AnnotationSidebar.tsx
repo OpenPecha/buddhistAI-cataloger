@@ -306,7 +306,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   }, [onSegmentClick]);
 
   const metadataContent = activeSegment ? (
-    <div className="p-6 overflow-y-auto flex-1">
+    <div className="p-6 overflow-y-auto flex-1 h-full">
       <div className="flex relative flex-col flex-1 h-full space-y-6">
         <div>
           <div className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-md ">

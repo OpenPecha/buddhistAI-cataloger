@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef, Activity, forwardRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react';
 import { useBdrcSearch } from '@/hooks/useBdrcSearch';
 import Emitter from '@/events';
+import { CreateBdrcWorkModal } from '@/components/bdrc/CreateBdrcWorkModal';
 import type { TextSegment } from '../types';
 import type { FormDataType, Title, Author } from '../AnnotationSidebar';
 
@@ -39,6 +40,7 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const [isBdrcFocused, setIsBdrcFocused] = useState(false);
+  const [createWorkModalOpen, setCreateWorkModalOpen] = useState(false);
   const bdrcInputRef = useRef<HTMLInputElement | null>(null);
 
   const { results: titleResults, isLoading: titleLoading } = useBdrcSearch(
@@ -50,8 +52,13 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
   );
 
   const handleSelect = (title: { workId?: string; instanceId?: string; title?: string }) => {
-    onUpdate('title', { name: titleSearch || '', bdrc_id: title?.workId || '' });
-    setIsBdrcFocused(false)
+    onUpdate('title', { name: titleSearch || title?.title || '', bdrc_id: title?.workId || '' });
+    setIsBdrcFocused(false);
+  };
+
+  const handleCreateWorkSuccess = (work: { workId: string; title?: string }) => {
+    handleSelect({ workId: work.workId, title: work.title });
+    setCreateWorkModalOpen(false);
   };
 
   const handleBdrcIdChange = (value: string) => {
@@ -123,8 +130,13 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
             </div>
           )}
         </div>
-        <Activity mode={titleResults.length > 0 && isBdrcFocused ? 'visible' : 'hidden'}>
+        <Activity mode={isBdrcFocused ? 'visible' : 'hidden'}>
           <div className="absolute z-900 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+            {titleResults.length === 0 && !titleLoading && (
+              <div className="px-4 py-2 text-sm text-muted-foreground border-b border-gray-100">
+                No results. Create a new work below.
+              </div>
+            )}
             {titleResults.map((title, index) => (
               <button
                 key={title.workId || index}
@@ -141,9 +153,28 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
                 )}
               </button>
             ))}
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setIsBdrcFocused(false);
+                setCreateWorkModalOpen(true);
+              }}
+              className="w-full px-4 py-2 text-left hover:bg-gray-100 border-t border-gray-200 flex items-center gap-2 text-sm text-primary font-medium"
+            >
+              <Plus className="h-4 w-4 shrink-0" />
+              Create work
+            </button>
           </div>
         </Activity>
       </div>
+
+      <CreateBdrcWorkModal
+        open={createWorkModalOpen}
+        onOpenChange={setCreateWorkModalOpen}
+        onSuccess={handleCreateWorkSuccess}
+        initialPrefLabel={titleSearch}
+      />
     </div>
   );
 });
