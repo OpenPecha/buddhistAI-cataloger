@@ -302,7 +302,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
 
   const handleTocClick = useCallback((segmentId: string) => {
     onSegmentClick?.(segmentId);
-    globalThis.document.getElementById(segmentId)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    globalThis.document.getElementById(segmentId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [onSegmentClick]);
 
   const metadataContent = activeSegment ? (

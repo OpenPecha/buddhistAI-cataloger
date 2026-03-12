@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, Activity, forwardRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, PersonStandingIcon, Plus } from 'lucide-react';
 import { useBdrcSearch } from '@/hooks/useBdrcSearch';
 import Emitter from '@/events';
 import { CreateBdrcWorkModal } from '@/components/bdrc/CreateBdrcWorkModal';
@@ -104,7 +104,8 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
         className="w-full"
       />
       <div className="relative mt-2">
-        <Label htmlFor="title-bdrc-id" className="mb-1 text-xs text-gray-500">BDRC ID</Label> 
+        <Label htmlFor="title-bdrc-id" className="mb-1 text-xs text-gray-500">BDRC ID
+    </Label> 
        
         <div className="relative">
           <Input
@@ -117,26 +118,23 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
             placeholder="Focus to search BDRC..."
             className="w-full pr-8 text-sm"
           />
-           {
-            isBdrcFocused && (
-              <span className={`text-xs ${titleResults.length === 0 ? 'text-red-500' : 'text-gray-500'}`}>
-                found: {titleResults.length}
-              </span>
-            )
-           }
           {titleLoading && (
             <div className="absolute right-3 top-1/2 -translate-y-1/2">
               <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
             </div>
           )}
+         
+          
         </div>
         <Activity mode={isBdrcFocused ? 'visible' : 'hidden'}>
           <div className="absolute z-900 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-            {titleResults.length === 0 && !titleLoading && (
-              <div className="px-4 py-2 text-sm text-muted-foreground border-b border-gray-100">
-                No results. Create a new work below.
-              </div>
-            )}
+            {
+            isBdrcFocused && (
+              <span className={`text-xs pl-2 ${titleResults.length === 0 ? 'text-red-500' : 'text-gray-500'}`}>
+                found: {titleResults.length}
+              </span>
+            )
+           }
             {titleResults.map((title, index) => (
               <button
                 key={title.workId || index}
@@ -145,12 +143,15 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
                   e.preventDefault();
                   handleSelect(title);
                 }}
-                className="w-full px-4 py-2 text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                className="w-full px-4 py-2 font-monlam text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
               >
                 <div className="text-sm font-medium text-gray-900">{title.title}</div>
-                {title.workId && (
-                  <div className="text-xs text-gray-500">ID: {title.workId}</div>
-                )}
+                <div className="text-xs text-gray-500 flex items-center gap-1"><PersonStandingIcon className="w-4 h-4" /> 
+                {title?.author || "unknown author"} &nbsp; 
+                {title.workId && 
+                  <span>ID: {title.workId}</span>
+                }</div>
+              
               </button>
             ))}
             <button

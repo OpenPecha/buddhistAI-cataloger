@@ -15,7 +15,7 @@ export const Workspace: React.FC = () => {
     onUndoTextEndingDetection,
     onResetSegments,
   } = useActions()
-  const { isLoading: isLoadingDocument } = useOutlinerDocument()
+  const { isLoading: isLoadingDocument,isRefetching } = useOutlinerDocument()
   const containerRef = useRef<HTMLDivElement>(null);
   const parentContainerRef = useRef<HTMLDivElement>(null);
 
@@ -28,8 +28,6 @@ export const Workspace: React.FC = () => {
     defaultRowHeight: 50
   });
 
-
- 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div ref={parentContainerRef} className="flex-1 flex flex-col overflow-hidden">
@@ -59,6 +57,9 @@ export const Workspace: React.FC = () => {
     )
   }
         {/* Text Display - Virtualized or Direct Rendering */}
+
+        
+
         <div
           ref={containerRef}
           className="flex-1 bg-white relative overflow-auto scroll-container"

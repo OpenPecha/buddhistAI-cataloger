@@ -19,14 +19,17 @@ export const SplitMenu: React.FC<SplitMenuProps> = ({ segmentId }) => {
   useEffect(() => {
     if(viewportPosition)  setIsVisible(true)
   }, [viewportPosition])
-  // Handle outside click
+  // Handle outside click: close only when click is outside both the menu and the segment that owns it
   const handleClickOutside = useCallback(
     (event: MouseEvent) => {
-      if (viewportPosition && menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      const target = event.target as Node
+      if (!viewportPosition || !menuRef.current) return
+      if (menuRef.current.contains(target)) return
+      const segmentEl = document.getElementById(segmentId)
+      if (segmentEl?.contains(target)) return
       setIsVisible(false)
-      }
     },
-    [menuRef]
+    [segmentId, viewportPosition, menuRef]
   )
 
   React.useEffect(() => {

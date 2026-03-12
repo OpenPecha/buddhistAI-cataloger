@@ -656,6 +656,7 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
     segmentLoadingStates: segmentLoadingStates || new Map(), // Map of segmentId -> loading boolean
     updateSegmentLoading: updateSegmentMutation.isPending,
     isRefetching: isRefetchingQuery,
+    isResetting: resetSegmentsMutation.isPending,
     // Actions
     uploadFile: handleUploadFile,
     createDocument: handleCreateDocument,

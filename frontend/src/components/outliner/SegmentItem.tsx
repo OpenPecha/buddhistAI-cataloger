@@ -109,7 +109,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
           </Button>
         </div>
       )}
-
+     
       <div
       id={segment.id}
         data-segment-id={segment.id}

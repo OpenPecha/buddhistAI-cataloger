@@ -72,7 +72,7 @@ export function BdrcAuthorSelector({
   }
 
   return (
-    <div className="grid gap-1">
+    <div className="grid gap-1 ">
       {label && (
         <Label htmlFor={id} className="text-xs text-gray-500">
           {label}
@@ -101,6 +101,9 @@ export function BdrcAuthorSelector({
                 No results. Create a new author below.
               </div>
             )}
+              <span className={`text-xs pl-2 ${results.length === 0 ? 'text-red-500' : 'text-gray-500'}`}>
+                found: {results.length}
+              </span>
             {results.map((person, index) => (
               <button
                 key={person.bdrc_id ?? index}
@@ -109,7 +112,7 @@ export function BdrcAuthorSelector({
                   e.preventDefault()
                   handleSelect(person.bdrc_id ?? '', person.name)
                 }}
-                className="w-full px-4 py-2 text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                className="w-full font-monlam px-4 py-2 text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
               >
                 <div className="text-sm font-medium text-gray-900">{person.name ?? person.bdrc_id}</div>
                 {person.bdrc_id && (
