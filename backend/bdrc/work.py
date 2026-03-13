@@ -67,3 +67,23 @@ async def create_work(
         raise TimeoutError(TIMEOUT_ERROR_MSG) from e
     except httpx.RequestError as e:
         raise ConnectionError(f"Error connecting to BDRC OTAPI: {str(e)}") from e
+
+
+async def get_work(work_id: str) -> Dict[str, Any]:
+    """
+    Get a work from BDRC OTAPI by work id.
+    """
+    url = f"{BDRC_BACKEND_URL}/works/{work_id}"
+    headers = {"accept": APPLICATION_JSON}
+    try:
+        client = await get_http_client()
+        response = await client.get(url, headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except httpx.HTTPStatusError as e:
+        error_msg = f"HTTP error {e.response.status_code}: {e.response.text}"
+        raise RuntimeError(error_msg) from e
+    except httpx.TimeoutException as e:
+        raise TimeoutError(TIMEOUT_ERROR_MSG) from e
+    except httpx.RequestError as e:
+        raise ConnectionError(f"Error connecting to BDRC OTAPI: {str(e)}") from e

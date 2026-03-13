@@ -5,6 +5,7 @@ import { segmentLabelDisplay } from './segment-label';
 import { FilterSegments, type LabelFilterValue } from './FilterSegments';
 import { TitleField, type TitleFieldRef } from './sidebarFields/TitleField';
 import { AuthorField, type AuthorFieldRef } from './sidebarFields/AuthorField';
+import BDRCField from './sidebarFields/BDRCField';
 import { AISuggestionsBox } from './AISuggestionsBox';
 import { useAISuggestions } from '@/hooks/useAISuggestions';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
@@ -305,6 +306,10 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
     globalThis.document.getElementById(segmentId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }, [onSegmentClick]);
 
+  const hasLabelledSegment = Boolean(activeSegment?.label);
+  const isMetadataDisabled = !activeSegment || !hasLabelledSegment;
+  const showBdrcMatch = activeSegment?.label === 'TEXT';
+
   const metadataContent = activeSegment ? (
     <div className="p-6 overflow-y-auto flex-1 h-full">
       <div className="flex relative flex-col flex-1 h-full space-y-6">
@@ -313,82 +318,77 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
             <div className="font-medium mb-1">Text:</div>
             <div className="text-gray-800">{activeSegment.text.slice(0, 100)}...</div>
           </div>
+          {
+            activeSegment.status !== 'checked' && (
            <AISuggestionsBox
                   suggestions={aiSuggestions.aiSuggestions}
                   loading={aiSuggestions.aiLoading}
                   onDetect={aiSuggestions.onAIDetect}
                   onStop={aiSuggestions.onAIStop}
-           />
+           />)}
         </div>
        
         <div className="relative flex flex-col gap-4">
-          {(updateSegmentLoading || isRefetching) && (
-            <div className="absolute inset-0 z-20 flex items-center justify-center bg-white bg-opacity-60">
-              <Loader2 className="w-6 h-6 animate-spin text-gray-600" />
-            </div>
+          
+          <TitleField
+            ref={titleFieldRef}
+            formData={formData}
+            onUpdate={onUpdate}
+            suppliedTitleChecked={suppliedTitleChecked}
+            onSuppliedTitleChange={setSuppliedTitleChecked}
+            disabled={activeSegment.status === 'checked'}
+          />
+          <AuthorField
+            ref={authorFieldRef}
+            segment={activeSegment}
+            formData={formData}
+            onUpdate={onUpdate}
+            resetForm={resetForm}
+            disabled={activeSegment.status === 'checked'}
+          />
+          {showBdrcMatch && (
+            <BDRCField
+              segment={activeSegment}
+              formData={formData}
+              onUpdate={onUpdate}
+              resetForm={resetForm}
+              disabled={activeSegment.status === 'checked'}
+            />
           )}
-          {
-            activeSegment.status !== 'checked'  && (
-              <>
-               
-                <TitleField
-                  ref={titleFieldRef}
-                  segment={activeSegment}
-                  activeSegmentId={activeSegmentId}
-                  formData={formData}
-                  onUpdate={onUpdate}
-                  resetForm={resetForm}
-                  suppliedTitleChecked={suppliedTitleChecked}
-                  onSuppliedTitleChange={setSuppliedTitleChecked}
-                />
-
-                <AuthorField
-                  ref={authorFieldRef}
-                  segment={activeSegment}
-                  formData={formData}
-                  onUpdate={onUpdate}
-                  resetForm={resetForm}
-                />
-              </>
-            )
-          }
         </div>
 
-
         <div className="flex gap-2 bg-white">
-          {
-            activeSegment.status !== 'checked' ?
-              <>
-                <Button
-                  type="button"
-                  className='flex-1'
-                  onClick={onSave}
-                  variant="default"
-                  disabled={!activeSegmentId || (formData.title.name.trim() === '' && formData.author.name.trim() === '')}
-                >
-                  <Save />Save
-                </Button>
-                <Button
-                  type="button"
-                  onClick={onUnknown}
-                  variant="outline"
-                  disabled={!activeSegmentId}
-                >
-                  <X /> N/A
-                </Button>
-              </>
-              :
+          {activeSegment.status !== 'checked' ? (
+            <>
               <Button
                 type="button"
-                onClick={onReset}
+                className="flex-1"
+                onClick={onSave}
+                variant="default"
+                disabled={!activeSegmentId || (formData.title.name.trim() === '' && formData.author.name.trim() === '')}
+              >
+                <Save />Save
+              </Button>
+              <Button
+                type="button"
+                onClick={onUnknown}
                 variant="outline"
                 disabled={!activeSegmentId}
-                className='w-full'
               >
-                <RotateCcw /> Reset
+                <X /> N/A
               </Button>
-
-          }
+            </>
+          ) : (
+            <Button
+              type="button"
+              onClick={onReset}
+              variant="outline"
+              disabled={!activeSegmentId}
+              className="w-full"
+            >
+              <RotateCcw /> Reset
+            </Button>
+          )}
         </div>
         <hr />
 
@@ -402,7 +402,6 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
     </div>
   );
 
-  const isMetadataDisabled = !activeSegment || activeSegment?.label !== 'TEXT';
   const [activeTab, setActiveTab] = useState('outlines');
   const [labelFilter, setLabelFilter] = useState<LabelFilterValue[]>([]);
 
@@ -426,7 +425,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
         <TabsList className="w-full shrink-0 border-b border-gray-200 rounded-none">
           <TabsTrigger value="outlines">Outlines</TabsTrigger>
           <span
-            title={isMetadataDisabled ? 'Only available for text segment' : undefined}
+            title={isMetadataDisabled ? 'Only available for labelled segments' : undefined}
             className={`flex-1 flex ${isMetadataDisabled ? 'inline-flex ' : undefined}`}
           >
             <TabsTrigger value="metadata" disabled={isMetadataDisabled}>

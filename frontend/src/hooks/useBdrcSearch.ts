@@ -92,3 +92,31 @@ export function useBdrcSearch(searchQuery: string, type: string = "Work", deboun
   };
 }
 
+export interface BdrcWorkInfo {
+  workId: string;
+  title: string;
+  author: string;
+}
+
+/**
+ * Fetch BDRC work by ID for display (title, author).
+ */
+export function useBdrcWork(workId: string | null) {
+  const { data, isLoading, error } = useQuery<BdrcWorkInfo>({
+    queryKey: ["bdrc-work", workId],
+    queryFn: async ({ signal }) => {
+      const res = await fetch(`${API_URL}/bdrc/works/${workId}`, { signal });
+      if (!res.ok) throw new Error("Failed to fetch BDRC work");
+      return res.json();
+    },
+    enabled: Boolean(workId?.trim()),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  return {
+    work: data ?? null,
+    isLoading,
+    error: error ? (error instanceof Error ? error.message : "Unknown error") : null,
+  };
+}
+

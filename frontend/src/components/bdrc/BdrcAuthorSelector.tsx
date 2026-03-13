@@ -1,9 +1,12 @@
 import { useState, useRef, Activity } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Loader2, Plus } from 'lucide-react'
+import { Loader2, Plus, UserX } from 'lucide-react'
 import { useBdrcSearch } from '@/hooks/useBdrcSearch'
 import { CreateBdrcPersonModal } from './CreateBdrcPersonModal'
+
+/** Sentinel value for author bdrc_id when author is difficult to identify. */
+export const BDRC_AUTHOR_DIFFICULT_TO_IDENTIFY = 'difficult_to_identify'
 
 export interface BdrcAuthorSelectorProps {
   /** Current BDRC person ID. */
@@ -43,7 +46,10 @@ export function BdrcAuthorSelector({
     isFocused
   )
 
-  const displayValue = value || (searchQueryProp === undefined ? localSearch : '')
+  const displayValue =
+    value === BDRC_AUTHOR_DIFFICULT_TO_IDENTIFY
+      ? 'Difficult to identify'
+      : value || (searchQueryProp === undefined ? localSearch : '')
   const showDropdown = isFocused
 
   const handleSelect = (bdrc_id: string, name?: string) => {
@@ -120,6 +126,17 @@ export function BdrcAuthorSelector({
                 )}
               </button>
             ))}
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                handleSelect(BDRC_AUTHOR_DIFFICULT_TO_IDENTIFY, 'Difficult to identify')
+              }}
+              className="w-full px-4 py-2 text-left hover:bg-gray-100 border-t border-gray-200 flex items-center gap-2 text-sm text-muted-foreground"
+            >
+              <UserX className="h-4 w-4 shrink-0" />
+              Difficult to identify
+            </button>
             <button
               type="button"
               onMouseDown={(e) => {

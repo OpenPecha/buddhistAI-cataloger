@@ -147,6 +147,36 @@ async def bdrc_search(request: BdrcSearchRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/works/{work_id}")
+async def get_work(work_id: str):
+    """Get a work from BDRC by work ID. Returns title and author for display."""
+    try:
+        raw = await bdrc_work_module.get_work(work_id)
+    except TimeoutError:
+        raise HTTPException(status_code=504, detail="Request to BDRC API timed out")
+    except ConnectionError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    # Normalize OTAPI response for frontend display
+    title = raw.get("pref_label_bo") or (raw.get("alt_label_bo") or [None])[0] or ""
+    authors = raw.get("authors") or []
+    author = authors[0] if authors else ""
+    if isinstance(author, dict):
+        author = author.get("pref_label_bo") or author.get("name") or str(author)
+    else:
+        author = str(author) if author else ""
+
+    return {
+        "workId": raw.get("id", work_id),
+        "title": title,
+        "author": author,
+    }
+
+
 @router.post("/works")
 async def create_work(request: CreateWorkRequest):
     """Create a work in BDRC via OTAPI POST /api/v1/works."""

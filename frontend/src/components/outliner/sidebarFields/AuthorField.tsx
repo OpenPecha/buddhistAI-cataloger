@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef, forwardRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { BdrcAuthorSelector } from '@/components/bdrc/BdrcAuthorSelector';
+import { BDRC_AUTHOR_DIFFICULT_TO_IDENTIFY, BdrcAuthorSelector } from '@/components/bdrc/BdrcAuthorSelector';
 import Emitter from '@/events';
 import type { TextSegment } from '../types';
 import type { Author, FormDataType, Title } from '../AnnotationSidebar';
@@ -46,6 +46,7 @@ interface AuthorFieldProps {
   formData: FormDataType;
   onUpdate: (field: 'title' | 'author', value: Title | Author) => void;
   resetForm: () => void;
+  disabled?: boolean;
 }
 
 export interface AuthorFieldRef {
@@ -58,6 +59,7 @@ export const AuthorField = forwardRef<AuthorFieldRef, AuthorFieldProps>(({
   formData,
   onUpdate,
   resetForm,
+  disabled = false,
 }, ref) => {
   const authorSearch = formData?.author?.name || '';
   const setAuthorSearch = (value: string) => {
@@ -71,8 +73,8 @@ export const AuthorField = forwardRef<AuthorFieldRef, AuthorFieldProps>(({
   const [selectedAuthorName, setSelectedAuthorName] = useState<string | null>(null);
 
   const handleAuthorChange = (bdrc_id: string, name?: string) => {
-    onUpdate('author', { name: name ?? authorSearch, bdrc_id });
-    setSelectedAuthorName(name ?? null);
+    onUpdate('author', { name: authorSearch, bdrc_id });
+    setSelectedAuthorName(bdrc_id === BDRC_AUTHOR_DIFFICULT_TO_IDENTIFY ? null : (name ?? null));
   };
 
   useEffect(() => {
@@ -103,10 +105,9 @@ export const AuthorField = forwardRef<AuthorFieldRef, AuthorFieldProps>(({
 
   return (
     <div>
-     
       <div className="relative flex items-center gap-2">
       <Label htmlFor="author" className="mb-2">Author</Label>
-      {matchPercentage !== null && (
+      {matchPercentage !== null &&  authorSearch!=="Difficult to identify" && (
         <div
           className={`mb-1 h-full inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${matchIndicatorClass}`}
           title="Match with selected BDRC author"
@@ -122,17 +123,9 @@ export const AuthorField = forwardRef<AuthorFieldRef, AuthorFieldProps>(({
         onChange={(e) => setAuthorSearch(e.target.value)}
         placeholder="Enter author name"
         className="w-full"
+        disabled={disabled}
       />
-      <div className="relative mt-2">
-        <BdrcAuthorSelector
-          id="author-bdrc-id"
-          label="BDRC ID"
-          value={bdrcId}
-          onChange={handleAuthorChange}
-          searchQuery={authorSearch}
-          placeholder="Focus to search BDRC or create author…"
-        />
-      </div>
+     
     </div>
   );
 });

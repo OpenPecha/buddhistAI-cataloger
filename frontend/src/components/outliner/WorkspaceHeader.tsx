@@ -30,10 +30,16 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
   const checked_percentage = segmentsCount > 0 ? (checkedSegmentsCount / segmentsCount) * 100 : 0;
   const { onAIDetectTextEndings, onAITextEndingStop, onUndoTextEndingDetection, onResetSegments } = actions;
   const [isAllExpanded, setIsAllExpanded] = useState(false);
+
+  const { isLoading,isRefetching,isSaving,isResetting } = useOutlinerDocument();
+  const isLoadingOrSaving = isLoading || isRefetching || isSaving || isResetting;
   return (
     <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
       <div>
-        <h2 className="text-lg font-semibold text-gray-900">Text Workspace</h2>
+        <div className="flex items-center gap-2">
+        <h2 className="text-lg font-semibold text-gray-900"> Workspace</h2> 
+        {isLoadingOrSaving &&        <span className="text-sm text-gray-600">saving...</span>}
+        </div>
         <div className="text-sm text-gray-600">
           <Progress value={checked_percentage} title={`${checkedSegmentsCount} saved segments`}/>
           <span>{segmentsCount} segment{segmentsCount !== 1 ? 's' : ''}</span>
@@ -109,6 +115,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import ExpandAllButton from './ExpandAllButton';
 import { Progress } from '../ui/progress';
 import SubmitToReview from './SubmitToReview';
+import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
 
 
 function Menu({ onResetSegments, isAllExpanded, setIsAllExpanded }: {readonly onResetSegments: () => void; readonly isAllExpanded: boolean; readonly setIsAllExpanded: (v: boolean) => void }) {

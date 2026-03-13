@@ -42,22 +42,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
     onAttachParent,
     onMergeWithPrevious,
   } = useActions()
-  const { documentId,isSaving: isUpdatingLabelMutation,isRefetching: isUpdatingLabelLoading, updateSegment: updateSegmentMutation } = useOutlinerDocument()
 
-  const isUpdatingLabel = isUpdatingLabelMutation || isUpdatingLabelLoading
-  const handleLabelChange = useCallback(
-    (value: string) => {
-      if (!segment.id || !documentId) return
-      const label = value === 'none' || value === '' ? undefined : (value as SegmentLabel)
-      updateSegmentMutation(segment.id, { label }).catch((err) => {
-        console.error('Failed to update segment label:', err)
-        toast.error(err instanceof Error ? err.message : 'Failed to update label')
-      })
-    },
-    [segment.id, documentId, updateSegmentMutation]
-  )
-
-  const isLoading = segmentLoadingStates?.get(segment.id) ?? false
   const isChecked = segment.status === 'checked' || segment.status === 'approved'
   const isRejected = segment.status === 'rejected'
   const isFirstSegment = index === 0
@@ -144,42 +129,10 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
               : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
         }`}
       >
-        {/* Segment label - at top of each segment */}
-        <div className="segment-label-bar flex items-center gap-2 mb-3 pb-2 border-b border-gray-200">
-          <span className="text-xs font-medium text-gray-500 shrink-0">Label</span>
-          {isUpdatingLabel && activeSegmentId === segment.id ? (
-            <div className="z-10">
-            <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
-            </div>
-          ):
-          <Select
-          value={segment.label ?? 'none'}
-          onValueChange={handleLabelChange}
-            disabled={!documentId || isLoading}
-          >
-            <SelectTrigger className="h-8 text-xs flex-1 max-w-[180px]" id={`segment-label-${segment.id}`}>
-              <SelectValue placeholder="No label" />
-            </SelectTrigger>
-            <SelectContent>
-          
-              {SEGMENT_LABEL_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-         
-        }
-        </div>
+       
         
-        {/* Loading Spinner - positioned on the right side */}
-        {isLoading && (
-          <div className="absolute top-4 right-4 z-10">
-            <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
-          </div>
-        )}
         
+       <SegmentLabelSelector segment={segment} />
         
       
         {activeSegmentId === segment.id && index > 0 && (
@@ -332,3 +285,41 @@ const TitleAndAuthor = ({
 }
 
 
+const SegmentLabelSelector = ({ segment }: { segment: TextSegment }) => {
+
+  const { documentId, updateSegment: updateSegmentMutation } = useOutlinerDocument()
+
+
+  const handleLabelChange = useCallback(
+    (value: string) => {
+      if (!segment.id || !documentId) return
+      const label = value === 'none' || value === '' ? undefined : (value as SegmentLabel)
+      updateSegmentMutation(segment.id, { label }).catch((err) => {
+        console.error('Failed to update segment label:', err)
+        toast.error(err instanceof Error ? err.message : 'Failed to update label')
+      })
+    },
+    [segment.id, documentId, updateSegmentMutation]
+  )
+  return (  <div className="segment-label-bar flex items-center gap-2 mb-3 pb-2 border-b border-gray-200">
+    <span className="text-xs font-medium text-gray-500 shrink-0">Label</span>
+    <Select
+    value={segment.label ?? 'none'}
+    onValueChange={handleLabelChange}
+      disabled={!documentId}
+    >
+      <SelectTrigger className="h-8 text-xs flex-1 max-w-[180px]" id={`segment-label-${segment.id}`}>
+        <SelectValue placeholder="No label" />
+      </SelectTrigger>
+      <SelectContent>
+    
+        {SEGMENT_LABEL_OPTIONS.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value}>
+            {opt.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  </div>
+  )
+}

@@ -215,7 +215,13 @@ export function CreateBdrcWorkModal({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => setForm((prev) => ({ ...prev, authors: [...prev.authors, makeItem(nextKeyRef.current++)] }))}
+                  onClick={() => {
+                    if(confirm('Are you sure you want to add an author/commentator ? multiple commentators allowed only for commentaries')){
+
+                      setForm((prev) => ({ ...prev, authors: [...prev.authors, makeItem(nextKeyRef.current++)] }))
+                      nextKeyRef.current++
+                    }
+                  }}
                   className="h-8 gap-1"
                 >
                   <Plus className="h-4 w-4" />
@@ -250,22 +256,6 @@ export function CreateBdrcWorkModal({
                 ))}
               </div>
             </div>
-
-            <ArrayField
-              label="Versions"
-              idPrefix="create-work-versions"
-              items={form.versions}
-              onAdd={() => setForm((prev) => ({ ...prev, versions: [...prev.versions, makeItem(nextKeyRef.current++)] }))}
-              onRemove={(i) => setForm((prev) => ({ ...prev, versions: prev.versions.filter((_, idx) => idx !== i) }))}
-              onSetValue={(i, value) => setForm((prev) => ({
-                ...prev,
-                versions: prev.versions.map((item, idx) => idx === i ? { ...item, value } : item),
-              }))}
-              placeholder="Version"
-            />
-
-         
-
             {submitError && (
               <p className="text-sm text-destructive" role="alert">
                 {submitError}
