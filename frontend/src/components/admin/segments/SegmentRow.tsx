@@ -2,11 +2,59 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { updateSegment, rejectSegment } from '@/api/outliner';
 import { toast } from 'sonner';
+import { useBdrcWork, type BdrcWorkInfo } from '@/hooks/useBdrcSearch';
+import { FileText, Loader2, PersonStanding, User } from 'lucide-react';
 import type { Segment } from '../shared/types';
+
+function BdrcWorkDialogBody({
+  workId,
+  work,
+  isLoading,
+}: {
+  workId: string;
+  work: BdrcWorkInfo | null;
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 py-4 text-gray-500">
+        <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+        <span className="text-sm">Loading work…</span>
+      </div>
+    );
+  }
+  if (!work) {
+    return (
+      <div className="py-2 text-sm text-gray-500">Work not found or failed to load.</div>
+    );
+  }
+  return (
+    <div className="space-y-2 text-sm">
+      <div>
+        <span className="text-gray-500">ID: </span>
+        <span className="font-mono text-gray-900">{workId}</span>
+      </div>
+      <div>
+        <span className="text-gray-500">Title: </span>
+        <span className="text-gray-900">{work.title || '—'}</span>
+      </div>
+      <div>
+        <span className="text-gray-500">Author: </span>
+        <span className="text-gray-900">{work.author || '—'}</span>
+      </div>
+    </div>
+  );
+}
 
 interface SegmentRowProps {
   readonly segment: Segment;
@@ -24,6 +72,8 @@ function SegmentRow({
   const { documentId } = useParams<{ documentId: string }>();
   const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
+  const [workDialogId, setWorkDialogId] = useState<string | null>(null);
+  const { work, isLoading: workLoading } = useBdrcWork(workDialogId);
 
   const statusMutation = useMutation({
     mutationFn: (newStatus: 'approved' | 'unchecked') =>
@@ -133,31 +183,23 @@ function SegmentRow({
         </div>
       </TableCell>
       <TableCell className="px-6 py-4">
-        <div className="text-sm">
-          {segment.title ? (
-            <div>
-              <div className="font-medium text-gray-900">{segment.title}</div>
-              {segment.title_bdrc_id && (
-                <div className="text-xs text-gray-500">BDRC: {segment.title_bdrc_id}</div>
-              )}
-            </div>
-          ) : (
-            <div className="text-gray-400 italic">No title</div>
-          )}
+        <div className="text-sm flex flex-col gap-1">
+          <span className="font-medium text-gray-900 flex gap-1 items-center"><FileText className="w-4 h-4"/>{segment.title || "---"}</span>
+          <span className="text-xs text-gray-500 flex gap-1 items-center"><User className="w-4 h-4"/>{segment.author || "---"}</span>
         </div>
       </TableCell>
       <TableCell className="px-6 py-4">
         <div className="text-sm">
-          {segment.author ? (
-            <div>
-              <div className="font-medium text-gray-900">{segment.author}</div>
-              {segment.author_bdrc_id && (
-                <div className="text-xs text-gray-500">BDRC: {segment.author_bdrc_id}</div>
-              )}
-            </div>
-          ) : (
-            <div className="text-gray-400 italic">No author</div>
-          )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setWorkDialogId(segment.title_bdrc_id ?? null);
+              }}
+              className="text-blue-600 hover:text-blue-800 hover:underline font-mono text-xs"
+            >
+              {segment.title_bdrc_id || "---"}
+            </button>
         </div>
       </TableCell>
       <TableCell className="px-6 py-4">
@@ -197,6 +239,20 @@ function SegmentRow({
         ) : null}
       </TableCell>
     </TableRow>
+    <Dialog open={!!workDialogId} onOpenChange={(open) => !open && setWorkDialogId(null)}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>BDRC work</DialogTitle>
+        </DialogHeader>
+        {workDialogId && (
+          <BdrcWorkDialogBody
+            workId={workDialogId}
+            work={work}
+            isLoading={workLoading}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
     {isExpanded && (
       <TableRow className="bg-gray-50">
         <TableCell colSpan={6} className="px-6 py-4">

@@ -161,10 +161,10 @@ function SegmentsTab({
                       Text Preview
                     </TableHead>
                     <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Title & BDRC ID
+                      Title
                     </TableHead>
                     <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Author & BDRC ID
+                      BDRC match
                     </TableHead>
                     <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Comment
