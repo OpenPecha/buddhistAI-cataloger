@@ -41,7 +41,6 @@ function Modal({ open, onClose, children }: { open: boolean; onClose: () => void
 const OutlinerUpload: React.FC = () => {
   const {user}= useUser();
   const hasPermission = user?.permissions?.includes('outliner') && (user.role==='admin' || user.role==='reviewer' || user.role==='annotator');
-  const isAdminOrReviewer = user?.role==='admin' || user?.role==='reviewer';
 
   const userId = user?.id;
   const navigate = useNavigate();
@@ -114,14 +113,7 @@ const OutlinerUpload: React.FC = () => {
             >
               {assignWorkMutation.isPending ? 'Assigning...' : 'Assign me a work'}
             </Button>
-            {isAdminOrReviewer && (
-            <Link to="/outliner-admin">
-             <Button variant="outline" className="flex items-center gap-2">
-              <Settings className="w-4 h-4" />
-              Admin
-             </Button>
-            </Link>
-            )}
+            
           </div>
         </div>
 
