@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getOutlinerDocument,
-  uploadOutlinerDocument,
   createOutlinerDocument,
   updateSegment,
   updateSegmentsBulk,
@@ -58,20 +57,7 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
     refetchOnReconnect: false,
     refetchIntervalInBackground: false,
   });
-  // Mutation for uploading document
-  const uploadMutation = useMutation({
-    mutationFn: ({ file, user_id }: { file: File; user_id?: string }) =>
-      uploadOutlinerDocument(file, user_id),
-    onSuccess: (data) => {
-      toast.success('Document uploaded successfully');
-      navigate(`/outliner/${data.id}`);
-      queryClient.invalidateQueries({ queryKey: ['outliner-document'] });
-    },
-    onError: (error: Error) => {
-      toast.error(`Failed to upload document: ${error.message}`);
-      options?.onError?.(error);
-    },
-  });
+ 
 
   // Mutation for creating document from content
   const createMutation = useMutation({
@@ -349,18 +335,7 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
     }
   }, [loadError, options]);
 
-  // Upload file handler
-  const handleUploadFile = useCallback(
-    async (file: File, user_id?: string) => {
-      setIsLoadingDocument(true);
-      try {
-        await uploadMutation.mutateAsync({ file, user_id });
-      } finally {
-        setIsLoadingDocument(false);
-      }
-    },
-    [uploadMutation]
-  );
+ 
 
   // Create document from content handler
   const handleCreateDocument = useCallback(
@@ -658,7 +633,6 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
     isRefetching: isRefetchingQuery,
     isResetting: resetSegmentsMutation.isPending,
     // Actions
-    uploadFile: handleUploadFile,
     createDocument: handleCreateDocument,
     updateSegment: handleUpdateSegment,
     bulkUpdateSegments: handleBulkUpdateSegments,

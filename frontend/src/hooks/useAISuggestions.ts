@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { generateTitleAuthor, type GenerateTitleAuthorResponse } from '@/api/outliner';
 import { toast } from 'sonner';
-import type { AISuggestions, TextSegment } from '@/components/outliner';
+import type { AISuggestions, TextSegment } from '@/features/outliner/types';
 
 interface UseAISuggestionsOptions {
   activeSegment: TextSegment | undefined;

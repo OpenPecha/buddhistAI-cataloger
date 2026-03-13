@@ -84,7 +84,6 @@ def _normalize_person_results(raw: Dict[str, Any], max_results: int = 10) -> Lis
 
 def _parse_works_response(raw: Any, size: int = 20) -> List[WorkDetail]:
     """Parse OTAPI works/search response into List[WorkDetail]. Response is list of works with id, pref_label_bo, authors, versions, etc."""
-    print(raw)
     items: List[Dict[str, Any]] = []
     if isinstance(raw, list):
         items = raw
@@ -163,17 +162,22 @@ async def get_work(work_id: str):
 
     # Normalize OTAPI response for frontend display
     title = raw.get("pref_label_bo") or (raw.get("alt_label_bo") or [None])[0] or ""
-    authors = raw.get("authors") or []
-    author = authors[0] if authors else ""
-    if isinstance(author, dict):
-        author = author.get("pref_label_bo") or author.get("name") or str(author)
-    else:
-        author = str(author) if author else ""
+    authors_raw = raw.get("authors") or []
+    authors: List[Dict[str, Any]] = []
+    for a in authors_raw:
+        if isinstance(a, dict):
+            name = a.get("pref_label_bo") or a.get("name") or str(a)
+            author_id = a.get("id") or a.get("agent") or None
+            authors.append({"id": author_id, "name": name or ""})
+        else:
+            authors.append({"id": None, "name": str(a) if a else ""})
+    author = authors[0]["name"] if authors else ""
 
     return {
         "workId": raw.get("id", work_id),
         "title": title,
         "author": author,
+        "authors": authors,
     }
 
 

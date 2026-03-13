@@ -3,25 +3,17 @@ import { usePersons } from '@/hooks/usePersons';
 import type { Person } from '@/types/person';
 import { SimplePagination } from '@/components/ui/simple-pagination';
 import PersonCard from '@/components/PersonCard';
-import PersonFormModal from '@/components/PersonFormModal';
 import { useTranslation } from 'react-i18next';
 import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const PersonCRUD = () => {
   const { t } = useTranslation();
-  const [showModal, setShowModal] = useState(false);
-  const [modalMode] = useState<'create' | 'edit'>('create');
-  const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const LIMIT = 40; // Fixed limit
   const [offset, setOffset] = useState(0);
 
   const { data: persons = [], isLoading, error, refetch } = usePersons({ limit: LIMIT, offset });
 
-  const handleModalSuccess = () => {
-    setShowModal(false);
-    setSelectedPerson(null);
-    refetch();
-  };
+  
 
   const handleNextPage = () => {
     setOffset(prev => prev + LIMIT);
@@ -41,17 +33,31 @@ const PersonCRUD = () => {
       </div>
 
       {/* Content */}
-      <div className="space-y-4">
+      <div className="space-y-4 bg-white rounded-lg shadow-md mx-1 sm:mx-0">
          
 
           {isLoading && (
-            <div className="flex justify-center items-center h-64 bg-white rounded-lg shadow-md mx-1 sm:mx-0">
-              <div className="text-center px-4">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                <p className="text-sm sm:text-base text-gray-600">{t('personsPage.loadingPersons')}</p>
-              </div>
+            <div className="bg-white rounded-lg shadow-md mx-1 sm:mx-0">
+              <Table>
+                <TableBody>
+                  {Array.from({ length: 8 }).map((_, idx) => (
+                    <tr key={idx} className="animate-pulse">
+                      <td className="py-4 px-2">
+                        <div className="h-4 w-32 bg-gray-200 rounded mb-2"></div>
+                        <div className="h-3 w-20 bg-gray-100 rounded"></div>
+                      </td>
+                      <td className="py-4 px-2">
+                        <div className="h-4 w-24 bg-gray-200 rounded"></div>
+                      </td>
+                      <td className="py-4 px-2">
+                        <div className="h-4 w-36 bg-gray-200 rounded"></div>
+                      </td>
+                    </tr>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
-          ) }
+          )}
           { error && (
             <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mx-1 sm:mx-0">
               <div className="text-center">
@@ -65,7 +71,7 @@ const PersonCRUD = () => {
               </div>
             </div>
           )} 
-          { persons.length === 0 && (
+          { !isLoading && persons.length === 0 && (
             <div className="bg-white rounded-lg shadow-md p-4 sm:p-8 mx-1 sm:mx-0">
               <div className="text-center text-gray-500">
                 <p className="text-base sm:text-lg">{t('personsPage.noPersonsFound')}</p>
@@ -80,7 +86,6 @@ const PersonCRUD = () => {
                   <TableHead className="font-extrabold text-neutral-700">Name</TableHead>
                   <TableHead className="font-extrabold text-neutral-700">BDRC ID</TableHead>
                   <TableHead className="font-extrabold text-neutral-700">Alternative Names</TableHead>
-                  <TableHead className="font-extrabold text-neutral-700">Wiki Link</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

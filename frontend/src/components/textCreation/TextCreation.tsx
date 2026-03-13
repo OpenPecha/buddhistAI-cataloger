@@ -12,15 +12,23 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { detectLanguage } from "@/utils/languageDetection";
 import { useBibliographyAPI } from "@/hooks/useBibliographyAPI";
 import type { OpenPechaText } from "@/types/text";
-import { useBdrcSearch, type BdrcSearchResult } from "@/hooks/useBdrcSearch";
-import { fetchTextByBdrcId, fetchBdrcWorkInstance } from "@/api/texts";
+import { useBdrcSearch, fetchBdrcWork, type BdrcSearchResult, type BdrcWorkInfo } from "@/hooks/useBdrcSearch";
+import { fetchTextByBdrcId } from "@/api/texts";
 import { useTranslation } from "react-i18next";
 import { useBibliography } from "@/context/BibliographyContext";
 import { useAuth0 } from "@auth0/auth0-react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { validateContentEndsWithTsheg, validateSegmentLimits } from "@/utils/contentValidation";
+import { validateContentEndsWithTsheg } from "@/utils/contentValidation";
+import { useSegmentValidation } from "@/hooks/useSegmentValidation";
 import { Label } from "../ui/label";
 import { cn } from "@/lib/utils";
+
+/** Success result after creating text/instance; modal shows when non-null */
+interface SuccessResult {
+  message: string;
+  textId: string;
+  instanceId: string;
+}
 
 const TextCreation = () => {
   const navigate = useNavigate();
@@ -30,6 +38,7 @@ const TextCreation = () => {
   const instanceFormRef = useRef<InstanceCreationFormRef>(null);
   const hasAutoSelectedRef = useRef<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const pendingBdrWorkPrefillRef = useRef<{ work: BdrcWorkInfo; workId: string } | null>(null);
   const { clearAfterSubmission } = useBibliographyAPI();
 
   // Helper function to parse error messages
@@ -62,91 +71,39 @@ const TextCreation = () => {
     return t("messages.createError");
   };
 
-  // Workflow state
-  const [isCreatingNewText, setIsCreatingNewText] = useState(false);
   const [searchParams] = useSearchParams();
   const t_id = searchParams.get("t_id") || "";
   const w_id = searchParams.get("w_id") || "";
   const i_id = searchParams.get("i_id") || "";
 
-  // Text selection state
+  // — Workflow & selection —
+  const [isCreatingNewText, setIsCreatingNewText] = useState(false);
   const [selectedText, setSelectedText] = useState<OpenPechaText | null>(null);
   const [textSearch, setTextSearch] = useState(t_id);
   const [showTextDropdown, setShowTextDropdown] = useState(false);
   const [debouncedTextSearch, setDebouncedTextSearch] = useState("");
-
-  // Mobile panel state
-  const [activePanel, setActivePanel] = useState<"form" | "editor">("form");
-
-  // File upload state
-  const [uploadedFilename, setUploadedFilename] = useState<string>("");
-  const [editedContent, setEditedContent] = useLocalStorage("editedContent", "");
-
-  // Submission state
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [successTextId, setSuccessTextId] = useState<string | null>(null);
-  const [successInstanceId, setSuccessInstanceId] = useState<string | null>(null);
-  
-  // Notification state for text selection actions
-  const [notification, setNotification] = useState<string | null>(null);
-  
-  // Loading state for checking BDRC text
-  const [isCheckingBdrc, setIsCheckingBdrc] = useState(false);
-
-  // Track if incipit exists (for enabling/disabling alt incipit)
-  const [hasIncipitTitle, setHasIncipitTitle] = useState(false);
-
-  // Track if title exists (for enabling/disabling alt title)
-  const [hasTitle, setHasTitle] = useState(false);
-
-  // Track search attempts for "Create" button activation
   const [searchAttempts, setSearchAttempts] = useState(0);
 
-  // Track selected language from form for validation
-  const [selectedLanguage, setSelectedLanguage] = useState<string>('');
+  // — UI state —
+  const [activePanel, setActivePanel] = useState<"form" | "editor">("form");
+  const [uploadedFilename, setUploadedFilename] = useState<string>("");
+  const [editedContent, setEditedContent] = useLocalStorage("editedContent", "");
+  const [notification, setNotification] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [successResult, setSuccessResult] = useState<SuccessResult | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingBdrc, setIsCheckingBdrc] = useState(false);
 
-  // Watch for language changes in the form
-  useEffect(() => {
-    const checkLanguage = () => {
-      const currentLanguage = textFormRef.current?.getLanguage() || '';
-      if (currentLanguage !== selectedLanguage) {
-        setSelectedLanguage(currentLanguage);
-      }
-    };
-    
-    // Check immediately
-    checkLanguage();
-    
-    // Check periodically to catch language changes
-    const interval = setInterval(checkLanguage, 500);
-    return () => clearInterval(interval);
-  }, [selectedLanguage]);
+  // — Form-derived (for editor options) —
+  const [selectedLanguage, setSelectedLanguage] = useState<string>("");
+  const [hasIncipitTitle, setHasIncipitTitle] = useState(false);
+  const [hasTitle, setHasTitle] = useState(false);
 
-  // Content validation - check if content ends with appropriate punctuation based on language
-  const contentValidationError = useMemo(() => {
-    const isValidMessage = validateContentEndsWithTsheg(selectedLanguage, editedContent);
-    return isValidMessage;
-  }, [editedContent, selectedLanguage]);
-
-  // Segment character limit validation with debouncing (1000ms)
-  const [segmentValidation, setSegmentValidation] = useState<{
-    invalidSegments: Array<{ index: number; length: number }>;
-    invalidCount: number;
-  }>({ invalidSegments: [], invalidCount: 0 });
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      const validation = validateSegmentLimits(editedContent);
-      setSegmentValidation({
-        invalidSegments: validation.invalidSegments.map(seg => ({ index: seg.index, length: seg.length })),
-        invalidCount: validation.invalidCount,
-      });
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [editedContent]);
+  const contentValidationError = useMemo(
+    () => validateContentEndsWithTsheg(selectedLanguage, editedContent),
+    [editedContent, selectedLanguage]
+  );
+  const segmentValidation = useSegmentValidation(editedContent, 1000);
 
   // Mutations and data
   // Only fetch texts when t_id is present in URL (for auto-selection)
@@ -209,119 +166,79 @@ const TextCreation = () => {
     setUploadedFilename("");
   };
 
-  // Helper function to map BDRC roleName to form role
-  const mapRoleNameToFormRole = (roleName: string | undefined): "translator" | "reviser" | "author" | "scholar" => {
-    if (!roleName) return "author"; // Default to author
-    const lowerRoleName = roleName.toLowerCase();
-    if (lowerRoleName.includes("author") || lowerRoleName.includes("main author")) {
-      return "author";
-    } else if (lowerRoleName.includes("translator")) {
-      return "translator";
-    } else if (lowerRoleName.includes("reviser") || lowerRoleName.includes("revisor")) {
-      return "reviser";
-    } else if (lowerRoleName.includes("scholar")) {
-      return "scholar";
-    }
-    return "author"; // Default fallback
+  /** Prefill form from BDRC work (title + authors from fetchBdrcWork). */
+  const prefilledFormWithBdrWork = (work: BdrcWorkInfo, workId: string) => {
+    pendingBdrWorkPrefillRef.current = { work, workId };
   };
 
-  // Helper function to prefilled form with BDRC data
-  const prefilledFormWithBdrcData = (result: BdrcSearchResult, workId: string) => {
-    setTimeout(() => {
+  useEffect(() => {
+    if (!isCreatingNewText || !pendingBdrWorkPrefillRef.current) return;
+    const { work, workId } = pendingBdrWorkPrefillRef.current;
+    pendingBdrWorkPrefillRef.current = null;
+    const titleLang = work.title ? (detectLanguage(work.title) || "bo") : undefined;
+    const run = () => {
       if (textFormRef.current) {
-        // Set BDRC ID
-        textFormRef.current.setBdrcId(workId, result.title || '');
-        
-        // Set language if available
-        if (result.language) {
-          textFormRef.current.setFormLanguage(result.language);
+        textFormRef.current.setBdrcId(workId, work.title || workId);
+        if (work.title && work.title !== " - no data - ") {
+          textFormRef.current.addTitle(work.title, titleLang);
         }
-        
-        // Add title with language from response
-        if (result.title && result.title !== " - no data - ") {
-          textFormRef.current.addTitle(result.title, result.language || undefined);
-        }
-        
-        // Add all contributors
-        if (result.contributors && result.contributors.length > 0) {
-          result.contributors.forEach((contributor) => {
-            if (contributor.agent && contributor.agentName) {
-              const formRole = mapRoleNameToFormRole(contributor.roleName);
-              textFormRef.current?.addContributorFromBdrc(
-                contributor.agent,
-                contributor.agentName,
-                formRole
-              );
+        if (work.authors?.length) {
+          work.authors.forEach((a) => {
+            const id = a.id || a.name;
+            if (id && a.name) {
+              textFormRef.current?.addContributorFromBdrc(id, a.name, "author");
             }
           });
         }
       }
-    }, 100);
-  };
+    };
+    const t = setTimeout(run, 150);
+    return () => clearTimeout(t);
+  }, [isCreatingNewText]);
 
-  // Handle BDRC workId and instanceId from URL when page loads
+  // Handle BDRC workId from URL when page loads (e.g. /create?w_id=W12345)
   useEffect(() => {
-    const handleBdrcWorkInstanceFromUrl = async () => {
-      // Only process if:
-      // 1. w_id and i_id exist in URL
-      // 2. We haven't auto-selected a text yet
-      // 3. We're not already creating a new text
-      // 4. No text is selected
+    const handleBdrcWorkFromUrl = async () => {
       if (
-        w_id &&
-        i_id &&
-        !hasAutoSelectedRef.current &&
-        !isCreatingNewText &&
-        !selectedText &&
-        !isCheckingBdrc
+        !w_id ||
+        hasAutoSelectedRef.current ||
+        isCreatingNewText ||
+        selectedText ||
+        isCheckingBdrc
       ) {
-        hasAutoSelectedRef.current = true;
-        setIsCheckingBdrc(true);
+        return;
+      }
+      hasAutoSelectedRef.current = true;
+      setIsCheckingBdrc(true);
 
-        try {
-          // First check if it exists locally by BDRC ID
-          const existingText = await fetchTextByBdrcId(w_id);
-
-          if (existingText) {
-            // Text exists locally - select it and update URL
-            setSelectedText(existingText);
-            setTextSearch(getTextDisplayName(existingText));
-            setIsCreatingNewText(false);
-            hasAutoSelectedRef.current = true;
-            navigate(`/create?t_id=${existingText.id}`, { replace: true });
-            setNotification(t("create.textFound", { name: getTextDisplayName(existingText) }));
-          } else {
-            // Text doesn't exist locally - fetch from BDRC endpoint
-            try {
-              const workInstanceData = await fetchBdrcWorkInstance(w_id, i_id);
-              
-              // Set up for creating new text
-              setSelectedText(null);
-              setTextSearch("");
-              setIsCreatingNewText(true);
-              clearFileUpload();
-              
-              // Prefill form with BDRC data
-              prefilledFormWithBdrcData(workInstanceData, w_id);
-              
-              setNotification(t("create.creatingNewForBdrc", { id: w_id }));
-              setTimeout(() => setNotification(null), 3000);
-            } catch (error) {
-              console.error("Error fetching BDRC work instance:", error);
-              setError(t("create.failedToFetchBdrcWorkInstance"));
-            }
-          }
-        } catch (error) {
-          console.error("Error checking BDRC ID:", error);
-          setError(t("create.failedToCheckBdrc"));
-        } finally {
-          setIsCheckingBdrc(false);
+      try {
+        const existingText = await fetchTextByBdrcId(w_id);
+        if (existingText) {
+          setSelectedText(existingText);
+          setTextSearch(getTextDisplayName(existingText));
+          setIsCreatingNewText(false);
+          navigate(`/create?t_id=${existingText.id}`, { replace: true });
+          setNotification(t("create.textFound", { name: getTextDisplayName(existingText) }));
+        } else {
+          const work = await fetchBdrcWork(w_id);
+          setSelectedText(null);
+          setTextSearch("");
+          setIsCreatingNewText(true);
+          clearFileUpload();
+          prefilledFormWithBdrWork(work, w_id);
+          setNotification(t("create.creatingNewForBdrc", { id: w_id }));
+          setTimeout(() => setNotification(null), 3000);
         }
+      } catch (error) {
+        console.error("Error checking/fetching BDRC:", error);
+        setError(t("create.failedToCheckBdrc"));
+      } finally {
+        setIsCheckingBdrc(false);
       }
     };
 
-    handleBdrcWorkInstanceFromUrl();
-  }, [w_id, i_id, selectedText, isCreatingNewText, navigate, t, prefilledFormWithBdrcData, clearFileUpload, getTextDisplayName]);
+    handleBdrcWorkFromUrl();
+  }, [w_id, selectedText, isCreatingNewText, navigate, t, prefilledFormWithBdrWork, clearFileUpload, getTextDisplayName]);
 
   // Periodically check if incipit and title exist to keep the state up to date
   const { clearAnnotations } = useBibliography();
@@ -383,21 +300,37 @@ const TextCreation = () => {
     setTimeout(() => setNotification(null), 3000);
   };
 
-  // Handle BDRC text selection
+  const handleBdrcWorkPrefill = useCallback((work: BdrcWorkInfo, workId: string) => {
+    const titleLang = work.title ? (detectLanguage(work.title) || "bo") : undefined;
+    setTimeout(() => {
+      if (textFormRef.current) {
+        textFormRef.current.setBdrcId(workId, work.title || workId);
+        if (work.title && work.title !== " - no data - ") {
+          textFormRef.current.addTitle(work.title, titleLang);
+        }
+        if (work.authors?.length) {
+          work.authors.forEach((a) => {
+            const id = a.id || a.name;
+            if (id && a.name) {
+              textFormRef.current?.addContributorFromBdrc(id, a.name, "author");
+            }
+          });
+        }
+      }
+    }, 150);
+  }, []);
+
+  // Handle BDRC text selection: check catalog, then fetch work (title + authors) and prefill form
   const handleBdrcTextSelect = async (result: BdrcSearchResult) => {
     const workId = result.workId;
-    const instanceId = result.instanceId;
     if (!workId) return;
-    
+
     setShowTextDropdown(false);
     setIsCheckingBdrc(true);
-    
+
     try {
-      // Try to fetch text by BDRC ID
       const existingText = await fetchTextByBdrcId(workId);
-      
       if (existingText) {
-        // Case 1: Text exists - select it
         setSelectedText(existingText);
         setTextSearch(getTextDisplayName(existingText));
         setIsCreatingNewText(false);
@@ -406,37 +339,13 @@ const TextCreation = () => {
         navigate(`/create?t_id=${existingText.id}`, { replace: true });
         setNotification(t("create.textFound", { name: getTextDisplayName(existingText) }));
       } else {
-        // Case 2: Text doesn't exist - fetch from BDRC endpoint if instanceId exists
-        let bdrcData: BdrcSearchResult = result;
-        
-        if (instanceId) {
-          try {
-            // Call the BDRC work instance endpoint
-            const workInstanceData = await fetchBdrcWorkInstance(workId, instanceId);
-            bdrcData = workInstanceData;
-          } catch (error) {
-            console.error("Error fetching BDRC work instance:", error);
-            // Fall back to using search result data
-            bdrcData = result;
-          }
-        }
-        
-        // Set up for creating new text
+        const work = await fetchBdrcWork(workId);
         setSelectedText(null);
         setTextSearch("");
         setIsCreatingNewText(true);
         hasAutoSelectedRef.current = true;
-        
-        // Navigate with new URL pattern if instanceId exists, otherwise use workId only
-        if (instanceId) {
-          navigate(`/create?w_id=${workId}&i_id=${instanceId}`, { replace: true });
-        } else {
-          navigate(`/create?w_id=${workId}`, { replace: true });
-        }
-        
-        // Prefill form with BDRC data
-        prefilledFormWithBdrcData(bdrcData, workId);
-        
+        navigate(`/create?w_id=${workId}`, { replace: true });
+        prefilledFormWithBdrWork(work, workId);
         setNotification(t("create.creatingNewForBdrc", { id: workId }));
       }
     } catch {
@@ -444,82 +353,60 @@ const TextCreation = () => {
     } finally {
       setIsCheckingBdrc(false);
     }
-    
     setTimeout(() => setNotification(null), 3000);
   };
 
   // Handle file upload
   const handleFileUpload = (content: string, filename: string) => {
-    // Clean content immediately: remove empty lines and trailing empty lines
-    
-   
-    
-    
-    
 
     let lines = content.split('\n');
-    
     lines = lines.filter(line => line.trim() !== '');
-
     const cleanedContent = lines.join('\n');
-
-
 
     setEditedContent(cleanedContent);
     setUploadedFilename(filename);
   };
 
 
-  // Handle unified creation: create text then instance
   const handleInstanceCreation = async (instanceData: any) => {
     setError(null);
-    setSuccess(null);
+    setSuccessResult(null);
     setIsSubmitting(true);
 
     try {
       let textId: string;
 
       if (isCreatingNewText) {
-        // Creating new text - use window method to get form data
         const textFormData = (window as any).__getTextFormData?.();
         if (!textFormData) {
           throw new Error(t("create.textFormDataNotAvailable"));
         }
-
-        // Create text first
         const newText = await createTextMutation.mutateAsync(textFormData);
         textId = newText.id;
       } else if (selectedText) {
-        // Using existing text
         textId = selectedText.id;
       } else {
         throw new Error(t("create.noTextSelected"));
       }
 
-      // Now create the instance
-      const createdInstance = await createInstanceMutation.mutateAsync({ textId, instanceData, user:JSON.stringify(user || {}) });
-      // The API returns { message: string, id: string }, so access id directly
+      const createdInstance = await createInstanceMutation.mutateAsync({
+        textId,
+        instanceData,
+        user: JSON.stringify(user || {}),
+      });
       const instanceId = createdInstance?.id;
-      
       if (!instanceId) {
         throw new Error(t("create.instanceCreationFailed"));
       }
-      
-      // Clear bibliography annotations only after successful instance creation
+
       clearAfterSubmission();
-      
-      // Store IDs for navigation
-      setSuccessTextId(textId);
-      setSuccessInstanceId(instanceId);
-      
-      // Show success notification
-      setSuccess(
-        isCreatingNewText
+      setSuccessResult({
+        message: isCreatingNewText
           ? t("create.textAndInstanceCreated")
-          : t("create.instanceCreated")
-      );
-      
-      // Clear form state (without navigating)
+          : t("create.instanceCreated"),
+        textId,
+        instanceId,
+      });
       setSelectedText(null);
       setTextSearch("");
       setIsCreatingNewText(false);
@@ -532,46 +419,35 @@ const TextCreation = () => {
     }
   };
 
-  // Handle success modal close - navigate to instance page
   const handleSuccessModalClose = useCallback(() => {
-    if (successTextId && successInstanceId) {
-      navigate(`/texts/${successTextId}/instances/${successInstanceId}`);
+    if (successResult) {
+      navigate(`/texts/${successResult.textId}/instances/${successResult.instanceId}`);
     }
-    setSuccess(null);
-    setSuccessTextId(null);
-    setSuccessInstanceId(null);
-  }, [successTextId, successInstanceId, navigate]);
+    setSuccessResult(null);
+  }, [successResult, navigate]);
 
-  // Close modal on ESC key
   useEffect(() => {
-    if (!success) return;
-    
+    if (!successResult) return;
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        handleSuccessModalClose();
-      }
+      if (e.key === "Escape") handleSuccessModalClose();
     };
-    
     window.addEventListener("keydown", handleEsc);
     return () => window.removeEventListener("keydown", handleEsc);
-  }, [success, handleSuccessModalClose]);
+  }, [successResult, handleSuccessModalClose]);
 
-  // Prevent background scroll while modal is open
   useEffect(() => {
-    if (!success) return;
-    
+    if (!successResult) return;
     const original = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = original;
     };
-  }, [success]);
+  }, [successResult]);
 
-  // Handle cancel - reset file upload but keep text selection
   const handleCancel = () => {
     clearFileUpload();
     setError(null);
-    setSuccess(null);
+    setSuccessResult(null);
   };
 
   // Handle text selection from editor
@@ -640,7 +516,7 @@ const TextCreation = () => {
     <>
       {/* Success Modal */}
       <AnimatePresence>
-        {success && (
+        {successResult && (
           <div
             aria-modal
             role="dialog"
@@ -718,7 +594,7 @@ const TextCreation = () => {
                   <div className="mb-6 overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-900/20 dark:to-gray-900">
                     <div className="relative px-6 py-5 sm:px-8 sm:py-6">
                       <p id="success-desc" className="text-base sm:text-lg font-medium text-gray-800 dark:text-gray-100 text-center">
-                        {success || t("create.textAndInstanceCreated")}
+                        {successResult.message}
                       </p>
                     </div>
                   </div>
@@ -1117,11 +993,12 @@ const TextCreation = () => {
                 {/* Text Creation Form - Only show when creating new text */}
                  {isCreatingNewText && (
                    <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mb-6">
-                  
-                       <TextCreationForm 
-                         ref={textFormRef}
-                         onExistingTextFound={handleExistingTextFoundFromForm}
-                       />
+                     <TextCreationForm
+                       ref={textFormRef}
+                       onExistingTextFound={handleExistingTextFoundFromForm}
+                       onLanguageChange={setSelectedLanguage}
+                       onBdrcWorkPrefill={handleBdrcWorkPrefill}
+                     />
                    </div>
                  )}
 

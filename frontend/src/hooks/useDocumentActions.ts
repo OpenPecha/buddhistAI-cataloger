@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { Document } from '../components/admin/shared/types';
+import type { Document } from '@/features/outliner/types';
 
 interface UseDocumentActionsProps {
   selectedDocument?: Document | null;

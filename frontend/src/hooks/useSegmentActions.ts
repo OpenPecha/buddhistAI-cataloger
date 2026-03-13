@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useQueryClient } from '@tanstack/react-query';
-import type { Segment } from '../components/admin/shared/types';
+import type { Segment } from '@/features/outliner/types';
 
 interface UseSegmentActionsProps {
   documentId?: string | null;

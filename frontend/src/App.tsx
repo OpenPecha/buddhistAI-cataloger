@@ -1,12 +1,9 @@
 import { Routes, Route, useLocation,Link } from 'react-router-dom';
 import { useEffect, lazy, Suspense } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
-import Navigation from './components/Navigation';
-import ProtectedRoute from './components/ProtectedRoute';
+import { Navigation, ProtectedRoute } from '@app';
 import { getUserByEmail, createUser } from './api/settings';
-import OutlinerAdminUsers from './pages/OutlinerAdminUsers';
 import { useUser } from './hooks/useUser';
-import { toast } from 'sonner';
 
 // Lazy load page components
 const TextsPage = lazy(() => import('./pages/Text'));
@@ -21,12 +18,15 @@ const UpdateAnnotation = lazy(() => import('./pages/UpdateAnnotation'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Settings = lazy(() => import('./pages/Settings'));
-const AlignmentWorkstation = lazy(() => import('./components/Aligner/components/AlignmentWorkstation'));
-const OutlineDashboard = lazy(() => import('./pages/Dashboard'));
-const OutlinerWorkspace = lazy(() => import('./pages/OutlinerWorkspace'));
-const OutlinerAdminDashboard = lazy(() => import('./pages/OutlinerAdminDashboard'));
-const OutlinerAdminDocument = lazy(() => import('./pages/OutlinerAdminDocument'));
-const OutlinerAdminSegment = lazy(() => import('./pages/OutlinerAdminSegment'));
+const AlignmentWorkstationLazy = lazy(() =>
+  import('@/features/aligner').then((m) => ({ default: m.AlignmentWorkstation }))
+);
+const OutlineDashboardLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.Dashboard })));
+const OutlinerWorkspaceLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.Workspace })));
+const OutlinerAdminDashboardLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminDashboard })));
+const OutlinerAdminDocumentLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminDocument })));
+const OutlinerAdminSegmentLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminSegment })));
+const OutlinerAdminUsersLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminUsers })));
 
 
 
@@ -120,7 +120,7 @@ function App() {
           }  />
           <Route path="/align/:sourceInstanceId/:targetInstanceId" element={
             <ProtectedRoute>
-            <AlignmentWorkstation/>
+              <AlignmentWorkstationLazy />
             </ProtectedRoute>
           } />
           <Route path="/texts" element={
@@ -160,39 +160,39 @@ function App() {
           } />
           <Route path="/outliner" element={
             <ProtectedRoute>
-              <OutlineDashboard />
+              <OutlineDashboardLazy />
             </ProtectedRoute>
           } />
           <Route path="/outliner/:documentId" element={
             <ProtectedRoute>
-              <OutlinerWorkspace />
+              <OutlinerWorkspaceLazy />
             </ProtectedRoute>
           } />
           <Route path="/outliner-admin" element={
             <ProtectedRoute>
               <OutlinerAdminLayout >
-                <OutlinerAdminDashboard />
+                <OutlinerAdminDashboardLazy />
               </OutlinerAdminLayout>
             </ProtectedRoute>
           } />
           <Route path="/outliner-admin/documents" element={
             <ProtectedRoute>
               <OutlinerAdminLayout >
-                <OutlinerAdminDocument />
+                <OutlinerAdminDocumentLazy />
               </OutlinerAdminLayout>
             </ProtectedRoute>
           } />
           <Route path="/outliner-admin/documents/:documentId" element={
             <ProtectedRoute>
               <OutlinerAdminLayout >
-                <OutlinerAdminSegment />
+                <OutlinerAdminSegmentLazy />
               </OutlinerAdminLayout>
             </ProtectedRoute>
           } />
           <Route path="/outliner-admin/users" element={
             <ProtectedRoute>
               <OutlinerAdminLayout >
-                <OutlinerAdminUsers />
+                <OutlinerAdminUsersLazy />
               </OutlinerAdminLayout>
             </ProtectedRoute>
           } />

@@ -1,6 +1,6 @@
-import React, { useState, useImperativeHandle, forwardRef } from 'react';
-import { useBdrcSearch } from "@/hooks/useBdrcSearch";
-import { fetchTextByBdrcId } from "@/api/texts";
+import { useState, useImperativeHandle, forwardRef, useMemo, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useBdrcSearch, useBdrcWork, useTextByBdrcId, type BdrcWorkInfo } from "@/hooks/useBdrcSearch";
 import { useTranslation } from "react-i18next";
 import type { OpenPechaText } from "@/types/text";
 import { Button } from "@/components/ui/button";
@@ -8,112 +8,110 @@ import { Loader2, AlertTriangle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
+const TEXT_BY_BDRC_QUERY_KEY = ["text-by-bdrc-id"] as const;
+
 interface BDRCWorkProps {
   bdrc: string;
   onBdrcChange: (bdrcId: string) => void;
   onExistingTextFound?: (text: OpenPechaText) => void;
+  onBdrcWorkPrefill?: (work: BdrcWorkInfo, workId: string) => void;
 }
 
 export interface BDRCWorkRef {
   setBdrcId: (bdrcId: string, label: string) => void;
 }
 
+type PendingCheck = { workId: string; label: string };
+
 const BDRCWork = forwardRef<BDRCWorkRef, BDRCWorkProps>(
-  ({ bdrc, onBdrcChange, onExistingTextFound }, ref) => {
+  ({ bdrc, onBdrcChange, onExistingTextFound, onBdrcWorkPrefill }, ref) => {
     const { t } = useTranslation();
-    
-    // BDRC search state
+    const queryClient = useQueryClient();
+
     const [bdrcSearch, setBdrcSearch] = useState("");
     const [showBdrcDropdown, setShowBdrcDropdown] = useState(false);
-    const [selectedBdrc, setSelectedBdrc] = useState<{ id: string; label: string } | null>(null);
+    const [labelForBdrc, setLabelForBdrc] = useState("");
+    const [pendingCheck, setPendingCheck] = useState<PendingCheck | null>(null);
 
-    // BDRC conflict state
-    const [showBdrcConflictDialog, setShowBdrcConflictDialog] = useState(false);
-    const [conflictingText, setConflictingText] = useState<OpenPechaText | null>(null);
-    const [pendingBdrcSelection, setPendingBdrcSelection] = useState<{ id: string; label: string } | null>(null);
-    const [isCheckingBdrcId, setIsCheckingBdrcId] = useState(false);
+    const workIdToCheck = pendingCheck?.workId ?? null;
+    const { text: existingCatalogText, isSuccess: catalogCheckSuccess, isLoading: isCatalogLoading } = useTextByBdrcId(workIdToCheck);
+    const { work: fetchedWork, isLoading: isBdrcWorkLoading, error: workFetchError } = useBdrcWork(workIdToCheck);
 
-    // BDRC search hook
+    const showConflictDialog = Boolean(pendingCheck && catalogCheckSuccess && existingCatalogText);
+    const notInCatalog = Boolean(pendingCheck && catalogCheckSuccess && !existingCatalogText);
+
     const { results: bdrcResults, isLoading: bdrcLoading } = useBdrcSearch(bdrcSearch);
 
-    // Expose setBdrcId method to parent via ref
+    const selectedBdrc = useMemo((): { id: string; label: string } | null => {
+      if (pendingCheck) return { id: pendingCheck.workId, label: pendingCheck.label };
+      if (bdrc) return { id: bdrc, label: labelForBdrc || bdrc };
+      return null;
+    }, [bdrc, labelForBdrc, pendingCheck]);
+
+    useEffect(() => {
+      if (!bdrc) setLabelForBdrc("");
+    }, [bdrc]);
+
+    useEffect(() => {
+      if (!pendingCheck) return;
+      if (workFetchError) {
+        setPendingCheck(null);
+        return;
+      }
+      if (!notInCatalog || !fetchedWork) return;
+      setLabelForBdrc(pendingCheck.label);
+      onBdrcChange(pendingCheck.workId);
+      onBdrcWorkPrefill?.(fetchedWork, pendingCheck.workId);
+      setPendingCheck(null);
+    }, [pendingCheck, notInCatalog, fetchedWork, workFetchError, onBdrcChange, onBdrcWorkPrefill]);
+
+    const clearPendingCheck = useCallback(() => {
+      setPendingCheck((prev) => {
+        if (prev) {
+          queryClient.removeQueries({ queryKey: [...TEXT_BY_BDRC_QUERY_KEY, prev.workId] });
+        }
+        return null;
+      });
+    }, [queryClient]);
+
     useImperativeHandle(ref, () => ({
       setBdrcId: (bdrcId: string, label: string) => {
-        setSelectedBdrc({ id: bdrcId, label });
+        clearPendingCheck();
+        setLabelForBdrc(label);
         setBdrcSearch("");
         onBdrcChange(bdrcId);
       },
-    }), [onBdrcChange]);
+    }), [onBdrcChange, clearPendingCheck]);
 
-    // Sync internal bdrc state with prop
-    React.useEffect(() => {
-      if (bdrc && !selectedBdrc) {
-        setSelectedBdrc({ id: bdrc, label: bdrc });
-      } else if (!bdrc && selectedBdrc) {
-        setSelectedBdrc(null);
-      }
-    }, [bdrc, selectedBdrc]);
-
-    const handleBdrcSelect = async (workId: string, label: string) => {
-      // Show loading state
-      setIsCheckingBdrcId(true);
+    const handleBdrcSelect = (workId: string, label: string) => {
       setShowBdrcDropdown(false);
-      
-      // Check if this BDRC ID already exists
-      try {
-        const existingText = await fetchTextByBdrcId(workId);
-        
-        if (existingText) {
-          // Text already exists - show confirmation dialog
-          setConflictingText(existingText);
-          setPendingBdrcSelection({ id: workId, label });
-          setShowBdrcConflictDialog(true);
-        } else {
-          // No conflict - proceed normally
-          setSelectedBdrc({
-            id: workId,
-            label: label,
-          });
-          onBdrcChange(workId);
-        }
-      } catch (error) {
-        // Error checking - proceed with selection
-        console.error('Error checking BDRC ID:', error);
-        setSelectedBdrc({
-          id: workId,
-          label: label,
-        });
-        onBdrcChange(workId);
-      } finally {
-        setIsCheckingBdrcId(false);
-      }
+      setPendingCheck({ workId, label });
     };
 
     const handleClearBdrc = () => {
-      setSelectedBdrc(null);
+      clearPendingCheck();
+      setLabelForBdrc("");
       setBdrcSearch("");
       setShowBdrcDropdown(true);
       onBdrcChange("");
     };
 
     const handleChooseAnother = () => {
+      clearPendingCheck();
+      setLabelForBdrc("");
       setBdrcSearch("");
-      setSelectedBdrc(null);
-      onBdrcChange("");
-      setShowBdrcConflictDialog(false);
-      setConflictingText(null);
-      setPendingBdrcSelection(null);
       setShowBdrcDropdown(true);
+      onBdrcChange("");
     };
 
     const handleUseExisting = () => {
-      if (onExistingTextFound && conflictingText) {
-        onExistingTextFound(conflictingText);
+      if (onExistingTextFound && existingCatalogText) {
+        onExistingTextFound(existingCatalogText);
       }
-      setShowBdrcConflictDialog(false);
-      setConflictingText(null);
-      setPendingBdrcSelection(null);
+      clearPendingCheck();
     };
+
+    const pendingSelection = showConflictDialog ? pendingCheck : null;
 
     return (
       <>
@@ -197,8 +195,8 @@ const BDRCWork = forwardRef<BDRCWorkRef, BDRCWorkProps>(
           </div>
         </div>
 
-        {/* BDRC Checking Loading Overlay */}
-        {isCheckingBdrcId && (
+        {/* BDRC Checking Loading Overlay: catalog check or BDRC work fetch when not in catalog */}
+        {pendingCheck && (isCatalogLoading || (notInCatalog && isBdrcWorkLoading)) && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-8 animate-in fade-in zoom-in-95 duration-200">
               <div className="text-center">
@@ -232,10 +230,9 @@ const BDRCWork = forwardRef<BDRCWorkRef, BDRCWorkProps>(
         )}
 
         {/* BDRC Conflict Dialog */}
-        {showBdrcConflictDialog && conflictingText && pendingBdrcSelection && (
+        {showConflictDialog && pendingSelection && (
           <div className="fixed inset-0 bg-black/30 bg-opacity-50 flex justify-center z-50 p-4">
             <div className="bg-white mt-[200px] rounded-lg shadow-xl max-w-md w-full h-fit p-6 animate-in fade-in zoom-in-95 duration-200">
-              {/* Header */}
               <div className="flex items-start gap-4 mb-4">
                 <div className="flex-shrink-0 w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
                   <AlertTriangle className="w-6 h-6 text-yellow-600" />
@@ -250,37 +247,40 @@ const BDRCWork = forwardRef<BDRCWorkRef, BDRCWorkProps>(
                 </div>
               </div>
 
-              {/* Existing Text Info */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <div className="text-sm font-medium text-blue-900 mb-2">
                   {t("textForm.existingText")}
                 </div>
                 <div className="space-y-1 text-sm text-gray-700">
                   <div>
-                    <strong>{t("textForm.bdrcId")}:</strong> {pendingBdrcSelection.id}
+                    <strong>{t("textForm.bdrcId")}:</strong> {pendingSelection.workId}
                   </div>
                   <div>
                     <strong>{t("text.textTitle")}:</strong>{" "}
-                    {conflictingText.title.bo ||
-                      conflictingText.title.en ||
-                      Object.values(conflictingText.title)[0] ||
-                      "Untitled"}
+                    {existingCatalogText
+                      ? (existingCatalogText.title?.bo ||
+                          existingCatalogText.title?.en ||
+                          (existingCatalogText.title && Object.values(existingCatalogText.title)[0]) ||
+                          "Untitled")
+                      : "—"}
                   </div>
-                  <div>
-                    <strong>{t("textForm.type")}:</strong> {conflictingText.type}
-                  </div>
-                  <div>
-                    <strong>{t("textForm.language")}:</strong> {conflictingText.language}
-                  </div>
+                  {existingCatalogText && (
+                    <>
+                      <div>
+                        <strong>{t("textForm.type")}:</strong> {existingCatalogText.type}
+                      </div>
+                      <div>
+                        <strong>{t("textForm.language")}:</strong> {existingCatalogText.language}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
-              {/* Question */}
               <p className="text-sm text-gray-700 mb-6">
                 {t("textForm.useExistingQuestion")}
               </p>
 
-              {/* Actions */}
               <div className="flex gap-3">
                 <Button
                   type="button"
@@ -294,6 +294,7 @@ const BDRCWork = forwardRef<BDRCWorkRef, BDRCWorkProps>(
                   type="button"
                   className="flex-1 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90"
                   onClick={handleUseExisting}
+                  disabled={!existingCatalogText}
                 >
                   {t("textForm.useExistingText")}
                 </Button>

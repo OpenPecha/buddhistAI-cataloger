@@ -167,7 +167,6 @@ async def update_volume_status(
     Update the status of a specific volume in BDRC API by volume ID
     """
     url = f"{BDRC_BACKEND_URL}/volumes/{volume_id}/status"
-    print(f"updating volume status to {status} for volume {volume_id}")
     headers = {
         "accept": APPLICATION_JSON
     }

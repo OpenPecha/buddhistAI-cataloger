@@ -1,0 +1,1 @@
+export const SEGMENT_SPLIT_MARKER = 'U+A66E'

@@ -32,7 +32,6 @@ try:
     # Test connection
     redis_client.ping()
 except (ConnectionError, TimeoutError) as e:
-    print(f"Warning: Redis connection failed: {e}. Redis caching will be disabled.")
     redis_client = None
 
 

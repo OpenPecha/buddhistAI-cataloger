@@ -56,7 +56,6 @@ async def create_work(
 
     try:
         client = await get_http_client()
-        print(payload)
         response = await client.post(url, json=payload, headers=headers)
         response.raise_for_status()
         return response.json()

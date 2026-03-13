@@ -44,11 +44,9 @@ const OutlinerUpload: React.FC = () => {
 
   const userId = user?.id;
   const navigate = useNavigate();
-  const [showUpload, setShowUpload] = useState(false);
-  const { uploadFile, isLoading } = useOutlinerDocument();
   const queryClient = useQueryClient();
   // Fetch documents list with optional deleted filter
-  const { data: documents = [] , isLoading: isLoadingDocuments, refetch } = useQuery<OutlinerDocumentListItem[]>({
+  const { data: documents = [] , isLoading: isLoadingDocuments } = useQuery<OutlinerDocumentListItem[]>({
     queryKey: ['outliner-documents', userId],
     queryFn: () => listOutlinerDocuments(userId, 0, 10),
     enabled: !!userId,
@@ -86,12 +84,6 @@ const OutlinerUpload: React.FC = () => {
 
 
 
-  const handleFileUpload = async (file: File) => {
-    await uploadFile(file, userId);
-    // Refetch documents list after upload
-    refetch();
-    setShowUpload(false);
-  };
 
   const handleDocumentClick = (documentId: string) => {
     navigate(`/outliner/${documentId}`);
@@ -117,16 +109,7 @@ const OutlinerUpload: React.FC = () => {
           </div>
         </div>
 
-        {/* Modal for Upload */}
-        <Modal open={showUpload} onClose={() => setShowUpload(false)}>
-          <div className="p-6 w-full max-w-2xl">
-            <div className="mb-6 text-center">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Upload Document</h1>
-            </div>
-         
-            <OutlinerFileUploadZone onFileUpload={handleFileUpload} isUploading={isLoading} />
-          </div>
-        </Modal>
+    
 
         {/* Documents List */}
         {isLoadingDocuments && (

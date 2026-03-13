@@ -1241,7 +1241,6 @@ async def assign_volume(db: Session, user_id: str) -> OutlinerDocument:
     # check if the document already exists
     volume_id = volume_data["id"]
     document = None
-    print(f"filename: {volume_id}")
     try: 
         document =get_document_by_filename(db, volume_id)
     except Exception as e:
