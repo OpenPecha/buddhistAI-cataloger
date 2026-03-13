@@ -183,8 +183,11 @@ const OutlinerUpload: React.FC = () => {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <FileText className="w-5 h-5 text-blue-600" />
-                          <div className="font-medium text-gray-900">
-                            {doc.filename || 'Untitled Document'}
+                          <div className="font-medium flex flex-col text-gray-900">
+                            {doc.filename?.slice(0, 20)+"..."} 
+                            <span className="text-xs text-gray-500">
+                              {doc.status==='completed'&&"annotated"}
+                              </span>
                           </div>
                       </div>
                     </TableCell>
