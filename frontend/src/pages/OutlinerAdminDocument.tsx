@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DocumentsTab } from '../components/admin';
+import { SimplePagination } from '../components/ui/simple-pagination';
 import type { Document } from '../components/admin/shared/types';
 import {
   useDocuments,
@@ -15,13 +16,21 @@ function OutlinerAdminDocument() {
 
   const status = searchParams.get('status') || undefined;
   const annotator = searchParams.get('annotator') || undefined;
+  const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1', 10) || 1);
 
   const filters: DocumentFilters = useMemo(
-    () => ({ status, userId: annotator }),
-    [status, annotator]
+    () => ({ status, userId: annotator, page, pageSize: 20 }),
+    [status, annotator, page]
   );
 
-  const { documents, isLoading, isFetching } = useDocuments(filters);
+  const {
+    documents,
+    isLoading,
+    isFetching,
+    page: currentPage,
+    hasNextPage,
+    hasPrevPage,
+  } = useDocuments(filters);
   const { deleteDocument } = useDocumentActions();
   const { users: annotators, isLoading: annotatorsLoading } = useOutlinerUsers();
 
@@ -30,9 +39,19 @@ function OutlinerAdminDocument() {
       const params = new URLSearchParams();
       if (newStatus) params.set('status', newStatus);
       if (newAnnotator) params.set('annotator', newAnnotator);
+      params.set('page', '1');
       setSearchParams(params);
     },
     [setSearchParams]
+  );
+
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      const params = new URLSearchParams(searchParams);
+      params.set('page', String(newPage));
+      setSearchParams(params);
+    },
+    [searchParams, setSearchParams]
   );
 
   const handleDocumentSelectAction = (document: Document) => {
@@ -52,25 +71,29 @@ function OutlinerAdminDocument() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
-          <p className="text-gray-600">Manage users, documents, and system settings</p>
-        </div>
-
-        <DocumentsTab
-          documents={documents}
-          isFetching={isFetching}
-          onDocumentSelect={handleDocumentSelectAction}
-          onDocumentDelete={handleDocumentDelete}
-          annotators={annotators}
-          annotatorsLoading={annotatorsLoading}
-          currentStatus={status}
-          currentAnnotator={annotator}
-          onFilterChange={handleFilterChange}
+    <div className="space-y-4">
+      <DocumentsTab
+        documents={documents}
+        isFetching={isFetching}
+        onDocumentSelect={handleDocumentSelectAction}
+        onDocumentDelete={handleDocumentDelete}
+        annotators={annotators}
+        annotatorsLoading={annotatorsLoading}
+        currentStatus={status}
+        currentAnnotator={annotator}
+        onFilterChange={handleFilterChange}
+      />
+      {(hasPrevPage || hasNextPage) && (
+        <SimplePagination
+          canGoPrev={hasPrevPage}
+          canGoNext={hasNextPage}
+          onPrev={() => handlePageChange(currentPage - 1)}
+          onNext={() => handlePageChange(currentPage + 1)}
+          label={`Page ${currentPage}`}
+          labelPosition="left"
+          isDisabled={isFetching}
         />
-      </div>
+      )}
     </div>
   );
 }

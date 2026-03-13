@@ -170,26 +170,30 @@ function App() {
           } />
           <Route path="/outliner-admin" element={
             <ProtectedRoute>
-              <OutlinerAdminNav />
-              <OutlinerAdminDashboard />
+              <OutlinerAdminLayout >
+                <OutlinerAdminDashboard />
+              </OutlinerAdminLayout>
             </ProtectedRoute>
           } />
           <Route path="/outliner-admin/documents" element={
             <ProtectedRoute>
-              <OutlinerAdminNav />
-              <OutlinerAdminDocument />
+              <OutlinerAdminLayout >
+                <OutlinerAdminDocument />
+              </OutlinerAdminLayout>
             </ProtectedRoute>
           } />
           <Route path="/outliner-admin/documents/:documentId" element={
             <ProtectedRoute>
-              <OutlinerAdminNav />
-              <OutlinerAdminSegment />
+              <OutlinerAdminLayout >
+                <OutlinerAdminSegment />
+              </OutlinerAdminLayout>
             </ProtectedRoute>
           } />
           <Route path="/outliner-admin/users" element={
             <ProtectedRoute>
-              <OutlinerAdminNav />
-              <OutlinerAdminUsers />
+              <OutlinerAdminLayout >
+                <OutlinerAdminUsers />
+              </OutlinerAdminLayout>
             </ProtectedRoute>
           } />
         </Routes>
@@ -204,7 +208,7 @@ function App() {
 }
 
 
-const OutlinerAdminNav = () => {
+const OutlinerAdminLayout = ({children}: {children: React.ReactNode}) => {
   const location = useLocation();
   const { user } = useUser();
   const isAdmin = user?.role === 'admin';
@@ -215,24 +219,32 @@ const OutlinerAdminNav = () => {
   ];
 
   return (
-    <div className="absolute top-2 left-1/2 -translate-x-1/2 flex space-x-4 mb-6 justify-center bg-white rounded-md px-2 py-1">
+    <>
+
+    <div className="absolute top-2 left-1/2 -translate-x-1/2 flex space-x-4 mb-6 justify-center bg-white rounded-md px-2 py-1 border border-gray-200">
       {adminLinks.map(({ to, label }) => {
         if(!isAdmin && label === "Users") return null;
-
+        
         return(
-        <Link
-      
+          <Link
+          
           key={to}
           to={to}
           className={` text-sm ${
             location.pathname === to
-              && "text-gray-600 bg-gray-200 rounded-md px-2 py-1 " 
+            && "text-gray-600 bg-gray-200 rounded-md px-2 py-1 " 
           }`}
-        >
+          >
           {label}
         </Link>
       )})}
     </div>
+    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="max-w-7xl mx-auto pt-10">
+      {children}
+      </div>
+      </div>
+      </>
   );
 };
 

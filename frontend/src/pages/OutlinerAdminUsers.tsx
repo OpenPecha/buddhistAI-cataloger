@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { UsersTab } from '../components/admin';
+import { SimplePagination } from '../components/ui/simple-pagination';
 import { useUsers, useUserActions } from '../hooks';
 
 function OutlinerAdminUsers() {
@@ -30,14 +31,19 @@ function OutlinerAdminUsers() {
     }
   };
 
-  const handlePageChange = (newSkip: number) => {
-    setSkip(newSkip);
-  };
-
   const handleRoleFilterChange = (role: string) => {
     setRoleFilter(role);
     setSkip(0);
   };
+
+  const canGoPrev = skip > 0;
+  const canGoNext = skip + limit < total;
+  const onPrev = () => setSkip(Math.max(0, skip - limit));
+  const onNext = () => setSkip(skip + limit);
+  const rangeLabel =
+    total === 0
+      ? '0 users'
+      : `Showing ${skip + 1}-${Math.min(skip + limit, total)} of ${total} users`;
 
   if (isLoading) {
     return (
@@ -48,25 +54,23 @@ function OutlinerAdminUsers() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
-          <p className="text-gray-600">Manage users, documents, and system settings</p>
-        </div>
-
-        <UsersTab
-          users={users}
-          onUserUpdate={handleUserUpdate}
-          onUserDelete={handleUserDelete}
-          total={total}
-          skip={skip}
-          limit={limit}
-          onPageChange={handlePageChange}
-          roleFilter={roleFilter}
-          onRoleFilterChange={handleRoleFilterChange}
+    <div className="space-y-4">
+      <UsersTab
+        users={users}
+        onUserUpdate={handleUserUpdate}
+        onUserDelete={handleUserDelete}
+        roleFilter={roleFilter}
+        onRoleFilterChange={handleRoleFilterChange}
+      />
+      {total > limit && (
+        <SimplePagination
+          canGoPrev={canGoPrev}
+          canGoNext={canGoNext}
+          onPrev={onPrev}
+          onNext={onNext}
+          label={rangeLabel}
         />
-      </div>
+      )}
     </div>
   );
 }

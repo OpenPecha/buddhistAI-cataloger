@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { usePersons } from '@/hooks/usePersons';
 import type { Person } from '@/types/person';
-import { Button } from '@/components/ui/button';
+import { SimplePagination } from '@/components/ui/simple-pagination';
 import PersonCard from '@/components/PersonCard';
 import PersonFormModal from '@/components/PersonFormModal';
 import { useTranslation } from 'react-i18next';
@@ -94,33 +94,20 @@ const PersonCRUD = () => {
             </Table>
           )}
         </div>
-         {/* Pagination Controls */}
-         <div className="bg-white rounded-lg shadow-md p-3 sm:p-4 ">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
-              <Button
-                onClick={handlePrevPage}
-                disabled={offset === 0}
-                variant="outline"
-                className="w-full sm:w-auto"
-              >
-                {t('personsPage.previous')}
-              </Button>
-              <span className="text-xs sm:text-sm text-gray-600 text-center ">
-                {t('personsPage.showing', { 
-                  start: offset + 1, 
-                  end: offset + persons.length 
-                })}
-              </span>
-              <Button
-                onClick={handleNextPage}
-                disabled={persons.length < LIMIT}
-                variant="outline"
-                className="w-full sm:w-auto"
-              >
-                {t('personsPage.next')}
-              </Button>
-            </div>
-          </div>
+        {/* Pagination Controls */}
+        <div className="bg-white rounded-lg shadow-md p-3 sm:p-4">
+          <SimplePagination
+            canGoPrev={offset > 0}
+            canGoNext={persons.length >= LIMIT}
+            onPrev={handlePrevPage}
+            onNext={handleNextPage}
+            label={t('personsPage.showing', {
+              start: offset + 1,
+              end: offset + persons.length,
+            })}
+            labelPosition="center"
+          />
+        </div>
       </div>
   );
 };

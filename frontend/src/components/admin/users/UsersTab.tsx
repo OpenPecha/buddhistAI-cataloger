@@ -5,10 +5,6 @@ interface UsersTabProps {
   users: User[];
   onUserUpdate: (userId: string, userData: { role?: string; permissions?: string[] }) => void;
   onUserDelete: (userId: string) => void;
-  total: number;
-  skip: number;
-  limit: number;
-  onPageChange: (newSkip: number) => void;
   roleFilter: string;
   onRoleFilterChange: (role: string) => void;
 }
@@ -17,30 +13,9 @@ function UsersTab({
   users,
   onUserUpdate,
   onUserDelete,
-  total,
-  skip,
-  limit,
-  onPageChange,
   roleFilter,
   onRoleFilterChange
 }: UsersTabProps) {
-  const currentPage = Math.floor(skip / limit) + 1;
-  const totalPages = Math.ceil(total / limit);
-  const hasNextPage = skip + limit < total;
-  const hasPrevPage = skip > 0;
-
-  const handleNextPage = () => {
-    if (hasNextPage) {
-      onPageChange(skip + limit);
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (hasPrevPage) {
-      onPageChange(Math.max(0, skip - limit));
-    }
-  };
-
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow-md">
@@ -60,9 +35,6 @@ function UsersTab({
                 <option value="annotator">Annotator</option>
                 <option value="reviewer">Reviewer</option>
               </select>
-              <div className="text-sm text-gray-600">
-                Showing {total === 0 ? 0 : skip + 1}-{Math.min(skip + limit, total)} of {total} users
-              </div>
             </div>
           </div>
         </div>
@@ -107,29 +79,6 @@ function UsersTab({
             </tbody>
           </table>
         </div>
-        {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-            <div className="text-sm text-gray-700">
-              Page {currentPage} of {totalPages}
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handlePrevPage}
-                disabled={!hasPrevPage}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              <button
-                onClick={handleNextPage}
-                disabled={!hasNextPage}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

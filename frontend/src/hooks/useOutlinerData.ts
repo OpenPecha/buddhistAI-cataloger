@@ -30,9 +30,13 @@ function calculateStats(documents: Document[]): DocumentStats {
   }, { total: 0, active: 0, completed: 0, approved: 0, rejected: 0 });
 }
 
+const DEFAULT_PAGE_SIZE = 20
+
 export interface DocumentFilters {
   status?: string;
   userId?: string;
+  page?: number;
+  pageSize?: number;
 }
 
 /**
@@ -40,7 +44,8 @@ export interface DocumentFilters {
  */
 export function useDocuments(filters: DocumentFilters = {}) {
   const { getAccessTokenSilently } = useAuth0();
-  const { status, userId } = filters;
+  const { status, userId, page = 1, pageSize = DEFAULT_PAGE_SIZE } = filters;
+  const skip = (page - 1) * pageSize;
 
   const {
     data: documents = [],
@@ -49,14 +54,15 @@ export function useDocuments(filters: DocumentFilters = {}) {
     error,
     refetch
   } = useQuery<Document[]>({
-    queryKey: ['outliner-admin-documents', { status, userId }],
+    queryKey: ['outliner-admin-documents', { status, userId, skip, limit: pageSize }],
     queryFn: async () => {
       const token = await getAccessTokenSilently();
       const params = new URLSearchParams();
       if (status) params.append('status', status);
       if (userId) params.append('user_id', userId);
-      const qs = params.toString();
-      const url = `/api/outliner/documents${qs ? `?${qs}` : ''}`;
+      params.set('skip', String(skip));
+      params.set('limit', String(pageSize));
+      const url = `/api/outliner/documents?${params.toString()}`;
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -72,6 +78,8 @@ export function useDocuments(filters: DocumentFilters = {}) {
   });
 
   const stats = useMemo(() => calculateStats(documents), [documents]);
+  const hasNextPage = documents.length === pageSize;
+  const hasPrevPage = page > 1;
 
   return {
     documents,
@@ -79,7 +87,11 @@ export function useDocuments(filters: DocumentFilters = {}) {
     isLoading,
     isFetching,
     error,
-    refetch
+    refetch,
+    page,
+    pageSize,
+    hasNextPage,
+    hasPrevPage,
   };
 }
 

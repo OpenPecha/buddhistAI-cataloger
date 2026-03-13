@@ -32,7 +32,7 @@ function DocumentsTab({
   currentStatus,
   currentAnnotator,
   onFilterChange,
-}: DocumentsTabProps) {
+}: Readonly<DocumentsTabProps>) {
   const annotatorMap = useMemo(() => {
     const map = new Map<string, string>();
     for (const a of annotators) {

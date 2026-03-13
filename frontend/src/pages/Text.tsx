@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useTexts } from "@/hooks/useTexts";
 import type { OpenPechaText } from "@/types/text";
 import { Button } from "@/components/ui/button";
+import { SimplePagination } from "@/components/ui/simple-pagination";
 import { useTranslation } from "react-i18next";
 import {  useNavigate } from "react-router-dom";
 import TextList from "@/components/TextList";
@@ -155,31 +156,18 @@ const TextsPage = () => {
           )}
         {/* Pagination Controls - Only show when not searching */}
         {showPagination && (
-          <div className="bg-white rounded-lg shadow-md p-3 sm:p-4 ">
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
-              <Button
-                onClick={handlePrevPage}
-                disabled={offset === 0}
-                variant="outline"
-                className="w-full sm:w-auto"
-              >
-                {t('textsPage.previous')}
-              </Button>
-              <span className="text-xs sm:text-sm text-gray-600 text-center ">
-                {t('textsPage.showing', { 
-                  start: offset + 1, 
-                  end: offset + texts.length 
-                })}
-              </span>
-              <Button
-                onClick={handleNextPage}
-                disabled={texts.length === 0}
-                variant="outline"
-                className="w-full sm:w-auto"
-              >
-                {t('textsPage.next')}
-              </Button>
-            </div>
+          <div className="bg-white rounded-lg shadow-md p-3 sm:p-4">
+            <SimplePagination
+              canGoPrev={offset > 0}
+              canGoNext={texts.length > 0}
+              onPrev={handlePrevPage}
+              onNext={handleNextPage}
+              label={t('textsPage.showing', {
+                start: offset + 1,
+                end: offset + texts.length,
+              })}
+              labelPosition="center"
+            />
           </div>
         )}
       </div>
