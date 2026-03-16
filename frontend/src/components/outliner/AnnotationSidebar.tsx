@@ -2,7 +2,7 @@ import { forwardRef, useImperativeHandle, useRef, useEffect, useState, useCallba
 import { Button } from '@/components/ui/button';
 import type { TextSegment } from './types';
 import { segmentLabelDisplay } from './segment-label';
-import { FilterSegments, type LabelFilterValue } from './FilterSegments';
+import { FilterSegments, type LabelFilterValue, type CompletionFilterValue } from './FilterSegments';
 import { TitleField, type TitleFieldRef } from './sidebarFields/TitleField';
 import { AuthorField, type AuthorFieldRef } from './sidebarFields/AuthorField';
 import BDRCField from './sidebarFields/BDRCField';
@@ -58,8 +58,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   segments = [],
   onSegmentClick,
 }, ref) => {
-  const { document } = useOutlinerDocument();
-  const { updateSegment: updateSegmentMutation, updateSegmentLoading, isRefetching } = useOutlinerDocument();
+  const { updateSegment: updateSegmentMutation,  } = useOutlinerDocument();
   const activeSegmentId = activeSegment?.id || null;
   const title = activeSegment?.title || '';
   const author = activeSegment?.author || '';
@@ -311,7 +310,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   const showBdrcMatch = activeSegment?.label === 'TEXT';
 
   const metadataContent = activeSegment ? (
-    <div className="p-6 overflow-y-auto flex-1 h-full">
+    <div className="px-2 py-3 overflow-y-auto flex-1 h-full">
       <div className="flex relative flex-col flex-1 h-full space-y-6">
         <div>
           <div className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-md ">
@@ -404,14 +403,23 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
 
   const [activeTab, setActiveTab] = useState('outlines');
   const [labelFilter, setLabelFilter] = useState<LabelFilterValue[]>([]);
+  const [completionFilter, setCompletionFilter] = useState<CompletionFilterValue>('all');
 
   const filteredSegments = useMemo(() => {
-    if (labelFilter.length === 0) return segments;
-    const set = new Set(labelFilter);
-    return segments.filter((seg) =>
-      seg.label ? set.has(seg.label) : set.has('none')
-    );
-  }, [segments, labelFilter]);
+    let list = segments;
+    if (labelFilter.length > 0) {
+      const set = new Set(labelFilter);
+      list = list.filter((seg) =>
+        seg.label ? set.has(seg.label) : set.has('none')
+      );
+    }
+    if (completionFilter === 'completed') {
+      list = list.filter((seg) => seg.status === 'checked');
+    } else if (completionFilter === 'not_completed') {
+      list = list.filter((seg) => seg.status !== 'checked');
+    }
+    return list;
+  }, [segments, labelFilter, completionFilter]);
 
   useEffect(() => {
     if (isMetadataDisabled && activeTab === 'metadata') {
@@ -437,12 +445,19 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       
 
         <TabsContent value="outlines" className="flex-1 overflow-auto">
-          <div className="p-4 space-y-1">
-            <FilterSegments value={labelFilter} onChange={setLabelFilter} />
+          <div className="space-y-1">
+            <FilterSegments
+              value={labelFilter}
+              onChange={setLabelFilter}
+              completionFilter={completionFilter}
+              onCompletionFilterChange={setCompletionFilter}
+            />
+            <div className=" px-2 py-2">
+
             {filteredSegments.length === 0 ? (
               <div className="text-center text-gray-500 py-12">
                 <p className="text-sm">
-                  {segments.length === 0 ? 'No segments available' : 'No segments match the selected labels'}
+                  {segments.length === 0 ? 'No segments available' : 'No segments match the selected filters'}
                 </p>
               </div>
             ) : (
@@ -453,7 +468,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
                     key={seg.id}
                     type="button"
                     onClick={() => handleTocClick(seg.id)}
-                    className={`w-full text-left px-3 py-2.5 rounded-md transition-colors cursor-pointer ${
+                    className={` w-full text-left px-3 py-2.5 rounded-md transition-colors cursor-pointer ${
                       isActive
                         ? 'bg-blue-50 border border-blue-300'
                         : 'hover:bg-gray-50 border border-transparent'
@@ -502,9 +517,11 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
                 );
               })
             )}
+            </div>
+
           </div>
         </TabsContent>
-        <TabsContent value="metadata" className="flex-1 overflow-hidden">
+        <TabsContent value="metadata" className=" flex-1 overflow-hidden">
           {metadataContent}
         </TabsContent>
       </Tabs>
