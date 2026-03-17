@@ -20,6 +20,12 @@ class Creator(BaseModel):
     roleName: Optional[str] = None
 
 
+class AuthorInfo(BaseModel):
+    """Author in work search result: id and name (from pref_label_bo)."""
+    id: Optional[str] = None
+    name: Optional[str] = None
+
+
 class WorkDetail(BaseModel):
     """Work search result; matches OTAPI works/search shape and frontend BdrcSearchResult."""
     workId: str
@@ -30,7 +36,7 @@ class WorkDetail(BaseModel):
     # OTAPI work fields
     title: Optional[str] = None
     alt_label_bo: List[str] = []
-    authors: List[str] = []
+    authors: List[AuthorInfo] = []
     versions: List[Dict[str, Any]] = []
 
 
@@ -96,16 +102,27 @@ def _parse_works_response(raw: Any, size: int = 20) -> List[WorkDetail]:
     for item in items:
         work_id = item.get("id")
         title = item.get("pref_label_bo")
-        authors = item.get("authors")
         alt_label_bo = item.get("alt_label_bo")
         versions = item.get("versions")
         db_score = item.get("db_score")
-      
-        
+        # Build authors as [{id, name}] from author_records (pref_label_bo as name), fallback to author IDs
+        author_records = item.get("author_records") or []
+        author_ids = item.get("authors") or []
+        authors_out: List[AuthorInfo] = []
+        if author_records:
+            for rec in author_records:
+                if isinstance(rec, dict):
+                    authors_out.append(AuthorInfo(
+                        id=rec.get("id"),
+                        name=rec.get("pref_label_bo"),
+                    ))
+        if not authors_out and author_ids:
+            for aid in author_ids:
+                authors_out.append(AuthorInfo(id=str(aid) if aid else None, name=None))
         out.append(WorkDetail(
             workId=str(work_id),
             title=title,
-            authors=authors,
+            authors=authors_out,
             language=None,
             entityScore=db_score,
             alt_label_bo=alt_label_bo,

@@ -6,11 +6,8 @@ import { fetchTextByBdrcId } from "@/api/texts";
 import type { OpenPechaText } from "@/types/text";
 
 export interface BdrcContributor {
-  creator?: string;
-  agent?: string;
-  agentName?: string;
-  role?: string;
-  roleName?: string;
+  id?: string;
+  name?: string;
 }
 
 export interface BdrcSearchResult {
@@ -18,7 +15,7 @@ export interface BdrcSearchResult {
   instanceId?: string;
   title?: string;
   catalogInfo?: string | null;
-  contributors?: BdrcContributor[];
+  authors?: BdrcContributor[];
   language?: string | null;
   entityScore?: number | null;
   // Person-specific fields

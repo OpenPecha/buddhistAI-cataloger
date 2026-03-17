@@ -20,8 +20,8 @@ const FILTER_OPTIONS = [
 
 const COMPLETION_OPTIONS: { value: CompletionFilterValue; label: string }[] = [
   { value: 'all', label: 'All' },
-  { value: 'completed', label: 'Completed only' },
-  { value: 'not_completed', label: 'Not completed only' },
+  { value: 'completed', label: 'Completed' },
+  { value: 'not_completed', label: 'Not completed ' },
 ];
 
 interface FilterSegmentsProps {

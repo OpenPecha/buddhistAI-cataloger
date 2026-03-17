@@ -33,7 +33,7 @@ function BDRCField({ formData, segment, onUpdate, disabled = false }: Readonly<B
   )
 
   const handleSelect = (item: BdrcSearchResult) => {
-    const author = item.contributors?.[0]?.agentName ?? 'unknown author'
+    const author = item.authors?.[0]?.name ?? 'unknown author'
     onUpdate('title', { name: titleSearch || item.title || '', bdrc_id: item.workId || '' })
     setSelectedWorkInfo({ title: item.title ?? '', author })
     setIsBdrcFocused(false)
@@ -103,7 +103,7 @@ function BDRCField({ formData, segment, onUpdate, disabled = false }: Readonly<B
                 <div className="text-sm font-medium text-gray-900">{title.title}</div>
                 <div className="text-xs text-gray-500 flex items-center gap-1">
                   <PersonStandingIcon className="w-4 h-4" />
-                  {(title as BdrcSearchResult).contributors?.[0]?.agentName ?? 'unknown author'} &nbsp;
+                  {(title as BdrcSearchResult).authors?.[0]?.name ?? 'unknown author'} &nbsp;
                   {title.workId && <span>ID: {title.workId}</span>}
                 </div>
               </button>

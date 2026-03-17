@@ -31,10 +31,6 @@ html[lang="bo"] > div {
   font-size: 16px ;
 }
 
-html[lang="en"] > div {
-  font-family: 'poppins', 'Noto', sans-serif !important;
-  font-size: 14px ;
-}
 
 html[lang="bo"] label {
   font-family: 'jomo', sans-serif !important;
@@ -42,10 +38,6 @@ html[lang="bo"] label {
   margin-bottom: 0.5rem !important;
 }
 
-html[lang="en"] label {
-  font-family: 'poppins', 'Noto', sans-serif !important;
-  font-size: 14px ;
-}
 
   @keyframes loading {
     0% {
@@ -74,7 +66,6 @@ html[lang="en"] label {
 
   body {
     font-family: "poppins", sans-serif;
-    line-height: 1.6;
     color: var(--text-color);
     overflow: hidden;
   }
