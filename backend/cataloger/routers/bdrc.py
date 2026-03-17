@@ -179,21 +179,19 @@ async def get_work(work_id: str):
 
     # Normalize OTAPI response for frontend display
     title = raw.get("pref_label_bo") or (raw.get("alt_label_bo") or [None])[0] or ""
-    authors_raw = raw.get("authors") or []
+    authors_raw = raw.get("author_records") or []
     authors: List[Dict[str, Any]] = []
     for a in authors_raw:
         if isinstance(a, dict):
             name = a.get("pref_label_bo") or a.get("name") or str(a)
-            author_id = a.get("id") or a.get("agent") or None
+            author_id = a.get("id") or None
             authors.append({"id": author_id, "name": name or ""})
         else:
             authors.append({"id": None, "name": str(a) if a else ""})
-    author = authors[0]["name"] if authors else ""
 
     return {
         "workId": raw.get("id", work_id),
         "title": title,
-        "author": author,
         "authors": authors,
     }
 

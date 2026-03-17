@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, X, Upload, FileText, Code, CheckCircle2, ArrowRight } from "lucide-react";
+import { AlertCircle, X, Upload, FileText, Code, CheckCircle2, ArrowRight, User } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import TextEditorView from "./TextEditorView";
 import TextCreationForm from "@/components/TextCreationForm";
@@ -953,16 +953,13 @@ const TextCreation = () => {
                                   className="w-full px-4 py-2 text-left hover:bg-purple-50 border-b border-gray-100"
                                 >
                                   <div className="flex items-start gap-2">
-                                    <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full font-medium">
-                                      BDRC
-                                    </span>
+                                   
                                     <div className="flex-1">
                                       <div className="font-medium text-sm">
                                         {result.title || "Untitled"}
                                       </div>
-                                      <div className="text-xs text-gray-500 mt-1">
-                                        {result.workId}
-                                        {result.language && ` • ${result.language}`}
+                                      <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                        {result.authors?.[0]?.name && <User className="w-4 h-4" />} {result.authors?.[0]?.name}
                                       </div>
                                     </div>
                                   </div>
