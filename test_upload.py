@@ -73,7 +73,6 @@ def test_empty_upload():
 
 if __name__ == "__main__":
     print("Testing Outliner Document Upload Endpoint")
-    print("=" * 50)
     
     try:
         test_file_upload()

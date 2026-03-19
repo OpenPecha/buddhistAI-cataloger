@@ -6,7 +6,7 @@ import {
 import { useParams, Link } from "react-router-dom";
 import TextCard from "@/components/TextCard";
 import TextInstanceCard from "@/components/TextInstanceCard";
-import BreadCrumb from "@/components/BreadCrumb";
+import { BreadCrumb } from '@app';
 import type { OpenPechaTextInstanceListItem, RelatedInstance } from "@/types/text";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";

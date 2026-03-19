@@ -76,25 +76,7 @@ const PersonCard = ({ person }: PersonCardProps) => {
           )}
       </TableCell>
 
-      {/* Actions & Other Info */}
-      <TableCell>
-        <div className="flex flex-col space-y-2">
-          {/* Wiki Link */}
-          {person.wiki && (
-            <div className="flex items-center gap-2 mt-1">
-              <ExternalLink className="w-4 h-4 text-gray-400" />
-              <a
-                href={person.wiki}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline text-xs"
-              >
-                {t('personsPage.wikipediaLink')}
-              </a>
-            </div>
-          )}
-        </div>
-      </TableCell>
+  
     </TableRow>
   );
 };

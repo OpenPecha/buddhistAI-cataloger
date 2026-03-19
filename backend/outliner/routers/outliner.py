@@ -255,36 +255,6 @@ async def create_document(
     return db_document
 
 
-@router.post("/documents/upload", response_model=DocumentResponse, status_code=201)
-async def upload_document(
-    file: Optional[UploadFile] = File(None),
-    content: Optional[str] = Form(None),
-    filename: Optional[str] = Form(None),
-    user_id: Optional[str] = Form(None),
-    db: Session = Depends(get_db)
-):
-    """Upload a text file or text content to create a new outliner document"""
-    file_content = None
-    
-    # Try to get file content first
-    if file is not None and file.filename and file.filename.strip():
-        try:
-            file_content_bytes = await file.read()
-            if file_content_bytes:
-                file_content = file_content_bytes.decode('utf-8')
-        except Exception as e:
-            # Log the error for debugging but continue to check content field
-            print(f"Error reading file: {e}")
-    
-    db_document = upload_document_ctrl(
-        db=db,
-        file_content=file_content,
-        content=content,
-        filename=filename,
-        user_id=user_id
-    )
-    return db_document
-
 
 @router.get("/documents", response_model=List[DocumentListResponse])
 async def list_documents(

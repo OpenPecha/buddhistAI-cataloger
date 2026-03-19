@@ -1,7 +1,7 @@
 import { useInstance } from '@/hooks/useTexts';
 import { useParams } from 'react-router-dom';
 import InstanceCard from '../components/InstanceCard';
-import BreadCrumb from '../components/BreadCrumb';
+import { BreadCrumb } from '@app';
 import type { OpenPechaTextInstance } from '@/types/text';
 import { useTranslation } from 'react-i18next';
 

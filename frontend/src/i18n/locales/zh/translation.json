@@ -53,6 +53,8 @@
     "featureTextsDescription": "搜索与浏览文本目录。查看版本、对齐，创建译文或注释。",
     "featurePersonsTitle": "人物",
     "featurePersonsDescription": "作者、译者与注释者。管理人物记录并关联到文本。",
+    "featureOutlinerTitle": "Outliner",
+    "featureOutlinerDescription": "Outliner is a tool for managing and annotating text documents.",
     "statsCatalog": "文本目录",
     "statsPersons": "贡献者",
     "statsOpen": "开源",

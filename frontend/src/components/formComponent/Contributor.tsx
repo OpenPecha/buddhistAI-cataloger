@@ -57,16 +57,12 @@ const Contributor: React.FC<ContributorProps> = ({
   });
 
   const getPersonDisplayName = useCallback((person: Person): string => {
-    // Safety check in case name is undefined
-    if (!person.name) {
-      return person.id || t("textForm.unknown");
+    if (!person?.name || typeof person.name !== "object") {
+      return person?.id || t("textForm.unknown");
     }
-    return (
-      person.name.bo ||
-      person.name.en ||
-      Object.values(person.name)[0] ||
-      t("textForm.unknown")
-    );
+    const first = person.name.bo ?? person.name.en ?? Object.values(person.name)[0];
+    if (typeof first === "string" && first.trim()) return first.trim();
+    return person.id || t("textForm.unknown");
   }, [t]);
 
   const handlePersonSelect = useCallback((person: Person) => {
@@ -273,18 +269,29 @@ const Contributor: React.FC<ContributorProps> = ({
   );
 };
 
+/** Normalize BDRC result name to a string (API may return string or lang-keyed object). */
+function getBdrcResultName(result: { name?: string | Record<string, string> }): string {
+  const n = result.name
+  if (typeof n === "string" && n.trim()) return n.trim()
+  if (n && typeof n === "object") {
+    const first = n["bo"] ?? n["en"] ?? Object.values(n)[0]
+    if (typeof first === "string" && first.trim()) return first.trim()
+  }
+  return ""
+}
+
 // BdrcPersonList component
 interface BdrcPersonListProps {
-  bdrcPersonResults: Array<{ bdrc_id?: string; name?: string }>;
+  bdrcPersonResults: Array<{ bdrc_id?: string; name?: string | Record<string, string> }>;
   handlePersonSelect: (person: Person) => void;
 }
 
 const BdrcPersonList = memo(({ bdrcPersonResults, handlePersonSelect }: BdrcPersonListProps) => {
-  const handlePersonClick = useCallback((result: { bdrc_id?: string; name?: string }) => {
-    // Create a temporary Person object from BDRC data
+  const handlePersonClick = useCallback((result: { bdrc_id?: string; name?: string | Record<string, string> }) => {
+    const displayName = getBdrcResultName(result)
     const bdrcPerson: Person = {
       id: result.bdrc_id || '',
-      name: { bo: result.name || '' },
+      name: displayName ? { bo: displayName } : { bo: '' },
       alt_names: [],
       bdrc: result.bdrc_id || '',
       wiki: null
@@ -294,7 +301,9 @@ const BdrcPersonList = memo(({ bdrcPersonResults, handlePersonSelect }: BdrcPers
 
   return (
     <div className="z-50">
-      {bdrcPersonResults.map((result) => (
+      {bdrcPersonResults.map((result) => {
+        const displayName = getBdrcResultName(result)
+        return (
         <button
           key={result.bdrc_id}
           type="button"
@@ -307,7 +316,7 @@ const BdrcPersonList = memo(({ bdrcPersonResults, handlePersonSelect }: BdrcPers
             </span>
             <div className="flex-1">
               <div className="font-medium text-sm">
-                {result.name || "Untitled"}
+                {displayName || result.bdrc_id || "Untitled"}
               </div>
               <div className="text-xs text-gray-500 mt-1">
                 {result.bdrc_id}
@@ -315,7 +324,8 @@ const BdrcPersonList = memo(({ bdrcPersonResults, handlePersonSelect }: BdrcPers
             </div>
           </div>
         </button>
-      ))}
+        );
+      })}
     </div>
   );
 });

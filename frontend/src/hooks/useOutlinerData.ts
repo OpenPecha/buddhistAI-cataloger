@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import type { Document, Segment, DocumentStats } from '../components/admin/shared/types';
+import type { Document, Segment, DocumentStats } from '@/features/outliner/types';
 
 /**
  * Calculate stats from documents array

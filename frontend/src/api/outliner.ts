@@ -1,5 +1,5 @@
 import { API_URL } from '@/config/api';
-import type { TextSegment } from '@/components/outliner/types';
+import type { TextSegment } from '@/features/outliner/types';
 
 // ==================== Types ====================
 
@@ -172,54 +172,9 @@ export const createOutlinerDocument = async (
   return handleApiResponse(response);
 };
 
-export const uploadOutlinerDocument = async (
-  file: File,
-  user_id?: string
-): Promise<OutlinerDocument> => {
-  // Validate file
-  if (!file || file.size === 0) {
-    throw new Error('File is required and must not be empty');
-  }
 
-  const formData = new FormData();
-  // Ensure file has a name - if not, provide a default
-  const fileToUpload = file.name ? file : new File([file], 'document.txt', { type: file.type || 'text/plain' });
-  formData.append('file', fileToUpload);
-  if (user_id) {
-    formData.append('user_id', user_id);
-  }
 
-  const response = await fetch(`${API_URL}/outliner/documents/upload`, {
-    method: 'POST',
-    // Don't set Content-Type header - browser will set it automatically with boundary for FormData
-    body: formData,
-  });
 
-  return handleApiResponse(response);
-};
-
-export const uploadOutlinerDocumentFromText = async (
-  content: string,
-  filename?: string,
-  user_id?: string
-): Promise<OutlinerDocument> => {
-  const formData = new FormData();
-  formData.append('content', content);
-  if (filename) {
-    formData.append('filename', filename);
-  }
-  if (user_id) {
-    formData.append('user_id', user_id);
-  }
-
-  const response = await fetch(`${API_URL}/outliner/documents/upload`, {
-    method: 'POST',
-    // Don't set Content-Type header - browser will set it automatically with boundary for FormData
-    body: formData,
-  });
-
-  return handleApiResponse(response);
-};
 
 export const getOutlinerDocument = async (
   documentId: string,

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useBdrcSearch } from '@/hooks/useBdrcSearch';
-import type { TextSegment } from '@/components/outliner';
+import type { TextSegment } from '@/features/outliner/types';
 
 interface UseSegmentAnnotationsOptions {
   activeSegment: TextSegment | undefined;

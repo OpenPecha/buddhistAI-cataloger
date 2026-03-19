@@ -20,10 +20,14 @@ import Title from "./formComponent/Title";
 import Contributor from "./formComponent/Contributor";
 import type { ContributorItem } from "./formComponent/Contributor";
 import BDRCWork, { type BDRCWorkRef } from "./formComponent/BDRCWORK";
+import type { BdrcWorkInfo } from "@/hooks/useBdrcSearch";
+
 interface TextCreationFormProps {
   onDataChange?: (textData: any) => void;
   getFormData?: () => any;
   onExistingTextFound?: (text: OpenPechaText) => void;
+  onLanguageChange?: (language: string) => void;
+  onBdrcWorkPrefill?: (work: BdrcWorkInfo, workId: string) => void;
 }
 
 export interface TextCreationFormRef {
@@ -52,7 +56,7 @@ export interface TextCreationFormRef {
 
 
 const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
-  ({ onDataChange, onExistingTextFound }, ref) => {
+  ({ onDataChange, onExistingTextFound, onLanguageChange, onBdrcWorkPrefill }, ref) => {
     const { t } = useTranslation();
     // State declarations
     const [selectedType, setSelectedType] = useState<
@@ -216,10 +220,15 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
       onDataChange,
     ]);
 
+    // Notify parent when language changes (for content validation)
+    useEffect(() => {
+      onLanguageChange?.(language);
+    }, [language, onLanguageChange]);
+
     // Expose methods to parent component via ref
     useImperativeHandle(ref, () => ({
       addTitle: (text: string, language?: string) => {
-        const langToUse = language || "";
+        const langToUse = language?.trim() || "bo";
         setTitles((prev) => {
           // Check if there's already a title entry with this language
           const existingIndex = prev.findIndex(
@@ -377,7 +386,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
           </div>
         )}
         {/* Titles Section */}
-        <Title setTitles={setTitles}  errors={errors.titles} />
+        <Title setTitles={setTitles} initialTitles={titles} errors={errors.titles} />
 
         {/* Alternative Titles Section */}
          <AlternativeTitle altTitles ={altTitles} setAltTitles={setAltTitles} titles={titles} />
@@ -391,6 +400,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
           bdrc={bdrc}
           onBdrcChange={setBdrc}
           onExistingTextFound={onExistingTextFound}
+          onBdrcWorkPrefill={onBdrcWorkPrefill}
         />
 
         {/* Category Selector */}

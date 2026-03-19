@@ -53,6 +53,8 @@
     "featureTextsDescription": "Search and browse the text catalog. View instances, alignments, and create translations or commentaries.",
     "featurePersonsTitle": "Persons",
     "featurePersonsDescription": "Authors, translators, and commentators. Manage person records and link them to texts.",
+    "featureOutlinerTitle": "Outliner",
+    "featureOutlinerDescription": "BDRC Outliner Cataloger for title and author.",
     "statsCatalog": "Text Catalog",
     "statsPersons": "Contributors",
     "statsOpen": "Open Source",
