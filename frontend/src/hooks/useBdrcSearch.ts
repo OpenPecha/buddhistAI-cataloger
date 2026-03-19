@@ -99,7 +99,6 @@ export interface BdrcWorkAuthor {
 export interface BdrcWorkInfo {
   workId: string;
   title: string;
-  author: string;
   authors: BdrcWorkAuthor[];
 }
 
@@ -113,7 +112,6 @@ export async function fetchBdrcWork(workId: string): Promise<BdrcWorkInfo> {
   return {
     workId: data.workId ?? workId,
     title: data.title ?? "",
-    author: data.author ?? "",
     authors: Array.isArray(data.authors) ? data.authors : [],
   };
 }
