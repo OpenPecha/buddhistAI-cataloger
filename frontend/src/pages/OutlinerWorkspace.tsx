@@ -294,10 +294,29 @@ const OutlinerWorkspace: React.FC = () => {
     const offset = preCaretRange.toString().length;
 
     // Get cursor position relative to the segment container
-    const cursorRect = range.getBoundingClientRect();
+    let cursorRect = range.getBoundingClientRect();
     const segmentContainer = element.closest('[data-segment-container-id]') as HTMLElement;
 
     if (!segmentContainer) return;
+
+    // When there's no text, collapsed range often returns zero-size rect at (0,0).
+    // Use the content element's rect so the menu appears at the start of the content area.
+    const hasNoSize = cursorRect.width === 0 && cursorRect.height === 0;
+    if (hasNoSize) {
+      const contentRect = element.getBoundingClientRect();
+      const lineHeight = Math.max(contentRect.height, 20);
+      cursorRect = {
+        left: contentRect.left,
+        top: contentRect.top,
+        right: contentRect.right,
+        bottom: contentRect.top + lineHeight,
+        width: contentRect.width,
+        height: lineHeight,
+        x: contentRect.x,
+        y: contentRect.y,
+        toJSON: () => ({}),
+      } as DOMRect;
+    }
 
     const segmentRect = segmentContainer.getBoundingClientRect();
     const menuWidth = 180;
