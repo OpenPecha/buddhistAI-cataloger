@@ -137,7 +137,7 @@ function BDRCField({ formData, segment, onUpdate, disabled = false }: Readonly<B
               <div className="font-medium text-gray-900">{displayInfo.title || '—'}</div>
               <div className="text-xs text-gray-500 flex items-center gap-1">
                 <PersonStandingIcon className="w-3.5 h-3.5 shrink-0" />
-                {displayInfo.authors?.[0]?.name}
+                {displayInfo.author}
               </div>
             </>
           )}
