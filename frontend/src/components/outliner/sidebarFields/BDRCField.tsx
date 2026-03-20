@@ -158,7 +158,7 @@ function BDRCField({
     } else {
       reportBlocking(
         true,
-        'This segment has an author, but the matched BDRC work has no author. Edit the BDRC work and add author(s), then save.'
+        '⚠️This segment has an author, but the matched BDRC work has no author. Edit the BDRC work and add author(s), then save.'
       )
     }
   }, [annotatorAuthorName, bdrcId, workLoading, fetchedWork, onBdrcAuthorBlockingChange, reportBlocking])
