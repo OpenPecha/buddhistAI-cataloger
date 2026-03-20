@@ -43,7 +43,6 @@ export const SplitMenu: React.FC<SplitMenuProps> = ({ segmentId }) => {
 
  // Don't show if document.selection is not present
  if(!position||!isVisible || !showSplitMenu) return null;
-
   const menuContent = (
     <div
       ref={menuRef}

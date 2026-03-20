@@ -596,6 +596,8 @@ export const outlinerSegmentToTextSegment = (segment: OutlinerSegment): TextSegm
   return {
     id: segment.id,
     text: segment.text,
+    span_start: segment.span_start,
+    span_end: segment.span_end,
     title: segment.title || undefined,
     author: segment.author || undefined,
     title_bdrc_id: segment.title_bdrc_id || undefined,

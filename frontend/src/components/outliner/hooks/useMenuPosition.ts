@@ -38,7 +38,6 @@ export function useMenuPosition({
     const segmentContainer = document.querySelector(
       `[data-segment-container-id="${segmentId}"]`
     ) as HTMLElement
-
     if (segmentContainer) {
       const containerRect = segmentContainer.getBoundingClientRect()
       const viewportWidth = window.innerWidth
@@ -46,7 +45,6 @@ export function useMenuPosition({
 
       let x = containerRect.left + position.x
       let y = containerRect.top + position.y
-
       // Adjust horizontal position if menu would overflow
       if (x + menuWidth + margin > viewportWidth) {
         x = viewportWidth - menuWidth - margin
