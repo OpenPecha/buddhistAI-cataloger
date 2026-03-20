@@ -417,7 +417,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
           )}
         </div>
         {showBdrcMatch && bdrcAuthorBlock.blocked && bdrcAuthorBlock.message && (
-          <div className=" text-red-500 text-xs italic">
+          <div className=" text-red-500 text-xs italic animate-infinite animate-bounce">
             {bdrcAuthorBlock.message}
           </div>
         )}
