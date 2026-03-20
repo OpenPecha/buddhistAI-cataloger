@@ -11,7 +11,7 @@ import { useAISuggestions } from '@/hooks/useAISuggestions';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
 import { toast } from 'sonner';
 import Comments from './comment/Comment';
-import { Loader2, RotateCcw, Save, User, X } from 'lucide-react';
+import { RotateCcw, Save, User, X } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 
@@ -58,7 +58,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   segments = [],
   onSegmentClick,
 }, ref) => {
-  const { updateSegment: updateSegmentMutation,  } = useOutlinerDocument();
+  const { updateSegment: updateSegmentMutation, document } = useOutlinerDocument();
   const activeSegmentId = activeSegment?.id || null;
   const title = activeSegment?.title || '';
   const author = activeSegment?.author || '';
@@ -76,6 +76,12 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   // Local state for "title supplied by annotator" checkbox; only persisted on save
   const [suppliedTitleChecked, setSuppliedTitleChecked] = useState(false);
 
+  /** Segment Save blocked when annotator author is set but matched BDRC work has no author */
+  const [bdrcAuthorBlock, setBdrcAuthorBlock] = useState<{ blocked: boolean; message: string | null }>({
+    blocked: false,
+    message: null,
+  });
+
   // Refs for field components
   const titleFieldRef = useRef<TitleFieldRef>(null);
   const authorFieldRef = useRef<AuthorFieldRef>(null);
@@ -83,13 +89,24 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   // Reset formData and is_supplied_title checkbox when segment changes
   useEffect(() => {
     if (activeSegment) {
-      const initialFormData = { title: { name: title, bdrc_id: '' }, author: { name: author, bdrc_id: '' } };
+      const initialFormData = {
+        title: { name: title, bdrc_id: activeSegment.title_bdrc_id || '' },
+        author: { name: author, bdrc_id: activeSegment.author_bdrc_id || '' },
+      };
       setFormData(initialFormData);
       originalFormDataRef.current = initialFormData;
       setIsDirtyState(false);
       setSuppliedTitleChecked(activeSegment.is_supplied_title ?? false);
     }
   }, [activeSegment, title, author]);
+
+  useEffect(() => {
+    setBdrcAuthorBlock({ blocked: false, message: null });
+  }, [activeSegmentId]);
+
+  const handleBdrcAuthorBlockingChange = useCallback((blocked: boolean, message: string | null) => {
+    setBdrcAuthorBlock({ blocked, message });
+  }, []);
 
   // Check if form data differs from original
   const checkDirtyState = useCallback((newFormData: FormDataType) => {
@@ -345,6 +362,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
             resetForm={resetForm}
             disabled={activeSegment.status === 'checked'}
           />
+
           {showBdrcMatch && (
             <BDRCField
               segment={activeSegment}
@@ -352,9 +370,14 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
               onUpdate={onUpdate}
               resetForm={resetForm}
               disabled={activeSegment.status === 'checked'}
+              volumeId={document?.filename ?? undefined}
+              annotatorAuthorName={formData.author.name}
+              onBdrcAuthorBlockingChange={handleBdrcAuthorBlockingChange}
             />
           )}
         </div>
+
+       
 
         <div className="flex gap-2 bg-white">
           {activeSegment.status !== 'checked' ? (
@@ -364,7 +387,11 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
                 className="flex-1"
                 onClick={onSave}
                 variant="default"
-                disabled={!activeSegmentId || (formData.title.name.trim() === '' && formData.author.name.trim() === '')}
+                disabled={
+                  !activeSegmentId ||
+                  (formData.title.name.trim() === '' && formData.author.name.trim() === '') ||
+                  (showBdrcMatch && bdrcAuthorBlock.blocked)
+                }
               >
                 <Save />Save
               </Button>
@@ -389,6 +416,11 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
             </Button>
           )}
         </div>
+        {showBdrcMatch && bdrcAuthorBlock.blocked && bdrcAuthorBlock.message && (
+          <div className=" text-red-500 text-xs italic">
+            {bdrcAuthorBlock.message}
+          </div>
+        )}
         <hr />
 
         <Comments segmentId={activeSegmentId || ''} />

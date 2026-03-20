@@ -120,7 +120,7 @@ export async function fetchBdrcWork(workId: string): Promise<BdrcWorkInfo> {
  * Fetch BDRC work by ID for display (title, authors). React Query hook.
  */
 export function useBdrcWork(workId: string | null) {
-  const { data, isLoading, error } = useQuery<BdrcWorkInfo>({
+  const { data, isLoading, isFetching, error, refetch } = useQuery<BdrcWorkInfo>({
     queryKey: ["bdrc-work", workId],
     queryFn: () => fetchBdrcWork(workId!),
     enabled: Boolean(workId?.trim()),
@@ -130,7 +130,9 @@ export function useBdrcWork(workId: string | null) {
   return {
     work: data ?? null,
     isLoading,
+    isFetching,
     error: error ? (error instanceof Error ? error.message : "Unknown error") : null,
+    refetch,
   };
 }
 

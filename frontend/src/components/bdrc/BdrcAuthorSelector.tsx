@@ -13,6 +13,11 @@ export interface BdrcAuthorSelectorProps {
   readonly value: string
   /** Called when user selects or creates an author. */
   readonly onChange: (bdrcId: string, name?: string) => void
+  /**
+   * When set with a non-empty value, the input shows this name instead of the id.
+   * The id is shown separately as a small “ID: …” label.
+   */
+  readonly selectedName?: string | null
   /** Optional. When provided (e.g. author name from parent), search uses this instead of local input. */
   readonly searchQuery?: string
   readonly placeholder?: string
@@ -27,6 +32,7 @@ export interface BdrcAuthorSelectorProps {
 export function BdrcAuthorSelector({
   value,
   onChange,
+  selectedName,
   searchQuery: searchQueryProp,
   placeholder = 'Search or select BDRC author…',
   id = 'bdrc-author-selector',
@@ -46,11 +52,26 @@ export function BdrcAuthorSelector({
     isFocused
   )
 
+  const nameForField =
+    selectedName != null && String(selectedName).trim() !== '' ? String(selectedName).trim() : null
+
   const displayValue =
     value === BDRC_AUTHOR_DIFFICULT_TO_IDENTIFY
       ? 'Difficult to identify'
-      : value || (searchQueryProp === undefined ? localSearch : '')
+      : isFocused
+        ? searchQueryProp !== undefined
+          ? searchQueryProp
+          : localSearch
+        : nameForField && value
+          ? nameForField
+          : value || (searchQueryProp === undefined ? localSearch : '')
+
   const showDropdown = isFocused
+  /** Show id as a separate line only when the field shows the name (not the raw id). */
+  const showIdLabel =
+    Boolean(value) &&
+    value !== BDRC_AUTHOR_DIFFICULT_TO_IDENTIFY &&
+    Boolean(nameForField)
 
   const handleSelect = (bdrc_id: string, name?: string) => {
     onChange(bdrc_id, name)
@@ -64,6 +85,20 @@ export function BdrcAuthorSelector({
       onChange(v, undefined)
     } else {
       setLocalSearch(v)
+    }
+  }
+
+  const handleFocus = () => {
+    setIsFocused(true)
+    if (searchQueryProp === undefined) {
+      setLocalSearch('')
+    }
+  }
+
+  const handleBlur = () => {
+    setIsFocused(false)
+    if (searchQueryProp === undefined) {
+      setLocalSearch('')
     }
   }
 
@@ -84,14 +119,19 @@ export function BdrcAuthorSelector({
           {label}
         </Label>
       )}
+      {showIdLabel && (
+        <div className="text-[10px] text-muted-foreground font-mono leading-tight" aria-hidden>
+          ID: {value}
+        </div>
+      )}
       <div className="relative">
         <Input
           ref={inputRef}
           id={id}
           value={displayValue}
           onChange={handleInputChange}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           placeholder={placeholder}
           className="w-full pr-8 text-sm"
         />

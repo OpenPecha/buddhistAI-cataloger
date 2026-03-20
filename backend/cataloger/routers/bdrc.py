@@ -58,6 +58,25 @@ class CreateWorkRequest(BaseModel):
     modified_by: Optional[str] = None
 
 
+class UpdateWorkRequest(BaseModel):
+    """Request body for updating a work via BDRC OTAPI PUT /api/v1/works/{work_id}."""
+
+    pref_label_bo: Optional[str] = None
+    alt_label_bo: Optional[List[str]] = None
+    authors: Optional[List[str]] = None
+    versions: Optional[List[str]] = None
+    modified_by: Optional[str] = None
+
+
+class FindMatchingWorkRequest(BaseModel):
+    """Request body for BDRC OTAPI POST /api/v1/matching/find-work."""
+
+    text_bo: Optional[str] = None
+    volume_id: Optional[str] = None
+    cstart: Optional[int] = None
+    cend: Optional[int] = None
+
+
 class CreatePersonRequest(BaseModel):
     """Request body for creating a person via BDRC OTAPI POST /api/v1/persons."""
 
@@ -208,6 +227,71 @@ async def create_work(request: CreateWorkRequest):
             modified_by=request.modified_by,
         )
         return result
+    except TimeoutError:
+        raise HTTPException(status_code=504, detail="Request to BDRC API timed out")
+    except ConnectionError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/works/{work_id}")
+async def update_work(work_id: str, request: UpdateWorkRequest):
+    """Update a work in BDRC via OTAPI PUT /api/v1/works/{work_id}."""
+    try:
+        result = await bdrc_work_module.update_work(
+            work_id=work_id,
+            pref_label_bo=request.pref_label_bo,
+            alt_label_bo=request.alt_label_bo,
+            authors=request.authors,
+            versions=request.versions,
+            modified_by=request.modified_by,
+        )
+        return result
+    except TimeoutError:
+        raise HTTPException(status_code=504, detail="Request to BDRC API timed out")
+    except ConnectionError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/matching/find-work")
+async def find_matching_work(request: FindMatchingWorkRequest):
+    """Find a matching work in BDRC via OTAPI POST /api/v1/matching/find-work."""
+    try:
+        result = await bdrc_work_module.find_matching_work(
+            text_bo=request.text_bo,
+            volume_id=request.volume_id,
+            cstart=request.cstart,
+            cend=request.cend,
+        )
+
+        # Transform OTAPI response to list of { id: wa_id, name: pref_label_bo, score }
+        out = []
+        if isinstance(result, list):
+            items = result
+        elif isinstance(result, dict):
+            items = result.get("results") or result.get("items") or result.get("data") or result.get("matched_works") or []
+        else:
+            items = []
+
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            wa_id = item.get("wa_id") or item.get("id")
+            name = item.get("pref_label_bo") or "unknown"
+            score = item.get("score")
+            # Skip if no id
+            if not wa_id:
+                continue
+            out.append({"id": wa_id, "name": name, "score": score})
+
+        return out
     except TimeoutError:
         raise HTTPException(status_code=504, detail="Request to BDRC API timed out")
     except ConnectionError as e:

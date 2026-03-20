@@ -33,6 +33,11 @@ function makeItem(key: number, value = ''): { key: number; value: string } {
   return { key, value }
 }
 
+/** Author row: bdrc id in `value`, display name in `authorName` for the selector. */
+function makeAuthorItem(key: number, value = '', authorName?: string) {
+  return { key, value, ...(authorName ? { authorName } : {}) }
+}
+
 function ArrayField({
   label,
   items,
@@ -93,7 +98,7 @@ function buildInitialForm(
   return {
     pref_label_bo: '',
     alt_label_bo: [makeItem(nextKeyRef.current++)],
-    authors: [makeItem(nextKeyRef.current++)],
+    authors: [makeAuthorItem(nextKeyRef.current++)],
     versions: [makeItem(nextKeyRef.current++)],
     modified_by: user?.email ?? user?.id ?? '',
   }
@@ -215,11 +220,10 @@ export function CreateBdrcWorkModal({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => {
+                    onClick={() => {
                     if(confirm('Are you sure you want to add an author/commentator ? multiple commentators allowed only for commentaries')){
 
-                      setForm((prev) => ({ ...prev, authors: [...prev.authors, makeItem(nextKeyRef.current++)] }))
-                      nextKeyRef.current++
+                      setForm((prev) => ({ ...prev, authors: [...prev.authors, makeAuthorItem(nextKeyRef.current++)] }))
                     }
                   }}
                   className="h-8 gap-1"
@@ -235,10 +239,17 @@ export function CreateBdrcWorkModal({
                       <BdrcAuthorSelector
                         id={`create-work-author-${item.key}`}
                         value={item.value}
-                        onChange={(bdrcId) => setForm((prev) => ({
-                          ...prev,
-                          authors: prev.authors.map((it, idx) => idx === i ? { ...it, value: bdrcId } : it),
-                        }))}
+                        selectedName={'authorName' in item ? item.authorName : undefined}
+                        onChange={(bdrcId, name) =>
+                          setForm((prev) => ({
+                            ...prev,
+                            authors: prev.authors.map((it, idx) =>
+                              idx === i
+                                ? { ...it, value: bdrcId, authorName: name?.trim() || undefined }
+                                : it
+                            ),
+                          }))
+                        }
                         placeholder="Search or create author…"
                       />
                     </div>

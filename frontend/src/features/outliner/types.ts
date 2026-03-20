@@ -6,6 +6,9 @@ export type SegmentLabel = 'FRONT_MATTER' | 'TOC' | 'TEXT' | 'BACK_MATTER'
 export interface TextSegment {
   id: string
   text: string
+  /** Character range in full document content (for BDRC matching, etc.) */
+  span_start?: number
+  span_end?: number
   title?: string
   author?: string
   title_bdrc_id?: string
