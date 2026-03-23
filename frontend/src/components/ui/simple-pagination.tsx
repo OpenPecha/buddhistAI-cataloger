@@ -103,13 +103,7 @@ function SimplePagination({
             )}
           />
         </PaginationItem>
-        {label && (
-          <PaginationItem>
-            <span className="text-xs sm:text-sm text-gray-600 text-center">
-              {label}
-            </span>
-          </PaginationItem>
-        )}
+        
         <PaginationItem>
           <PaginationNext
             href="#"

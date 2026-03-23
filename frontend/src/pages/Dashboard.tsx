@@ -14,7 +14,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { FileText,  Calendar, BarChart3, Settings,  } from 'lucide-react';
+import { FileText,  Calendar, BarChart3 } from 'lucide-react';
+import { SimplePagination } from '@/components/ui/simple-pagination';
 import { useUser } from '@/hooks/useUser';
 import { Progress } from '@/components/ui/progress';
 import { formatDistanceToNow } from 'date-fns';
@@ -45,12 +46,17 @@ const OutlinerUpload: React.FC = () => {
   const userId = user?.id;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  // Fetch documents list with optional deleted filter
-  const { data: documents = [] , isLoading: isLoadingDocuments } = useQuery<OutlinerDocumentListItem[]>({
-    queryKey: ['outliner-documents', userId],
-    queryFn: () => listOutlinerDocuments(userId, 0, 10),
+  const [skip, setSkip] = useState(0);
+  const LIMIT = 10;
+
+  const { data: documents = [], isLoading: isLoadingDocuments } = useQuery<OutlinerDocumentListItem[]>({
+    queryKey: ['outliner-documents', userId, skip, LIMIT],
+    queryFn: () => listOutlinerDocuments(userId, skip, LIMIT),
     enabled: !!userId,
   });
+
+  const canGoPrev = skip > 0;
+  const canGoNext = documents.length === LIMIT;
 
   useEffect(() => {
   if(user && !hasPermission){
@@ -128,6 +134,18 @@ const OutlinerUpload: React.FC = () => {
         )}
         {!isLoadingDocuments && documents.length > 0 && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            {(canGoPrev || canGoNext) && (
+              <div className="flex justify-end p-3 border-b border-gray-200">
+                <SimplePagination
+                  canGoPrev={canGoPrev}
+                  canGoNext={canGoNext}
+                  onPrev={() => setSkip((s) => Math.max(0, s - LIMIT))}
+                  onNext={() => setSkip((s) => s + LIMIT)}
+                  label={`Page ${Math.floor(skip / LIMIT) + 1}`}
+                  labelPosition="center"
+                />
+              </div>
+            )}
             <Table>
               <TableHeader>
                 <TableRow>

@@ -4,7 +4,7 @@ import {
   BDRC_AUTHOR_DIFFICULT_TO_IDENTIFY,
   BdrcAuthorSelector,
 } from '@/components/bdrc/BdrcAuthorSelector'
-import { Loader2, PersonStandingIcon, Plus, Pencil, RefreshCw, X } from 'lucide-react'
+import { Loader2, PersonStandingIcon, Plus, Pencil, X } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -198,9 +198,7 @@ function BDRCField({
     }
   }
 
-  const handleRefetch = () => {
-    void refetch()
-  }
+  
 
   return (
     <div>
