@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { useBdrcWork, type BdrcWorkInfo } from '@/hooks/useBdrcSearch';
 import { AlertCircle, FileText, Hash, Loader2, User } from 'lucide-react';
 import type { Segment } from '../shared/types';
+import BDRCSeachWrapper from '@/components/outliner/BDRCSeachWrapper';
 
 
 
@@ -222,31 +223,26 @@ const BDRCInfo = ({ workId }: { workId: string }) => {
   if (!workId || workId==="") return null;
   if (workLoading) return <Loader2 className="h-4 w-4 animate-spin shrink-0" />;
   return (
-    <>
-    <button
-    type="button" 
-    onClick={(e) => {
-      e.stopPropagation();
-      setWorkDialogId(workId);
-    }}
+  <div className="flex  gap-1 flex-col items-start" > 
+<BDRCSeachWrapper bdrcId={workId}>
+
+    <span
     className="text-blue-600  hover:text-blue-800 hover:underline font-monlam text-sm"
     >{work?.title}
-  </button>
-  <Dialog open={!!workDialogId} onOpenChange={(open) => !open && setWorkDialogId(null)}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-base">BDRC work</DialogTitle>
-        </DialogHeader>
-        {workDialogId && (
-          <BdrcWorkDialogBody
-            workId={workDialogId}
-            work={work}
-            isLoading={workLoading}
-          />
-        )}
-      </DialogContent>
-    </Dialog>
-    </>
+  </span>
+    </BDRCSeachWrapper>
+    <span className="text-xs text-gray-500 ml-1">
+      {(work?.authors ?? []).map((a, idx, arr) => (
+        <React.Fragment key={a.id ?? idx}>
+          <BDRCSeachWrapper bdrcId={a.id ?? ''}>
+            {a.name ?? ''}
+          </BDRCSeachWrapper>
+          {idx < arr.length - 1 ? ', ' : ''}
+        </React.Fragment>
+      ))}
+    </span>
+    </div>
+
   );
 }
 
