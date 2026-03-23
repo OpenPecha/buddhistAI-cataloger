@@ -271,7 +271,7 @@ async def find_matching_work(request: FindMatchingWorkRequest):
             cend=request.cend,
         )
 
-        # Transform OTAPI response to list of { id: wa_id, name: pref_label_bo, score }
+        # Transform OTAPI response to list of { id: wa_id, name: pref_label_bo, score, authors }
         out = []
         if isinstance(result, list):
             items = result
@@ -286,10 +286,20 @@ async def find_matching_work(request: FindMatchingWorkRequest):
             wa_id = item.get("wa_id") or item.get("id")
             name = item.get("pref_label_bo") or "unknown"
             score = item.get("score")
+
+            # Send author_records as 'authors'
+            authors = item.get("author_records") or []
+
             # Skip if no id
             if not wa_id:
                 continue
-            out.append({"id": wa_id, "name": name, "score": score})
+
+            out.append({
+                "id": wa_id,
+                "name": name,
+                "score": score,
+                "authors": authors
+            })
 
         return out
     except TimeoutError:

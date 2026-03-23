@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Loader2 } from 'lucide-react'
+import { Loader2, User } from 'lucide-react'
 import { findMatchingBdrcWork, type BdrcMatchingSuggestion } from '@/api/bdrc'
 import type { TextSegment } from '../types'
 
@@ -85,7 +85,6 @@ export function ListBDRCMatches({
       </p>
     )
   }
-
   return (
     <div className="mt-2">
       {loading && (
@@ -103,20 +102,22 @@ export function ListBDRCMatches({
         <p className="text-xs text-gray-500">No suggestions for this segment.</p>
       )}
       {!loading && suggestions.length > 0 && (
-        <div className="flex flex-wrap gap-2 items-center">
+        <div className="flex flex-wrap gap-2  flex-col">
           <span className="text-xs text-gray-500">suggestions:</span>
           {suggestions.map((s) => {
             const label = (s.name?.trim() || s.id).slice(0, 80)
             const titleTip = [s.name, s.id].filter(Boolean).join(' — ')
+            const authors = s?.authors?.map((a) => a.pref_label_bo).join(', ')
             return (
               <button
                 key={s.id}
                 type="button"
                 title={titleTip}
                 onClick={() => onSelectWorkId(s.id)}
-                className="inline-flex max-w-full min-w-0 items-center rounded-full border border-emerald-200/90 bg-emerald-50 px-2.5 py-1 text-xs font-monlam text-emerald-950 shadow-sm transition hover:bg-emerald-100 hover:border-emerald-300"
+                className="flex flex-col w-min max-w-full min-w-0 gap-2 rounded-xl border border-emerald-200/90 cursor-pointer  px-2.5 py-1 text-xs font-monlam text-emerald-950 shadow-sm transition hover:bg-emerald-100 hover:border-emerald-300"
               >
                 <span className="truncate">{label}</span>
+                <span className="flex items-center gap-1 text-xs text-gray-500"><User className="w-3.5 h-3.5" />{authors}</span>
                
               </button>
             )

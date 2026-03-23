@@ -87,6 +87,7 @@ export interface BdrcMatchingSuggestion {
   id: string
   name?: string
   score?: number | null
+  authors?: { id: string; name: string }[]
 }
 
 /**
@@ -104,7 +105,7 @@ export async function findMatchingBdrcWork(
     },
     body: JSON.stringify(payload),
   })
-
+ 
   if (!response.ok) {
     const text = await response.text()
     throw new Error(text || `Failed to find matching BDRC work (${response.status})`)
@@ -114,25 +115,8 @@ export async function findMatchingBdrcWork(
   if (!Array.isArray(data)) {
     return []
   }
-  const out: BdrcMatchingSuggestion[] = []
-  for (const row of data) {
-    if (typeof row !== 'object' || row === null || !('id' in row)) continue
-    const r = row as { id?: unknown; name?: unknown; score?: unknown }
-    const id =
-      typeof r.id === 'string' || typeof r.id === 'number' ? String(r.id) : ''
-    if (!id) continue
-    let name: string | undefined
-    if (typeof r.name === 'string') name = r.name
-    else if (typeof r.name === 'number') name = String(r.name)
-    let score: number | null = null
-    if (typeof r.score === 'number') score = r.score
-    else if (typeof r.score === 'string' && r.score.trim() !== '') {
-      const n = Number(r.score)
-      if (!Number.isNaN(n)) score = n
-    }
-    out.push({ id, name, score })
-  }
-  return out
+  
+  return data
 }
 
 export interface CreateBdrcPersonPayload {
