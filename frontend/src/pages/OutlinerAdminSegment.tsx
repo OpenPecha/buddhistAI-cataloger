@@ -11,9 +11,7 @@ function OutlinerAdminSegment() {
   const [expandedSegments, setExpandedSegments] = useState<Set<string>>(new Set());
 
   const { document: selectedDocument, isLoading: isLoadingDocument } = useDocument(documentId);
-  const segments = selectedDocument?.segments
-    ? Array(5).fill(selectedDocument.segments).flat()
-    : undefined;
+  const segments = selectedDocument?.segments ?? [];
 
   // Redirect if no documentId is provided
   if (!documentId) {

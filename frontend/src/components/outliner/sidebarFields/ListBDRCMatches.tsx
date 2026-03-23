@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react'
 import { Loader2, User } from 'lucide-react'
-import { findMatchingBdrcWork, type BdrcMatchingSuggestion } from '@/api/bdrc'
 import type { TextSegment } from '../types'
+import { usePossibleMatch } from '../hooks/usePossibleMatch'
 
 interface ListBDRCMatchesProps {
   segment: TextSegment | undefined
@@ -20,59 +19,11 @@ export function ListBDRCMatches({
   onSelectWorkId,
   disabled = false,
 }: Readonly<ListBDRCMatchesProps>) {
-  const [suggestions, setSuggestions] = useState<BdrcMatchingSuggestion[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!segment || disabled) {
-      setSuggestions([])
-      setError(null)
-      setLoading(false)
-      return
-    }
-
-    const vid = volumeId?.trim()
-    if (!vid) {
-      setSuggestions([])
-      setError(null)
-      setLoading(false)
-      return
-    }
-
-    const text = segment.text ?? ''
-    const cstart = segment.span_start ?? 0
-    const cend = segment.span_end ?? text.length
-
-    const ac = new AbortController()
-    setLoading(true)
-    setError(null)
-
-    findMatchingBdrcWork({
-      text_bo: text,
-      volume_id: vid,
-      cstart,
-      cend,
-    })
-      .then((rows) => {
-        if (!ac.signal.aborted) {
-          setSuggestions(rows)
-        }
-      })
-      .catch((err: unknown) => {
-        if (!ac.signal.aborted) {
-          setSuggestions([])
-          setError(err instanceof Error ? err.message : 'Failed to load suggestions')
-        }
-      })
-      .finally(() => {
-        if (!ac.signal.aborted) {
-          setLoading(false)
-        }
-      })
-
-    return () => ac.abort()
-  }, [segment, volumeId, disabled])
+  const { suggestions, loading, error } = usePossibleMatch(
+    segment,
+    volumeId,
+    disabled
+  )
 
   if (!segment || disabled) {
     return null
@@ -103,7 +54,7 @@ export function ListBDRCMatches({
       )}
       {!loading && suggestions.length > 0 && (
         <div className="flex flex-wrap gap-2  flex-col">
-          <span className="text-xs text-gray-500">suggestions:</span>
+          <span className="text-xs text-gray-500">possible duplicates:</span>
           {suggestions.map((s) => {
             const label = (s.name?.trim() || s.id).slice(0, 80)
             const titleTip = [s.name, s.id].filter(Boolean).join(' — ')
@@ -118,7 +69,6 @@ export function ListBDRCMatches({
               >
                 <span className="truncate">{label}</span>
                 <span className="flex items-center gap-1 text-xs text-gray-500"><User className="w-3.5 h-3.5" />{authors}</span>
-               
               </button>
             )
           })}

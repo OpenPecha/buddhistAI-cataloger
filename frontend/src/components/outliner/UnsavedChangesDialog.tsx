@@ -30,14 +30,14 @@ export function UnsavedChangesDialog({
             You have unsaved changes to the title or author fields. What would you like to do?
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-2">
           <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={onDiscard}>
+          <Button  onClick={onDiscard}>
             Discard
           </Button>
-          <Button onClick={onSave}>
+          <Button variant="destructive" onClick={onSave}>
             Save
           </Button>
         </DialogFooter>

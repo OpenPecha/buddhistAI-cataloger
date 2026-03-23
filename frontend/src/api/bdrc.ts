@@ -87,7 +87,7 @@ export interface BdrcMatchingSuggestion {
   id: string
   name?: string
   score?: number | null
-  authors?: { id: string; name: string }[]
+  authors?: { id: string; name: string; pref_label_bo?: string }[]
 }
 
 /**
@@ -95,7 +95,8 @@ export interface BdrcMatchingSuggestion {
  * Returns a list of { id, name, score }.
  */
 export async function findMatchingBdrcWork(
-  payload: FindMatchingBdrcWorkPayload
+  payload: FindMatchingBdrcWorkPayload,
+  options?: { signal?: AbortSignal }
 ): Promise<BdrcMatchingSuggestion[]> {
   const response = await fetch(`${API_URL}/bdrc/matching/find-work`, {
     method: 'POST',
@@ -104,6 +105,7 @@ export async function findMatchingBdrcWork(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
+    signal: options?.signal,
   })
  
   if (!response.ok) {
