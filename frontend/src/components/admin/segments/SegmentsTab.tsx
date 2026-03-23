@@ -1,6 +1,5 @@
-import { useState, useMemo } from 'react';
-import { Table, TableHeader, TableRow, TableHead, TableBody } from '@/components/ui/table';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useMemo, useRef, useCallback, useLayoutEffect, useEffect } from 'react';
+import { TableHeader, TableRow, TableHead, TableBody } from '@/components/ui/table';
 import type { Document, Segment } from '../shared/types';
 import SegmentRow from './SegmentRow';
 import SegmentSidebar from './SegmentSidebar';
@@ -34,6 +33,35 @@ function SegmentsTab({
   const { documentId } = useParams<{ documentId: string }>();
   const { getAccessTokenSilently } = useAuth0();
   const queryClient = useQueryClient();
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const bottomScrollRef = useRef<HTMLDivElement>(null);
+  const spacerRef = useRef<HTMLDivElement>(null);
+  const isSyncingRef = useRef(false);
+
+  const updateSpacerWidth = useCallback(() => {
+    const table = bottomScrollRef.current?.querySelector('table');
+    const spacer = spacerRef.current;
+    if (table && spacer) {
+      spacer.style.width = `${table.scrollWidth}px`;
+    }
+  }, []);
+
+  const syncScroll = useCallback((source: 'top' | 'bottom') => {
+    if (isSyncingRef.current) return;
+    isSyncingRef.current = true;
+    const top = topScrollRef.current;
+    const bottom = bottomScrollRef.current;
+    if (top && bottom) {
+      if (source === 'top') {
+        bottom.scrollLeft = top.scrollLeft;
+      } else {
+        top.scrollLeft = bottom.scrollLeft;
+      }
+    }
+    requestAnimationFrame(() => {
+      isSyncingRef.current = false;
+    });
+  }, []);
 
   const filteredSegments = useMemo(() => {
     if (statusFilter === 'all') return segments;
@@ -48,6 +76,23 @@ function SegmentsTab({
     }
     return counts;
   }, [segments]);
+
+  useLayoutEffect(() => {
+    updateSpacerWidth();
+    const top = topScrollRef.current;
+    const bottom = bottomScrollRef.current;
+    if (top && bottom) {
+      top.scrollLeft = bottom.scrollLeft;
+    }
+  }, [filteredSegments, updateSpacerWidth]);
+
+  useEffect(() => {
+    const bottom = bottomScrollRef.current;
+    if (!bottom) return;
+    const ro = new ResizeObserver(updateSpacerWidth);
+    ro.observe(bottom);
+    return () => ro.disconnect();
+  }, [updateSpacerWidth]);
 
   const handleSegmentClick = (segment: Segment) => {
     setSelectedSegment(segment);
@@ -98,98 +143,108 @@ function SegmentsTab({
 
 
   return (
-    <div className="space-y-6">
-      { segments.length === 0 && selectedDocument && <Card className="text-center">
-          <CardContent className="py-6">
-            <p className="text-gray-600">No segments found for this document.</p>
-          </CardContent>
-        </Card>}
+    <div className="w-full min-w-0">
+      {segments.length === 0 && selectedDocument && (
+        <div className="flex items-center justify-center py-16 px-6 bg-white/90 border-y border-gray-200">
+          <p className="text-gray-500 text-sm">No segments found for this document.</p>
+        </div>
+      )}
 
       {loadingSegments && (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-2 text-gray-600">Loading segments...</span>
+        <div className="flex items-center justify-center py-16 px-6 bg-white/90 border-y border-gray-200">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600" />
+          <span className="ml-3 text-gray-600 text-sm">Loading segments...</span>
         </div>
-      )
-     }    
-     {selectedDocument && (
-        <Card>
-          <CardHeader className="px-6 py-4 border-b border-gray-200">
-            <CardTitle className="text-lg font-semibold text-gray-900">
-              Segments for: {selectedDocument.filename || `Document ${selectedDocument.id.slice(0, 8)}`}
-            </CardTitle>
-            <CardDescription className="text-sm text-gray-600 space-y-2">
-              <div className="flex items-center gap-3 flex-wrap">
-                <span>Approved: {statusCounts.approved}</span>
-                <span className="text-red-600">Rejected: {statusCounts.rejected}</span>
-                <span className="text-green-600">Done: {statusCounts.checked}</span>
-                <span className="text-yellow-600">Under Process: {statusCounts.unchecked}</span>
+      )}
+
+      {selectedDocument && segments.length > 0 && (
+        <section className="w-full bg-white border-y border-gray-200">
+          <header className="sticky top-0 z-10 flex flex-col gap-4 px-6 py-4 bg-white/95 backdrop-blur-sm border-b border-gray-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <h2 className="text-base font-semibold text-gray-900 truncate">
+                {selectedDocument.filename || `Document ${selectedDocument.id.slice(0, 8)}`}
+              </h2>
+              <div className="flex items-center gap-3 flex-wrap text-xs">
+                <span className="text-gray-500">Approved: <span className="font-medium text-gray-700">{statusCounts.approved}</span></span>
+                <span className="text-red-600">Rejected: <span className="font-medium">{statusCounts.rejected}</span></span>
+                <span className="text-green-600">Done: <span className="font-medium">{statusCounts.checked}</span></span>
+                <span className="text-amber-600">Under Process: <span className="font-medium">{statusCounts.unchecked}</span></span>
               </div>
-              <div className="flex items-center justify-between gap-2">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value as SegmentStatusFilter)}
-                  className="text-sm border border-gray-300 rounded-md px-2 py-1"
-                >
-                  <option value="all">All ({segments.length})</option>
-                  <option value="unchecked">Under Process ({statusCounts.unchecked})</option>
-                  <option value="checked">Done ({statusCounts.checked})</option>
-                  <option value="approved">Approved ({statusCounts.approved})</option>
-                  <option value="rejected">Rejected ({statusCounts.rejected})</option>
-                </select>
-                <Button 
-                  size="sm" 
-                  onClick={handleApproveAll} 
-                  disabled={isApproving || !documentId || statusCounts.approved !== segments.length}
-                  className="cursor-pointer"
-                  title={statusCounts.approved !== segments.length ? `${segments.length - statusCounts.approved} segment(s) are not yet approved` : 'Approve document'}
-                >
-                  {isApproving ? 'Approving...' : 'Submit'}
-                </Button>
-              </div>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table className="min-w-full divide-y divide-gray-200">
-                <TableHeader className="bg-gray-50">
-                  <TableRow>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Index
-                    </TableHead>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Text Preview
-                    </TableHead>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Title
-                    </TableHead>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      BDRC match
-                    </TableHead>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Comment
-                    </TableHead>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody className="bg-white divide-y divide-gray-200">
-                  {filteredSegments.map((segment) => (
-                    <SegmentRow
-                      key={segment.id}
-                      segment={segment}
-                      isExpanded={expandedSegments.has(segment.id)}
-                      onToggleExpansion={onToggleExpansion}
-                      onSegmentClick={handleSegmentClick}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
             </div>
-          </CardContent>
-        </Card>
-      ) }
+            <div className="flex items-center justify-between gap-3">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as SegmentStatusFilter)}
+                className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">All ({segments.length})</option>
+                <option value="unchecked">Under Process ({statusCounts.unchecked})</option>
+                <option value="checked">Done ({statusCounts.checked})</option>
+                <option value="approved">Approved ({statusCounts.approved})</option>
+                <option value="rejected">Rejected ({statusCounts.rejected})</option>
+              </select>
+              <Button
+                size="sm"
+                onClick={handleApproveAll}
+                disabled={isApproving || !documentId || statusCounts.approved < segments.length}
+                className="cursor-pointer shrink-0"
+                title={statusCounts.approved < segments.length ? `${segments.length - statusCounts.approved} segment(s) are not yet approved` : 'Approve document'}
+              >
+                {isApproving ? 'Approving...' : 'Submit'}
+              </Button>
+            </div>
+          </header>
+          <div
+            ref={topScrollRef}
+            className="overflow-x-auto overflow-y-hidden border-b border-gray-100 bg-gray-50/50"
+            style={{ height: 16 }}
+            onScroll={() => syncScroll('top')}
+          >
+            <div ref={spacerRef} className="h-px min-w-full" />
+          </div>
+          <div
+            ref={bottomScrollRef}
+            className="overflow-x-auto"
+            onScroll={() => syncScroll('bottom')}
+          >
+            <table className="min-w-max w-full divide-y divide-gray-200 caption-bottom text-sm">
+              <TableHeader className="bg-gray-50/80">
+                <TableRow>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Index
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Text Preview
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Title
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    BDRC match
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Comment
+                  </TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="divide-y divide-gray-200">
+                {filteredSegments.map((segment) => (
+                  <SegmentRow
+                    key={segment.id}
+                    segment={segment}
+                    isExpanded={expandedSegments.has(segment.id)}
+                    onToggleExpansion={onToggleExpansion}
+                    onSegmentClick={handleSegmentClick}
+                  />
+                ))}
+              </TableBody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {/* Segment Sidebar */}
       <SegmentSidebar
