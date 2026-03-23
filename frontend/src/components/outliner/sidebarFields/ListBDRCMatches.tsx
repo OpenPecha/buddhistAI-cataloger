@@ -54,7 +54,7 @@ export function ListBDRCMatches({
       )}
       {!loading && suggestions.length > 0 && (
         <div className="flex flex-wrap gap-2  flex-col">
-          <span className="text-xs text-gray-500">possible duplicates:</span>
+          <span className="text-xs text-gray-500">suggestions:</span>
           {suggestions.map((s) => {
             const label = (s.name?.trim() || s.id).slice(0, 80)
             const titleTip = [s.name, s.id].filter(Boolean).join(' — ')
