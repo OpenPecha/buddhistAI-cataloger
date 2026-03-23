@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, Activity, useCallback } from 'react'
+import React,{ useState, useRef, useEffect, Activity, useCallback } from 'react'
 import { CreateBdrcWorkModal } from '@/components/bdrc/CreateBdrcWorkModal'
 import {
   BDRC_AUTHOR_DIFFICULT_TO_IDENTIFY,
@@ -8,14 +8,7 @@ import { Loader2, PersonStandingIcon, Plus, Pencil, X } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+
 import {
   useBdrcSearch,
   useBdrcWork,
@@ -29,6 +22,8 @@ import { updateBdrcWork } from '@/api/bdrc'
 import { toast } from 'sonner'
 import { useAuth0 } from '@auth0/auth0-react'
 import BDRCSeachWrapper from '../BDRCSeachWrapper'
+import { DublicateModal } from './DublicateComponent'
+import AuthorsListing from './AuthorsListing'
 
 function bdrcWorkHasAuthor(work: BdrcWorkInfo | null): boolean {
   if (!work?.authors?.length) return false
@@ -177,9 +172,8 @@ function BDRCField({
     (fetchedWork
       ? { 
           workId: fetchedWork.workId,
-          authorId: fetchedWork.authors?.[0]?.id ?? '',
           title: fetchedWork.title,
-          author: fetchedWork.authors?.[0]?.name ?? 'unknown author',
+          authors: fetchedWork.authors,
         }
       : null)
   const openEdit = () => {
@@ -307,9 +301,9 @@ function BDRCField({
                 </BDRCSeachWrapper>
                 <div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
                   <PersonStandingIcon className="w-3.5 h-3.5 shrink-0" />
-                  <BDRCSeachWrapper bdrcId={displayInfo.authorId}>
-                  {displayInfo.author ?? 'unknown author'}
-                  </BDRCSeachWrapper>
+                  <AuthorsListing authors={displayInfo.authors} />
+                  
+                  
                 </div>
               </div>
               {!disabled && (
@@ -443,11 +437,9 @@ function BDRCField({
               </div>
             </div>
           )}
-        </div>
-      )}
-      <Button
+            <Button
         type="button"
-        variant="outline"
+        variant="link"
         size="sm"
         title={
           bdrcId.trim()
@@ -460,79 +452,9 @@ function BDRCField({
       >
         Identify possible duplicates
       </Button>
-      <Dialog open={workDetailModalOpen} onOpenChange={setWorkDetailModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>BDRC work details</DialogTitle>
-            <DialogDescription>
-              Matched work for this segment. Compare with other candidates before changing the match.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 text-sm">
-            {workLoading && (
-              <div className="flex items-center gap-2 text-gray-500">
-                <Loader2 className="h-4 w-4 animate-spin shrink-0" />
-                <span>Loading work…</span>
-              </div>
-            )}
-            {workError && !workLoading && (
-              <p className="text-sm text-red-600">{workError}</p>
-            )}
-            {fetchedWork && !workLoading && (
-              <div className="space-y-3 rounded-md border border-gray-200 bg-gray-50 p-3">
-                <div>
-                  <div className="text-xs font-medium text-gray-500">Work ID</div>
-                  <div className="mt-0.5 font-mono text-xs break-all">{fetchedWork.workId}</div>
-                </div>
-                <div>
-                  <div className="text-xs font-medium text-gray-500">Title</div>
-                  <BDRCSeachWrapper bdrcId={fetchedWork.workId}>
-                  <div className="mt-0.5 font-monlam font-medium text-gray-900">
-                    {fetchedWork.title || '—'}
-                  </div>
-                  </BDRCSeachWrapper>
-                </div>
-                <div>
-                  <div className="text-xs font-medium text-gray-500 mb-1">Authors</div>
-                  <ul className="space-y-1">
-                    {fetchedWork.authors?.length ? (
-                      fetchedWork.authors.map((a, i) => (
-                        <li
-                          key={`${a.id ?? ''}-${i}`}
-                          className="flex items-start gap-1.5 text-gray-800"
-                        >
-                          <PersonStandingIcon className="h-3.5 w-3.5 shrink-0 mt-0.5 text-gray-500" />
-                          <span>
-                            {a.name || '—'}
-                            {a.id?.trim() ? (
-                              <BDRCSeachWrapper bdrcId={a.id}>
-
-                              <span className="ml-1 font-mono text-xs text-gray-500">
-                                ({a.id})
-                              </span>
-                              </BDRCSeachWrapper>
-                            ) : null}
-                          </span>
-                        </li>
-                      ))
-                    ) : (
-                      <li className="text-gray-500">No authors listed</li>
-                    )}
-                  </ul>
-                </div>
-              </div>
-            )}
-            {!fetchedWork && !workLoading && !workError && bdrcId.trim() && (
-              <p className="text-sm text-gray-500">No work info available.</p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setWorkDetailModalOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
+      <DublicateModal work={fetchedWork} workLoading={workLoading} workError={workError} isOpen={workDetailModalOpen} onOpenChange={setWorkDetailModalOpen} />
       <CreateBdrcWorkModal
         open={createWorkModalOpen}
         onOpenChange={setCreateWorkModalOpen}
@@ -544,3 +466,7 @@ function BDRCField({
 }
 
 export default BDRCField
+
+
+
+

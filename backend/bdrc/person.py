@@ -61,3 +61,32 @@ async def create_person(
         raise TimeoutError(TIMEOUT_ERROR_MSG) from e
     except httpx.RequestError as e:
         raise ConnectionError(f"Error connecting to BDRC OTAPI: {str(e)}") from e
+
+
+async def merge_persons(
+    person_id: str,
+    target_person_id: str,
+    modified_by: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Merge a person into a target person using BDRC OTAPI.
+    POST /api/v1/persons/{person_id}/merge
+    """
+    url = f"{BDRC_BACKEND_URL}/persons/{person_id}/merge"
+    payload = {
+        "canonical_id": target_person_id,
+        "modified_by": modified_by or "string",
+    }
+    headers = {"accept": APPLICATION_JSON, "Content-Type": APPLICATION_JSON}
+    try:
+        client = await get_http_client()
+        response = await client.post(url, json=payload, headers=headers)
+        response.raise_for_status()
+        return response.json()
+    except httpx.HTTPStatusError as e:
+        error_msg = f"HTTP error {e.response.status_code}: {e.response.text}"
+        raise RuntimeError(error_msg) from e
+    except httpx.TimeoutException as e:
+        raise TimeoutError(TIMEOUT_ERROR_MSG) from e
+    except httpx.RequestError as e:
+        raise ConnectionError(f"Error connecting to BDRC OTAPI: {str(e)}") from e

@@ -28,6 +28,7 @@ export interface Title {
 }
 
 export interface Author {
+  id: string,
   name: string,
   bdrc_id: string
 }

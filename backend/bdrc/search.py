@@ -37,7 +37,6 @@ async def search_works(
     try:
         client = await get_http_client()
         response = await client.get(url, params=params or None, headers=headers)
-        print(response.json())
         response.raise_for_status()
         return response.json()
     except httpx.HTTPStatusError as e:

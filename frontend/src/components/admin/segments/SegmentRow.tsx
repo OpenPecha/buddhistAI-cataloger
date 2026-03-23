@@ -16,6 +16,7 @@ import { useBdrcWork, type BdrcWorkInfo } from '@/hooks/useBdrcSearch';
 import { AlertCircle, FileText, Hash, Loader2, User } from 'lucide-react';
 import type { Segment } from '../shared/types';
 import BDRCSeachWrapper from '@/components/outliner/BDRCSeachWrapper';
+import AuthorsListing from '@/components/outliner/sidebarFields/AuthorsListing';
 
 
 
@@ -219,7 +220,6 @@ export default SegmentRow;
 
 const BDRCInfo = ({ workId }: { workId: string }) => {
   const { work, isLoading: workLoading } = useBdrcWork(workId);
-  const [workDialogId, setWorkDialogId] = useState<string | null>(null);
   if (!workId || workId==="") return null;
   if (workLoading) return <Loader2 className="h-4 w-4 animate-spin shrink-0" />;
   return (
@@ -232,102 +232,10 @@ const BDRCInfo = ({ workId }: { workId: string }) => {
   </span>
     </BDRCSeachWrapper>
     <span className="text-xs text-gray-500 ml-1">
-      {(work?.authors ?? []).map((a, idx, arr) => (
-        <React.Fragment key={a.id ?? idx}>
-          <BDRCSeachWrapper bdrcId={a.id ?? ''}>
-            {a.name ?? ''}
-          </BDRCSeachWrapper>
-          {idx < arr.length - 1 ? ', ' : ''}
-        </React.Fragment>
-      ))}
+    <AuthorsListing authors={work?.authors ?? []} />
     </span>
     </div>
 
   );
 }
 
-
-function BdrcWorkDialogBody({
-  workId,
-  work,
-  isLoading,
-}: Readonly<{
-  workId: string;
-  work: BdrcWorkInfo | null;
-  isLoading: boolean;
-}>) {
-  if (isLoading) {
-    return (
-      <div className="flex min-h-30 flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-gray-200 bg-gray-50/90 px-4 py-8">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" aria-hidden />
-        <p className="text-center text-sm text-gray-600">Loading work details…</p>
-      </div>
-    );
-  }
-  if (!work) {
-    return (
-      <div
-        className="flex gap-3 rounded-lg border border-amber-200/80 bg-amber-50/90 px-4 py-3 text-sm text-amber-950"
-        role="alert"
-      >
-        <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden />
-        <div>
-          <p className="font-medium">Couldn’t load this work</p>
-          <p className="mt-1 text-amber-900/85">
-            The record may be missing or the request failed. Try again later.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  const authorNames = work.authors.map((a) => a.name).filter(Boolean);
-  const authorsWithNames = work.authors.filter((a) => a.name?.trim());
-
-  let authorsBody: React.ReactNode;
-  if (authorNames.length === 0) {
-    authorsBody = <span className="text-gray-400">—</span>;
-  } else if (authorNames.length === 1) {
-    authorsBody = authorNames[0];
-  } else {
-    authorsBody = (
-      <ul className="list-disc space-y-1 pl-4 marker:text-gray-300">
-        {authorsWithNames.map((author, i) => (
-          <li key={author.id ?? `author-${i}`} className="leading-snug">
-            {author.name}
-          </li>
-        ))}
-      </ul>
-    );
-  }
-
-  return (
-    <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
-      <dl className="divide-y divide-gray-100">
-        <div className="px-4 py-3 sm:grid sm:grid-cols-[6.5rem_1fr] sm:items-start sm:gap-4">
-          <dt className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            <Hash className="h-3.5 w-3.5 opacity-70" aria-hidden />
-            Work ID
-          </dt>
-          <dd className="mt-1 break-all font-mono text-sm text-gray-900 sm:mt-0">{workId}</dd>
-        </div>
-        <div className="px-4 py-3 sm:grid sm:grid-cols-[6.5rem_1fr] sm:items-start sm:gap-4">
-          <dt className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            <FileText className="h-3.5 w-3.5 opacity-70" aria-hidden />
-            Title
-          </dt>
-          <dd className="mt-1 text-sm font-medium leading-snug text-gray-900 sm:mt-0">
-            {work.title?.trim() ? work.title : <span className="font-normal text-gray-400">—</span>}
-          </dd>
-        </div>
-        <div className="px-4 py-3 sm:grid sm:grid-cols-[6.5rem_1fr] sm:items-start sm:gap-4">
-          <dt className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            <User className="h-3.5 w-3.5 opacity-70" aria-hidden />
-            {authorNames.length === 1 ? 'Author' : 'Authors'}
-          </dt>
-          <dd className="mt-1 text-sm text-gray-900 sm:mt-0">{authorsBody}</dd>
-        </div>
-      </dl>
-    </div>
-  );
-}

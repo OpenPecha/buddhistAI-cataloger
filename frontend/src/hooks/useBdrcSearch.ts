@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useDebouncedState } from "@tanstack/react-pacer";
 import { API_URL } from "@/config/api";
@@ -9,6 +9,9 @@ export interface BdrcContributor {
   id?: string;
   name?: string;
 }
+
+/** Root key for BDRC search queries; use with invalidateQueries to refetch all searches. */
+export const bdrcSearchQueryKeyRoot = ["bdrc-search"] as const;
 
 export interface BdrcSearchResult {
   workId?: string;
@@ -33,7 +36,7 @@ export interface BdrcSearchResult {
  */
 
 export function useBdrcSearch(searchQuery: string, type: string = "Work", debounceMs: number = 1000,callback: () => void | null=()=>{},enabled: boolean = true) {
-  const [debouncedValue, setDebouncedValue, debouncer] = useDebouncedState(
+  const [debouncedValue, setDebouncedValue] = useDebouncedState(
     searchQuery,
     { wait: debounceMs }
   );
@@ -44,7 +47,7 @@ export function useBdrcSearch(searchQuery: string, type: string = "Work", deboun
   const isEnabled = trimmedQuery.length > 0 && enabled;
 
   const { data, isLoading, error } = useQuery<BdrcSearchResult[]>({
-    queryKey: ["bdrc-search", trimmedQuery, type],
+    queryKey: [...bdrcSearchQueryKeyRoot, trimmedQuery, type],
     queryFn: async ({ signal }) => {
       const response = await fetch(`${API_URL}/bdrc/search`, {
         method: "POST",
@@ -83,7 +86,6 @@ export function useBdrcSearch(searchQuery: string, type: string = "Work", deboun
   if (error) {
     errorMessage = error instanceof Error ? error.message : "Unknown error";
   }
-
   return {
     results: data ?? [],
     isLoading,

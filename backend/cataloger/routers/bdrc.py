@@ -33,6 +33,7 @@ class WorkDetail(BaseModel):
     title: Optional[str] = None
     language: Optional[str] = None
     entityScore: Optional[int] = None
+    canonical_id: Optional[str] = None
     # OTAPI work fields
     title: Optional[str] = None
     alt_label_bo: List[str] = []
@@ -77,6 +78,22 @@ class FindMatchingWorkRequest(BaseModel):
     cend: Optional[int] = None
 
 
+class MergeWorksRequest(BaseModel):
+    """Merge a duplicate work into the current (canonical) work via OTAPI POST /api/v1/works/{work_id}/merge."""
+
+    parent_work_id: str = Field(..., description="Canonical work ID (survives after merge)")
+    searched_work_id: str = Field(..., description="Duplicate work ID from search to merge into parent")
+    modified_by: Optional[str] = None
+
+
+class MergePersonsRequest(BaseModel):
+    """Merge a duplicate person into the canonical person via OTAPI POST /api/v1/persons/{person_id}/merge."""
+
+    parent_person_id: str = Field(..., description="Canonical person ID (survives after merge)")
+    searched_person_id: str = Field(..., description="Duplicate person ID from search to merge into parent")
+    modified_by: Optional[str] = None
+
+
 class CreatePersonRequest(BaseModel):
     """Request body for creating a person via BDRC OTAPI POST /api/v1/persons."""
 
@@ -99,11 +116,12 @@ def _normalize_person_results(raw: Dict[str, Any], max_results: int = 10) -> Lis
         if not isinstance(item, dict):
             continue
         bdrc_id = item.get("id")
+        canonical_id = item.get("canonical_id")
         if not bdrc_id:
             continue
         name = item.get("name") or item.get("pref_label_bo")
        
-        out.append({"bdrc_id": str(bdrc_id), "name": name or ""})
+        out.append({"bdrc_id": str(bdrc_id), "name": name or "", "canonical_id": canonical_id or ""})
     return out
 
 
@@ -127,6 +145,7 @@ def _parse_works_response(raw: Any, size: int = 20) -> List[WorkDetail]:
         # Build authors as [{id, name}] from author_records (pref_label_bo as name), fallback to author IDs
         author_records = item.get("author_records") or []
         author_ids = item.get("authors") or []
+        canonical_id = item.get("canonical_id") or ""
         authors_out: List[AuthorInfo] = []
         if author_records:
             for rec in author_records:
@@ -142,6 +161,7 @@ def _parse_works_response(raw: Any, size: int = 20) -> List[WorkDetail]:
             workId=str(work_id),
             title=title,
             authors=authors_out,
+            canonical_id=canonical_id,
             language=None,
             entityScore=db_score,
             alt_label_bo=alt_label_bo,
@@ -237,6 +257,32 @@ async def create_work(request: CreateWorkRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/works/merge")
+async def merge_works(request: MergeWorksRequest):
+    """Merge a searched duplicate into the parent work via OTAPI POST /api/v1/works/{work_id}/merge."""
+    parent = (request.parent_work_id or "").strip()
+    searched = (request.searched_work_id or "").strip()
+    if not parent or not searched:
+        raise HTTPException(status_code=400, detail="parent_work_id and searched_work_id are required")
+    if parent == searched:
+        raise HTTPException(status_code=400, detail="Cannot merge a work into itself")
+    try:
+        result = await bdrc_work_module.merge_works(
+            work_id=searched,
+            target_work_id=parent,
+            modified_by=request.modified_by,
+        )
+        return result
+    except TimeoutError:
+        raise HTTPException(status_code=504, detail="Request to BDRC API timed out")
+    except ConnectionError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.put("/works/{work_id}")
 async def update_work(work_id: str, request: UpdateWorkRequest):
     """Update a work in BDRC via OTAPI PUT /api/v1/works/{work_id}."""
@@ -302,6 +348,32 @@ async def find_matching_work(request: FindMatchingWorkRequest):
             })
 
         return out
+    except TimeoutError:
+        raise HTTPException(status_code=504, detail="Request to BDRC API timed out")
+    except ConnectionError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/persons/merge")
+async def merge_persons(request: MergePersonsRequest):
+    """Merge a searched duplicate person into the parent person via OTAPI POST /api/v1/persons/{person_id}/merge."""
+    parent = (request.parent_person_id or "").strip()
+    searched = (request.searched_person_id or "").strip()
+    if not parent or not searched:
+        raise HTTPException(status_code=400, detail="parent_person_id and searched_person_id are required")
+    if parent == searched:
+        raise HTTPException(status_code=400, detail="Cannot merge a person into itself")
+    try:
+        result = await bdrc_person_module.merge_persons(
+            person_id=searched,
+            target_person_id=parent,
+            modified_by=request.modified_by,
+        )
+        return result
     except TimeoutError:
         raise HTTPException(status_code=504, detail="Request to BDRC API timed out")
     except ConnectionError as e:

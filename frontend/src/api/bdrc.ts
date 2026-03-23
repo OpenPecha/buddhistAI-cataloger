@@ -75,6 +75,78 @@ export async function updateBdrcWork(
   }
 }
 
+export interface MergeBdrcWorksPayload {
+  parent_work_id: string
+  searched_work_id: string
+  modified_by?: string
+}
+
+/**
+ * Merge a duplicate work into the canonical parent (POST /bdrc/works/merge).
+ * OTAPI absorbs searched_work_id into parent_work_id.
+ */
+export async function mergeBdrcWorks(
+  payload: MergeBdrcWorksPayload
+): Promise<Record<string, unknown>> {
+  const response = await fetch(`${API_URL}/bdrc/works/merge`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(text || `Failed to merge BDRC works (${response.status})`)
+  }
+
+  const text = await response.text()
+  if (!text.trim()) return {}
+  try {
+    return JSON.parse(text) as Record<string, unknown>
+  } catch {
+    return {}
+  }
+}
+
+export interface MergeBdrcPersonsPayload {
+  parent_person_id: string
+  searched_person_id: string
+  modified_by?: string
+}
+
+/**
+ * Merge a duplicate person into the canonical parent (POST /bdrc/persons/merge).
+ * OTAPI absorbs searched_person_id into parent_person_id.
+ */
+export async function mergeBdrcPersons(
+  payload: MergeBdrcPersonsPayload
+): Promise<Record<string, unknown>> {
+  const response = await fetch(`${API_URL}/bdrc/persons/merge`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+
+  if (!response.ok) {
+    const text = await response.text()
+    throw new Error(text || `Failed to merge BDRC persons (${response.status})`)
+  }
+
+  const text = await response.text()
+  if (!text.trim()) return {}
+  try {
+    return JSON.parse(text) as Record<string, unknown>
+  } catch {
+    return {}
+  }
+}
+
 export interface FindMatchingBdrcWorkPayload {
   text_bo: string
   volume_id: string

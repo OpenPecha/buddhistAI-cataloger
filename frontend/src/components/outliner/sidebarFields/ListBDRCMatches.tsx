@@ -1,6 +1,7 @@
 import { Loader2, User } from 'lucide-react'
 import type { TextSegment } from '../types'
 import { usePossibleMatch } from '../hooks/usePossibleMatch'
+import AuthorsListing from './AuthorsListing'
 
 interface ListBDRCMatchesProps {
   segment: TextSegment | undefined
@@ -58,7 +59,6 @@ export function ListBDRCMatches({
           {suggestions.map((s) => {
             const label = (s.name?.trim() || s.id).slice(0, 80)
             const titleTip = [s.name, s.id].filter(Boolean).join(' — ')
-            const authors = s?.authors?.map((a) => a.pref_label_bo).join(', ')
             return (
               <button
                 key={s.id}
@@ -68,8 +68,8 @@ export function ListBDRCMatches({
                 className="flex flex-col w-min max-w-full min-w-0 gap-2 rounded-xl border border-emerald-200/90 cursor-pointer  px-2.5 py-1 text-xs font-monlam text-emerald-950 shadow-sm transition hover:bg-emerald-100 hover:border-emerald-300"
               >
                 <span className="truncate">{label}</span>
-                <span className="flex items-center gap-1 text-xs text-gray-500"><User className="w-3.5 h-3.5" />{authors}</span>
-              </button>
+                <AuthorsListing authors={s.authors ?? []} />
+               </button>
             )
           })}
         </div>
