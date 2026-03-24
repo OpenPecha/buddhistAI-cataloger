@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
 import { OutlinerFileUploadZone } from '@/components/outliner/OutlinerFileUploadZone';
@@ -47,28 +47,51 @@ const OutlinerUpload: React.FC = () => {
   const userId = user?.id;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [skip, setSkip] = useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1', 10) || 1);
   const [titleSearch, setTitleSearch] = useState('');
   const [debouncedTitle, setDebouncedTitle] = useState('');
   const LIMIT = 10;
+  const skip = (page - 1) * LIMIT;
 
+  const prevDebouncedTitleRef = useRef<string | undefined>(undefined);
   useEffect(() => {
     const t = globalThis.setTimeout(() => setDebouncedTitle(titleSearch.trim()), 400);
     return () => globalThis.clearTimeout(t);
   }, [titleSearch]);
 
   useEffect(() => {
-    setSkip(0);
-  }, [debouncedTitle]);
+    if (prevDebouncedTitleRef.current === undefined) {
+      prevDebouncedTitleRef.current = debouncedTitle;
+      return;
+    }
+    if (prevDebouncedTitleRef.current !== debouncedTitle) {
+      prevDebouncedTitleRef.current = debouncedTitle;
+      if (page > 1) {
+        const params = new URLSearchParams(searchParams);
+        params.set('page', '1');
+        setSearchParams(params);
+      }
+    }
+  }, [debouncedTitle, page, searchParams, setSearchParams]);
+
+  const handlePageChange = useCallback(
+    (newPage: number) => {
+      const params = new URLSearchParams(searchParams);
+      params.set('page', String(newPage));
+      setSearchParams(params);
+    },
+    [searchParams, setSearchParams]
+  );
 
   const { data: documents = [], isLoading: isLoadingDocuments } = useQuery<OutlinerDocumentListItem[]>({
-    queryKey: ['outliner-documents', userId, skip, LIMIT, debouncedTitle],
+    queryKey: ['outliner-documents', userId, page, LIMIT, debouncedTitle],
     queryFn: () =>
       listOutlinerDocuments(userId, skip, LIMIT, false, debouncedTitle || undefined),
     enabled: !!userId,
   });
 
-  const canGoPrev = skip > 0;
+  const canGoPrev = page > 1;
   const canGoNext = documents.length === LIMIT;
 
   useEffect(() => {
@@ -166,9 +189,9 @@ const OutlinerUpload: React.FC = () => {
                 <SimplePagination
                   canGoPrev={canGoPrev}
                   canGoNext={canGoNext}
-                  onPrev={() => setSkip((s) => Math.max(0, s - LIMIT))}
-                  onNext={() => setSkip((s) => s + LIMIT)}
-                  label={`Page ${Math.floor(skip / LIMIT) + 1}`}
+                  onPrev={() => handlePageChange(page - 1)}
+                  onNext={() => handlePageChange(page + 1)}
+                  label={`Page ${page}`}
                   labelPosition="center"
                 />
               </div>
