@@ -114,7 +114,6 @@ const OutlinerUpload: React.FC = () => {
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Outliner Documents</h1>
-            <p className="text-gray-600">Split your text and assign title and author</p>
             <div className="relative mt-4 max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden />
               <Input
