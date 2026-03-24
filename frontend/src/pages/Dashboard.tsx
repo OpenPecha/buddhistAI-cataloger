@@ -14,8 +14,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { FileText,  Calendar, BarChart3 } from 'lucide-react';
+import { FileText, Calendar, BarChart3, Search } from 'lucide-react';
 import { SimplePagination } from '@/components/ui/simple-pagination';
+import { Input } from '@/components/ui/input';
 import { useUser } from '@/hooks/useUser';
 import { Progress } from '@/components/ui/progress';
 import { formatDistanceToNow } from 'date-fns';
@@ -47,11 +48,23 @@ const OutlinerUpload: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [skip, setSkip] = useState(0);
+  const [titleSearch, setTitleSearch] = useState('');
+  const [debouncedTitle, setDebouncedTitle] = useState('');
   const LIMIT = 10;
 
+  useEffect(() => {
+    const t = globalThis.setTimeout(() => setDebouncedTitle(titleSearch.trim()), 400);
+    return () => globalThis.clearTimeout(t);
+  }, [titleSearch]);
+
+  useEffect(() => {
+    setSkip(0);
+  }, [debouncedTitle]);
+
   const { data: documents = [], isLoading: isLoadingDocuments } = useQuery<OutlinerDocumentListItem[]>({
-    queryKey: ['outliner-documents', userId, skip, LIMIT],
-    queryFn: () => listOutlinerDocuments(userId, skip, LIMIT),
+    queryKey: ['outliner-documents', userId, skip, LIMIT, debouncedTitle],
+    queryFn: () =>
+      listOutlinerDocuments(userId, skip, LIMIT, false, debouncedTitle || undefined),
     enabled: !!userId,
   });
 
@@ -98,12 +111,23 @@ const OutlinerUpload: React.FC = () => {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
-          <div>
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 flex-1">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Outliner Documents</h1>
             <p className="text-gray-600">Split your text and assign title and author</p>
+            <div className="relative mt-4 max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden />
+              <Input
+                type="search"
+                placeholder="Search by document title…"
+                value={titleSearch}
+                onChange={(e) => setTitleSearch(e.target.value)}
+                className="pl-9"
+                aria-label="Search documents by title"
+              />
+            </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-3">
        
                 <Button 
               onClick={assignWork}
@@ -129,7 +153,11 @@ const OutlinerUpload: React.FC = () => {
         {!isLoadingDocuments && documents.length === 0 && (
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
             <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            Get started by uploading your first document
+            {debouncedTitle ? (
+              <p className="text-gray-600">No documents match your search.</p>
+            ) : (
+              <p>Get started by uploading your first document</p>
+            )}
           </div>
         )}
         {!isLoadingDocuments && documents.length > 0 && (

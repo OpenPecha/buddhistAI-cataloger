@@ -260,17 +260,22 @@ async def create_document(
 async def list_documents(
     user_id: Optional[str] = None,
     status: Optional[str] = None,
+    title: Optional[str] = Query(
+        None,
+        description="Case-insensitive partial match on document title (filename)",
+    ),
     skip: int = 0,
     limit: int = 100,
     include_deleted: bool = False,
     db: Session = Depends(get_db)
 ):
     """
-    List all outliner documents, optionally filtered by user, status, and deletion status.
+    List all outliner documents, optionally filtered by user, status, title search, and deletion status.
 
     Args:
         user_id: Filter documents by user ID (annotator)
         status: Filter by document status (active, completed, approved)
+        title: Search string matched against document filename (display title in list views)
         skip: Number of documents to skip (pagination)
         limit: Maximum number of documents to return
         include_deleted: If False (default), exclude deleted documents. If True, include all documents.
@@ -281,7 +286,8 @@ async def list_documents(
         status=status,
         skip=skip,
         limit=limit,
-        include_deleted=include_deleted
+        include_deleted=include_deleted,
+        title=title,
     )
     return result
 

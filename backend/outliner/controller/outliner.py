@@ -93,7 +93,8 @@ def list_documents(
     status: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
-    include_deleted: bool = False
+    include_deleted: bool = False,
+    title: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """
     List all outliner documents, optionally filtered by user, status, and deletion status.
@@ -105,6 +106,7 @@ def list_documents(
         skip: Number of documents to skip (pagination)
         limit: Maximum number of documents to return
         include_deleted: If False (default), exclude deleted documents. If True, include all documents.
+        title: If set, case-insensitive substring match on document filename (list UI title).
     """
     query = db.query(OutlinerDocument)
     if user_id:
@@ -112,6 +114,15 @@ def list_documents(
 
     if status:
         query = query.filter(OutlinerDocument.status == status)
+
+    if title and title.strip():
+        escaped = (
+            title.strip()
+            .replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_")
+        )
+        query = query.filter(OutlinerDocument.filename.ilike(f"%{escaped}%", escape="\\"))
 
     # Filter out deleted documents by default
     if not include_deleted:

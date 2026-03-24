@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
+import { Search } from 'lucide-react';
 import type { Document } from '../shared/types';
 import type { OutlinerUser } from '../../../hooks/useOutlinerUsers';
+import { Input } from '@/components/ui/input';
 import DocumentRow from './DocumentRow';
 
 const STATUS_OPTIONS = [
@@ -19,6 +21,9 @@ interface DocumentsTabProps {
   annotatorsLoading: boolean;
   currentStatus?: string;
   currentAnnotator?: string;
+  titleSearch: string;
+  debouncedTitle: string;
+  onTitleSearchChange: (value: string) => void;
   onFilterChange: (status?: string, annotator?: string) => void;
 }
 
@@ -31,6 +36,9 @@ function DocumentsTab({
   annotatorsLoading,
   currentStatus,
   currentAnnotator,
+  titleSearch,
+  debouncedTitle,
+  onTitleSearchChange,
   onFilterChange,
 }: Readonly<DocumentsTabProps>) {
   const annotatorMap = useMemo(() => {
@@ -57,7 +65,6 @@ function DocumentsTab({
         <div className="px-6 py-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h3 className="text-xl font-semibold text-gray-900">Document Management</h3>
-            <p className="text-gray-600 mt-1">Review and manage outliner documents</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-4">
@@ -98,6 +105,22 @@ function DocumentsTab({
                 ))}
               </select>
             </div>
+
+            <div className="relative w-full min-w-[200px] max-w-xs sm:w-64">
+              <Search
+                className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none"
+                aria-hidden
+              />
+              <Input
+                id="document-title-search"
+                type="search"
+                placeholder="Search by title…"
+                value={titleSearch}
+                onChange={(e) => onTitleSearchChange(e.target.value)}
+                className="pl-9 h-9 text-sm"
+                aria-label="Search documents by title"
+              />
+            </div>
           </div>
         </div>
 
@@ -135,7 +158,9 @@ function DocumentsTab({
               {documents.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500">
-                    No documents found for the selected filters.
+                    {debouncedTitle.trim()
+                      ? 'No documents match your search.'
+                      : 'No documents found for the selected filters.'}
                   </td>
                 </tr>
               ) : (

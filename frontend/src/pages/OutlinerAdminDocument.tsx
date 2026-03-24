@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DocumentsTab } from '../components/admin';
 import { SimplePagination } from '../components/ui/simple-pagination';
@@ -18,9 +18,36 @@ function OutlinerAdminDocument() {
   const annotator = searchParams.get('annotator') || undefined;
   const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1', 10) || 1);
 
+  const [titleSearch, setTitleSearch] = useState('');
+  const [debouncedTitle, setDebouncedTitle] = useState('');
+  const isFirstTitleDebounce = useRef(true);
+
+  useEffect(() => {
+    const t = globalThis.setTimeout(() => setDebouncedTitle(titleSearch.trim()), 400);
+    return () => globalThis.clearTimeout(t);
+  }, [titleSearch]);
+
+  useEffect(() => {
+    if (isFirstTitleDebounce.current) {
+      isFirstTitleDebounce.current = false;
+      return;
+    }
+    setSearchParams((prev) => {
+      const p = new URLSearchParams(prev);
+      p.set('page', '1');
+      return p;
+    });
+  }, [debouncedTitle, setSearchParams]);
+
   const filters: DocumentFilters = useMemo(
-    () => ({ status, userId: annotator, page, pageSize: 20 }),
-    [status, annotator, page]
+    () => ({
+      status,
+      userId: annotator,
+      title: debouncedTitle || undefined,
+      page,
+      pageSize: 20,
+    }),
+    [status, annotator, debouncedTitle, page]
   );
 
   const {
@@ -81,6 +108,9 @@ function OutlinerAdminDocument() {
         annotatorsLoading={annotatorsLoading}
         currentStatus={status}
         currentAnnotator={annotator}
+        titleSearch={titleSearch}
+        debouncedTitle={debouncedTitle}
+        onTitleSearchChange={setTitleSearch}
         onFilterChange={handleFilterChange}
       />
       {(hasPrevPage || hasNextPage) && (

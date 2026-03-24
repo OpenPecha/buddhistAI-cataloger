@@ -35,6 +35,7 @@ const DEFAULT_PAGE_SIZE = 20
 export interface DocumentFilters {
   status?: string;
   userId?: string;
+  title?: string;
   page?: number;
   pageSize?: number;
 }
@@ -44,7 +45,7 @@ export interface DocumentFilters {
  */
 export function useDocuments(filters: DocumentFilters = {}) {
   const { getAccessTokenSilently } = useAuth0();
-  const { status, userId, page = 1, pageSize = DEFAULT_PAGE_SIZE } = filters;
+  const { status, userId, title, page = 1, pageSize = DEFAULT_PAGE_SIZE } = filters;
   const skip = (page - 1) * pageSize;
 
   const {
@@ -54,12 +55,13 @@ export function useDocuments(filters: DocumentFilters = {}) {
     error,
     refetch
   } = useQuery<Document[]>({
-    queryKey: ['outliner-admin-documents', { status, userId, skip, limit: pageSize }],
+    queryKey: ['outliner-admin-documents', { status, userId, title, skip, limit: pageSize }],
     queryFn: async () => {
       const token = await getAccessTokenSilently();
       const params = new URLSearchParams();
       if (status) params.append('status', status);
       if (userId) params.append('user_id', userId);
+      if (title?.trim()) params.append('title', title.trim());
       params.set('skip', String(skip));
       params.set('limit', String(pageSize));
       const url = `/api/outliner/documents?${params.toString()}`;

@@ -189,13 +189,15 @@ export const listOutlinerDocuments = async (
   user_id?: string,
   skip: number = 0,
   limit: number = 100,
-  include_deleted: boolean = false
+  include_deleted: boolean = false,
+  title?: string
 ): Promise<OutlinerDocumentListItem[]> => {
   const params = new URLSearchParams();
   if (user_id) params.append('user_id', user_id);
   params.append('skip', skip.toString());
   params.append('limit', limit.toString());
   params.append('include_deleted', include_deleted.toString());
+  if (title?.trim()) params.append('title', title.trim());
 
   const response = await fetch(`${API_URL}/outliner/documents?${params.toString()}`);
   return handleApiResponse(response);
