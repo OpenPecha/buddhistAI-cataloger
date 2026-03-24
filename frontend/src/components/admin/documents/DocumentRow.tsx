@@ -25,12 +25,10 @@ function DocumentRow({ document, annotatorName, onSelect, onDelete }: DocumentRo
           {document.filename || `Document ${document.id.slice(0, 8)}`}
         </div>
         <div className="text-sm text-gray-500">
-          ID: {document.id.slice(0, 8)}...
+        {annotatorName}
         </div>
       </TableCell>
-      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-        {annotatorName}
-      </TableCell>
+      
       <TableCell className="px-6 py-4 whitespace-nowrap">
         <span
           className={`inline-flex px-2 py-1 text-sm font-medium rounded ${
@@ -49,9 +47,7 @@ function DocumentRow({ document, annotatorName, onSelect, onDelete }: DocumentRo
       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
         {document.annotated_segments}/{document.total_segments}
       </TableCell>
-      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-        {new Date(document.created_at).toLocaleDateString()}
-      </TableCell>
+     
       <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium">
         <button
           onClick={() => onSelect(document)}

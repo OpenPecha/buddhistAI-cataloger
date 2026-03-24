@@ -211,7 +211,7 @@ function SegmentsTab({
               <TableHeader className="bg-gray-50/80">
                 <TableRow>
                   <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Index
+                    Status
                   </TableHead>
                   <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Text Preview
@@ -222,9 +222,7 @@ function SegmentsTab({
                   <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     BDRC match
                   </TableHead>
-                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Comment
-                  </TableHead>
+                  
                   <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </TableHead>

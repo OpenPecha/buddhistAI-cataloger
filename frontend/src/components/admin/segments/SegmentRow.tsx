@@ -13,7 +13,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { updateSegment, rejectSegment } from '@/api/outliner';
 import { toast } from 'sonner';
 import { useBdrcWork, type BdrcWorkInfo } from '@/hooks/useBdrcSearch';
-import { AlertCircle, FileText, Hash, Loader2, User } from 'lucide-react';
+import { AlertCircle, FileText, Hash, Loader2, MessageCircle, User } from 'lucide-react';
 import type { Segment } from '../shared/types';
 import BDRCSeachWrapper from '@/components/outliner/BDRCSeachWrapper';
 import AuthorsListing from '@/components/outliner/sidebarFields/AuthorsListing';
@@ -92,10 +92,14 @@ function SegmentRow({
   return (
     <React.Fragment>
     <TableRow
-      className="hover:bg-gray-50 cursor-pointer"
+      className="hover:bg-gray-50 cursor-pointer max-w-full overflow-auto"
       onClick={handleRowClick}
     >
       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+        {segment.comments && segment.comments.length > 0 && (
+          <span className="inline-flex rounded-full items-center gap-1 bg-gray-100 text-gray-800 px-2 py-1 text-xs font-semibold">
+            <MessageCircle className="w-4 h-4" /> {segment.comments.length}        </span>
+       )}
         {segment.status === 'approved' ? (
           <span
             className="inline-block rounded-full bg-blue-100 text-blue-800 px-2 py-1 text-xs font-semibold"
@@ -136,7 +140,7 @@ function SegmentRow({
           }
           } 
         >
-          <span className="truncate block">
+          <span className="truncate block font-monlam">
             {segment.text.substring(0, 100)}...
           </span>
           <span className="text-xs text-blue-500 mt-1">
@@ -155,16 +159,12 @@ function SegmentRow({
            <BDRCInfo workId={segment.title_bdrc_id ?? ''} />
         </div>
       </TableCell>
-      <TableCell className="px-6 py-4">
-        {segment.comments && segment.comments.length > 0 && (
-          <span>{segment.comments.length}</span>
-        )}
-      </TableCell>
+    
       <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium">
         {segment.status === 'checked' ? (
           <div className="flex gap-2">
             <Button
-              size="sm"
+              size="xs"
               onClick={handleSave}
               disabled={isSaving}
               variant="outline"
@@ -172,10 +172,10 @@ function SegmentRow({
               {isSaving ? 'Saving...' : 'Approve'}
             </Button>
             <Button
-              size="sm"
+              size="xs"
               onClick={handleReject}
               disabled={isSaving}
-              variant="outline"
+              variant="ghost"
               className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
             >
               Reject
@@ -196,7 +196,6 @@ function SegmentRow({
     {isExpanded && (
       <TableRow className="bg-gray-50">
         <TableCell colSpan={6} className="px-6 py-4">
-              <div className="text-sm font-medium text-gray-900 pb-2">Text:</div>
               <div className="text-sm text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto font-monlam">
                 {segment.text}
               </div>
