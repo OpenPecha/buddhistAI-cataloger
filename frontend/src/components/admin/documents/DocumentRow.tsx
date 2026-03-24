@@ -1,4 +1,5 @@
 import type { Document } from '../shared/types';
+import { TableCell, TableRow } from '@/components/ui/table';
 
 const STATUS_LABEL: Record<string, string> = {
   active: 'Annotating',
@@ -18,19 +19,19 @@ function DocumentRow({ document, annotatorName, onSelect, onDelete }: DocumentRo
   const statusKey = document.status || 'active';
 
   return (
-    <tr className="hover:bg-gray-50">
-      <td className="px-6 py-4 whitespace-nowrap">
+    <TableRow className="hover:bg-gray-50">
+      <TableCell className="px-6 py-4 whitespace-nowrap">
         <div className="text-sm font-medium text-gray-900">
           {document.filename || `Document ${document.id.slice(0, 8)}`}
         </div>
         <div className="text-sm text-gray-500">
           ID: {document.id.slice(0, 8)}...
         </div>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+      </TableCell>
+      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
         {annotatorName}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
+      </TableCell>
+      <TableCell className="px-6 py-4 whitespace-nowrap">
         <span
           className={`inline-flex px-2 py-1 text-sm font-medium rounded ${
             statusKey === 'completed'
@@ -44,14 +45,14 @@ function DocumentRow({ document, annotatorName, onSelect, onDelete }: DocumentRo
         >
           {STATUS_LABEL[statusKey] || statusKey}
         </span>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+      </TableCell>
+      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
         {document.annotated_segments}/{document.total_segments}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+      </TableCell>
+      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
         {new Date(document.created_at).toLocaleDateString()}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+      </TableCell>
+      <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium">
         <button
           onClick={() => onSelect(document)}
           className="text-blue-600 hover:text-blue-900 mr-4"
@@ -64,8 +65,8 @@ function DocumentRow({ document, annotatorName, onSelect, onDelete }: DocumentRo
         >
           Delete
         </button>
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
 

@@ -196,16 +196,10 @@ function SegmentRow({
     {isExpanded && (
       <TableRow className="bg-gray-50">
         <TableCell colSpan={6} className="px-6 py-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium text-gray-900">Full Text:</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto">
+              <div className="text-sm font-medium text-gray-900 pb-2">Text:</div>
+              <div className="text-sm text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto font-monlam">
                 {segment.text}
               </div>
-            </CardContent>
-          </Card>
         </TableCell>
       </TableRow>
     )}

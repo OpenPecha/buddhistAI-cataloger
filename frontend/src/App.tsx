@@ -27,7 +27,6 @@ const OutlinerAdminDashboardLazy = lazy(() => import('@/features/outliner').then
 const OutlinerAdminDocumentLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminDocument })));
 const OutlinerAdminSegmentLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminSegment })));
 const OutlinerAdminUsersLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminUsers })));
-const OutlinerAdminMergeReviewsLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminMergeReviews })));
 
 
 

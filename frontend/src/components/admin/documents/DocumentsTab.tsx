@@ -3,6 +3,14 @@ import { Search } from 'lucide-react';
 import type { Document } from '../shared/types';
 import type { OutlinerUser } from '../../../hooks/useOutlinerUsers';
 import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import DocumentRow from './DocumentRow';
 
 const STATUS_OPTIONS = [
@@ -124,45 +132,45 @@ function DocumentsTab({
           </div>
         </div>
 
-        <div className="relative overflow-x-auto">
+        <div className="relative">
           {isFetching && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[1px] transition-opacity">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
             </div>
           )}
 
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <Table className="min-w-full divide-y divide-gray-200">
+            <TableHeader className="bg-gray-50">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Filename
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Annotator
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Segments
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Created
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody className="bg-white divide-y divide-gray-200">
               {documents.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500">
+                <TableRow className="hover:bg-transparent">
+                  <TableCell colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500">
                     {debouncedTitle.trim()
                       ? 'No documents match your search.'
                       : 'No documents found for the selected filters.'}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 documents.map((doc) => (
                   <DocumentRow
@@ -174,8 +182,8 @@ function DocumentsTab({
                   />
                 ))
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
       </div>
     </div>

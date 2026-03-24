@@ -20,24 +20,13 @@ function OutlinerAdminDocument() {
 
   const [titleSearch, setTitleSearch] = useState('');
   const [debouncedTitle, setDebouncedTitle] = useState('');
-  const isFirstTitleDebounce = useRef(true);
 
   useEffect(() => {
     const t = globalThis.setTimeout(() => setDebouncedTitle(titleSearch.trim()), 400);
     return () => globalThis.clearTimeout(t);
   }, [titleSearch]);
 
-  useEffect(() => {
-    if (isFirstTitleDebounce.current) {
-      isFirstTitleDebounce.current = false;
-      return;
-    }
-    setSearchParams((prev) => {
-      const p = new URLSearchParams(prev);
-      p.set('page', '1');
-      return p;
-    });
-  }, [debouncedTitle, setSearchParams]);
+
 
   const filters: DocumentFilters = useMemo(
     () => ({
