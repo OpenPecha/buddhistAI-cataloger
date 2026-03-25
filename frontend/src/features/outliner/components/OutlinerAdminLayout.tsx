@@ -42,7 +42,7 @@ const OutlinerAdminLayout = ({children}: {children: React.ReactNode}) => {
             })}
           </nav>
         </aside>
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-gray-50 p-6">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-gray-50 p-6">
           {children}
         </div>
       </div>

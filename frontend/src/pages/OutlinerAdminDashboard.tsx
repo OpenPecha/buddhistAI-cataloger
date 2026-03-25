@@ -35,8 +35,8 @@ function OutlinerAdminDashboard() {
   }
 
   return (
-    <>
-      <div className=" bg-gray-50/80  mb-4 flex flex-wrap justify-end items-center gap-3 ">
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+      <div className="mb-4 flex flex-wrap items-center justify-end gap-3 bg-gray-50/80">
         <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Filters</span>
         <select
           id="user-filter"
@@ -77,7 +77,7 @@ function OutlinerAdminDashboard() {
         isLoading={isLoading}
         annotators={outlinerUsers}
       />
-    </>
+    </div>
   );
 }
 

@@ -5,6 +5,7 @@ import type { PaginatedUserResponse } from '../api/user';
 export interface OutlinerUser {
   id: string;
   name: string | null;
+  email: string;
 }
 
 /**
@@ -42,7 +43,8 @@ export function useOutlinerUsers() {
 
   const users: OutlinerUser[] = (data?.items || []).map((u) => ({
     id: u.id,
-    name: u.name ?? null
+    name: u.name ?? null,
+    email: u.email ?? '',
   }));
 
   return {

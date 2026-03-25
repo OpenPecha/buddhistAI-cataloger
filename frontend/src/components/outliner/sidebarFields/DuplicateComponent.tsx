@@ -26,7 +26,7 @@ import { toast } from 'sonner'
 
 const EMPTY_AUTHORS: BdrcWorkAuthor[] = []
 
-type DublicateModalProps = Readonly<{
+type DuplicateModalProps = Readonly<{
   work: BdrcWorkInfo | null
   workLoading: boolean
   workError: string | null
@@ -34,13 +34,13 @@ type DublicateModalProps = Readonly<{
   onOpenChange: (open: boolean) => void
 }>
 
-export function DublicateModal({
+export function DuplicateModal({
   work,
   workLoading,
   workError,
   isOpen,
   onOpenChange,
-}: DublicateModalProps) {
+}: DuplicateModalProps) {
   if (!work) return null
 
   return (

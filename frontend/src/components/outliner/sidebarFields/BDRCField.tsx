@@ -22,7 +22,7 @@ import { updateBdrcWork } from '@/api/bdrc'
 import { toast } from 'sonner'
 import { useAuth0 } from '@auth0/auth0-react'
 import BDRCSeachWrapper from '../BDRCSeachWrapper'
-import { DublicateModal } from './DublicateComponent'
+import { DuplicateModal } from './DuplicateComponent'
 import AuthorsListing from './AuthorsListing'
 
 function bdrcWorkHasAuthor(work: BdrcWorkInfo | null): boolean {
@@ -454,7 +454,7 @@ function BDRCField({
       </Button>
         </div>
       )}
-      <DublicateModal work={fetchedWork} workLoading={workLoading} workError={workError} isOpen={workDetailModalOpen} onOpenChange={setWorkDetailModalOpen} />
+      <DuplicateModal work={fetchedWork} workLoading={workLoading} workError={workError} isOpen={workDetailModalOpen} onOpenChange={setWorkDetailModalOpen} />
       <CreateBdrcWorkModal
         open={createWorkModalOpen}
         onOpenChange={setCreateWorkModalOpen}
