@@ -112,7 +112,7 @@ function SegmentsTab({
 
       {!loadingSegments && selectedDocument && segments.length > 0 && (
         <>
-          <header className="shrink-0 flex flex-col gap-4 border-b border-gray-200 bg-white px-6 py-4">
+          <header className="shrink-0 flex flex-col gap-4 pb-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <h2 className="text-base font-semibold text-gray-900 truncate">
                 {selectedDocument.filename || `Document ${selectedDocument.id.slice(0, 8)}`}

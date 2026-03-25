@@ -69,7 +69,7 @@ function DocumentsTab({
 
   return (
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="shrink-0 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
+        <div className="shrink-0  pb-4 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h3 className="text-xl font-semibold text-gray-900">Document Management</h3>
           </div>
