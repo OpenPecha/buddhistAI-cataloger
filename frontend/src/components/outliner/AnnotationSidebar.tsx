@@ -364,7 +364,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
             disabled={activeSegment.status === 'checked'}
           />
 
-          {showBdrcMatch && (
+          {/* {showBdrcMatch && (
             <BDRCField
               segment={activeSegment}
               formData={formData}
@@ -375,7 +375,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
               annotatorAuthorName={formData.author.name}
               onBdrcAuthorBlockingChange={handleBdrcAuthorBlockingChange}
             />
-          )}
+          )} */}
         </div>
 
        
