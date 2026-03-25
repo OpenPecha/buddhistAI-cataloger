@@ -13,12 +13,14 @@ import {
   CategoryScale,
   LinearScale,
   BarElement,
+  LineElement,
+  PointElement,
   ArcElement,
   Title,
   Tooltip,
   Legend,
 } from 'chart.js'
-import { Bar, Doughnut } from 'react-chartjs-2'
+import { Bar, Doughnut, Line } from 'react-chartjs-2'
 import StatsCard from '../shared/StatsCard'
 import type { DashboardStats } from '@/api/outliner'
 
@@ -26,6 +28,8 @@ ChartJS.register(
   CategoryScale,
   LinearScale,
   BarElement,
+  LineElement,
+  PointElement,
   ArcElement,
   Title,
   Tooltip,
@@ -97,10 +101,13 @@ const HBAR_OPTIONS = {
   },
 } as const
 
-const ANNOTATOR_COMPARE_OPTIONS = {
-  indexAxis: 'y' as const,
+const ANNOTATOR_LINE_OPTIONS = {
   responsive: true,
   maintainAspectRatio: false,
+  interaction: {
+    mode: 'index' as const,
+    intersect: false,
+  },
   plugins: {
     legend: {
       display: true,
@@ -121,15 +128,18 @@ const ANNOTATOR_COMPARE_OPTIONS = {
   },
   scales: {
     x: {
-      beginAtZero: true,
-      stacked: false,
-      grid: { color: '#f1f5f9' },
-      ticks: { font: { size: 11 }, color: '#64748b' },
+      grid: { display: false },
+      ticks: {
+        font: { size: 11 },
+        color: '#334155',
+        maxRotation: 45,
+        minRotation: 0,
+      },
     },
     y: {
-      stacked: false,
-      grid: { display: false },
-      ticks: { font: { size: 11 }, color: '#334155', maxRotation: 0 },
+      beginAtZero: true,
+      grid: { color: '#f1f5f9' },
+      ticks: { font: { size: 11 }, color: '#64748b' },
     },
   },
 } as const
@@ -276,26 +286,35 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
         {
           label: 'Segments',
           data: perf.map((r) => r.segment_count),
-          backgroundColor: 'rgba(37, 99, 235, 0.88)',
-          borderColor: '#1d4ed8',
-          borderWidth: 1,
-          borderRadius: 4,
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37, 99, 235, 0.12)',
+          borderWidth: 2,
+          tension: 0.25,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#2563eb',
         },
         {
           label: 'Title / author',
           data: perf.map((r) => r.segments_with_title_or_author),
-          backgroundColor: 'rgba(124, 58, 237, 0.88)',
-          borderColor: '#6d28d9',
-          borderWidth: 1,
-          borderRadius: 4,
+          borderColor: '#7c3aed',
+          backgroundColor: 'rgba(124, 58, 237, 0.12)',
+          borderWidth: 2,
+          tension: 0.25,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#7c3aed',
         },
         {
           label: 'Rejections',
           data: perf.map((r) => r.rejection_count),
-          backgroundColor: 'rgba(220, 38, 38, 0.85)',
-          borderColor: '#b91c1c',
-          borderWidth: 1,
-          borderRadius: 4,
+          borderColor: '#dc2626',
+          backgroundColor: 'rgba(220, 38, 38, 0.12)',
+          borderWidth: 2,
+          tension: 0.25,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#dc2626',
         },
       ],
     }
@@ -465,14 +484,9 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
             Annotator performance
           </p>
        
-          <div
-            className="mt-4 min-h-64"
-            style={{
-              height: Math.max(256, (stats.annotator_performance?.length ?? 0) * 44 + 72),
-            }}
-          >
+          <div className="mt-4 h-80 min-h-64">
             {annotatorCompareData ? (
-              <Bar data={annotatorCompareData} options={ANNOTATOR_COMPARE_OPTIONS} />
+              <Line data={annotatorCompareData} options={ANNOTATOR_LINE_OPTIONS} />
             ) : (
               <div className="flex h-full min-h-48 items-center justify-center text-sm text-slate-400">
                 No annotator activity in this date range.
