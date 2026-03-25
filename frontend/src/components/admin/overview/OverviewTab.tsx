@@ -443,22 +443,6 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
         </div>
         <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Segments by status
-          </p>
-          <p className="mt-1 text-sm text-slate-600">Review pipeline: unchecked through approved.</p>
-          <div className="mt-4 flex h-72 items-center justify-center">
-            {segmentStatusChart ? (
-              <Doughnut data={segmentStatusChart} options={DOUGHNUT_OPTIONS} />
-            ) : (
-              <p className="text-sm text-slate-400">No segments in range.</p>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
             Segment labels
           </p>
           <p className="mt-1 text-sm text-slate-600">Front matter, TOC, text, back matter, etc.</p>
@@ -472,15 +456,15 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
             )}
           </div>
         </div>
+      </section>
+
+      <section className="grid gap-6 lg:grid-cols-2">
+       
         <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
             Annotator performance
           </p>
-          <p className="mt-1 text-sm text-slate-600">
-            Compare annotators by segment volume, segments with title or author filled, and rejection
-            events on their documents. Uses the same date range as the filters above; always includes
-            all annotators (not the single-user filter).
-          </p>
+       
           <div
             className="mt-4 min-h-64"
             style={{
