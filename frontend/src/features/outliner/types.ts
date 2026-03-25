@@ -73,6 +73,8 @@ export interface Document {
   status?: string | null
   created_at: string
   updated_at: string
+  /** Present on admin document detail responses */
+  segments?: Segment[]
 }
 
 export interface Segment {

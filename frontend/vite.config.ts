@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   
   const serverUrl = env.VITE_SERVER_URL || 'http://localhost:8000'
+  const bdrcServerUrl = env.VITE_BDRC_BACKEND_URL || 'http://localhost:8000'
   
   return {
     plugins: [react({
@@ -33,6 +34,12 @@ export default defineConfig(({ mode }) => {
             proxy.on('proxyRes', (proxyRes, req) => {
             });
           },
+        },
+        '/bdrc/api': {
+          target: bdrcServerUrl,
+          changeOrigin: true,
+          secure: false,
+          rewrite: (path) => path.replace(/^\/bdrc\/api/, ''),
         },
       },
     },

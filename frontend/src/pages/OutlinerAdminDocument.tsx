@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DocumentsTab } from '../components/admin';
 import { SimplePagination } from '../components/ui/simple-pagination';
@@ -87,7 +87,7 @@ function OutlinerAdminDocument() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
       <DocumentsTab
         documents={documents}
         isFetching={isFetching}

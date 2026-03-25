@@ -58,15 +58,15 @@ function OutlinerAdminSegment() {
   }
 
   return (
-   
-        <SegmentsTab
-          selectedDocument={selectedDocument}
-          segments={segments}
-          loadingSegments={isLoadingDocument}
-          expandedSegments={expandedSegments}
-          onToggleExpansion={toggleSegmentExpansion}
-        />
-    
+    <div className="flex min-h-0 flex-1 flex-col">
+      <SegmentsTab
+        selectedDocument={selectedDocument}
+        segments={segments}
+        loadingSegments={isLoadingDocument}
+        expandedSegments={expandedSegments}
+        onToggleExpansion={toggleSegmentExpansion}
+      />
+    </div>
   );
 }
 

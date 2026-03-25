@@ -68,9 +68,8 @@ function DocumentsTab({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow-md">
-        <div className="px-6 py-4 border-b border-gray-200 flex flex-wrap items-center justify-between gap-4">
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="shrink-0 px-6 py-4 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h3 className="text-xl font-semibold text-gray-900">Document Management</h3>
           </div>
@@ -132,15 +131,18 @@ function DocumentsTab({
           </div>
         </div>
 
-        <div className="relative">
+        <div className="relative min-h-0 flex-1 overflow-auto [scrollbar-gutter:stable] rounded-md border border-gray-200 bg-white">
           {isFetching && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[1px] transition-opacity">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
             </div>
           )}
 
-          <Table className="min-w-full divide-y divide-gray-200">
-            <TableHeader className="bg-gray-50">
+          <Table
+            wrapperClassName="min-w-0 overflow-visible"
+            className="min-w-full divide-y divide-gray-200"
+          >
+            <TableHeader className="sticky top-0 z-1 bg-gray-50 shadow-sm">
               <TableRow className="hover:bg-transparent">
                 <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Filename
@@ -182,7 +184,6 @@ function DocumentsTab({
           </Table>
         </div>
       </div>
-    </div>
   );
 }
 

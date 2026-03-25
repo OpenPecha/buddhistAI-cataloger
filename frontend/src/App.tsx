@@ -4,6 +4,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { Navigation, ProtectedRoute } from '@app';
 import { getUserByEmail, createUser } from './api/settings';
 import { useUser } from './hooks/useUser';
+import OutlinerAdminLayout from './features/outliner/components/OutlinerAdminLayout';
 
 // Lazy load page components
 const TextsPage = lazy(() => import('./pages/Text'));
@@ -27,7 +28,7 @@ const OutlinerAdminDashboardLazy = lazy(() => import('@/features/outliner').then
 const OutlinerAdminDocumentLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminDocument })));
 const OutlinerAdminSegmentLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminSegment })));
 const OutlinerAdminUsersLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminUsers })));
-
+const OutlinerAdminBDRCLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminBDRC })));
 
 
 
@@ -196,6 +197,13 @@ function App() {
               </OutlinerAdminLayout>
             </ProtectedRoute>
           } />
+           <Route path="/outliner-admin/bdrc" element={
+            <ProtectedRoute>
+              <OutlinerAdminLayout >
+                <OutlinerAdminBDRCLazy />
+              </OutlinerAdminLayout>
+            </ProtectedRoute>
+          } />
         </Routes>
         </Suspense>
         </div>
@@ -208,45 +216,6 @@ function App() {
 }
 
 
-const OutlinerAdminLayout = ({children}: {children: React.ReactNode}) => {
-  const location = useLocation();
-  const { user } = useUser();
-  const isAdmin = user?.role === 'admin';
-  const adminLinks = [
-    { to: "/outliner-admin", label: "Overview" },
-    { to: "/outliner-admin/documents", label: "Documents" },
-    { to: "/outliner-admin/users", label: "Users" },
-  ];
-
-  return (
-    <>
-
-    <div className="absolute top-2 left-1/2 -translate-x-1/2 flex space-x-4 mb-6 justify-center bg-white rounded-md px-2 py-1 border border-gray-200">
-      {adminLinks.map(({ to, label }) => {
-        if(!isAdmin && label === "Users") return null;
-        
-        return(
-          <Link
-          
-          key={to}
-          to={to}
-          className={` text-sm ${
-            location.pathname === to
-            && "text-gray-600 bg-gray-200 rounded-md px-2 py-1 " 
-          }`}
-          >
-          {label}
-        </Link>
-      )})}
-    </div>
-    <div className="min-h-screen bg-gray-50 p-6">
-    <div className="max-w-7xl mx-auto pt-10">
-      {children}
-      </div>
-      </div>
-      </>
-  );
-};
 
 
 export default App;

@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback, useLayoutEffect, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { TableHeader, TableRow, TableHead, TableBody } from '@/components/ui/table';
 import type { Document, Segment } from '../shared/types';
 import SegmentRow from './SegmentRow';
@@ -33,35 +33,6 @@ function SegmentsTab({
   const { documentId } = useParams<{ documentId: string }>();
   const { getAccessTokenSilently } = useAuth0();
   const queryClient = useQueryClient();
-  const topScrollRef = useRef<HTMLDivElement>(null);
-  const bottomScrollRef = useRef<HTMLDivElement>(null);
-  const spacerRef = useRef<HTMLDivElement>(null);
-  const isSyncingRef = useRef(false);
-
-  const updateSpacerWidth = useCallback(() => {
-    const table = bottomScrollRef.current?.querySelector('table');
-    const spacer = spacerRef.current;
-    if (table && spacer) {
-      spacer.style.width = `${table.scrollWidth}px`;
-    }
-  }, []);
-
-  const syncScroll = useCallback((source: 'top' | 'bottom') => {
-    if (isSyncingRef.current) return;
-    isSyncingRef.current = true;
-    const top = topScrollRef.current;
-    const bottom = bottomScrollRef.current;
-    if (top && bottom) {
-      if (source === 'top') {
-        bottom.scrollLeft = top.scrollLeft;
-      } else {
-        top.scrollLeft = bottom.scrollLeft;
-      }
-    }
-    requestAnimationFrame(() => {
-      isSyncingRef.current = false;
-    });
-  }, []);
 
   const filteredSegments = useMemo(() => {
     if (statusFilter === 'all') return segments;
@@ -76,23 +47,6 @@ function SegmentsTab({
     }
     return counts;
   }, [segments]);
-
-  useLayoutEffect(() => {
-    updateSpacerWidth();
-    const top = topScrollRef.current;
-    const bottom = bottomScrollRef.current;
-    if (top && bottom) {
-      top.scrollLeft = bottom.scrollLeft;
-    }
-  }, [filteredSegments, updateSpacerWidth]);
-
-  useEffect(() => {
-    const bottom = bottomScrollRef.current;
-    if (!bottom) return;
-    const ro = new ResizeObserver(updateSpacerWidth);
-    ro.observe(bottom);
-    return () => ro.disconnect();
-  }, [updateSpacerWidth]);
 
   const handleSegmentClick = (segment: Segment) => {
     setSelectedSegment(segment);
@@ -128,8 +82,7 @@ function SegmentsTab({
 
       await response.json();
       toast.success('Document approved successfully');
-      
-      // Invalidate queries to refresh the document data
+
       queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] });
       queryClient.invalidateQueries({ queryKey: ['outliner-admin-documents'] });
     } catch (error) {
@@ -140,26 +93,26 @@ function SegmentsTab({
     }
   };
 
-
-
   return (
-    <div className="w-full min-w-0">
-      {segments.length === 0 && selectedDocument && (
-        <div className="flex items-center justify-center py-16 px-6 bg-white/90 border-y border-gray-200">
+    <div className="flex min-h-0 flex-1 flex-col w-full min-w-0">
+      {loadingSegments && (
+        <div className="flex min-h-48 flex-1 flex-col items-center justify-center px-6 py-8 bg-white/90">
+          <div className="flex items-center gap-3">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600" />
+            <span className="text-gray-600 text-sm">Loading segments...</span>
+          </div>
+        </div>
+      )}
+
+      {!loadingSegments && segments.length === 0 && selectedDocument && (
+        <div className="flex flex-1 items-center justify-center py-16 px-6 bg-white/90 rounded-md border border-gray-200">
           <p className="text-gray-500 text-sm">No segments found for this document.</p>
         </div>
       )}
 
-      {loadingSegments && (
-        <div className="flex items-center justify-center py-16 px-6 bg-white/90 border-y border-gray-200">
-          <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-blue-600" />
-          <span className="ml-3 text-gray-600 text-sm">Loading segments...</span>
-        </div>
-      )}
-
-      {selectedDocument && segments.length > 0 && (
-        <section className="w-full bg-white border-y border-gray-200">
-          <header className="sticky top-0 z-10 flex flex-col gap-4 px-6 py-4 bg-white/95 backdrop-blur-sm border-b border-gray-200">
+      {!loadingSegments && selectedDocument && segments.length > 0 && (
+        <>
+          <header className="shrink-0 flex flex-col gap-4 border-b border-gray-200 bg-white px-6 py-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <h2 className="text-base font-semibold text-gray-900 truncate">
                 {selectedDocument.filename || `Document ${selectedDocument.id.slice(0, 8)}`}
@@ -194,21 +147,9 @@ function SegmentsTab({
               </Button>
             </div>
           </header>
-          <div
-            ref={topScrollRef}
-            className="overflow-x-auto overflow-y-hidden border-b border-gray-100 bg-gray-50/50"
-            style={{ height: 16 }}
-            onScroll={() => syncScroll('top')}
-          >
-            <div ref={spacerRef} className="h-px min-w-full" />
-          </div>
-          <div
-            ref={bottomScrollRef}
-            className="overflow-x-auto"
-            onScroll={() => syncScroll('bottom')}
-          >
+          <div className="relative min-h-0 flex-1 overflow-auto [scrollbar-gutter:stable] rounded-md border border-gray-200 bg-white">
             <table className="min-w-max w-full divide-y divide-gray-200 caption-bottom text-sm">
-              <TableHeader className="bg-gray-50/80">
+              <TableHeader className="sticky top-0 z-1 bg-gray-50/95 shadow-sm backdrop-blur-sm [&_tr]:border-b">
                 <TableRow>
                   <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
@@ -222,7 +163,6 @@ function SegmentsTab({
                   <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     BDRC match
                   </TableHead>
-                  
                   <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </TableHead>
@@ -241,10 +181,9 @@ function SegmentsTab({
               </TableBody>
             </table>
           </div>
-        </section>
+        </>
       )}
 
-      {/* Segment Sidebar */}
       <SegmentSidebar
         segment={selectedSegment}
         isOpen={isSidebarOpen}

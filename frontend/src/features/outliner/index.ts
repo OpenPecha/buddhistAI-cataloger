@@ -9,4 +9,5 @@ export {
   AdminDocument,
   AdminSegment,
   AdminUsers,
+  AdminBDRC,
 } from './pages'
