@@ -19,7 +19,8 @@ import {
 import { SimplePagination } from '@/components/ui/simple-pagination';
 import { useOutlinerUsers } from '@/hooks/useOutlinerUsers';
 import { useBdrcSearch, type BdrcSearchResult } from '@/hooks/useBdrcSearch';
-import { useSearchBDRC } from '../hook/useSearchBDRC';
+import { useSearchBDRC } from '../hook/useSearchBDRCWorks';
+import { formatDistanceToNow } from 'date-fns';
 
 const TABLE_COL_COUNT = 5;
 const PAGE_SIZE = 20;
@@ -55,15 +56,7 @@ function asWorkRows(raw: unknown[]): BdrcOtWorkRow[] {
   return raw.filter((r): r is BdrcOtWorkRow => typeof r === 'object' && r !== null && 'id' in r);
 }
 
-function formatModifiedAt(iso: string | null | undefined): string {
-  if (iso == null || iso === '') return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString(undefined, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
-}
+
 
 function TitleWithAltLabels({ row }: Readonly<{ row: BdrcOtWorkRow }>) {
   const title = row.pref_label_bo?.trim() || '—';
@@ -74,7 +67,7 @@ function TitleWithAltLabels({ row }: Readonly<{ row: BdrcOtWorkRow }>) {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="max-w-xs cursor-pointer rounded text-left text-sm text-blue-700 wrap-break-word hover:underline focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          className="max-w-xs truncate cursor-pointer rounded text-left text-sm text-blue-700 wrap-break-word hover:underline focus:ring-2 focus:ring-blue-500 focus:outline-none"
         >
           {title}
         </button>
@@ -348,8 +341,11 @@ function BDRCPage() {
       </TableRow>
     );
   } else {
-    tableBodyContent = results.map((row, index) => (
-      <TableRow key={row.id || `row-${index}`}>
+    tableBodyContent = results.map((row, index) => {
+      const modifiedAt = row.curation?.modified_at;
+      const istDate = modifiedAt ? new Date(modifiedAt) : new Date();
+
+    return <TableRow key={row.id || `row-${index}`}>
         <TableCell className="max-w-xs px-6 py-3 align-top">
           <TitleWithAltLabels row={row} />
         </TableCell>
@@ -363,10 +359,11 @@ function BDRCPage() {
           {row.canonical_id != null && row.canonical_id !== '' ? row.canonical_id : '—'}
         </TableCell>
         <TableCell className="whitespace-nowrap px-6 py-3 text-sm text-gray-900">
-          {formatModifiedAt(row.curation?.modified_at ?? undefined)}
+        {formatDistanceToNow(istDate, { addSuffix: true })}
         </TableCell>
       </TableRow>
-    ));
+  }
+    );
   }
 
   return (

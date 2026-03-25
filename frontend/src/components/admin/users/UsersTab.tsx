@@ -26,7 +26,7 @@ function UsersTab({
 }: Readonly<UsersTabProps>) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="shrink-0 px-6 py-4">
+      <div className="shrink-0 pb-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h3 className="text-xl font-semibold text-gray-900">User Management</h3>

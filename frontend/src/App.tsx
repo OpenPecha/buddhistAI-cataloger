@@ -28,7 +28,8 @@ const OutlinerAdminDashboardLazy = lazy(() => import('@/features/outliner').then
 const OutlinerAdminDocumentLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminDocument })));
 const OutlinerAdminSegmentLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminSegment })));
 const OutlinerAdminUsersLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminUsers })));
-const OutlinerAdminBDRCLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminBDRC })));
+const OutlinerAdminBDRCWorksLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminBDRCWorks })));
+const OutlinerAdminBDRCPersonsLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminBDRCPersons })));
 
 
 
@@ -197,10 +198,17 @@ function App() {
               </OutlinerAdminLayout>
             </ProtectedRoute>
           } />
-           <Route path="/outliner-admin/bdrc" element={
+           <Route path="/outliner-admin/bdrc-library/works" element={
             <ProtectedRoute>
               <OutlinerAdminLayout >
-                <OutlinerAdminBDRCLazy />
+                <OutlinerAdminBDRCWorksLazy />
+              </OutlinerAdminLayout>
+            </ProtectedRoute>
+          } />
+              <Route path="/outliner-admin/bdrc-library/persons" element={
+            <ProtectedRoute>
+              <OutlinerAdminLayout >
+                <OutlinerAdminBDRCPersonsLazy />
               </OutlinerAdminLayout>
             </ProtectedRoute>
           } />
