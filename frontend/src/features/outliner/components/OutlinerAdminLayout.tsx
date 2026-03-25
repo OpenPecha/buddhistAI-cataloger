@@ -1,5 +1,5 @@
 import { useUser } from "@/hooks/useUser";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, FileIcon, HomeIcon, UsersIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -9,12 +9,13 @@ type AdminNavItem = {
   label: string;
   exact?: boolean;
   sub?: AdminNavSubItem[];
+  icon?: React.ReactNode;
 };
 
 const ADMIN_LINKS: AdminNavItem[] = [
-  { to: "/outliner-admin", label: "Overview", exact: true },
-  { to: "/outliner-admin/documents", label: "Documents" },
-  { to: "/outliner-admin/users", label: "Users" },
+  { to: "/outliner-admin", label: "Overview", exact: true ,icon: <HomeIcon className="w-4 h-4" />},
+  { to: "/outliner-admin/documents", label: "Documents" ,icon: <FileIcon className="w-4 h-4" />},
+  { to: "/outliner-admin/users", label: "Users" ,icon: <UsersIcon className="w-4 h-4" />},
   {
     to: "/outliner-admin/bdrc-library",
     label: "BDRC Library",
@@ -31,7 +32,7 @@ function navPathActive(pathname: string, to: string, exact?: boolean) {
 }
 
 const linkBase =
-  "rounded-md px-3 py-2 text-sm font-medium transition-colors";
+  "rounded-md px-3 py-2 text-sm font-medium transition-colors flex items-center gap-2";
 const linkInactive = "text-gray-600 hover:bg-gray-50 hover:text-gray-900";
 const linkActive = "bg-gray-100 text-gray-900";
 
@@ -79,14 +80,14 @@ const OutlinerAdminLayout = ({ children }: { children: React.ReactNode }) => {
   const toggleSection = (path: string) => {
     setOpenSections((s) => ({ ...s, [path]: !s[path] }));
   };
-
+  const ADMIN_LABELS=new Set<string>(["Users","BDRC Library","Works","Persons"]);
   return (
     <div className="flex h-[calc(100vh-4rem)] min-h-0 w-full">
       <aside className="flex w-56 shrink-0 flex-col border-r border-gray-200 bg-white">
         <nav className="flex flex-col gap-0.5 p-3" aria-label="Outliner admin">
           {ADMIN_LINKS.map((item) => {
-            const { to, label, exact, sub } = item;
-            if (!isAdmin && label === "Users") return null;
+            const { to, label, exact, sub, icon } = item;
+            if (!isAdmin && ADMIN_LABELS.has(label)) return null;
 
             if (sub?.length) {
               const sectionOpen = openSections[to] ?? false;
@@ -152,7 +153,7 @@ const OutlinerAdminLayout = ({ children }: { children: React.ReactNode }) => {
                 to={to}
                 className={`${linkBase} ${active ? linkActive : linkInactive}`}
               >
-                {label}
+                {icon} {label}
               </Link>
             );
           })}
