@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
 from datetime import datetime
 from core.database import get_db
@@ -707,11 +707,28 @@ async def approve_document(
 
 # ==================== Dashboard Stats ====================
 
+class AnnotatorPerformanceRow(BaseModel):
+    user_id: Optional[str] = None
+    document_count: int
+    segment_count: int
+    segments_with_title_or_author: int
+    rejection_count: int
+
+
 class DashboardStatsResponse(BaseModel):
     document_count: int
     total_segments: int
     segments_with_title_or_author: int
     rejection_count: int
+    document_status_counts: Dict[str, int]
+    document_category_counts: Dict[str, int]
+    segment_status_counts: Dict[str, int]
+    segment_label_counts: Dict[str, int]
+    segments_with_bdrc_id: int
+    segments_with_parent: int
+    segments_with_comments: int
+    annotation_coverage_pct: float
+    annotator_performance: List[AnnotatorPerformanceRow]
 
 
 @router.get("/dashboard/stats", response_model=DashboardStatsResponse)

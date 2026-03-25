@@ -7,7 +7,7 @@ from datetime import datetime
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy import func
+from sqlalchemy import func, case, or_, and_
 from sqlalchemy.orm.session import identity
 from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentRejection, SegmentLabels
 from core.redis import invalidate_document_content_cache
@@ -1184,6 +1184,89 @@ def get_segment_rejection_count(db: Session, segment_id: str) -> int:
     ).scalar() or 0
 
 
+def get_annotator_performance_breakdown(
+    db: Session,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Per-annotator metrics for documents in the date range (ignores user_id filter).
+    Scoped by document.created_at. user_id None = unassigned documents.
+    """
+    doc_filters = [
+        (OutlinerDocument.status != "deleted") | (OutlinerDocument.status.is_(None))
+    ]
+    if start_date:
+        doc_filters.append(OutlinerDocument.created_at >= start_date)
+    if end_date:
+        doc_filters.append(OutlinerDocument.created_at <= end_date)
+    doc_scope = and_(*doc_filters)
+
+    title_or_author = case(
+        (
+            or_(
+                and_(OutlinerSegment.title.isnot(None), OutlinerSegment.title != ""),
+                and_(OutlinerSegment.author.isnot(None), OutlinerSegment.author != ""),
+            ),
+            1,
+        ),
+        else_=0,
+    )
+
+    doc_rows = (
+        db.query(OutlinerDocument.user_id, func.count(OutlinerDocument.id))
+        .filter(doc_scope)
+        .group_by(OutlinerDocument.user_id)
+        .all()
+    )
+    seg_rows = (
+        db.query(
+            OutlinerDocument.user_id,
+            func.count(OutlinerSegment.id),
+            func.sum(title_or_author),
+        )
+        .join(OutlinerSegment, OutlinerSegment.document_id == OutlinerDocument.id)
+        .filter(doc_scope)
+        .group_by(OutlinerDocument.user_id)
+        .all()
+    )
+    rej_rows = (
+        db.query(OutlinerDocument.user_id, func.count(SegmentRejection.id))
+        .select_from(SegmentRejection)
+        .join(OutlinerSegment, OutlinerSegment.id == SegmentRejection.segment_id)
+        .join(OutlinerDocument, OutlinerDocument.id == OutlinerSegment.document_id)
+        .filter(doc_scope)
+        .group_by(OutlinerDocument.user_id)
+        .all()
+    )
+
+    by_user: Dict[Any, Dict[str, int]] = {}
+    for uid, cnt in doc_rows:
+        by_user.setdefault(uid, {"document_count": 0, "segment_count": 0, "segments_with_title_or_author": 0, "rejection_count": 0})
+        by_user[uid]["document_count"] = int(cnt)
+    for uid, seg_cnt, titled in seg_rows:
+        by_user.setdefault(uid, {"document_count": 0, "segment_count": 0, "segments_with_title_or_author": 0, "rejection_count": 0})
+        by_user[uid]["segment_count"] = int(seg_cnt)
+        by_user[uid]["segments_with_title_or_author"] = int(titled or 0)
+    for uid, rej_cnt in rej_rows:
+        by_user.setdefault(uid, {"document_count": 0, "segment_count": 0, "segments_with_title_or_author": 0, "rejection_count": 0})
+        by_user[uid]["rejection_count"] = int(rej_cnt)
+
+    rows: List[Dict[str, Any]] = []
+    for uid, m in by_user.items():
+        rows.append(
+            {
+                "user_id": uid,
+                "document_count": m["document_count"],
+                "segment_count": m["segment_count"],
+                "segments_with_title_or_author": m["segments_with_title_or_author"],
+                "rejection_count": m["rejection_count"],
+            }
+        )
+    rows.sort(key=lambda r: r["segment_count"], reverse=True)
+    return rows
+
+
 def get_dashboard_stats(
     db: Session,
     user_id: Optional[str] = None,
@@ -1221,11 +1304,106 @@ def get_dashboard_stats(
         SegmentRejection.segment_id.in_(db.query(seg_ids_subq.c.id))
     ).scalar() or 0
 
+    doc_id_filter = OutlinerDocument.id.in_(db.query(doc_ids_subq.c.id))
+
+    doc_status_rows = (
+        db.query(OutlinerDocument.status, func.count(OutlinerDocument.id))
+        .filter(doc_id_filter)
+        .group_by(OutlinerDocument.status)
+        .all()
+    )
+    document_status_counts: Dict[str, int] = {}
+    for status_val, cnt in doc_status_rows:
+        key = status_val if status_val else "unknown"
+        document_status_counts[key] = int(cnt)
+
+    doc_category_rows = (
+        db.query(OutlinerDocument.category, func.count(OutlinerDocument.id))
+        .filter(doc_id_filter)
+        .group_by(OutlinerDocument.category)
+        .all()
+    )
+    document_category_counts: Dict[str, int] = {}
+    for cat_val, cnt in doc_category_rows:
+        key = cat_val if cat_val else "uncategorized"
+        document_category_counts[key] = int(cnt)
+
+    seg_status_rows = (
+        db.query(OutlinerSegment.status, func.count(OutlinerSegment.id))
+        .filter(OutlinerSegment.document_id.in_(db.query(doc_ids_subq.c.id)))
+        .group_by(OutlinerSegment.status)
+        .all()
+    )
+    segment_status_counts: Dict[str, int] = {}
+    for status_val, cnt in seg_status_rows:
+        key = status_val if status_val else "unchecked"
+        segment_status_counts[key] = int(cnt)
+
+    label_rows = (
+        db.query(OutlinerSegment.label, func.count(OutlinerSegment.id))
+        .filter(OutlinerSegment.document_id.in_(db.query(doc_ids_subq.c.id)))
+        .group_by(OutlinerSegment.label)
+        .all()
+    )
+    segment_label_counts: Dict[str, int] = {}
+    for label_val, cnt in label_rows:
+        if label_val is not None:
+            key = label_val.value if hasattr(label_val, "value") else str(label_val)
+        else:
+            key = "unset"
+        segment_label_counts[key] = int(cnt)
+
+    segments_with_bdrc_id = (
+        seg_base.filter(
+            (OutlinerSegment.title_bdrc_id.isnot(None) & (OutlinerSegment.title_bdrc_id != ""))
+            | (
+                OutlinerSegment.author_bdrc_id.isnot(None)
+                & (OutlinerSegment.author_bdrc_id != "")
+            )
+        )
+        .with_entities(func.count(OutlinerSegment.id))
+        .scalar()
+        or 0
+    )
+
+    segments_with_parent = (
+        seg_base.filter(OutlinerSegment.parent_segment_id.isnot(None))
+        .with_entities(func.count(OutlinerSegment.id))
+        .scalar()
+        or 0
+    )
+
+    segments_with_comments = (
+        seg_base.filter(OutlinerSegment.comment.isnot(None))
+        .with_entities(func.count(OutlinerSegment.id))
+        .scalar()
+        or 0
+    )
+
+    annotation_coverage_pct = (
+        round((segments_with_title_or_author / total_segments) * 100, 1)
+        if total_segments
+        else 0.0
+    )
+
+    annotator_performance = get_annotator_performance_breakdown(
+        db, start_date=start_date, end_date=end_date
+    )
+
     return {
         "document_count": document_count,
         "total_segments": total_segments,
         "segments_with_title_or_author": segments_with_title_or_author,
         "rejection_count": rejection_count,
+        "document_status_counts": document_status_counts,
+        "document_category_counts": document_category_counts,
+        "segment_status_counts": segment_status_counts,
+        "segment_label_counts": segment_label_counts,
+        "segments_with_bdrc_id": segments_with_bdrc_id,
+        "segments_with_parent": segments_with_parent,
+        "segments_with_comments": segments_with_comments,
+        "annotation_coverage_pct": annotation_coverage_pct,
+        "annotator_performance": annotator_performance,
     }
 
 

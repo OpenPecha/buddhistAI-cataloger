@@ -509,11 +509,29 @@ export const resetSegments = async (documentId: string): Promise<void> => {
 
 // ==================== Dashboard Stats ====================
 
+export interface AnnotatorPerformanceRow {
+  user_id: string | null;
+  document_count: number;
+  segment_count: number;
+  segments_with_title_or_author: number;
+  rejection_count: number;
+}
+
 export interface DashboardStats {
   document_count: number;
   total_segments: number;
   segments_with_title_or_author: number;
   rejection_count: number;
+  document_status_counts: Record<string, number>;
+  document_category_counts: Record<string, number>;
+  segment_status_counts: Record<string, number>;
+  segment_label_counts: Record<string, number>;
+  segments_with_bdrc_id: number;
+  segments_with_parent: number;
+  segments_with_comments: number;
+  annotation_coverage_pct: number;
+  /** Per-annotator breakdown (same date range as dashboard; not scoped by user filter). */
+  annotator_performance?: AnnotatorPerformanceRow[];
 }
 
 export const getDashboardStats = async (

@@ -36,7 +36,7 @@ function OutlinerAdminDashboard() {
 
   return (
     <>
-      <div className=" bg-gray-50/80 px-3 py-2 mb-4 flex flex-wrap items-center gap-3 float-right">
+      <div className=" bg-gray-50/80  mb-4 flex flex-wrap justify-end items-center gap-3 ">
         <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Filters</span>
         <select
           id="user-filter"
@@ -72,7 +72,11 @@ function OutlinerAdminDashboard() {
         />
       </div>
 
-      <OverviewTab stats={stats ?? null} isLoading={isLoading} />
+      <OverviewTab
+        stats={stats ?? null}
+        isLoading={isLoading}
+        annotators={outlinerUsers}
+      />
     </>
   );
 }
