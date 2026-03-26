@@ -312,6 +312,7 @@ function TextInstances() {
                               isAnnotationAvailable={isAnnotationAvailable}
                               instanceId={instanceId}
                               sourceInstanceId={sourceInstanceId}
+                              relationship={relatedInstance.relationship}
                             />
                           </Link>
                         );

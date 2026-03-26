@@ -18,6 +18,7 @@ interface TextCardProps {
   isAnnotationAvailable?: boolean;
   instanceId: string;
   sourceInstanceId: string;
+  relationship: string;
 }
 
 const TextCard = ({
@@ -27,10 +28,33 @@ const TextCard = ({
   isAnnotationAvailable,
   instanceId,
   sourceInstanceId,
+  relationship,
 }: TextCardProps) => {
   const { data: permission,isFetching:isFetchingPermission } = usePermission();
   const isAdmin=permission?.role === "admin";
   const navigate = useNavigate();
+
+  const getAlignmentInfo = (source: string, target: string) => {
+    const alignmentInfo = {
+      source: source,
+      target: target,
+    }
+    return alignmentInfo;
+  }
+
+  const navigateToAlignment = (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      const source=sourceInstanceId
+      const target= instanceId
+      const alignmentInfo=getAlignmentInfo(source,target);
+      if(relationship === "translation" || relationship === "commentary"){
+        navigate(`/align/${alignmentInfo.source}/${alignmentInfo.target}`)
+      }else{
+        navigate(`/align/${alignmentInfo.target}/${alignmentInfo.source}`)
+      }
+    }
+
 
   return (
     <TableRow className="cursor-pointer group hover:bg-muted/50">
@@ -81,11 +105,7 @@ const TextCard = ({
           className={`w-fit cursor-pointer 
           ${!isAnnotationAvailable ? "bg-[#025388] hover:bg-[#025388]/90 text-white" : ""}
           pointer-events-auto`} 
-          onClick={(e)=>{
-            e.preventDefault()
-            e.stopPropagation()
-            navigate(`/align/${sourceInstanceId}/${instanceId}`)
-          }}
+          onClick={navigateToAlignment}
         >
           <PermissionButton isLoading={isFetchingPermission} icon={null} text={!isAnnotationAvailable ? "Align" : "update"} />
         </Button>
