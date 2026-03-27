@@ -569,7 +569,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
         )}
         <hr />
 
-        <Comments segmentId={activeSegmentId || ''} />
+        {/* <Comments segmentId={activeSegmentId || ''} /> */}
       </div>
     </div>
   ) : (

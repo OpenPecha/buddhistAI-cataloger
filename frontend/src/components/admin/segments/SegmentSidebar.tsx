@@ -39,10 +39,6 @@ return (
             </DrawerClose>
           </div>
         </DrawerHeader>
-        <div className="p-4">
-
-        <Comments segmentId={segment.id} />
-        </div>
       </DrawerContent>
     </Drawer>
   );
