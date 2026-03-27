@@ -26,8 +26,6 @@ function SegmentsTab({
   expandedSegments,
   onToggleExpansion,
 }: SegmentsTabProps) {
-  const [selectedSegment, setSelectedSegment] = useState<Segment | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
   const [statusFilter, setStatusFilter] = useState<SegmentStatusFilter>('all');
   const { documentId } = useParams<{ documentId: string }>();
@@ -48,15 +46,9 @@ function SegmentsTab({
     return counts;
   }, [segments]);
 
-  const handleSegmentClick = (segment: Segment) => {
-    setSelectedSegment(segment);
-    setIsSidebarOpen(true);
-  };
+  
 
-  const handleSidebarClose = () => {
-    setIsSidebarOpen(false);
-    setSelectedSegment(null);
-  };
+
 
   const handleApproveAll = async () => {
     if (!documentId) {
@@ -175,7 +167,7 @@ function SegmentsTab({
                     segment={segment}
                     isExpanded={expandedSegments.has(segment.id)}
                     onToggleExpansion={onToggleExpansion}
-                    onSegmentClick={handleSegmentClick}
+                    documentFilename={selectedDocument?.filename}
                   />
                 ))}
               </TableBody>
@@ -184,11 +176,7 @@ function SegmentsTab({
         </>
       )}
 
-      <SegmentSidebar
-        segment={selectedSegment}
-        isOpen={isSidebarOpen}
-        onClose={handleSidebarClose}
-      />
+   
     </div>
   );
 }

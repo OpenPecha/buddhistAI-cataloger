@@ -19,7 +19,6 @@ interface OutlinerContextValue {
   onFileUploadToBackend?: (file: File) => Promise<void>;
   isUploading?: boolean;
   onTextSelection: () => void;
-  onSegmentClick: (segmentId: string, event?: React.MouseEvent) => void;
   onCursorChange: (segmentId: string, element: HTMLDivElement) => void;
   onActivate: (segmentId: string) => void;
   onInput: (e: React.FormEvent<HTMLDivElement>) => void;

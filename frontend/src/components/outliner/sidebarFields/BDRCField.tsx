@@ -91,7 +91,8 @@ function BDRCField({
 }: Readonly<BDRCFieldProps>) {
   const { user } = useAuth0()
   const bdrcId = formData?.title?.bdrc_id || segment.title_bdrc_id || ''
-  const titleSearch = formData?.title?.name || ''
+  const titleFromProp = formData?.title?.name || ''
+  const [searchQuery, setSearchQuery] = useState(titleFromProp)
   const [isBdrcFocused, setIsBdrcFocused] = useState(false)
   const [createWorkModalOpen, setCreateWorkModalOpen] = useState(false)
   const [workDetailModalOpen, setWorkDetailModalOpen] = useState(false)
@@ -110,15 +111,15 @@ function BDRCField({
   const { work: fetchedWork, isLoading: workLoading, isFetching: workFetching, error: workError, refetch } =
     useBdrcWork(bdrcId || null)
   const { results: titleResults, isLoading: titleLoading } = useBdrcSearch(
-    titleSearch,
+    searchQuery,
     'Work',
     1000,
     () => bdrcInputRef.current?.focus(),
-    isBdrcFocused
+    isBdrcFocused && !bdrcId
   )
 
   const handleSelect = (item: BdrcSearchResult) => {
-    onUpdate('title', { name: titleSearch || item.title || '', bdrc_id: item.workId || '' })
+    onUpdate('title', { name: item.title || searchQuery || '', bdrc_id: item.workId || '' })
     setIsBdrcFocused(false)
   }
 
@@ -127,12 +128,15 @@ function BDRCField({
     setCreateWorkModalOpen(false)
   }
 
-  const handleBdrcIdChange = (value: string) => {
-    onUpdate('title', { name: titleSearch, bdrc_id: value })
+  const handleClearSelection = () => {
+    onUpdate('title', { name: '', bdrc_id: '' })
+    setSearchQuery('')
+    setEditingBdrc(false)
   }
 
   useEffect(() => {
     setEditingBdrc(false)
+    setSearchQuery(formData?.title?.name || '')
   }, [segment?.id])
 
   const reportBlocking = useCallback(
@@ -178,7 +182,7 @@ function BDRCField({
       : null)
   const openEdit = () => {
     const segmentAuthorText = (formData.author.name || segment.author || '').trim()
-    setEditPrefLabel(fetchedWork ? fetchedWork.title : titleSearch)
+    setEditPrefLabel(fetchedWork ? fetchedWork.title : searchQuery)
     setEditAuthorRows(buildAuthorEditRows(nextAuthorRowKey, fetchedWork ?? null, segmentAuthorText))
     setEditingBdrc(true)
   }
@@ -208,80 +212,64 @@ function BDRCField({
 
   return (
     <div>
-      <div className="relative mt-2">
-        <Label htmlFor="title-bdrc-id" className="mb-1 text-xs text-gray-500">
-          BDRC match
-        </Label>
-
-        <div className="relative">
-          <Input
-            ref={bdrcInputRef}
-            id="title-bdrc-id"
-            value={bdrcId}
-            onChange={(e) => handleBdrcIdChange(e.target.value)}
-            onFocus={() => !disabled && setIsBdrcFocused(true)}
-            onBlur={() => setIsBdrcFocused(false)}
-            placeholder="Focus to search BDRC..."
-            className="w-full pr-8 text-sm"
-            disabled={disabled}
-          />
-          {titleLoading && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-            </div>
-          )}
-        </div>
-
-        <Activity mode={!disabled && isBdrcFocused ? 'visible' : 'hidden'}>
-          <div className="absolute z-900 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-            {isBdrcFocused && (
-              <span className={`text-xs pl-2 ${titleResults.length === 0 ? 'text-red-500' : 'text-gray-500'}`}>
-                found: {titleResults.length}
-              </span>
+      {!bdrcId && (
+        <div className="relative mt-2">
+          <div className="relative">
+            <Input
+              ref={bdrcInputRef}
+              id="title-bdrc-search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => !disabled && setIsBdrcFocused(true)}
+              onBlur={() => setIsBdrcFocused(false)}
+              placeholder="Type title to search BDRC..."
+              className="w-full pr-8 text-sm font-monlam"
+              disabled={disabled}
+            />
+            {titleLoading && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+              </div>
             )}
-            {titleResults.map((title, index) => (
+          </div>
+
+          <Activity mode={!disabled && isBdrcFocused ? 'visible' : 'hidden'}>
+            <div className="flex-col absolute z-900 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+              {titleResults.map((title, index) => (
+                <button
+                  key={title.workId || index}
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    handleSelect(title)
+                  }}
+                  className="w-full px-4 py-2 font-monlam text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                >
+                  <div className="text-sm font-medium text-gray-900">{title.title}</div>
+                  <div className="text-xs text-gray-500 flex items-center gap-1">
+                    <PersonStandingIcon className="w-4 h-4" />
+                    {title.authors?.[0]?.name ?? 'unknown author'} &nbsp;
+                    {title.workId && <span>ID: {title.workId}</span>}
+                  </div>
+                </button>
+              ))}
               <button
-                key={title.workId || index}
                 type="button"
                 onMouseDown={(e) => {
                   e.preventDefault()
-                  handleSelect(title)
+                  setIsBdrcFocused(false)
+                  setCreateWorkModalOpen(true)
                 }}
-                className="w-full px-4 py-2 font-monlam text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                className="w-full px-4 py-2 text-left hover:bg-gray-100 border-t border-gray-200 flex items-center gap-2 text-sm text-primary font-medium"
               >
-                <div className="text-sm font-medium text-gray-900">{title.title}</div>
-                <div className="text-xs text-gray-500 flex items-center gap-1">
-                  <PersonStandingIcon className="w-4 h-4" />
-                  {title.authors?.[0]?.name ?? 'unknown author'} &nbsp;
-                  {title.workId && <span>ID: {title.workId}</span>}
-                </div>
+                <Plus className="h-4 w-4 shrink-0" />
+                Create work
               </button>
-            ))}
-            <button
-              type="button"
-              onMouseDown={(e) => {
-                e.preventDefault()
-                setIsBdrcFocused(false)
-                setCreateWorkModalOpen(true)
-              }}
-              className="w-full px-4 py-2 text-left hover:bg-gray-100 border-t border-gray-200 flex items-center gap-2 text-sm text-primary font-medium"
-            >
-              <Plus className="h-4 w-4 shrink-0" />
-              Create work
-            </button>
-          </div>
-        </Activity>
-      </div>
-      {!bdrcId && (
-        <ListBDRCMatches
-          segment={segment}
-          volumeId={volumeId ?? undefined}
-          onSelectWorkId={(id) => {
-            onUpdate('title', { name: titleSearch, bdrc_id: id })
-          }}
-          disabled={disabled}
-        />
+            </div>
+          </Activity>
+        </div>
       )}
+ 
       {bdrcId && (
         <div className="mt-2 rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
           {workLoading && (
@@ -318,7 +306,16 @@ function BDRCField({
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
-                
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2"
+                    onClick={handleClearSelection}
+                    title="Clear BDRC selection"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
               )}
            
@@ -459,7 +456,7 @@ function BDRCField({
         open={createWorkModalOpen}
         onOpenChange={setCreateWorkModalOpen}
         onSuccess={handleCreateWorkSuccess}
-        initialPrefLabel={titleSearch}
+        initialPrefLabel={searchQuery}
       />
     </div>
   )

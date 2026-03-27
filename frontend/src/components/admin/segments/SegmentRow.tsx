@@ -1,37 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { useParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { updateSegment, rejectSegment } from '@/api/outliner';
 import { toast } from 'sonner';
-import { useBdrcWork, type BdrcWorkInfo } from '@/hooks/useBdrcSearch';
-import { AlertCircle, FileText, Hash, Loader2, MessageCircle, User } from 'lucide-react';
+import { FileText, MessageCircle, User } from 'lucide-react';
 import type { Segment } from '../shared/types';
-import BDRCSeachWrapper from '@/components/outliner/BDRCSeachWrapper';
-import AuthorsListing from '@/components/outliner/sidebarFields/AuthorsListing';
-
-
+import type { TextSegment } from '@/components/outliner/types';
+import type { FormDataType, Title, Author } from '@/components/outliner/AnnotationSidebar';
+import BDRCField from '@/components/outliner/sidebarFields/BDRCField';
 
 interface SegmentRowProps {
   readonly segment: Segment;
   readonly isExpanded: boolean;
   readonly onToggleExpansion: (segmentId: string) => void;
-  readonly onSegmentClick?: (segment: Segment) => void;
+  readonly documentFilename?: string | null;
 }
 
 function SegmentRow({
   segment,
   isExpanded,
   onToggleExpansion,
-  onSegmentClick,
+  documentFilename,
 }: SegmentRowProps) {
   const { documentId } = useParams<{ documentId: string }>();
   const queryClient = useQueryClient();
@@ -79,21 +70,84 @@ function SegmentRow({
     statusMutation.mutate('unchecked');
   };
 
+  // --- BDRC field state ---
+  const [formData, setFormData] = useState<FormDataType>({
+    title: { name: segment.title || '', bdrc_id: segment.title_bdrc_id || '' },
+    author: { id: '', name: segment.author || '', bdrc_id: segment.author_bdrc_id || '' },
+  });
+  const initialBdrcIdRef = useRef(segment.title_bdrc_id || '');
+
+  useEffect(() => {
+    setFormData({
+      title: { name: segment.title || '', bdrc_id: segment.title_bdrc_id || '' },
+      author: { id: '', name: segment.author || '', bdrc_id: segment.author_bdrc_id || '' },
+    });
+    initialBdrcIdRef.current = segment.title_bdrc_id || '';
+  }, [segment.id, segment.title, segment.author, segment.title_bdrc_id, segment.author_bdrc_id]);
+
+  const bdrcSaveMutation = useMutation({
+    mutationFn: (bdrcId: string) =>
+      updateSegment(segment.id, { title_bdrc_id: bdrcId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] });
+      toast.success('BDRC match saved');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to save BDRC match: ${error.message}`);
+    },
+  });
+
+  const bdrcSaveTimeoutRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const bdrcSaveMutationRef = useRef(bdrcSaveMutation);
+  bdrcSaveMutationRef.current = bdrcSaveMutation;
+
+  useEffect(() => {
+    const currentBdrcId = formData.title.bdrc_id;
+    if (currentBdrcId === initialBdrcIdRef.current) return;
+
+    clearTimeout(bdrcSaveTimeoutRef.current);
+    bdrcSaveTimeoutRef.current = setTimeout(() => {
+      initialBdrcIdRef.current = currentBdrcId;
+      bdrcSaveMutationRef.current.mutate(currentBdrcId);
+    }, 1000);
+
+    return () => clearTimeout(bdrcSaveTimeoutRef.current);
+  }, [formData.title.bdrc_id]);
+
+  const handleBdrcUpdate = useCallback((field: 'title' | 'author', value: Title | Author) => {
+    setFormData(prev => {
+      if (field === 'title') return { ...prev, title: value as Title };
+      return { ...prev, author: value as Author };
+    });
+  }, []);
+
+  const resetBdrcForm = useCallback(() => {
+    setFormData({
+      title: { name: segment.title || '', bdrc_id: segment.title_bdrc_id || '' },
+      author: { id: '', name: segment.author || '', bdrc_id: segment.author_bdrc_id || '' },
+    });
+  }, [segment.title, segment.author, segment.title_bdrc_id, segment.author_bdrc_id]);
+
+  const segmentAsTextSegment = useMemo<TextSegment>(() => ({
+    id: segment.id,
+    text: segment.text,
+    span_start: segment.span_start,
+    span_end: segment.span_end,
+    title: segment.title ?? undefined,
+    author: segment.author ?? undefined,
+    title_bdrc_id: segment.title_bdrc_id ?? undefined,
+    author_bdrc_id: segment.author_bdrc_id ?? undefined,
+    status: segment.status,
+    comments: segment.comments ?? [],
+  }), [segment]);
 
 
-  const handleRowClick = (e: React.MouseEvent) => {
-    // Prevent opening sidebar if clicking on interactive elements
-    if ((e.target as HTMLElement).closest('button, input, textarea, [role="button"]')) {
-      return;
-    }
-    onSegmentClick?.(segment);
-  };
+
 
   return (
     <React.Fragment>
     <TableRow
       className="hover:bg-gray-50 cursor-pointer max-w-full overflow-auto"
-      onClick={handleRowClick}
     >
       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
         {segment.comments && segment.comments.length > 0 && (
@@ -154,10 +208,16 @@ function SegmentRow({
           <span className="text-xs text-gray-500 flex gap-1 items-center"><User className="w-4 h-4"/>{segment.author || "---"}</span>
         </div>
       </TableCell>
-      <TableCell className="px-6 py-4">
-        <div className="text-sm">
-           <BDRCInfo workId={segment.title_bdrc_id ?? ''} />
-        </div>
+      <TableCell className="px-6 py-4 min-w-[280px]">
+        <BDRCField
+          segment={segmentAsTextSegment}
+          formData={formData}
+          onUpdate={handleBdrcUpdate}
+          resetForm={resetBdrcForm}
+          disabled={segment.status === 'approved'}
+          volumeId={documentFilename ?? undefined}
+          annotatorAuthorName={formData.author.name}
+        />
       </TableCell>
     
       <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -207,28 +267,4 @@ function SegmentRow({
 }
 
 export default SegmentRow;
-
-
-
-
-const BDRCInfo = ({ workId }: { workId: string }) => {
-  const { work, isLoading: workLoading } = useBdrcWork(workId);
-  if (!workId || workId==="") return null;
-  if (workLoading) return <Loader2 className="h-4 w-4 animate-spin shrink-0" />;
-  return (
-  <div className="flex  gap-1 flex-col items-start" > 
-<BDRCSeachWrapper bdrcId={workId}>
-
-    <span
-    className="text-blue-600  hover:text-blue-800 hover:underline font-monlam text-sm"
-    >{work?.title}
-  </span>
-    </BDRCSeachWrapper>
-    <span className="text-xs text-gray-500 ml-1">
-    <AuthorsListing authors={work?.authors ?? []} />
-    </span>
-    </div>
-
-  );
-}
 
