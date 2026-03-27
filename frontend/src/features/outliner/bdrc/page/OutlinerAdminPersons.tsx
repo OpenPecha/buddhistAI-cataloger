@@ -26,8 +26,10 @@ import { useOutlinerUsers } from '@/hooks/useOutlinerUsers';
 import type { BdrcOtPersonRow } from '../api/persons';
 import { useSearchBDRCPersons } from '../hook/useSearchBDRCPersons';
 import { formatDistanceToNow } from 'date-fns';
+import { AdminMarkDuplicatePersonButton } from '../components/AdminBdrcMarkDuplicate';
+import BDRCSeachWrapper from '@/components/outliner/BDRCSeachWrapper';
 
-const TABLE_COL_COUNT = 6;
+const TABLE_COL_COUNT = 5;
 const PAGE_SIZE = 20;
 
 const URL_KEYS = {
@@ -49,7 +51,7 @@ function asPersonRows(raw: unknown[]): BdrcOtPersonRow[] {
 }
 
 
-function TitleWithAltLabels({ row }: Readonly<{ row: BdrcOtPersonRow }>) {
+export function TitleWithAltLabels({ row }: Readonly<{ row: BdrcOtPersonRow }>) {
   const title = row.pref_label_bo?.trim() || '—';
   const alts = row.alt_label_bo ?? [];
 
@@ -58,9 +60,10 @@ function TitleWithAltLabels({ row }: Readonly<{ row: BdrcOtPersonRow }>) {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="max-w-xs truncate cursor-pointer rounded text-left text-sm text-blue-700 wrap-break-word hover:underline focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          className="max-w-xs truncate font-monlam cursor-pointer rounded text-left text-sm text-blue-700 wrap-break-word hover:underline focus:ring-2 focus:ring-blue-500 focus:outline-none"
         >
-          {title}
+          <span>{title}</span> 
+         ( <span>{row?.id}</span> )
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="max-w-md p-3">
@@ -76,6 +79,9 @@ function TitleWithAltLabels({ row }: Readonly<{ row: BdrcOtPersonRow }>) {
             ))}
           </ul>
         )}
+        <BDRCSeachWrapper bdrcId={row?.id}>
+          <span className='text-xs text-blue-500 '>link</span>
+          </BDRCSeachWrapper>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -227,6 +233,12 @@ function BDRCPersonsPage() {
         <TableCell className="whitespace-nowrap px-6 py-3 text-sm text-gray-900">
           {formatDistanceToNow(istDate, { addSuffix: true })}
         </TableCell>
+        <TableCell className="whitespace-nowrap px-6 py-3 align-top">
+          <AdminMarkDuplicatePersonButton
+            parentPersonId={row.id}
+            defaultQuery={row.pref_label_bo?.trim() ?? ''}
+          />
+        </TableCell>
       </TableRow>
         }
     );
@@ -364,7 +376,7 @@ function BDRCPersonsPage() {
 
           <Table
             wrapperClassName="min-w-0 overflow-visible"
-            className="w-full min-w-[960px] divide-y divide-gray-200"
+            className="w-full min-w-[1040px] divide-y divide-gray-200"
           >
             <TableHeader className="sticky top-0 z-1 bg-gray-50 shadow-sm">
               <TableRow className="hover:bg-transparent">
@@ -381,6 +393,9 @@ function BDRCPersonsPage() {
                 </TableHead>
                 <TableHead className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                   Modified at
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  Actions
                 </TableHead>
               </TableRow>
             </TableHeader>

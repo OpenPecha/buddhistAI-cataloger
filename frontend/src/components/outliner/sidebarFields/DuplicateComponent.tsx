@@ -22,6 +22,8 @@ import {
   type BdrcWorkInfo,
 } from '@/hooks/useBdrcSearch'
 import { mergeBdrcPersons, mergeBdrcWorks } from '@/api/bdrc'
+import { useAuth0 } from '@auth0/auth0-react'
+import { useUser } from '@/hooks/useUser'
 import { toast } from 'sonner'
 
 const EMPTY_AUTHORS: BdrcWorkAuthor[] = []
@@ -41,6 +43,15 @@ export function DuplicateModal({
   isOpen,
   onOpenChange,
 }: DuplicateModalProps) {
+  const { user: apiUser } = useUser()
+  const { user: auth0User } = useAuth0()
+  const modifiedBy =
+    apiUser?.email?.trim() ||
+    auth0User?.email?.trim() ||
+    apiUser?.id?.trim() ||
+    auth0User?.sub?.trim() ||
+    undefined
+
   if (!work) return null
 
   return (
@@ -57,8 +68,12 @@ export function DuplicateModal({
           )}
          
         </div>
-        <BDRCSearch parentWork={work} isOpen={isOpen} />
-        <BDRCPersonDuplicateSearch authors={work.authors ?? EMPTY_AUTHORS} isOpen={isOpen} />
+        <BDRCSearch parentWork={work} isOpen={isOpen} modifiedBy={modifiedBy} />
+        <BDRCPersonDuplicateSearch
+          authors={work.authors ?? EMPTY_AUTHORS}
+          isOpen={isOpen}
+          modifiedBy={modifiedBy}
+        />
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
@@ -79,9 +94,10 @@ function defaultDuplicateSearchQuery(work: BdrcWorkInfo): string {
 type BDRCSearchProps = Readonly<{
   parentWork: BdrcWorkInfo
   isOpen: boolean
+  modifiedBy?: string
 }>
 
-function BDRCSearch({ parentWork, isOpen }: BDRCSearchProps) {
+function BDRCSearch({ parentWork, isOpen, modifiedBy }: BDRCSearchProps) {
   const queryClient = useQueryClient()
   const [query, setQuery] = useState(() => defaultDuplicateSearchQuery(parentWork))
   const [selectedWorkId, setSelectedWorkId] = useState<string | null>(null)
@@ -122,7 +138,11 @@ function BDRCSearch({ parentWork, isOpen }: BDRCSearchProps) {
     setMergeError(null)
     setMergingWorkId(searched)
     try {
-      await mergeBdrcWorks({ parent_work_id: parent, searched_work_id: searched })
+      await mergeBdrcWorks({
+        parent_work_id: parent,
+        searched_work_id: searched,
+        ...(modifiedBy ? { modified_by: modifiedBy } : {}),
+      })
       await queryClient.invalidateQueries({ queryKey: bdrcSearchQueryKeyRoot })
       toast.success('Duplicate merged into this work')
     } catch (err) {
@@ -268,9 +288,10 @@ function defaultPersonDuplicateQuery(parentPersonId: string, authors: BdrcWorkAu
 type BDRCPersonDuplicateSearchProps = Readonly<{
   authors: BdrcWorkAuthor[]
   isOpen: boolean
+  modifiedBy?: string
 }>
 
-function BDRCPersonDuplicateSearch({ authors, isOpen }: BDRCPersonDuplicateSearchProps) {
+function BDRCPersonDuplicateSearch({ authors, isOpen, modifiedBy }: BDRCPersonDuplicateSearchProps) {
   const queryClient = useQueryClient()
   const authorsWithBdrc = useMemo(
     () => authors.filter((a) => Boolean(a.id?.trim())),
@@ -330,7 +351,11 @@ function BDRCPersonDuplicateSearch({ authors, isOpen }: BDRCPersonDuplicateSearc
     setPersonMergeError(null)
     setMergingPersonId(searched)
     try {
-      await mergeBdrcPersons({ parent_person_id: parent, searched_person_id: searched })
+      await mergeBdrcPersons({
+        parent_person_id: parent,
+        searched_person_id: searched,
+        ...(modifiedBy ? { modified_by: modifiedBy } : {}),
+      })
       await queryClient.invalidateQueries({ queryKey: bdrcSearchQueryKeyRoot })
       toast.success('Duplicate merged into this author')
     } catch (err) {

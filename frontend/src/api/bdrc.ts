@@ -88,12 +88,17 @@ export interface MergeBdrcWorksPayload {
 export async function mergeBdrcWorks(
   payload: MergeBdrcWorksPayload
 ): Promise<Record<string, unknown>> {
+  const modifiedBy = payload.modified_by?.trim()
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+  }
+  if (modifiedBy) {
+    headers['X-User-Email'] = modifiedBy
+  }
   const response = await fetch(`${API_URL}/bdrc/works/merge`, {
     method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify(payload),
   })
 
@@ -124,12 +129,17 @@ export interface MergeBdrcPersonsPayload {
 export async function mergeBdrcPersons(
   payload: MergeBdrcPersonsPayload
 ): Promise<Record<string, unknown>> {
+  const modifiedBy = payload.modified_by?.trim()
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+  }
+  if (modifiedBy) {
+    headers['X-User-Email'] = modifiedBy
+  }
   const response = await fetch(`${API_URL}/bdrc/persons/merge`, {
     method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify(payload),
   })
 

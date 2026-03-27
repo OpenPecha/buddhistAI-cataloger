@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from typing import Annotated, Any, Dict, List, Literal, Optional
+
+from fastapi import APIRouter, Header, HTTPException
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any, Literal
 from dotenv import load_dotenv
 
 from bdrc import search as bdrc_search_module
@@ -264,7 +265,10 @@ async def create_work(request: CreateWorkRequest):
 
 
 @router.post("/works/merge")
-async def merge_works(request: MergeWorksRequest):
+async def merge_works(
+    request: MergeWorksRequest,
+    x_user_email: Annotated[Optional[str], Header(alias="X-User-Email")] = None,
+):
     """Merge a searched duplicate into the parent work via OTAPI POST /api/v1/works/{work_id}/merge."""
     parent = (request.parent_work_id or "").strip()
     searched = (request.searched_work_id or "").strip()
@@ -272,11 +276,12 @@ async def merge_works(request: MergeWorksRequest):
         raise HTTPException(status_code=400, detail="parent_work_id and searched_work_id are required")
     if parent == searched:
         raise HTTPException(status_code=400, detail="Cannot merge a work into itself")
+    modified_by = (x_user_email or request.modified_by or "").strip() or None
     try:
         result = await bdrc_work_module.merge_works(
             work_id=searched,
             target_work_id=parent,
-            modified_by=request.modified_by,
+            modified_by=modified_by,
         )
         return result
     except TimeoutError:
@@ -365,7 +370,10 @@ async def find_matching_work(request: FindMatchingWorkRequest):
 
 
 @router.post("/persons/merge")
-async def merge_persons(request: MergePersonsRequest):
+async def merge_persons(
+    request: MergePersonsRequest,
+    x_user_email: Annotated[Optional[str], Header(alias="X-User-Email")] = None,
+):
     """Merge a searched duplicate person into the parent person via OTAPI POST /api/v1/persons/{person_id}/merge."""
     parent = (request.parent_person_id or "").strip()
     searched = (request.searched_person_id or "").strip()
@@ -373,11 +381,12 @@ async def merge_persons(request: MergePersonsRequest):
         raise HTTPException(status_code=400, detail="parent_person_id and searched_person_id are required")
     if parent == searched:
         raise HTTPException(status_code=400, detail="Cannot merge a person into itself")
+    modified_by = (x_user_email or request.modified_by or "").strip() or None
     try:
         result = await bdrc_person_module.merge_persons(
             person_id=searched,
             target_person_id=parent,
-            modified_by=request.modified_by,
+            modified_by=modified_by,
         )
         return result
     except TimeoutError:

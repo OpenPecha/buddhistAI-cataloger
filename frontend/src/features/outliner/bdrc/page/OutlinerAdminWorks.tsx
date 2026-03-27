@@ -21,8 +21,11 @@ import { useOutlinerUsers } from '@/hooks/useOutlinerUsers';
 import { useBdrcSearch, type BdrcSearchResult } from '@/hooks/useBdrcSearch';
 import { useSearchBDRC } from '../hook/useSearchBDRCWorks';
 import { formatDistanceToNow } from 'date-fns';
+import { AdminMarkDuplicateWorkButton } from '../components/AdminBdrcMarkDuplicate';
+import { TitleWithAltLabels } from './OutlinerAdminPersons';
+import BDRCSeachWrapper from '@/components/outliner/BDRCSeachWrapper';
 
-const TABLE_COL_COUNT = 5;
+const TABLE_COL_COUNT = 6;
 const PAGE_SIZE = 20;
 
 const URL_KEYS = {
@@ -58,36 +61,6 @@ function asWorkRows(raw: unknown[]): BdrcOtWorkRow[] {
 
 
 
-function TitleWithAltLabels({ row }: Readonly<{ row: BdrcOtWorkRow }>) {
-  const title = row.pref_label_bo?.trim() || '—';
-  const alts = row.alt_label_bo ?? [];
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="max-w-xs truncate cursor-pointer rounded text-left text-sm text-blue-700 wrap-break-word hover:underline focus:ring-2 focus:ring-blue-500 focus:outline-none"
-        >
-          {title}
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="max-w-md p-3">
-        <p className="text-muted-foreground mb-2 text-xs font-medium">Alternative labels</p>
-        {alts.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No alternative labels.</p>
-        ) : (
-          <ul className="max-h-48 space-y-2 overflow-y-auto text-sm wrap-break-word">
-            {alts.map((label, i) => (
-              <li key={`alt-${i}-${label.slice(0, 48)}`}>{label}</li>
-            ))}
-          </ul>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
 function AuthorWithRecords({ row }: Readonly<{ row: BdrcOtWorkRow }>) {
   const primary = row.authors?.[0]?.trim() || '—';
   const recordsWithNames = (row.author_records ?? []).filter((r) => Boolean(r.pref_label_bo?.trim()));
@@ -113,6 +86,9 @@ function AuthorWithRecords({ row }: Readonly<{ row: BdrcOtWorkRow }>) {
             ))}
           </ul>
         )}
+          <BDRCSeachWrapper bdrcId={row?.id}>
+          <span className='text-xs text-blue-500 '>link</span>
+          </BDRCSeachWrapper>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -361,6 +337,12 @@ function BDRCPage() {
         <TableCell className="whitespace-nowrap px-6 py-3 text-sm text-gray-900">
         {formatDistanceToNow(istDate, { addSuffix: true })}
         </TableCell>
+        <TableCell className="whitespace-nowrap px-6 py-3 align-top">
+          <AdminMarkDuplicateWorkButton
+            parentWorkId={row.id}
+            defaultQuery={row.pref_label_bo?.trim() ?? ''}
+          />
+        </TableCell>
       </TableRow>
   }
     );
@@ -487,7 +469,7 @@ function BDRCPage() {
 
           <Table
             wrapperClassName="min-w-0 overflow-visible"
-            className="w-full min-w-[920px] divide-y divide-gray-200"
+            className="w-full min-w-[1000px] divide-y divide-gray-200"
           >
             <TableHeader className="sticky top-0 z-1 bg-gray-50 shadow-sm">
               <TableRow className="hover:bg-transparent">
@@ -505,6 +487,9 @@ function BDRCPage() {
                 </TableHead>
                 <TableHead className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
                   Modified at
+                </TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+                  Actions
                 </TableHead>
               </TableRow>
             </TableHeader>
