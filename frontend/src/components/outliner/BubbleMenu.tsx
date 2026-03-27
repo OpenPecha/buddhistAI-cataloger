@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import Emitter from '@/events';
 import type { BubbleMenuProps } from './types';
 import { useMenuPosition } from './hooks/useMenuPosition';
 import { useSelection } from './contexts';
@@ -82,17 +81,11 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({ segmentId }) => {
   }, [menuRef]);
 
   const handleTitleSelect = () => {
-    if (selectedText) {
-      Emitter.emit('bubbleMenu:updateTitle', selectedText);
-    }
     onSelect('title');
     setIsVisible(false)
   };
 
   const handleAuthorSelect = () => {
-    if (selectedText) {
-      Emitter.emit('bubbleMenu:updateAuthor', selectedText);
-    }
     onSelect('author');
     setIsVisible(false)
   };

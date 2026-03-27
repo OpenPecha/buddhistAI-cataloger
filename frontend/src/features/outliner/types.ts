@@ -11,6 +11,13 @@ export interface TextSegment {
   span_end?: number
   title?: string
   author?: string
+  /** Document-level offsets for title selected from source text */
+  title_span_start?: number
+  title_span_end?: number
+  updated_title?: string
+  author_span_start?: number
+  author_span_end?: number
+  updated_author?: string
   title_bdrc_id?: string
   author_bdrc_id?: string
   parentSegmentId?: string
@@ -85,6 +92,12 @@ export interface Segment {
   span_end: number
   title?: string | null
   author?: string | null
+  title_span_start?: number | null
+  title_span_end?: number | null
+  updated_title?: string | null
+  author_span_start?: number | null
+  author_span_end?: number | null
+  updated_author?: string | null
   title_bdrc_id?: string | null
   author_bdrc_id?: string | null
   parent_segment_id?: string | null

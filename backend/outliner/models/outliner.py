@@ -74,8 +74,14 @@ class OutlinerSegment(Base):
     label: Mapped[SegmentLabels | None] = mapped_column(Enum(SegmentLabels), nullable=True)
     # Annotations
     title: Mapped[str | None] = mapped_column(String, nullable=True)
+    title_span_start: Mapped[int] = mapped_column(Integer, nullable=True)
+    title_span_end: Mapped[int] = mapped_column(Integer, nullable=True)
+    updated_title: Mapped[str | None] = mapped_column(String, nullable=True)
     is_supplied_title: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
     author: Mapped[str | None] = mapped_column(String, nullable=True)
+    author_span_start: Mapped[int] = mapped_column(Integer, nullable=True)
+    author_span_end: Mapped[int] = mapped_column(Integer, nullable=True)
+    updated_author: Mapped[str | None] = mapped_column(String, nullable=True)
     title_bdrc_id: Mapped[str | None] = mapped_column(String, nullable=True)
     author_bdrc_id: Mapped[str | None] = mapped_column(String, nullable=True)
     parent_segment_id: Mapped[str | None] = mapped_column(

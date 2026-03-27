@@ -83,6 +83,12 @@ class SegmentUpdate(BaseModel):
     comment_content: Optional[str] = None  # New comment content to append
     comment_username: Optional[str] = None  # Username for new comment
     is_supplied_title: Optional[bool] = None  # Title supplied by annotator (not from source)
+    title_span_start: Optional[int] = None
+    title_span_end: Optional[int] = None
+    updated_title: Optional[str] = None  # Annotator text when it differs from source span text
+    author_span_start: Optional[int] = None
+    author_span_end: Optional[int] = None
+    updated_author: Optional[str] = None
 
 
 class SegmentResponse(BaseModel):
@@ -93,6 +99,12 @@ class SegmentResponse(BaseModel):
     span_end: int
     title: Optional[str] = None
     author: Optional[str] = None
+    title_span_start: Optional[int] = None
+    title_span_end: Optional[int] = None
+    updated_title: Optional[str] = None
+    author_span_start: Optional[int] = None
+    author_span_end: Optional[int] = None
+    updated_author: Optional[str] = None
     title_bdrc_id: Optional[str] = None
     author_bdrc_id: Optional[str] = None
     parent_segment_id: Optional[str] = None
@@ -128,6 +140,12 @@ class SegmentResponseDocument(BaseModel):
     span_end: int
     title: Optional[str] = None
     author: Optional[str] = None
+    title_span_start: Optional[int] = None
+    title_span_end: Optional[int] = None
+    updated_title: Optional[str] = None
+    author_span_start: Optional[int] = None
+    author_span_end: Optional[int] = None
+    updated_author: Optional[str] = None
     title_bdrc_id: Optional[str] = None
     author_bdrc_id: Optional[str] = None
     parent_segment_id: Optional[str] = None
@@ -223,6 +241,12 @@ def _build_segment_response(segment, db: Session = None) -> SegmentResponse:
         span_end=segment.span_end,
         title=segment.title,
         author=segment.author,
+        title_span_start=segment.title_span_start,
+        title_span_end=segment.title_span_end,
+        updated_title=segment.updated_title,
+        author_span_start=segment.author_span_start,
+        author_span_end=segment.author_span_end,
+        updated_author=segment.updated_author,
         title_bdrc_id=segment.title_bdrc_id,
         author_bdrc_id=segment.author_bdrc_id,
         parent_segment_id=segment.parent_segment_id,
@@ -452,23 +476,8 @@ async def update_segment(
     - Before: 1 SELECT (segment) + 1 SELECT (document) + 2 COUNT(*) + 1 UPDATE (doc) + 1 UPDATE (segment) + 1 SELECT (refresh)
     - After: 1 SELECT (segment) + 1 UPDATE (segment) + 1 UPDATE (doc, if annotation changed)
     """
-    segment = update_segment_ctrl(
-        db=db,
-        segment_id=segment_id,
-        text=segment_update.text,
-        title=segment_update.title,
-        author=segment_update.author,
-        title_bdrc_id=segment_update.title_bdrc_id,
-        author_bdrc_id=segment_update.author_bdrc_id,
-        parent_segment_id=segment_update.parent_segment_id,
-        is_attached=segment_update.is_attached,
-        status=segment_update.status,
-        label=segment_update.label,
-        comment=segment_update.comment,
-        comment_content=segment_update.comment_content,
-        comment_username=segment_update.comment_username,
-        is_supplied_title=segment_update.is_supplied_title
-    )
+    patch = segment_update.model_dump(exclude_unset=True)
+    segment = update_segment_ctrl(db, segment_id, patch)
     return _build_segment_response(segment, db)
 
 
@@ -478,7 +487,7 @@ async def update_segments_bulk(
     db: Session = Depends(get_db)
 ):
     """Update multiple segments at once"""
-    segment_updates = [seg.dict() for seg in updates.segments]
+    segment_updates = [seg.model_dump(exclude_unset=True) for seg in updates.segments]
     updated_segments = update_segments_bulk_ctrl(db, segment_updates, updates.segment_ids)
     
     segment_responses = []

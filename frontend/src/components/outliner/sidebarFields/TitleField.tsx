@@ -1,8 +1,6 @@
-import { useEffect, useRef,  forwardRef } from 'react';
+import React, { useRef, useImperativeHandle, forwardRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import Emitter from '@/events';
-import type { TextSegment } from '../types';
 import type { FormDataType, Title, Author } from '../AnnotationSidebar';
 
 interface TitleFieldProps {
@@ -18,6 +16,7 @@ export interface TitleFieldRef {
   getValue: () => string;
 }
 
+
 export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
   formData,
   onUpdate,
@@ -25,42 +24,47 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
   onSuppliedTitleChange,
   disabled = false,
 }, ref) => {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Allow parent to set/get title value programmatically
+  useImperativeHandle(ref, () => ({
+    setValueWithoutUpdate: (value: string) => {
+      if (inputRef.current) {
+        inputRef.current.value = value;
+      }
+    },
+    getValue: () => {
+      return inputRef.current?.value || '';
+    }
+  }));
+
   const titleSearch = formData?.title?.name || '';
+
   const setTitleSearch = (value: string) => {
     onUpdate('title', { name: value, bdrc_id: formData?.title?.bdrc_id ?? '' });
   };
-  const inputRef = useRef<HTMLInputElement | null>(null);
-
-  useEffect(() => {
-    const handleBubbleMenuUpdate = (value: string) => {
-      setTitleSearch(value);
-      inputRef.current?.focus();
-    };
-
-    Emitter.on('bubbleMenu:updateTitle', handleBubbleMenuUpdate);
-    return () => {
-      Emitter.off('bubbleMenu:updateTitle', handleBubbleMenuUpdate);
-    };
-  }, [setTitleSearch]);
 
   return (
     <div>
-      <div className="flex items-center gap-2  justify-between" >
-      <Label htmlFor="title" className="">Title</Label>
-        
-        <div className="flex items-center gap-2 mb-2"> 
+      <div className="flex items-center gap-2 justify-between">
+        <Label htmlFor="title" className="">Title</Label>
+        <div className="flex items-center gap-2 mb-2">
           <input
-          type="checkbox"
-          id="reconstructed-title"
-          checked={suppliedTitleChecked}
-          onChange={(e) => onSuppliedTitleChange(e.target.checked)}
-          disabled={disabled}
-          className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            type="checkbox"
+            id="reconstructed-title"
+            checked={suppliedTitleChecked}
+            onChange={(e) => onSuppliedTitleChange(e.target.checked)}
+            disabled={disabled}
+            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
           />
-        <Label htmlFor="reconstructed-title" title="Title reconstructed from the text / title not clear" className="text-sm text-gray-500 font-normal cursor-pointer">
-        reconstructed
-        </Label>
-          </div>
+          <Label 
+            htmlFor="reconstructed-title" 
+            title="Title reconstructed from the text / title not clear"
+            className="text-sm text-gray-500 font-normal cursor-pointer"
+          >
+            reconstructed
+          </Label>
+        </div>
       </div>
       <Input
         ref={inputRef}
@@ -71,9 +75,6 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
         className="w-full"
         disabled={disabled}
       />
-      
     </div>
   );
 });
-
-TitleField.displayName = 'TitleField';

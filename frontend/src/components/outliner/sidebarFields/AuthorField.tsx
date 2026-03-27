@@ -1,8 +1,7 @@
-import React, { useEffect, useState, useRef, forwardRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { BDRC_AUTHOR_DIFFICULT_TO_IDENTIFY, BdrcAuthorSelector } from '@/components/bdrc/BdrcAuthorSelector';
-import Emitter from '@/events';
 import type { TextSegment } from '../types';
 import type { Author, FormDataType, Title } from '../AnnotationSidebar';
 
@@ -49,18 +48,13 @@ interface AuthorFieldProps {
   disabled?: boolean;
 }
 
-export interface AuthorFieldRef {
-  setValueWithoutUpdate: (value: string) => void;
-  getValue: () => string;
-}
-
-export const AuthorField = forwardRef<AuthorFieldRef, AuthorFieldProps>(({
+export const AuthorField = ({
   segment,
   formData,
   onUpdate,
   resetForm,
   disabled = false,
-}, ref) => {
+}: AuthorFieldProps) => {
   const authorSearch = formData?.author?.name || '';
   const setAuthorSearch = (value: string) => {
     onUpdate('author', { name: value, bdrc_id: '' });
@@ -76,18 +70,6 @@ export const AuthorField = forwardRef<AuthorFieldRef, AuthorFieldProps>(({
     onUpdate('author', { name: authorSearch, bdrc_id });
     setSelectedAuthorName(bdrc_id === BDRC_AUTHOR_DIFFICULT_TO_IDENTIFY ? null : (name ?? null));
   };
-
-  useEffect(() => {
-    const handleBubbleMenuUpdate = (value: string) => {
-      setAuthorSearch(value);
-      inputRef.current?.focus();
-    };
-
-    Emitter.on('bubbleMenu:updateAuthor', handleBubbleMenuUpdate);
-    return () => {
-      Emitter.off('bubbleMenu:updateAuthor', handleBubbleMenuUpdate);
-    };
-  }, [setAuthorSearch]);
 
   useEffect(() => {
     setSelectedAuthorName(null);
@@ -128,6 +110,4 @@ export const AuthorField = forwardRef<AuthorFieldRef, AuthorFieldProps>(({
      
     </div>
   );
-});
-
-AuthorField.displayName = 'AuthorField';
+};

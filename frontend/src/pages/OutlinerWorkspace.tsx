@@ -19,6 +19,20 @@ import {
   ActionsProvider,
 } from '@/components/outliner/contexts'
 
+function getSelectionOffsetsInRoot(
+  root: HTMLElement,
+  range: Range
+): { start: number; end: number } | null {
+  if (!root.contains(range.commonAncestorContainer)) return null;
+  const preStart = document.createRange();
+  preStart.selectNodeContents(root);
+  preStart.setEnd(range.startContainer, range.startOffset);
+  const preEnd = document.createRange();
+  preEnd.selectNodeContents(root);
+  preEnd.setEnd(range.endContainer, range.endOffset);
+  return { start: preStart.toString().length, end: preEnd.toString().length };
+}
+
 const OutlinerWorkspace: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -58,11 +72,20 @@ const OutlinerWorkspace: React.FC = () => {
   
   // UI state for menus
   const [bubbleMenuState, setBubbleMenuState] = useState<BubbleMenuState | null>(null);
+  const bubbleMenuStateRef = useRef<BubbleMenuState | null>(null);
+  useEffect(() => {
+    bubbleMenuStateRef.current = bubbleMenuState;
+  }, [bubbleMenuState]);
  
   const [cursorPosition, setCursorPosition] = useState<CursorPosition | null>(null);
   
   // Store pending bubble menu value to apply when segment becomes active
-  const pendingBubbleMenuValueRef = useRef<{ field: 'title' | 'author'; segmentId: string; text: string } | null>(null);
+  const pendingBubbleMenuValueRef = useRef<{
+    field: 'title' | 'author';
+    segmentId: string;
+    text: string;
+    docSpan?: { start: number; end: number };
+  } | null>(null);
 
   // Unsaved changes dialog state
   const [unsavedChangesDialog, setUnsavedChangesDialog] = useState<{
@@ -88,14 +111,14 @@ const OutlinerWorkspace: React.FC = () => {
   // Apply pending bubble menu value when segment becomes active
   useEffect(() => {
     if (pendingBubbleMenuValueRef.current && activeSegmentId === pendingBubbleMenuValueRef.current.segmentId) {
-      const { field, text } = pendingBubbleMenuValueRef.current;
-      
+      const { field, text, docSpan } = pendingBubbleMenuValueRef.current;
+
       // Use requestAnimationFrame to ensure sidebar has updated
       requestAnimationFrame(() => {
         if (field === 'title') {
-          annotationSidebarRef.current?.setTitleValueWithoutUpdate(text);
+          annotationSidebarRef.current?.setTitleValueWithoutUpdate(text, docSpan);
         } else if (field === 'author') {
-          annotationSidebarRef.current?.setAuthorValueWithoutUpdate(text);
+          annotationSidebarRef.current?.setAuthorValueWithoutUpdate(text, docSpan);
         }
         pendingBubbleMenuValueRef.current = null;
       });
@@ -558,19 +581,36 @@ const OutlinerWorkspace: React.FC = () => {
     (field: 'title' | 'author', segmentId: string, text: string) => {
       if (!segmentId || !text) return;
 
-      // Store the pending value
-      pendingBubbleMenuValueRef.current = { field, segmentId, text };
-     
-      // Activate the segment so sidebar shows it - update URL
+      const state = bubbleMenuStateRef.current;
+      const seg = currentSegments.find(s => s.id === segmentId);
+      let docSpan: { start: number; end: number } | undefined;
+      if (
+        state?.selectionRange &&
+        seg != null &&
+        seg.span_start != null &&
+        state.segmentId === segmentId
+      ) {
+        const root = document.querySelector(
+          `.segment-text-content[data-segment-id="${segmentId}"]`
+        ) as HTMLElement | null;
+        if (root) {
+          const off = getSelectionOffsetsInRoot(root, state.selectionRange);
+          if (off) {
+            docSpan = { start: seg.span_start + off.start, end: seg.span_start + off.end };
+          }
+        }
+      }
+
+      pendingBubbleMenuValueRef.current = { field, segmentId, text, docSpan };
+
       setSearchParams({ segmentId }, { replace: true });
-      
-      // If the segment is already active, apply immediately
+
       if (activeSegmentId === segmentId) {
         requestAnimationFrame(() => {
           if (field === 'title') {
-            annotationSidebarRef.current?.setTitleValueWithoutUpdate(text);
+            annotationSidebarRef.current?.setTitleValueWithoutUpdate(text, docSpan);
           } else if (field === 'author') {
-            annotationSidebarRef.current?.setAuthorValueWithoutUpdate(text);
+            annotationSidebarRef.current?.setAuthorValueWithoutUpdate(text, docSpan);
           }
           pendingBubbleMenuValueRef.current = null;
         });
@@ -578,7 +618,7 @@ const OutlinerWorkspace: React.FC = () => {
 
       setBubbleMenuState(null);
     },
-    [setSearchParams, activeSegmentId]
+    [setSearchParams, activeSegmentId, currentSegments]
   );
 
   // Cleanup on unmount

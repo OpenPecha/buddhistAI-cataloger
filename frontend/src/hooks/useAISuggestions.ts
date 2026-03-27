@@ -3,6 +3,14 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { generateTitleAuthor, type GenerateTitleAuthorResponse } from '@/api/outliner';
 import { toast } from 'sonner';
 import type { AISuggestions, TextSegment } from '@/features/outliner/types';
+import { findPhraseDocSpan, type PhraseDocSpan } from '@/utils/findPhraseDocSpan';
+
+export interface PersistAIAnnotationsArgs {
+  titleValue: string;
+  authorValue: string;
+  titleSpan: PhraseDocSpan | null;
+  authorSpan: PhraseDocSpan | null;
+}
 
 interface UseAISuggestionsOptions {
   activeSegment: TextSegment | undefined;
@@ -13,6 +21,8 @@ interface UseAISuggestionsOptions {
   onAuthorChange: (value: string) => void;
   onShowTitleDropdown: (show: boolean) => void;
   onShowAuthorDropdown: (show: boolean) => void;
+  /** Persist title/author + document spans to the API when AI returns (optional). */
+  persistAIAnnotations?: (args: PersistAIAnnotationsArgs) => Promise<void>;
 }
 
 /**
@@ -27,40 +37,78 @@ export const useAISuggestions = ({
   onAuthorChange,
   onShowTitleDropdown,
   onShowAuthorDropdown,
+  persistAIAnnotations,
 }: UseAISuggestionsOptions) => {
   const queryClient = useQueryClient();
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestions | null>(null);
   const aiAbortControllerRef = useRef<AbortController | null>(null);
+  const persistAIAnnotationsRef = useRef(persistAIAnnotations);
+  persistAIAnnotationsRef.current = persistAIAnnotations;
+
+  type AIMutationVars = {
+    content: string;
+    signal?: AbortSignal;
+    segment: TextSegment;
+    segmentId: string;
+    documentId: string | undefined;
+  };
 
   // Mutation for AI title/author generation
   const mutation = useMutation({
-    mutationFn: ({ content, signal }: { content: string; signal?: AbortSignal }) =>
+    mutationFn: ({ content, signal }: AIMutationVars) =>
       generateTitleAuthor({ content }, signal),
-    onSuccess: (data: GenerateTitleAuthorResponse) => {
+    onSuccess: async (data: GenerateTitleAuthorResponse, variables: AIMutationVars) => {
       setAiSuggestions(data as AISuggestions);
 
-      // Update segment with detected/extracted values
-      if (activeSegmentId) {
-        if (data.title) {
-          onUpdate(activeSegmentId, 'title', data.title);
-          onTitleChange(data.title);
-        } else if (data.suggested_title) {
-          onUpdate(activeSegmentId, 'title', data.suggested_title);
-          onTitleChange(data.suggested_title);
-        }
+      const { segment, segmentId, documentId: docId } = variables;
+      const persistFn = persistAIAnnotationsRef.current;
 
-        if (data.author) {
-          onUpdate(activeSegmentId, 'author', data.author);
-          onAuthorChange(data.author);
-        } else if (data.suggested_author) {
-          onUpdate(activeSegmentId, 'author', data.suggested_author);
-          onAuthorChange(data.suggested_author);
+      if (!segmentId || !segment.text) {
+        if (docId && !persistFn) {
+          queryClient.invalidateQueries({ queryKey: ['outliner-document', docId] });
+        }
+        return;
+      }
+
+      const segmentText = segment.text;
+      const segStart = segment.span_start ?? 0;
+
+      // Resolved strings we store (extracted preferred, else suggested).
+      const titleValue =
+        data.title?.trim() || data.suggested_title?.trim() || '';
+      const authorValue =
+        data.author?.trim() || data.suggested_author?.trim() || '';
+
+      // Document-level spans: search each saved string inside the segment text, then offset by span_start.
+      const titleSpan = titleValue
+        ? findPhraseDocSpan(segmentText, segStart, titleValue)
+        : null;
+      const authorSpan = authorValue
+        ? findPhraseDocSpan(segmentText, segStart, authorValue)
+        : null;
+
+      if (persistFn && (titleValue || authorValue)) {
+        try {
+          await persistFn({
+            titleValue,
+            authorValue,
+            titleSpan,
+            authorSpan,
+          });
+        } catch {
+          return;
         }
       }
 
-      // Invalidate document query if we have a documentId
-      if (documentId) {
-        queryClient.invalidateQueries({ queryKey: ['outliner-document', documentId] });
+      if (titleValue) {
+        onTitleChange(titleValue);
+      }
+      if (authorValue) {
+        onAuthorChange(authorValue);
+      }
+
+      if (docId && !persistFn) {
+        queryClient.invalidateQueries({ queryKey: ['outliner-document', docId] });
       }
     },
     onError: (error: Error) => {
@@ -105,7 +153,13 @@ export const useAISuggestions = ({
     aiAbortControllerRef.current = abortController;
 
     try {
-      await mutation.mutateAsync({ content: text, signal: abortController.signal });
+      await mutation.mutateAsync({
+        content: text,
+        signal: abortController.signal,
+        segment: activeSegment,
+        segmentId: activeSegmentId,
+        documentId,
+      });
     } catch (error) {
       // Error handling is done in mutation onError
       // Only log if it's not an abort error
@@ -117,7 +171,7 @@ export const useAISuggestions = ({
         aiAbortControllerRef.current = null;
       }
     }
-  }, [activeSegmentId, activeSegment, mutation]);
+  }, [activeSegmentId, activeSegment, mutation, documentId]);
 
   const handleAIStop = useCallback(() => {
     if (aiAbortControllerRef.current) {

@@ -42,6 +42,12 @@ export interface OutlinerSegment {
   span_end: number;
   title?: string | null;
   author?: string | null;
+  title_span_start?: number | null;
+  title_span_end?: number | null;
+  updated_title?: string | null;
+  author_span_start?: number | null;
+  author_span_end?: number | null;
+  updated_author?: string | null;
   title_bdrc_id?: string | null;
   author_bdrc_id?: string | null;
   parent_segment_id?: string | null;
@@ -88,6 +94,12 @@ export interface SegmentUpdateRequest {
   text?: string;
   title?: string;
   author?: string;
+  title_span_start?: number | null;
+  title_span_end?: number | null;
+  updated_title?: string | null;
+  author_span_start?: number | null;
+  author_span_end?: number | null;
+  updated_author?: string | null;
   title_bdrc_id?: string;
   author_bdrc_id?: string;
   parent_segment_id?: string;
@@ -620,6 +632,12 @@ export const outlinerSegmentToTextSegment = (segment: OutlinerSegment): TextSegm
     span_end: segment.span_end,
     title: segment.title || undefined,
     author: segment.author || undefined,
+    title_span_start: segment.title_span_start ?? undefined,
+    title_span_end: segment.title_span_end ?? undefined,
+    updated_title: segment.updated_title ?? undefined,
+    author_span_start: segment.author_span_start ?? undefined,
+    author_span_end: segment.author_span_end ?? undefined,
+    updated_author: segment.updated_author ?? undefined,
     title_bdrc_id: segment.title_bdrc_id || undefined,
     author_bdrc_id: segment.author_bdrc_id || undefined,
     parentSegmentId: segment.parent_segment_id || undefined,

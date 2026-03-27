@@ -3,12 +3,13 @@ import { Button } from '@/components/ui/button';
 import type { TextSegment } from './types';
 import { segmentLabelDisplay } from './segment-label';
 import { FilterSegments, type LabelFilterValue, type CompletionFilterValue } from './FilterSegments';
-import { TitleField, type TitleFieldRef } from './sidebarFields/TitleField';
-import { AuthorField, type AuthorFieldRef } from './sidebarFields/AuthorField';
+import { TitleField } from './sidebarFields/TitleField';
+import { AuthorField } from './sidebarFields/AuthorField';
 import BDRCField from './sidebarFields/BDRCField';
 import { AISuggestionsBox } from './AISuggestionsBox';
-import { useAISuggestions } from '@/hooks/useAISuggestions';
+import { useAISuggestions, type PersistAIAnnotationsArgs } from '@/hooks/useAISuggestions';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
+import type { SegmentUpdateRequest } from '@/api/outliner';
 import { toast } from 'sonner';
 import Comments from './comment/Comment';
 import { RotateCcw, Save, User, X } from 'lucide-react';
@@ -44,9 +45,11 @@ export interface FormDataType {
   author: Author;
 }
 
+export type DocTextSpan = { start: number; end: number };
+
 export interface AnnotationSidebarRef {
-  setTitleValueWithoutUpdate: (value: string) => void;
-  setAuthorValueWithoutUpdate: (value: string) => void;
+  setTitleValueWithoutUpdate: (value: string, docSpan?: DocTextSpan | null) => void;
+  setAuthorValueWithoutUpdate: (value: string, docSpan?: DocTextSpan | null) => void;
   getPendingChanges: () => PendingChanges[];
   isDirty: () => boolean;
   save: () => Promise<void>;
@@ -61,6 +64,14 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
 }, ref) => {
   const { updateSegment: updateSegmentMutation, document } = useOutlinerDocument();
   const activeSegmentId = activeSegment?.id || null;
+  const fullDocumentContent = document?.content ?? '';
+
+  const titleSourceSpanRef = useRef<DocTextSpan | null>(null);
+  const authorSourceSpanRef = useRef<DocTextSpan | null>(null);
+  /** Last title/author strings applied by AI detect (for updated_* on save). Cleared when segment id changes or bubble selects text. */
+  const aiBaselineTitleRef = useRef<string | null>(null);
+  const aiBaselineAuthorRef = useRef<string | null>(null);
+  const loadedSegmentIdRef = useRef<string | null>(null);
   const title = activeSegment?.title || '';
   const author = activeSegment?.author || '';
 
@@ -83,13 +94,14 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
     message: null,
   });
 
-  // Refs for field components
-  const titleFieldRef = useRef<TitleFieldRef>(null);
-  const authorFieldRef = useRef<AuthorFieldRef>(null);
-
   // Reset formData and is_supplied_title checkbox when segment changes
   useEffect(() => {
     if (activeSegment) {
+      if (loadedSegmentIdRef.current !== activeSegment.id) {
+        loadedSegmentIdRef.current = activeSegment.id;
+        aiBaselineTitleRef.current = null;
+        aiBaselineAuthorRef.current = null;
+      }
       const initialFormData = {
         title: { name: title, bdrc_id: activeSegment.title_bdrc_id || '' },
         author: { name: author, bdrc_id: activeSegment.author_bdrc_id || '' },
@@ -98,8 +110,56 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       originalFormDataRef.current = initialFormData;
       setIsDirtyState(false);
       setSuppliedTitleChecked(activeSegment.is_supplied_title ?? false);
+      titleSourceSpanRef.current =
+        activeSegment.title_span_start != null && activeSegment.title_span_end != null
+          ? { start: activeSegment.title_span_start, end: activeSegment.title_span_end }
+          : null;
+      authorSourceSpanRef.current =
+        activeSegment.author_span_start != null && activeSegment.author_span_end != null
+          ? { start: activeSegment.author_span_start, end: activeSegment.author_span_end }
+          : null;
     }
   }, [activeSegment, title, author]);
+
+  const persistAIAnnotations = useCallback(
+    async ({
+      titleValue,
+      authorValue,
+      titleSpan,
+      authorSpan,
+    }: PersistAIAnnotationsArgs) => {
+      if (!activeSegmentId) return;
+
+      const patch: SegmentUpdateRequest = {};
+      if (titleValue) {
+        titleSourceSpanRef.current = titleSpan;
+        aiBaselineTitleRef.current = titleValue;
+        patch.title = titleValue;
+        patch.title_span_start = titleSpan?.start ?? null;
+        patch.title_span_end = titleSpan?.end ?? null;
+        patch.updated_title = null;
+      }
+      if (authorValue) {
+        authorSourceSpanRef.current = authorSpan;
+        aiBaselineAuthorRef.current = authorValue;
+        patch.author = authorValue;
+        patch.author_span_start = authorSpan?.start ?? null;
+        patch.author_span_end = authorSpan?.end ?? null;
+        patch.updated_author = null;
+      }
+      if (Object.keys(patch).length === 0) return;
+      await updateSegmentMutation(activeSegmentId, patch);
+    },
+    [activeSegmentId, updateSegmentMutation]
+  );
+
+  const handleSuppliedTitleChange = useCallback((checked: boolean) => {
+    if (checked) {
+      titleSourceSpanRef.current = null;
+      aiBaselineTitleRef.current = null;
+    }
+    setSuppliedTitleChecked(checked);
+  }, []);
 
   useEffect(() => {
     setBdrcAuthorBlock({ blocked: false, message: null });
@@ -182,6 +242,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
     onAuthorChange: handleAuthorUpdate,
     onShowTitleDropdown: () => { },
     onShowAuthorDropdown: () => { },
+    persistAIAnnotations,
   });
   const onSave = useCallback(async () => {
     // Validate that we have an active segment
@@ -199,15 +260,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       return;
     }
 
-    // Prepare update payload
-    const updatePayload: {
-      title?: string;
-      author?: string;
-      title_bdrc_id?: string;
-      author_bdrc_id?: string;
-      status?: string;
-      is_supplied_title?: boolean;
-    } = {};
+    const updatePayload: SegmentUpdateRequest = { status: 'checked' };
 
     if (titleName) {
       updatePayload.title = titleName;
@@ -215,6 +268,24 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
         updatePayload.title_bdrc_id = formData.title.bdrc_id;
       }
       updatePayload.is_supplied_title = suppliedTitleChecked;
+      const tspan = titleSourceSpanRef.current;
+      const aiTitleBase = aiBaselineTitleRef.current?.trim() ?? null;
+      if (tspan) {
+        updatePayload.title_span_start = tspan.start;
+        updatePayload.title_span_end = tspan.end;
+      } else {
+        updatePayload.title_span_start = null;
+        updatePayload.title_span_end = null;
+      }
+      if (aiTitleBase !== null) {
+        updatePayload.updated_title = titleName.trim() !== aiTitleBase ? titleName : null;
+      } else if (tspan) {
+        const sourceSlice = fullDocumentContent.slice(tspan.start, tspan.end);
+        updatePayload.updated_title = titleName !== sourceSlice ? titleName : null;
+      } else {
+        const inSegment = activeSegment.text.includes(titleName.trim());
+        updatePayload.updated_title = !inSegment ? titleName : null;
+      }
     }
 
     if (authorName) {
@@ -222,11 +293,34 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       if (formData.author?.bdrc_id) {
         updatePayload.author_bdrc_id = formData.author.bdrc_id;
       }
+      const aspan = authorSourceSpanRef.current;
+      const aiAuthorBase = aiBaselineAuthorRef.current?.trim() ?? null;
+      if (aspan) {
+        updatePayload.author_span_start = aspan.start;
+        updatePayload.author_span_end = aspan.end;
+      } else {
+        updatePayload.author_span_start = null;
+        updatePayload.author_span_end = null;
+      }
+      if (aiAuthorBase !== null) {
+        updatePayload.updated_author = authorName.trim() !== aiAuthorBase ? authorName : null;
+      } else if (aspan) {
+        const sourceSlice = fullDocumentContent.slice(aspan.start, aspan.end);
+        updatePayload.updated_author = authorName !== sourceSlice ? authorName : null;
+      } else {
+        const inSegment = activeSegment.text.includes(authorName.trim());
+        updatePayload.updated_author = !inSegment ? authorName : null;
+      }
     }
-    updatePayload.status = 'checked';
     // Make API call to update segment using mutation
     try {
       await updateSegmentMutation(activeSegmentId, updatePayload);
+      if (titleName) {
+        aiBaselineTitleRef.current = titleName.trim();
+      }
+      if (authorName) {
+        aiBaselineAuthorRef.current = authorName.trim();
+      }
       toast.success('Annotations saved successfully');
       // Clear pending changes for this segment
       if (pendingChangesRef.current.has(activeSegmentId)) {
@@ -239,15 +333,52 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       console.error('Failed to save annotations:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to save annotations');
     }
-  }, [activeSegment, activeSegmentId, formData, suppliedTitleChecked, updateSegmentMutation]);
+  }, [
+    activeSegment,
+    activeSegmentId,
+    formData,
+    suppliedTitleChecked,
+    updateSegmentMutation,
+    fullDocumentContent,
+  ]);
 
   // Expose methods via ref
   useImperativeHandle(ref, () => ({
-    setTitleValueWithoutUpdate: (value: string) => {
-      titleFieldRef.current?.setValueWithoutUpdate(value);
+    setTitleValueWithoutUpdate: (value: string, docSpan?: DocTextSpan | null) => {
+      if (docSpan !== undefined) {
+        titleSourceSpanRef.current = docSpan;
+        if (docSpan != null) {
+          aiBaselineTitleRef.current = null;
+        }
+      }
+      setFormData(prev => {
+        const updatedTitle: Title = { ...prev.title, name: value };
+        const updated = { ...prev, title: updatedTitle };
+        if (activeSegmentId) {
+          const current = pendingChangesRef.current.get(activeSegmentId) || prev;
+          pendingChangesRef.current.set(activeSegmentId, { ...current, title: updatedTitle });
+        }
+        checkDirtyState(updated);
+        return updated;
+      });
     },
-    setAuthorValueWithoutUpdate: (value: string) => {
-      authorFieldRef.current?.setValueWithoutUpdate(value);
+    setAuthorValueWithoutUpdate: (value: string, docSpan?: DocTextSpan | null) => {
+      if (docSpan !== undefined) {
+        authorSourceSpanRef.current = docSpan;
+        if (docSpan != null) {
+          aiBaselineAuthorRef.current = null;
+        }
+      }
+      setFormData(prev => {
+        const updatedAuthor: Author = { ...prev.author, name: value };
+        const updated = { ...prev, author: updatedAuthor };
+        if (activeSegmentId) {
+          const current = pendingChangesRef.current.get(activeSegmentId) || prev;
+          pendingChangesRef.current.set(activeSegmentId, { ...current, author: updatedAuthor });
+        }
+        checkDirtyState(updated);
+        return updated;
+      });
     },
     getPendingChanges: () => {
       const changes: PendingChanges[] = [];
@@ -270,7 +401,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
         originalFormDataRef.current = { ...formData };
       }
     },
-  }), [isDirtyState, onSave, activeSegment, formData]);
+  }), [isDirtyState, onSave, activeSegment, formData, activeSegmentId, checkDirtyState]);
 
   function onUpdate(field: 'title' | 'author', value: Title | Author) {
     if (field === 'title') {
@@ -293,26 +424,42 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   }
   async function onReset() {
     resetForm();
+    aiBaselineTitleRef.current = null;
+    aiBaselineAuthorRef.current = null;
     if (activeSegmentId) {
-      const newPayload = {
+      const newPayload: SegmentUpdateRequest = {
         title: '',
         author: '',
         title_bdrc_id: '',
         author_bdrc_id: '',
-        status: 'unchecked'
-      }
+        title_span_start: null,
+        title_span_end: null,
+        updated_title: null,
+        author_span_start: null,
+        author_span_end: null,
+        updated_author: null,
+        status: 'unchecked',
+      };
       await updateSegmentMutation(activeSegmentId, newPayload);
     }
   }
   async function onUnknown() {
+    aiBaselineTitleRef.current = null;
+    aiBaselineAuthorRef.current = null;
     if (activeSegmentId) {
-      const newPayload = {
+      const newPayload: SegmentUpdateRequest = {
         title: '',
         author: '',
         title_bdrc_id: '',
         author_bdrc_id: '',
-        status: 'checked'
-      }
+        title_span_start: null,
+        title_span_end: null,
+        updated_title: null,
+        author_span_start: null,
+        author_span_end: null,
+        updated_author: null,
+        status: 'checked',
+      };
       await updateSegmentMutation(activeSegmentId, newPayload);
     }
   }
@@ -348,15 +495,13 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
         <div className="relative flex flex-col gap-4">
           
           <TitleField
-            ref={titleFieldRef}
             formData={formData}
             onUpdate={onUpdate}
             suppliedTitleChecked={suppliedTitleChecked}
-            onSuppliedTitleChange={setSuppliedTitleChecked}
+            onSuppliedTitleChange={handleSuppliedTitleChange}
             disabled={activeSegment.status === 'checked'}
           />
           <AuthorField
-            ref={authorFieldRef}
             segment={activeSegment}
             formData={formData}
             onUpdate={onUpdate}

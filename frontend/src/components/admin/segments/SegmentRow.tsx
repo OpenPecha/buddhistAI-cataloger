@@ -135,6 +135,12 @@ function SegmentRow({
     span_end: segment.span_end,
     title: segment.title ?? undefined,
     author: segment.author ?? undefined,
+    title_span_start: segment.title_span_start ?? undefined,
+    title_span_end: segment.title_span_end ?? undefined,
+    updated_title: segment.updated_title ?? undefined,
+    author_span_start: segment.author_span_start ?? undefined,
+    author_span_end: segment.author_span_end ?? undefined,
+    updated_author: segment.updated_author ?? undefined,
     title_bdrc_id: segment.title_bdrc_id ?? undefined,
     author_bdrc_id: segment.author_bdrc_id ?? undefined,
     status: segment.status,
@@ -221,7 +227,7 @@ function SegmentRow({
       </TableCell>
     
       <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-        {segment.status === 'checked' ? (
+        {segment.status === 'checked' && (
           <div className="flex gap-2">
             <Button
               size="xs"
@@ -241,15 +247,17 @@ function SegmentRow({
               Reject
             </Button>
           </div>
-        ) : segment.status === 'approved' ? (
+        )} 
+        { segment.status === 'approved' && (
           <Button size="sm" onClick={handleReset} disabled={isSaving} variant="outline">
             Reset
           </Button>
-        ) : segment.status === 'rejected' ? (
+        )} 
+        { segment.status === 'rejected' && (
           <Button size="sm" onClick={handleReset} disabled={isSaving} variant="outline">
             Reset
           </Button>
-        ) : null}
+        )} 
       </TableCell>
     </TableRow>
     

@@ -190,7 +190,13 @@ def get_document(
             OutlinerSegment.span_start,
             OutlinerSegment.span_end,
             OutlinerSegment.title,
+            OutlinerSegment.title_span_start,
+            OutlinerSegment.title_span_end,
+            OutlinerSegment.updated_title,
             OutlinerSegment.author,
+            OutlinerSegment.author_span_start,
+            OutlinerSegment.author_span_end,
+            OutlinerSegment.updated_author,
             OutlinerSegment.title_bdrc_id,
             OutlinerSegment.author_bdrc_id,
             OutlinerSegment.parent_segment_id,
@@ -452,23 +458,14 @@ def get_segment(db: Session, segment_id: str) -> OutlinerSegment:
 def update_segment(
     db: Session,
     segment_id: str,
-    text: Optional[str] = None,
-    title: Optional[str] = None,
-    author: Optional[str] = None,
-    title_bdrc_id: Optional[str] = None,
-    author_bdrc_id: Optional[str] = None,
-    parent_segment_id: Optional[str] = None,
-    is_attached: Optional[bool] = None,
-    status: Optional[str] = None,
-    label: Optional[str] = None,
-    comment: Optional[str] = None,
-    comment_content: Optional[str] = None,
-    comment_username: Optional[str] = None,
-    is_supplied_title: Optional[bool] = None
+    patch: Dict[str, Any],
 ) -> OutlinerSegment:
     """
     PERFORMANCE OPTIMIZED: Update a segment's content or annotations.
-    
+
+    ``patch`` is a partial update (e.g. from Pydantic ``model_dump(exclude_unset=True)``).
+    Keys present in ``patch`` are applied, including explicit nulls to clear nullable fields.
+
     Optimizations:
     1. Single SELECT to get segment (with old annotation status)
     2. Incremental document progress update (no COUNT queries)
@@ -479,59 +476,75 @@ def update_segment(
     segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
     if not segment:
         raise HTTPException(status_code=404, detail="Segment not found")
-    
+
     # Track old annotation status for incremental update
     old_is_annotated = segment.is_annotated
     document_id = segment.document_id  # Store before updates
-    
-    # Update fields if provided
-    if text is not None:
-        segment.text = text
-    if title is not None:
-        segment.title = title
-    if author is not None:
-        segment.author = author
-    if title_bdrc_id is not None:
-        segment.title_bdrc_id = title_bdrc_id
-    if author_bdrc_id is not None:
-        segment.author_bdrc_id = author_bdrc_id
-    if parent_segment_id is not None:
-        segment.parent_segment_id = parent_segment_id
-    if is_attached is not None:
-        segment.is_attached = is_attached
-    if comment is not None:
+
+    if "text" in patch:
+        segment.text = patch["text"]
+    if "title" in patch:
+        segment.title = patch["title"]
+    if "author" in patch:
+        segment.author = patch["author"]
+    if "title_bdrc_id" in patch:
+        segment.title_bdrc_id = patch["title_bdrc_id"]
+    if "author_bdrc_id" in patch:
+        segment.author_bdrc_id = patch["author_bdrc_id"]
+    if "parent_segment_id" in patch:
+        segment.parent_segment_id = patch["parent_segment_id"]
+    if "is_attached" in patch:
+        segment.is_attached = patch["is_attached"]
+    if "comment" in patch:
         # Backward compatibility: if old comment format is used, convert to new format
-        segment.comment = comment
+        segment.comment = patch["comment"]
     # Handle new comment format: append comment with username
-    if comment_content is not None and comment_username is not None:
+    if patch.get("comment_content") is not None and patch.get("comment_username") is not None:
         # Get existing comments using helper function
         existing_comments = get_comments_list(segment)
-        
+
         # Append new comment
         new_comment = {
-            "content": comment_content,
-            "username": comment_username,
+            "content": patch["comment_content"],
+            "username": patch["comment_username"],
             "timestamp": datetime.utcnow().isoformat()
         }
         existing_comments.append(new_comment)
-        
+
         # Store as array directly
         segment.comment = existing_comments
-    if status is not None:
+    if "status" in patch:
+        status = patch["status"]
         is_valid, error_msg = validate_segment_status_transition(segment.status, status)
         if not is_valid:
             raise HTTPException(status_code=422, detail=error_msg)
         segment.status = status
-    if label is not None:
-        try:
-            segment.label = SegmentLabels[label]
-        except KeyError:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Invalid label. Must be one of: {', '.join(s.name for s in SegmentLabels)}"
-            )
-    if is_supplied_title is not None:
-        segment.is_supplied_title = is_supplied_title
+    if "label" in patch:
+        label = patch["label"]
+        if label is not None:
+            try:
+                segment.label = SegmentLabels[label]
+            except KeyError:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Invalid label. Must be one of: {', '.join(s.name for s in SegmentLabels)}"
+                )
+        else:
+            segment.label = None
+    if "is_supplied_title" in patch:
+        segment.is_supplied_title = patch["is_supplied_title"]
+    if "title_span_start" in patch:
+        segment.title_span_start = patch["title_span_start"]
+    if "title_span_end" in patch:
+        segment.title_span_end = patch["title_span_end"]
+    if "updated_title" in patch:
+        segment.updated_title = patch["updated_title"]
+    if "author_span_start" in patch:
+        segment.author_span_start = patch["author_span_start"]
+    if "author_span_end" in patch:
+        segment.author_span_end = patch["author_span_end"]
+    if "updated_author" in patch:
+        segment.updated_author = patch["updated_author"]
 
     # Update annotation status flag
     segment.update_annotation_status()
@@ -574,32 +587,42 @@ def update_segments_bulk(
         
         document_ids.add(segment.document_id)
         
-        if segment_update.get('text') is not None:
+        if 'text' in segment_update:
             segment.text = segment_update['text']
-        if segment_update.get('title') is not None:
+        if 'title' in segment_update:
             segment.title = segment_update['title']
-        if segment_update.get('author') is not None:
+        if 'author' in segment_update:
             segment.author = segment_update['author']
-        if segment_update.get('title_bdrc_id') is not None:
+        if 'title_bdrc_id' in segment_update:
             segment.title_bdrc_id = segment_update['title_bdrc_id']
-        if segment_update.get('author_bdrc_id') is not None:
+        if 'author_bdrc_id' in segment_update:
             segment.author_bdrc_id = segment_update['author_bdrc_id']
-        if segment_update.get('parent_segment_id') is not None:
+        if 'parent_segment_id' in segment_update:
             segment.parent_segment_id = segment_update['parent_segment_id']
-        if segment_update.get('is_attached') is not None:
+        if 'is_attached' in segment_update:
             segment.is_attached = segment_update['is_attached']
-        if segment_update.get('status') is not None:
+        if 'status' in segment_update:
             is_valid, _ = validate_segment_status_transition(segment.status, segment_update['status'])
             if not is_valid:
                 continue
             segment.status = segment_update['status']
-        if segment_update.get('label') is not None:
-            try:
-                segment.label = SegmentLabels[segment_update['label']]
-            except KeyError:
-                pass
-        if segment_update.get('is_supplied_title') is not None:
+        if 'label' in segment_update:
+            lbl = segment_update['label']
+            if lbl is not None:
+                try:
+                    segment.label = SegmentLabels[lbl]
+                except KeyError:
+                    pass
+            else:
+                segment.label = None
+        if 'is_supplied_title' in segment_update:
             segment.is_supplied_title = segment_update['is_supplied_title']
+        for span_key in (
+            'title_span_start', 'title_span_end', 'updated_title',
+            'author_span_start', 'author_span_end', 'updated_author',
+        ):
+            if span_key in segment_update:
+                setattr(segment, span_key, segment_update[span_key])
         segment.update_annotation_status()
         segment.updated_at = datetime.utcnow()
         updated_segments.append(segment)
