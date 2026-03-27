@@ -21,6 +21,8 @@ export interface BdrcSearchResult {
   authors?: BdrcContributor[];
   language?: string | null;
   entityScore?: number | null;
+  origin?: string | null;
+  record_status?: string | null;
   // Person-specific fields
   bdrc_id?: string;
   name?: string;

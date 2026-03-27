@@ -34,6 +34,8 @@ class WorkDetail(BaseModel):
     language: Optional[str] = None
     entityScore: Optional[int] = None
     canonical_id: Optional[str] = None
+    origin: Optional[str] = None
+    record_status: Optional[str] = None
     # OTAPI work fields
     title: Optional[str] = None
     alt_label_bo: List[str] = []
@@ -144,6 +146,8 @@ def _parse_works_response(raw: Any, size: int = 20) -> List[WorkDetail]:
         db_score = item.get("db_score")
         # Build authors as [{id, name}] from author_records (pref_label_bo as name), fallback to author IDs
         author_records = item.get("author_records") or []
+        origin = item.get("origin")
+        record_status = item.get("record_status")
         author_ids = item.get("authors") or []
         canonical_id = item.get("canonical_id") or ""
         authors_out: List[AuthorInfo] = []
@@ -162,6 +166,8 @@ def _parse_works_response(raw: Any, size: int = 20) -> List[WorkDetail]:
             title=title,
             authors=authors_out,
             canonical_id=canonical_id,
+            origin=origin,
+            record_status=record_status,
             language=None,
             entityScore=db_score,
             alt_label_bo=alt_label_bo,

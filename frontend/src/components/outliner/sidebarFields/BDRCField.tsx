@@ -8,6 +8,14 @@ import { Loader2, PersonStandingIcon, Plus, Pencil, X } from 'lucide-react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 import {
   useBdrcSearch,
@@ -24,6 +32,7 @@ import { useAuth0 } from '@auth0/auth0-react'
 import BDRCSeachWrapper from '../BDRCSeachWrapper'
 import { DuplicateModal } from './DuplicateComponent'
 import AuthorsListing from './AuthorsListing'
+import TitlesListing from './TitlesListing'
 
 function bdrcWorkHasAuthor(work: BdrcWorkInfo | null): boolean {
   if (!work?.authors?.length) return false
@@ -37,6 +46,20 @@ function bdrcWorkHasAuthor(work: BdrcWorkInfo | null): boolean {
 }
 
 type AuthorEditRow = { key: number; value: string; searchHint?: string; displayName?: string }
+
+const CAPTCHA_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+
+function generateCaptchaCode(length = 6): string {
+  const buf = new Uint32Array(length)
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(buf)
+  } else {
+    for (let i = 0; i < length; i += 1) {
+      buf[i] = Math.floor(Math.random() * 2 ** 32)
+    }
+  }
+  return Array.from(buf, (n) => CAPTCHA_CHARS[n % CAPTCHA_CHARS.length]).join('')
+}
 
 function buildAuthorEditRows(
   nextKey: () => number,
@@ -95,8 +118,13 @@ function BDRCField({
   const [searchQuery, setSearchQuery] = useState(titleFromProp)
   const [isBdrcFocused, setIsBdrcFocused] = useState(false)
   const [createWorkModalOpen, setCreateWorkModalOpen] = useState(false)
+  const [captchaGateOpen, setCaptchaGateOpen] = useState(false)
+  const [captchaStep, setCaptchaStep] = useState<1 | 2>(1)
+  const [captchaExpected, setCaptchaExpected] = useState('')
+  const [captchaInput, setCaptchaInput] = useState('')
   const [workDetailModalOpen, setWorkDetailModalOpen] = useState(false)
   const bdrcInputRef = useRef<HTMLInputElement>(null)
+  const captchaFieldRef = useRef<HTMLInputElement>(null)
   const authorRowKeyRef = useRef(0)
   const nextAuthorRowKey = () => {
     authorRowKeyRef.current += 1
@@ -126,6 +154,46 @@ function BDRCField({
   const handleCreateWorkSuccess = (work: { workId: string; title?: string }) => {
     handleSelect({ workId: work.workId, title: work.title } as BdrcSearchResult)
     setCreateWorkModalOpen(false)
+  }
+
+  const openCreateWorkCaptcha = () => {
+    setCaptchaStep(1)
+    setCaptchaExpected(generateCaptchaCode())
+    setCaptchaInput('')
+    setCaptchaGateOpen(true)
+  }
+
+  useEffect(() => {
+    if (!captchaGateOpen) return
+    const id = requestAnimationFrame(() => captchaFieldRef.current?.focus())
+    return () => cancelAnimationFrame(id)
+  }, [captchaGateOpen, captchaStep])
+
+  const handleCaptchaGateOpenChange = (open: boolean) => {
+    setCaptchaGateOpen(open)
+    if (!open) {
+      setCaptchaStep(1)
+      setCaptchaInput('')
+      setCaptchaExpected('')
+    }
+  }
+
+  const handleCaptchaContinue = () => {
+    if (captchaInput.trim().toUpperCase() !== captchaExpected) {
+      toast.error('Code does not match. Try again or request a new code.')
+      setCaptchaInput('')
+      setCaptchaExpected(generateCaptchaCode())
+      return
+    }
+    if (captchaStep === 1) {
+      setCaptchaStep(2)
+      setCaptchaExpected(generateCaptchaCode())
+      setCaptchaInput('')
+      toast.success('First code verified. Enter the second code.')
+      return
+    }
+    handleCaptchaGateOpenChange(false)
+    setCreateWorkModalOpen(true)
   }
 
   const handleClearSelection = () => {
@@ -234,7 +302,7 @@ function BDRCField({
           </div>
 
           <Activity mode={!disabled && isBdrcFocused ? 'visible' : 'hidden'}>
-            <div className="flex-col absolute z-900 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+            <div className="flex flex-wrap absolute z-900 w-full  mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
               {titleResults.map((title, index) => (
                 <button
                   key={title.workId || index}
@@ -243,13 +311,23 @@ function BDRCField({
                     e.preventDefault()
                     handleSelect(title)
                   }}
-                  className="w-full px-4 py-2 font-monlam text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
+                  className="w-full cursor-pointer px-4 py-2 font-monlam text-left hover:bg-gray-100 border-b border-gray-100 last:border-b-0"
                 >
-                  <div className="text-sm font-medium text-gray-900">{title.title}</div>
-                  <div className="text-xs text-gray-500 flex items-center gap-1">
-                    <PersonStandingIcon className="w-4 h-4" />
-                    {title.authors?.[0]?.name ?? 'unknown author'} &nbsp;
-                    {title.workId && <span>ID: {title.workId}</span>}
+                  <div className="text-sm font-medium text-gray-900">
+                    <TitlesListing bdrc_data={title} isLink={false} />
+                  </div>
+                  <div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                    <AuthorsListing authors={title.authors ?? []} isLink={false} />
+                    {title.origin && title.origin !== "imported" && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 mr-1">
+                        Origin: {title.origin}
+                      </span>
+                    )}
+                    {title.record_status === "duplicate" && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-800">
+                        Duplicate
+                      </span>
+                    )}
                   </div>
                 </button>
               ))}
@@ -258,7 +336,7 @@ function BDRCField({
                 onMouseDown={(e) => {
                   e.preventDefault()
                   setIsBdrcFocused(false)
-                  setCreateWorkModalOpen(true)
+                  openCreateWorkCaptcha()
                 }}
                 className="w-full px-4 py-2 text-left hover:bg-gray-100 border-t border-gray-200 flex items-center gap-2 text-sm text-primary font-medium"
               >
@@ -284,14 +362,9 @@ function BDRCField({
           {!workLoading && displayInfo && !editingBdrc && (
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
-                <BDRCSeachWrapper bdrcId={displayInfo.workId}>
-                <div className="font-medium text-gray-900">{displayInfo.title || '—'}</div>
-                </BDRCSeachWrapper>
+              <TitlesListing bdrc_data={displayInfo} />
                 <div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                  <PersonStandingIcon className="w-3.5 h-3.5 shrink-0" />
                   <AuthorsListing authors={displayInfo.authors} />
-                  
-                  
                 </div>
               </div>
               {!disabled && (
@@ -452,6 +525,69 @@ function BDRCField({
         </div>
       )}
       <DuplicateModal work={fetchedWork} workLoading={workLoading} workError={workError} isOpen={workDetailModalOpen} onOpenChange={setWorkDetailModalOpen} />
+      <Dialog open={captchaGateOpen} onOpenChange={handleCaptchaGateOpenChange}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm before creating a work</DialogTitle>
+            <DialogDescription>
+              Enter the code below correctly twice (a new code appears after the first). This helps prevent
+              accidental BDRC work creation.
+            </DialogDescription>
+            <p className="text-sm font-medium text-foreground" aria-live="polite">
+              Step {captchaStep} of 2
+            </p>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div
+              className="rounded-md border bg-muted px-4 py-3 text-center font-mono text-2xl font-semibold tracking-[0.35em] text-foreground select-none"
+              aria-hidden
+            >
+              {captchaExpected}
+            </div>
+            <div>
+              <Label htmlFor="bdrc-create-captcha" className="text-xs text-muted-foreground">
+                Type the code
+              </Label>
+              <Input
+                id="bdrc-create-captcha"
+                ref={captchaFieldRef}
+                value={captchaInput}
+                onChange={(e) => setCaptchaInput(e.target.value.toUpperCase())}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    handleCaptchaContinue()
+                  }
+                }}
+                className="mt-1 font-mono uppercase tracking-widest"
+                autoComplete="off"
+                spellCheck={false}
+                maxLength={captchaExpected.length || 6}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="link"
+              className="h-auto p-0 text-sm"
+              onClick={() => {
+                setCaptchaExpected(generateCaptchaCode())
+                setCaptchaInput('')
+                requestAnimationFrame(() => captchaFieldRef.current?.focus())
+              }}
+            >
+              New code
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => handleCaptchaGateOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleCaptchaContinue}>
+              Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <CreateBdrcWorkModal
         open={createWorkModalOpen}
         onOpenChange={setCreateWorkModalOpen}
