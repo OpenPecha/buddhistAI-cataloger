@@ -22,7 +22,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from mangum import Mangum
 
 # Add project root to the Python path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 load_dotenv( override=True)
 
@@ -38,6 +38,9 @@ app = FastAPI(
         {
             "url": "https://api.buddhistai.tools",
             "description": "Production server"
+        },{
+            "url":"https://buddhistai-cataloger.onrender.com",
+            "description":"dev"
         }
     ]
 )
