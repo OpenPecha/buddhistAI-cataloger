@@ -52,6 +52,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
 
   const { documentId: outlinerDocumentId, refetchDocument } = useOutlinerDocument()
 
+  const [isTocAiLoading, setIsTocAiLoading] = useState(false)
   const [isCollapsed, setIsCollapsed] = useState(segments.length === 1 ? false : segment.id !== activeSegmentId)
   const toggleCollapse = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -80,23 +81,28 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
         throw new Error('There can be only one TOC in the document')
       }
 
-      const { is_toc, entries } = await parseTocFromText({
-        content: segment.text,
-        ...(outlinerDocumentId ? { document_id: outlinerDocumentId } : {}),
-      })
+      setIsTocAiLoading(true)
+      try {
+        const { is_toc, entries } = await parseTocFromText({
+          content: segment.text,
+          ...(outlinerDocumentId ? { document_id: outlinerDocumentId } : {}),
+        })
 
-      await refetchDocument()
+        await refetchDocument()
 
-      if (!is_toc) {
-        toast.error('This segment does not look like a table of contents')
-        return
-      }
+        if (!is_toc) {
+          toast.error('This segment does not look like a table of contents')
+          return
+        }
 
-      const textSegmentCount = segments.filter((s) => s.label === 'TEXT').length
-      if (textSegmentCount !== entries.length) {
-        toast.warning(
-          `TEXT segment count (${textSegmentCount}) does not match AI TOC entries (${entries.length})`
-        )
+        const textSegmentCount = segments.filter((s) => s.label === 'TEXT').length
+        if (textSegmentCount !== entries.length) {
+          toast.warning(
+            `TEXT segment count (${textSegmentCount}) does not match AI TOC entries (${entries.length})`
+          )
+        }
+      } finally {
+        setIsTocAiLoading(false)
       }
     },
     [segment.id, segment.text, segments, outlinerDocumentId, refetchDocument]
@@ -163,7 +169,11 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
        
         
         
-       <SegmentLabelSelector segment={segment} validation={validation} />
+       <SegmentLabelSelector
+          segment={segment}
+          validation={validation}
+          isTocAiLoading={isTocAiLoading}
+        />
         
       
         {activeSegmentId === segment.id && index > 0 && (
@@ -319,9 +329,11 @@ const TitleAndAuthor = ({
 const SegmentLabelSelector = ({
   segment,
   validation,
+  isTocAiLoading,
 }: {
   segment: TextSegment
   validation: (value: string) => Promise<void>
+  isTocAiLoading: boolean
 }) => {
   const { documentId, updateSegment: updateSegmentMutation } = useOutlinerDocument()
 
@@ -343,12 +355,13 @@ const SegmentLabelSelector = ({
     },
     [segment.id, documentId, validation, updateSegmentMutation]
   )
-  return (  <div className="segment-label-bar flex items-center gap-2 mb-3 pb-2 border-b border-gray-200">
+  return (
+    <div className="segment-label-bar flex flex-wrap items-center gap-2 mb-3 pb-2 border-b border-gray-200">
     <span className="text-xs font-medium text-gray-500 shrink-0">Label</span>
     <Select
     value={segment.label ?? 'none'}
     onValueChange={handleLabelChange}
-      disabled={!documentId}
+      disabled={!documentId || isTocAiLoading}
     >
       <SelectTrigger className="h-8 text-xs flex-1 max-w-[180px]" id={`segment-label-${segment.id}`}>
         <SelectValue placeholder="No label" />
@@ -362,6 +375,12 @@ const SegmentLabelSelector = ({
         ))}
       </SelectContent>
     </Select>
+    {isTocAiLoading && (
+      <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground" aria-live="polite">
+        <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" aria-hidden />
+        Analyzing TOC…
+      </span>
+    )}
   </div>
   )
 }
