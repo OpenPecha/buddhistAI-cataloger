@@ -29,20 +29,46 @@ function DocumentRow({ document, annotatorName, onSelect, onDelete }: DocumentRo
         </div>
       </TableCell>
       
-      <TableCell className="px-6 py-4 whitespace-nowrap">
-        <span
-          className={`inline-flex px-2 py-1 text-sm font-medium rounded ${
-            statusKey === 'completed'
-              ? 'bg-green-100 text-green-800'
-              : statusKey === 'approved'
-              ? 'bg-blue-100 text-blue-800'
-              : statusKey === 'rejected'
-              ? 'bg-red-100 text-red-800'
-              : 'bg-yellow-100 text-yellow-800'
-          }`}
-        >
-          {STATUS_LABEL[statusKey] || statusKey}
-        </span>
+      <TableCell className="px-6 py-4 whitespace-nowrap align-middle">
+        <div className="flex items-center gap-4">
+          <span
+            className={`inline-flex items-center gap-1 px-2.5 py-1 text-sm font-semibold rounded-full transition-colors
+              ${
+                statusKey === 'completed'
+                  ? 'bg-green-50 text-green-700 border border-green-200'
+                  : statusKey === 'approved'
+                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                  : statusKey === 'rejected'
+                  ? 'bg-red-50 text-red-700 border border-red-200'
+                  : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+              }
+            `}
+            title={STATUS_LABEL[statusKey] || statusKey}
+          >
+            <span className="w-2 h-2 rounded-full mr-2"
+              style={{
+                background:
+                  statusKey === 'completed'
+                    ? '#22c55e'
+                    : statusKey === 'approved'
+                    ? '#3b82f6'
+                    : statusKey === 'rejected'
+                    ? '#ef4444'
+                    : '#facc15',
+                display: 'inline-block'
+              }}
+            ></span>
+            {STATUS_LABEL[statusKey] || statusKey}
+          </span>
+          {typeof document.rejection_count === 'number' && document.rejection_count > 0 && (
+            <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full border border-red-200" title="Rejection Count">
+              <svg className="w-3 h-3 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M8.257 3.099c.366-.756 1.42-.756 1.786 0l7.451 15.396A1 1 0 0 1 16.584 20H3.416a1 1 0 0 1-.91-1.505L8.257 3.1zM11 14a1 1 0 1 0-2 0 1 1 0 0 0 2 0zm-1-5a1 1 0 0 0-.993.883L9 10v2a1 1 0 0 0 1.993.117L11 12v-2a1 1 0 0 0-1-1z" />
+              </svg>
+              {document.rejection_count}
+            </span>
+          )}
+        </div>
       </TableCell>
       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
         {document.annotated_segments}/{document.total_segments}
@@ -54,12 +80,6 @@ function DocumentRow({ document, annotatorName, onSelect, onDelete }: DocumentRo
           className="text-blue-600 hover:text-blue-900 mr-4"
         >
           View Segments
-        </button>
-        <button
-          onClick={() => onDelete(document.id)}
-          className="text-red-600 hover:text-red-900"
-        >
-          Delete
         </button>
       </TableCell>
     </TableRow>

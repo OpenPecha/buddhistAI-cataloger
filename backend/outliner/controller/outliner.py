@@ -153,7 +153,14 @@ def list_documents(
             OutlinerSegment.document_id == doc.id,
             OutlinerSegment.is_annotated == True
         ).scalar() or 0
-        
+
+        rejection_count = (
+            db.query(func.count(SegmentRejection.id))
+            .join(OutlinerSegment, OutlinerSegment.id == SegmentRejection.segment_id)
+            .filter(OutlinerSegment.document_id == doc.id)
+            .scalar()
+        ) or 0
+
         result.append({
             "id": doc.id,
             "filename": doc.filename,
@@ -162,6 +169,7 @@ def list_documents(
             "unchecked_segments": unchecked,
             "total_segments": total,
             "annotated_segments": annotated,
+            "rejection_count": rejection_count,
             "progress_percentage": (annotated / total) * 100 if total > 0 else 0,
             "status": doc.status,
             "created_at": doc.created_at,

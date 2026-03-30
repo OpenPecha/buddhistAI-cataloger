@@ -154,7 +154,7 @@ function DocumentsTab({
                 <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Segments
                 </TableHead>
-               
+              
                 <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </TableHead>
@@ -163,7 +163,7 @@ function DocumentsTab({
             <TableBody className="bg-white divide-y divide-gray-200">
               {documents.length === 0 ? (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={6} className="px-6 py-8 text-center text-sm text-gray-500">
+                  <TableCell colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">
                     {debouncedTitle.trim()
                       ? 'No documents match your search.'
                       : 'No documents found for the selected filters.'}
