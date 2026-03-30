@@ -48,7 +48,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
   const isFirstSegment = index === 0
   const isAttached = isFirstSegment && (segment.is_attached ?? false)
   const isActive = segment.id === activeSegmentId
-
+  const [TOC_segment_max_message,setTOC_segment_max_message] = useState("error")
   const [isCollapsed, setIsCollapsed] = useState(segments.length === 1 ? false : segment.id !== activeSegmentId)
   const toggleCollapse = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -69,7 +69,22 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
   }, [segment.id, activeSegmentId])
   
   
-  
+  function validation(value: string) {
+    if (value === 'TOC') {
+      if (segments.some((s) => s.label === 'TOC')) {
+        toast.error('There can be only one TOC in the document')
+        throw new Error('There can be only one TOC in the document')
+      }
+      
+      //send the value of that segment to AI and extract the TOC as a list
+      //lets say its AI_toc_list
+      const AI_toc_list = []
+      //now we need to see if total segment length keep up with the AI_toc_list
+      if (segment.text.length !== AI_toc_list.length) {
+        toast.error('The total segment length does not match the AI_toc_list length')
+      }
+    }
+  }
 
   return (
     <div className="relative">
@@ -94,7 +109,10 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
           </Button>
         </div>
       )}
-     
+      {
+
+       segment.label === 'TOC' && <div className="text-red-500 text-xs">{TOC_segment_max_message}</div>
+      }
       <div
       id={segment.id}
         data-segment-id={segment.id}
@@ -132,7 +150,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
        
         
         
-       <SegmentLabelSelector segment={segment} />
+       <SegmentLabelSelector segment={segment} validation={validation} />
         
       
         {activeSegmentId === segment.id && index > 0 && (
@@ -285,7 +303,7 @@ const TitleAndAuthor = ({
 }
 
 
-const SegmentLabelSelector = ({ segment }: { segment: TextSegment }) => {
+const SegmentLabelSelector = ({ segment, validation }: { segment: TextSegment, validation: (value: string) => void }) => {
 
   const { documentId, updateSegment: updateSegmentMutation } = useOutlinerDocument()
 
@@ -293,6 +311,10 @@ const SegmentLabelSelector = ({ segment }: { segment: TextSegment }) => {
   const handleLabelChange = useCallback(
     (value: string) => {
       if (!segment.id || !documentId) return
+
+      //check if the label is already there if it TOC, there can be only one TOC in the document
+      validation(value)
+
       const label = value === 'none' || value === '' ? undefined : (value as SegmentLabel)
       updateSegmentMutation(segment.id, { label }).catch((err) => {
         console.error('Failed to update segment label:', err)
