@@ -12,7 +12,11 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from dotenv import load_dotenv
 from outliner.models.outliner import OutlinerDocument, OutlinerSegment
-from cataloger.prompts.ai_prompts import get_title_author_prompt, get_text_boundary_detection_prompt
+from cataloger.prompts.ai_prompts import (
+    get_title_author_prompt,
+    get_text_boundary_detection_prompt,
+    get_toc_parse_prompt,
+)
 from outliner.controller.outliner import get_segment
 from outliner.utils.outliner_utils import incremental_update_document_progress, get_document_with_cache
 
@@ -157,6 +161,51 @@ def generate_title_author(content: str, response_schema: Any) -> Dict[str, Optio
         raise HTTPException(
             status_code=500,
             detail=f"Error generating title and author: {str(e)}"
+        )
+
+
+def parse_toc_from_text(content: str, response_schema: Any) -> Any:
+    """
+    Use Gemini to decide whether text is a TOC and return a list of entry strings.
+    """
+    if not GEMINI_API_KEY:
+        raise HTTPException(
+            status_code=500,
+            detail="GEMINI_API_KEY environment variable is not set",
+        )
+
+    try:
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        prompt = get_toc_parse_prompt(content)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-lite",
+            contents=prompt,
+            config={
+                "response_mime_type": "application/json",
+                "response_schema": response_schema,
+            },
+        )
+
+        if hasattr(response, "parsed") and response.parsed:
+            p = response.parsed
+            if isinstance(p, response_schema):
+                return p
+            if isinstance(p, dict):
+                return response_schema(**p)
+            return response_schema.model_validate(p)
+        if hasattr(response, "text") and response.text:
+            result = json.loads(response.text.strip())
+            return response_schema(**result)
+        raise HTTPException(
+            status_code=500,
+            detail="No response received from the model",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error parsing TOC: {str(e)}",
         )
 
 

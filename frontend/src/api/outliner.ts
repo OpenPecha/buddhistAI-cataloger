@@ -15,6 +15,8 @@ export interface OutlinerDocument {
   progress_percentage: number;
   created_at: string;
   updated_at: string;
+  /** AI-parsed TOC lines stored on the document when a TOC segment is analyzed */
+  ai_toc_entries?: string[] | null;
   segments?: OutlinerSegment[];
 }
 
@@ -607,6 +609,34 @@ export const generateTitleAuthor = async (
   signal?: AbortSignal
 ): Promise<GenerateTitleAuthorResponse> => {
   const response = await fetch(`${API_URL}/ai/generate-title-author`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      accept: 'application/json',
+    },
+    body: JSON.stringify(request),
+    signal,
+  });
+
+  return handleApiResponse(response);
+};
+
+export interface ParseTocRequest {
+  content: string;
+  /** When set, backend persists entries on this outliner document (or clears if not a TOC) */
+  document_id?: string;
+}
+
+export interface ParseTocResponse {
+  is_toc: boolean;
+  entries: string[];
+}
+
+export const parseTocFromText = async (
+  request: ParseTocRequest,
+  signal?: AbortSignal
+): Promise<ParseTocResponse> => {
+  const response = await fetch(`${API_URL}/ai/parse-toc`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

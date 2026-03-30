@@ -8,6 +8,7 @@ import { SplitMenu } from './SplitMenu'
 import { BubbleMenu } from './BubbleMenu'
 import { SEGMENT_LABEL_OPTIONS } from './segment-label'
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument'
+import { parseTocFromText } from '@/api/outliner'
 import { toast } from 'sonner'
 import Emitter from '@/events'
 import {
@@ -48,7 +49,9 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
   const isFirstSegment = index === 0
   const isAttached = isFirstSegment && (segment.is_attached ?? false)
   const isActive = segment.id === activeSegmentId
-  const [TOC_segment_max_message,setTOC_segment_max_message] = useState("error")
+
+  const { documentId: outlinerDocumentId, refetchDocument } = useOutlinerDocument()
+
   const [isCollapsed, setIsCollapsed] = useState(segments.length === 1 ? false : segment.id !== activeSegmentId)
   const toggleCollapse = (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -68,23 +71,36 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
     }
   }, [segment.id, activeSegmentId])
   
-  
-  function validation(value: string) {
-    if (value === 'TOC') {
-      if (segments.some((s) => s.label === 'TOC')) {
+  const validation = useCallback(
+    async (value: string) => {
+      if (value !== 'TOC') return
+
+      if (segments.some((s) => s.label === 'TOC' && s.id !== segment.id)) {
         toast.error('There can be only one TOC in the document')
         throw new Error('There can be only one TOC in the document')
       }
-      
-      //send the value of that segment to AI and extract the TOC as a list
-      //lets say its AI_toc_list
-      const AI_toc_list = []
-      //now we need to see if total segment length keep up with the AI_toc_list
-      if (segment.text.length !== AI_toc_list.length) {
-        toast.error('The total segment length does not match the AI_toc_list length')
+
+      const { is_toc, entries } = await parseTocFromText({
+        content: segment.text,
+        ...(outlinerDocumentId ? { document_id: outlinerDocumentId } : {}),
+      })
+
+      await refetchDocument()
+
+      if (!is_toc) {
+        toast.error('This segment does not look like a table of contents')
+        return
       }
-    }
-  }
+
+      const textSegmentCount = segments.filter((s) => s.label === 'TEXT').length
+      if (textSegmentCount !== entries.length) {
+        toast.warning(
+          `TEXT segment count (${textSegmentCount}) does not match AI TOC entries (${entries.length})`
+        )
+      }
+    },
+    [segment.id, segment.text, segments, outlinerDocumentId, refetchDocument]
+  )
 
   return (
     <div className="relative">
@@ -109,10 +125,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
           </Button>
         </div>
       )}
-      {
-
-       segment.label === 'TOC' && <div className="text-red-500 text-xs">{TOC_segment_max_message}</div>
-      }
+      
       <div
       id={segment.id}
         data-segment-id={segment.id}
@@ -303,17 +316,24 @@ const TitleAndAuthor = ({
 }
 
 
-const SegmentLabelSelector = ({ segment, validation }: { segment: TextSegment, validation: (value: string) => void }) => {
-
+const SegmentLabelSelector = ({
+  segment,
+  validation,
+}: {
+  segment: TextSegment
+  validation: (value: string) => Promise<void>
+}) => {
   const { documentId, updateSegment: updateSegmentMutation } = useOutlinerDocument()
 
-
   const handleLabelChange = useCallback(
-    (value: string) => {
+    async (value: string) => {
       if (!segment.id || !documentId) return
 
-      //check if the label is already there if it TOC, there can be only one TOC in the document
-      validation(value)
+      try {
+        await validation(value)
+      } catch {
+        return
+      }
 
       const label = value === 'none' || value === '' ? undefined : (value as SegmentLabel)
       updateSegmentMutation(segment.id, { label }).catch((err) => {
@@ -321,7 +341,7 @@ const SegmentLabelSelector = ({ segment, validation }: { segment: TextSegment, v
         toast.error(err instanceof Error ? err.message : 'Failed to update label')
       })
     },
-    [segment.id, documentId, updateSegmentMutation]
+    [segment.id, documentId, validation, updateSegmentMutation]
   )
   return (  <div className="segment-label-bar flex items-center gap-2 mb-3 pb-2 border-b border-gray-200">
     <span className="text-xs font-medium text-gray-500 shrink-0">Label</span>

@@ -43,7 +43,7 @@ class OutlinerDocument(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     status: Mapped[str|None] = mapped_column(String, default="active",nullable=True) #  active ,completed, deleted ,approved ,rejected
-    
+    ai_toc_entries: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     segments: Mapped[list["OutlinerSegment"]] = relationship(
         "OutlinerSegment",
         back_populates="document",

@@ -89,3 +89,23 @@ If the entire content is a single coherent text, return:
 {{
   "starting_positions": [0]
 }}"""
+
+
+def get_toc_parse_prompt(text: str) -> str:
+    """
+    Prompt: decide if the passage is a table of contents and list entries if so.
+    """
+    return f"""Task: Check if the text is a TOC; if yes, return the list of TOC entries from it.
+
+Then apply this more precisely: decide if the following text is a table of contents (TOC)—a structured list of titles,
+sections, chapters, folio references, or similar navigational lines typical of a TOC.
+
+If it IS a TOC, set is_toc to true and return entries as a list of strings — one string per TOC line or item
+(preserve each entry's wording; trim only outer whitespace on each line).
+
+If it is NOT a TOC (e.g. ordinary prose, a single title only, or unrelated content), set is_toc to false
+and return an empty entries array.
+
+Text:
+{text}
+"""

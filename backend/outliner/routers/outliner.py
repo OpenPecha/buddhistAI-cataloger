@@ -167,6 +167,7 @@ class DocumentResponse(BaseModel):
     created_at: datetime
     is_supplied_title: Optional[bool] = None
     updated_at: datetime
+    ai_toc_entries: Optional[List[str]] = None
     segments: List[SegmentResponseDocument] = []
 
     class Config:
@@ -359,6 +360,7 @@ async def get_document(
             created_at=document.created_at,
             updated_at=document.updated_at,
             is_supplied_title=getattr(document, 'is_supplied_title', None),
+            ai_toc_entries=getattr(document, 'ai_toc_entries', None),
             segments=segments_resp,
         )
     return DocumentResponse(
@@ -370,6 +372,7 @@ async def get_document(
         created_at=document.created_at,
         updated_at=document.updated_at,
         is_supplied_title=getattr(document, 'is_supplied_title', None),
+        ai_toc_entries=getattr(document, 'ai_toc_entries', None),
         segments=[],
     )
 
