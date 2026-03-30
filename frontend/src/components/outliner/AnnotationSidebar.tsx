@@ -474,15 +474,12 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   const isMetadataDisabled = !activeSegment || !hasLabelledSegment;
   const showBdrcMatch = activeSegment?.label === 'TEXT';
 
-  const aiTocEntries =
-    activeSegment?.label === 'TOC' && document?.ai_toc_entries?.length
-      ? document.ai_toc_entries
-      : undefined;
+  const aiTocEntries =document?.ai_toc_entries ?? []
   const showAiTocPanel = Boolean(aiTocEntries && aiTocEntries.length > 0);
 
   const metadataContent = activeSegment ? (
     <div className="px-2 py-3 flex flex-col flex-1 min-h-0 h-full">
-      <div className="overflow-y-auto min-h-0 flex-1 space-y-6">
+      <div className="overflow-y-auto h-min space-y-6">
         <div>
           <div className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-md ">
             <div className="font-medium mb-1">Text:</div>
@@ -580,7 +577,11 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
               AI table of contents
             </div>
             <p className="text-[11px] text-slate-500 mt-0.5 normal-case font-normal tracking-normal">
-              {aiTocEntries.length} {aiTocEntries.length === 1 ? 'entry' : 'entries'} extracted
+              {segments && aiTocEntries.length !== segments.filter((s) => s.label === 'TEXT').length && (
+                <span className="block text-xs mt-1">
+                  number of TEXT segments <span className="text-red-500">{segments?.filter((s) => s.label === 'TEXT').length}</span>  and TOC mismatch! Please fix it.
+                </span>
+              )}
             </p>
           </div>
           <ul

@@ -105,7 +105,10 @@ If it IS a TOC, set is_toc to true and return entries as a list of strings — o
 
 If it is NOT a TOC (e.g. ordinary prose, a single title only, or unrelated content), set is_toc to false
 and return an empty entries array.
-
+rule: 
+1.check the content dont return number and non relevant text. 
+2.check the title of each entry is not a number and not a non relevant text and has proper title sense.
 Text:
 {text}
+
 """
