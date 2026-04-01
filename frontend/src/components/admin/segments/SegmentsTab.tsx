@@ -164,7 +164,7 @@ function SegmentsTab({
                 <option value="approved">Approved ({statusCounts.approved})</option>
                 <option value="rejected">Rejected ({statusCounts.rejected})</option>
               </select>
-              <div>
+              <div className='flex items-center gap-2'>
            
               {
                selectedDocument.status==='skipped' && <Button variant='outline' onClick={handleUndoSkipped} disabled={isUndoingSkipped || !documentId}>
