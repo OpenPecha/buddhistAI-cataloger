@@ -7,7 +7,7 @@ import { useOutlinerDocument } from '@/hooks/useOutlinerDocument'
 import type { TextSegment } from './types'
 
 export const Workspace: React.FC = () => {
-  const { activeSegmentId, segments, aiTextEndingLoading } = useDocument()
+  const {  segments, aiTextEndingLoading } = useDocument()
   const { onTextSelection } = useSelection()
   const {
     onAIDetectTextEndings,
@@ -15,7 +15,7 @@ export const Workspace: React.FC = () => {
     onUndoTextEndingDetection,
     onResetSegments,
   } = useActions()
-  const { isLoading: isLoadingDocument,isRefetching } = useOutlinerDocument()
+  const { isLoading: isLoadingDocument } = useOutlinerDocument()
   const containerRef = useRef<HTMLDivElement>(null);
   const parentContainerRef = useRef<HTMLDivElement>(null);
 
@@ -30,6 +30,7 @@ export const Workspace: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
+      <ImageWrapper/>
       <div ref={parentContainerRef} className="flex-1 flex flex-col overflow-hidden">
         {/* Workspace Header */}
         <WorkspaceHeader
@@ -94,6 +95,7 @@ export const Workspace: React.FC = () => {
 
 
 import { type RowComponentProps } from 'react-window'
+import ImageWrapper from './ImageWrapper'
 
 function RowComponent({
   index,
