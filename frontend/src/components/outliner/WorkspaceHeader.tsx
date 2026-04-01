@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, Sparkles, Square, EllipsisVertical, Undo } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { updateDocumentStatus } from '@/api/outliner';
 
 interface WorkspaceHeaderConfig {
   segmentsCount: number;
@@ -15,6 +18,7 @@ interface WorkspaceHeaderActions {
   onAITextEndingStop: () => void;
   onUndoTextEndingDetection: () => void;
   onResetSegments?: () => void;
+  onSKIP?: () => void;
 }
 
 interface WorkspaceHeaderProps {
@@ -28,11 +32,38 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
 }) => {
   const { segmentsCount, aiTextEndingLoading, hasPreviousSegments, checkedSegmentsCount, rejectedSegmentsCount } = headerConfig;
   const checked_percentage = segmentsCount > 0 ? (checkedSegmentsCount / segmentsCount) * 100 : 0;
-  const { onAIDetectTextEndings, onAITextEndingStop, onUndoTextEndingDetection, onResetSegments } = actions;
+  const { onAIDetectTextEndings, onAITextEndingStop, onUndoTextEndingDetection, onResetSegments ,onSKIP } = actions;
   const [isAllExpanded, setIsAllExpanded] = useState(false);
 
-  const { isLoading,isRefetching,isSaving,isResetting } = useOutlinerDocument();
+  const queryClient = useQueryClient();
+  const { documentId, document, isLoading, isRefetching, isSaving, isResetting } = useOutlinerDocument();
   const isLoadingOrSaving = isLoading || isRefetching || isSaving || isResetting;
+  const documentStatus= document?.status;
+  const skipMutation = useMutation({
+    mutationFn: async () => {
+      if (!documentId) throw new Error('No document loaded');
+      return updateDocumentStatus(documentId, 'skipped');
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['outliner-document', documentId] }),
+        queryClient.invalidateQueries({ queryKey: ['outliner-documents'] }),
+      ]);
+      toast.success('Document marked as skipped');
+      onSKIP?.();
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to skip document: ${error.message}`);
+    },
+  });
+
+  const handleSkip = useCallback(() => {
+    if (skipMutation.isPending) return;
+    skipMutation.mutate();
+  }, [skipMutation]);
+
+
+
   return (
     <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
       <div>
@@ -105,6 +136,13 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
             }
           />
         )}
+        <Button
+          variant="outline"
+          onClick={handleSkip}
+          disabled={isLoadingOrSaving || skipMutation.isPending || !documentId || documentStatus==='skipped'}
+        >
+          {documentStatus==='skipped'?"skipped": skipMutation.isPending ? 'Skipping...' : 'SKIP'}
+        </Button>
       </div>
     </div>
   );
@@ -118,7 +156,15 @@ import SubmitToReview from './SubmitToReview';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
 
 
-function Menu({ onResetSegments, isAllExpanded, setIsAllExpanded }: {readonly onResetSegments: () => void; readonly isAllExpanded: boolean; readonly setIsAllExpanded: (v: boolean) => void }) {
+function Menu({
+  onResetSegments,
+  isAllExpanded,
+  setIsAllExpanded,
+}: {
+  readonly onResetSegments?: () => void;
+  readonly isAllExpanded: boolean;
+  readonly setIsAllExpanded: (v: boolean) => void;
+}) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -127,13 +173,15 @@ function Menu({ onResetSegments, isAllExpanded, setIsAllExpanded }: {readonly on
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem
-          onClick={onResetSegments}
-          className="text-red-600 hover:bg-red-50"
-        >
-          <Undo/>
-          Reset All Segments
-        </DropdownMenuItem>
+        {onResetSegments && (
+          <DropdownMenuItem
+            onClick={onResetSegments}
+            className="text-red-600 hover:bg-red-50"
+          >
+            <Undo />
+            Reset All Segments
+          </DropdownMenuItem>
+        )}
       
         <ExpandAllButton isAllExpanded={isAllExpanded} setIsAllExpanded={setIsAllExpanded}/>
       </DropdownMenuContent>

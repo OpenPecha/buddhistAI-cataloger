@@ -1,10 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
-import { OutlinerFileUploadZone } from '@/components/outliner/OutlinerFileUploadZone';
-import { listOutlinerDocuments, updateDocumentStatus, assignVolume, type OutlineDocumentStatus, type OutlinerDocumentListItem } from '@/api/outliner';
+import { listOutlinerDocuments, assignVolume, type OutlinerDocumentListItem } from '@/api/outliner';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -20,25 +18,6 @@ import { Input } from '@/components/ui/input';
 import { useUser } from '@/hooks/useUser';
 import { Progress } from '@/components/ui/progress';
 import { formatDistanceToNow } from 'date-fns';
-
-// Simple modal implementation
-function Modal({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
-  if (!open) return null;
-  return (
-    <div className="fixed z-50 inset-0 flex items-center justify-center backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-[90vw] max-w-2xl p-0 relative animate-scale-in">
-        <button
-          onClick={onClose}
-          className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 transition-colors"
-          aria-label="Close"
-        >
-          <span className="text-2xl">&times;</span>
-        </button>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 const OutlinerUpload: React.FC = () => {
   const {user}= useUser();
@@ -130,6 +109,9 @@ const OutlinerUpload: React.FC = () => {
   const handleDocumentClick = (documentId: string) => {
     navigate(`/outliner/${documentId}`);
   };
+  const assingDisabled= 
+  assignWorkMutation.isPending ||
+  !userId || !documents.every(doc=>doc.status==='skipped' || doc.status==='completed')
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
@@ -153,7 +135,7 @@ const OutlinerUpload: React.FC = () => {
        
                 <Button 
               onClick={assignWork}
-              disabled={assignWorkMutation.isPending || !userId || documents.some(doc => doc.status === 'active' && doc.checked_segments < doc.total_segments)}
+              disabled={assingDisabled}
             >
               {assignWorkMutation.isPending ? 'Assigning...' : 'Assign me a work'}
             </Button>

@@ -280,7 +280,7 @@ def update_document_status(
     to ensure only the document owner can restore it.
     """
     # Validate status value
-    valid_statuses = ['active', 'completed', 'deleted', 'approved', 'rejected']
+    valid_statuses = ['active', 'completed', 'deleted', 'approved', 'rejected','skipped']
     if status not in valid_statuses:
         raise HTTPException(
             status_code=400,
@@ -1460,6 +1460,7 @@ async def assign_volume(db: Session, user_id: str) -> OutlinerDocument:
         raise HTTPException(status_code=400, detail="Text or user_id is required")
     # check if the document already exists
     volume_id = volume_data["id"]
+    
     document = None
     try: 
         document =get_document_by_filename(db, volume_id)
