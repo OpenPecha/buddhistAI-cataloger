@@ -5,8 +5,9 @@ import SegmentRow from './SegmentRow';
 import { Button } from '@/components/ui/button';
 import { useParams } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { updateDocumentStatus } from '@/api/outliner';
 
 type SegmentStatusFilter = 'all' | 'unchecked' | 'checked' | 'approved' | 'rejected';
 
@@ -26,7 +27,6 @@ function SegmentsTab({
   onToggleExpansion,
 }: SegmentsTabProps) {
   const [isApproving, setIsApproving] = useState(false);
-  const [isUndoingSkipped, setIsUndoingSkipped] = useState(false);
   const [statusFilter, setStatusFilter] = useState<SegmentStatusFilter>('all');
   const { documentId } = useParams<{ documentId: string }>();
   const { getAccessTokenSilently } = useAuth0();
@@ -85,41 +85,22 @@ function SegmentsTab({
     }
   };
 
-  const handleUndoSkipped = async () => {
-    if (!documentId) {
-      toast.error('Document ID is required');
-      return;
-    }
-
-    setIsUndoingSkipped(true);
-    try {
-      const token = await getAccessTokenSilently();
-      const response = await fetch(`/api/outliner/documents/${documentId}/status`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: 'active' }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || errorData.message || 'Failed to update document status');
-      }
-
-      await response.json().catch(() => null);
+  const undoSkippedMutation = useMutation({
+    mutationFn: async () => {
+      if (!documentId) throw new Error('Document ID is required');
+      return updateDocumentStatus(documentId, 'active');
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] }),
+        queryClient.invalidateQueries({ queryKey: ['outliner-admin-documents'] }),
+      ]);
       toast.success('Document restored to active');
-
-      queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] });
-      queryClient.invalidateQueries({ queryKey: ['outliner-admin-documents'] });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update document status';
-      toast.error(errorMessage);
-    } finally {
-      setIsUndoingSkipped(false);
-    }
-  };
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update document status');
+    },
+  });
 
   return (
     <div className="flex min-h-0 flex-1 flex-col w-full min-w-0">
@@ -167,8 +148,8 @@ function SegmentsTab({
               <div className='flex items-center gap-2'>
            
               {
-               selectedDocument.status==='skipped' && <Button variant='outline' onClick={handleUndoSkipped} disabled={isUndoingSkipped || !documentId}>
-                {isUndoingSkipped ? 'Restoring...' : 'Undo skipped'}
+               selectedDocument.status==='skipped' && <Button variant='outline' onClick={() => undoSkippedMutation.mutate()} disabled={undoSkippedMutation.isPending || !documentId}>
+                {undoSkippedMutation.isPending ? 'Restoring...' : 'Undo skipped'}
               </Button>
 }
               <Button
