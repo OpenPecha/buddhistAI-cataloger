@@ -48,6 +48,7 @@ async def get_http_client() -> httpx.AsyncClient:
 
 async def get_volumes(
     status: str = "new",
+    batch_id:str = "",
     offset: int = 0,
     limit: int = 50
 ) -> Dict[str, Any]:
@@ -63,12 +64,15 @@ async def get_volumes(
         Dictionary containing total, offset, limit, and items list
     """
     url = f"{BDRC_BACKEND_URL}/volumes"
-    
+     
     params = {
         "status": status,
         "offset": offset,
-        "limit": limit
+        "limit": limit,
+        "batch_id":batch_id
     }
+    if batch_id=="":
+        del params['batch_id']
     
     headers = {
         "accept": APPLICATION_JSON

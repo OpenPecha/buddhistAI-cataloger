@@ -3,9 +3,10 @@
 
 from bdrc.volume import STATUS, get_volume, get_volumes, update_volume_status
 
+BATCH_ID="1"
 
 async def get_new_volume():
-    volume = await get_volumes(status="active",limit=1)
+    volume = await get_volumes(status="active",limit=1,batch_id=BATCH_ID)
     # merge the volume text and load in database
     if len(volume["items"]) == 0:
         return None
