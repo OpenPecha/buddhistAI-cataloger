@@ -2,8 +2,10 @@
 
 
 from bdrc.volume import STATUS, get_volume, get_volumes, update_volume_status
-
-BATCH_ID="1"
+from dotenv import load_dotenv
+import os
+load_dotenv(override=True)
+BATCH_ID=os.getenv("OUTLINER_BATCH_ID") or "1"
 
 async def get_new_volume():
     volume = await get_volumes(status="active",limit=1,batch_id=BATCH_ID)
