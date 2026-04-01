@@ -58,8 +58,10 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
   });
 
   const handleSkip = useCallback(() => {
-    if (skipMutation.isPending) return;
-    skipMutation.mutate();
+    const isConfirm=confirm("are you sure")
+      if (skipMutation.isPending||!isConfirm) return;
+      skipMutation.mutate();
+    
   }, [skipMutation]);
 
 

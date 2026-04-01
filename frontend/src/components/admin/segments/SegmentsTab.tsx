@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { TableHeader, TableRow, TableHead, TableBody } from '@/components/ui/table';
 import type { Document, Segment } from '../shared/types';
 import SegmentRow from './SegmentRow';
-import SegmentSidebar from './SegmentSidebar';
 import { Button } from '@/components/ui/button';
 import { useParams } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -27,6 +26,7 @@ function SegmentsTab({
   onToggleExpansion,
 }: SegmentsTabProps) {
   const [isApproving, setIsApproving] = useState(false);
+  const [isUndoingSkipped, setIsUndoingSkipped] = useState(false);
   const [statusFilter, setStatusFilter] = useState<SegmentStatusFilter>('all');
   const { documentId } = useParams<{ documentId: string }>();
   const { getAccessTokenSilently } = useAuth0();
@@ -85,6 +85,42 @@ function SegmentsTab({
     }
   };
 
+  const handleUndoSkipped = async () => {
+    if (!documentId) {
+      toast.error('Document ID is required');
+      return;
+    }
+
+    setIsUndoingSkipped(true);
+    try {
+      const token = await getAccessTokenSilently();
+      const response = await fetch(`/api/outliner/documents/${documentId}/status`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: 'active' }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || errorData.message || 'Failed to update document status');
+      }
+
+      await response.json().catch(() => null);
+      toast.success('Document restored to active');
+
+      queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] });
+      queryClient.invalidateQueries({ queryKey: ['outliner-admin-documents'] });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update document status';
+      toast.error(errorMessage);
+    } finally {
+      setIsUndoingSkipped(false);
+    }
+  };
+
   return (
     <div className="flex min-h-0 flex-1 flex-col w-full min-w-0">
       {loadingSegments && (
@@ -128,15 +164,23 @@ function SegmentsTab({
                 <option value="approved">Approved ({statusCounts.approved})</option>
                 <option value="rejected">Rejected ({statusCounts.rejected})</option>
               </select>
+              <div>
+           
+              {
+               selectedDocument.status==='skipped' && <Button variant='outline' onClick={handleUndoSkipped} disabled={isUndoingSkipped || !documentId}>
+                {isUndoingSkipped ? 'Restoring...' : 'Undo skipped'}
+              </Button>
+}
               <Button
                 size="sm"
                 onClick={handleApproveAll}
                 disabled={isApproving || !documentId || statusCounts.approved < segments.length}
                 className="cursor-pointer shrink-0"
                 title={statusCounts.approved < segments.length ? `${segments.length - statusCounts.approved} segment(s) are not yet approved` : 'Approve document'}
-              >
+                >
                 {isApproving ? 'Approving...' : 'Submit'}
               </Button>
+                </div>
             </div>
           </header>
           <div className="relative min-h-0 flex-1 overflow-auto [scrollbar-gutter:stable] rounded-md border border-gray-200 bg-white">
