@@ -728,7 +728,8 @@ def split_segment(
         span_start=new_first_span_end,
         span_end=old_span_end,
         title=None,
-        author=None,
+        author=None,        
+        label=SegmentLabels.TEXT,
         parent_segment_id=segment.parent_segment_id,
         status=segment.status or 'unchecked'
     )
