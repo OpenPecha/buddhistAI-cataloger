@@ -259,11 +259,27 @@ const OutlinerWorkspace: React.FC = () => {
           adjustedY = viewportHeight - padding - menuHeight - segmentRect.top;
         }
 
+        const contentEl = targetSegmentElement.querySelector(
+          '.segment-text-content'
+        ) as HTMLDivElement | null
+        let selectionStartOffset = 0
+        if (
+          contentEl &&
+          range &&
+          contentEl.contains(range.commonAncestorContainer)
+        ) {
+          const preRange = range.cloneRange()
+          preRange.selectNodeContents(contentEl)
+          preRange.setEnd(range.startContainer, range.startOffset)
+          selectionStartOffset = preRange.toString().length
+        }
+
         setBubbleMenuState({
           segmentId: targetSegmentId,
           position: { x: adjustedX, y: adjustedY },
           selectedText: selectedText,
           selectionRange: range.cloneRange(),
+          selectionStartOffset,
         });
         setCursorPosition(null); // Hide split menu
       }

@@ -53,6 +53,8 @@ export interface BubbleMenuState {
   position: { x: number; y: number }
   selectedText: string
   selectionRange?: Range
+  /** Start offset within segment plain text (matches cursor/split indexing; for BDRC page sync) */
+  selectionStartOffset?: number
 }
 
 export interface CursorPosition {
