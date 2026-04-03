@@ -66,10 +66,7 @@ export const AuthorField = ({
   /** Name of the BDRC result when user selected it (for match % display). */
   const [selectedAuthorName, setSelectedAuthorName] = useState<string | null>(null);
 
-  const handleAuthorChange = (bdrc_id: string, name?: string) => {
-    onUpdate('author', { name: authorSearch, bdrc_id });
-    setSelectedAuthorName(bdrc_id === BDRC_AUTHOR_DIFFICULT_TO_IDENTIFY ? null : (name ?? null));
-  };
+ 
 
   useEffect(() => {
     setSelectedAuthorName(null);

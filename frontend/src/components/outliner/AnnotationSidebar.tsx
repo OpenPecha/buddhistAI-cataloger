@@ -252,7 +252,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
 
     const updatePayload: SegmentUpdateRequest = { status: 'checked' };
 
-    if (titleName) {
+    if (titleName || titleName==='') {
       updatePayload.title = titleName;
       if (formData.title?.bdrc_id) {
         updatePayload.title_bdrc_id = formData.title.bdrc_id;
@@ -278,7 +278,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       }
     }
 
-    if (authorName) {
+    if (authorName || authorName==='') {
       updatePayload.author = authorName;
       if (formData.author?.bdrc_id) {
         updatePayload.author_bdrc_id = formData.author.bdrc_id;
