@@ -480,7 +480,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   const metadataContent = activeSegment ? (
     <div className="px-2 py-3 flex flex-col flex-1 min-h-0 h-full">
       <div className="overflow-y-auto h-min space-y-6">
-        <div>
+        <div className="relative">
           <div className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-md ">
             <div className="font-medium mb-1">Text:</div>
             <div className="text-gray-800">{activeSegment.text.slice(0, 100)}...</div>
