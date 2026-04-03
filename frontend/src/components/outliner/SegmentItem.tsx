@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Loader2, ChevronDown, ChevronRight, Merge } from 'lucide-react'
 import type { TextSegment, SegmentLabel } from './types'
@@ -10,7 +10,6 @@ import { SEGMENT_LABEL_OPTIONS } from './segment-label'
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument'
 import { parseTocFromText } from '@/api/outliner'
 import { toast } from 'sonner'
-import Emitter from '@/events'
 import {
   Select,
   SelectContent,
@@ -42,6 +41,8 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
     onKeyDown,
     onAttachParent,
     onMergeWithPrevious,
+    expandedSegmentIds,
+    toggleSegmentExpanded,
   } = useActions()
 
   const isChecked = segment.status === 'checked' || segment.status === 'approved'
@@ -53,24 +54,13 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
   const { documentId: outlinerDocumentId, refetchDocument } = useOutlinerDocument()
 
   const [isTocAiLoading, setIsTocAiLoading] = useState(false)
-  const [isCollapsed, setIsCollapsed] = useState(segments.length === 1 ? false : segment.id !== activeSegmentId)
+  const isExpanded =
+    segments.length === 1 || expandedSegmentIds.includes(segment.id)
+  const isCollapsed = !isExpanded
   const toggleCollapse = (e: React.MouseEvent) => {
     e.stopPropagation()
-    setIsCollapsed(!isCollapsed)
+    toggleSegmentExpanded(segment.id)
   }
-
-  useEffect(() => {
-    const handleSegmentsExpand = (expand: boolean) => {
-      if (segment.id !== activeSegmentId) {
-        setIsCollapsed(expand)
-      }
-    }
-
-    Emitter.on('segments:expand', handleSegmentsExpand)
-    return () => {
-      Emitter.off('segments:expand', handleSegmentsExpand)
-    }
-  }, [segment.id, activeSegmentId])
   
   const validation = useCallback(
     async (value: string) => {
@@ -146,6 +136,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
             !(e.target as HTMLElement).closest('.collapse-button')
           ) {
             onSegmentClick(segment.id, e)
+            if (!isExpanded) toggleSegmentExpanded(segment.id)
           }
         }}
         onKeyDown={(e) => {

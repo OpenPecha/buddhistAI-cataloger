@@ -38,7 +38,6 @@ const OutlinerWorkspace: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   // Get activeSegmentId from URL
   const activeSegmentId = searchParams.get('segmentId');
-  
   // Backend integration hook
   const {
     documentId,
@@ -61,8 +60,65 @@ const OutlinerWorkspace: React.FC = () => {
     () => backendSegments.map(outlinerSegmentToTextSegment),
     [backendSegments]
   )
-  
-  
+
+  const segmentIdsKey = useMemo(
+    () => currentSegments.map((s) => s.id).join('\0'),
+    [currentSegments]
+  );
+  const [expandedSegmentIds, setExpandedSegmentIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const idSet = new Set(currentSegments.map((s) => s.id));
+    setExpandedSegmentIds((prev) => prev.filter((id) => idSet.has(id)));
+  }, [segmentIdsKey, currentSegments]);
+
+  useEffect(() => {
+    if (!activeSegmentId) return;
+    setExpandedSegmentIds((prev) => {
+      if (prev.includes(activeSegmentId)) return prev;
+      return [...prev, activeSegmentId];
+    });
+  }, [activeSegmentId]);
+
+  const toggleSegmentExpanded = useCallback(
+    (segmentId: string) => {
+      if (currentSegments.length === 1) return;
+      setExpandedSegmentIds((prev) =>
+        prev.includes(segmentId)
+          ? prev.filter((id) => id !== segmentId)
+          : [...prev, segmentId]
+      );
+    },
+    [currentSegments.length]
+  );
+
+  const expandAllSegments = useCallback(() => {
+    setExpandedSegmentIds(currentSegments.map((s) => s.id));
+  }, [currentSegments]);
+
+  const collapseAllSegments = useCallback(() => {
+    if (activeSegmentId && currentSegments.some((s) => s.id === activeSegmentId)) {
+      setExpandedSegmentIds([activeSegmentId]);
+    } else {
+      setExpandedSegmentIds([]);
+    }
+  }, [activeSegmentId, currentSegments]);
+
+  const isAllSegmentsExpanded = useMemo(() => {
+    if (currentSegments.length === 0) return false;
+    if (currentSegments.length === 1) return true;
+    const expanded = new Set(expandedSegmentIds);
+    return currentSegments.every((s) => expanded.has(s.id));
+  }, [currentSegments, expandedSegmentIds]);
+
+  const toggleExpandAllSegments = useCallback(() => {
+    if (isAllSegmentsExpanded) {
+      collapseAllSegments();
+    } else {
+      expandAllSegments();
+    }
+  }, [isAllSegmentsExpanded, collapseAllSegments, expandAllSegments]);
+
   // Set initial activeSegmentId from URL or first segment
   useEffect(() => {
     if (currentSegments.length > 0 && !activeSegmentId) {
@@ -810,6 +866,10 @@ const OutlinerWorkspace: React.FC = () => {
         >
           <ActionsProvider
             value={{
+              expandedSegmentIds,
+              toggleSegmentExpanded,
+              isAllSegmentsExpanded,
+              toggleExpandAllSegments,
               onFileUpload: () => {},
               onFileUploadToBackend: undefined,
               onSegmentClick: handleSegmentClick,
@@ -822,6 +882,7 @@ const OutlinerWorkspace: React.FC = () => {
               onAIDetectTextEndings: handleAIDetectTextEndings,
               onAITextEndingStop: handleAITextEndingStop,
               onUndoTextEndingDetection: handleUndoTextEndingDetection,
+              onLoadNewFile: () => {},
               onSegmentStatusUpdate: handleSegmentStatusUpdate,
               onResetSegments: resetSegmentsBackend,
             }}

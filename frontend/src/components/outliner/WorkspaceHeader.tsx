@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, Sparkles, Square, EllipsisVertical, Undo } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -33,7 +33,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
   const { segmentsCount, aiTextEndingLoading, hasPreviousSegments, checkedSegmentsCount, rejectedSegmentsCount } = headerConfig;
   const checked_percentage = segmentsCount > 0 ? (checkedSegmentsCount / segmentsCount) * 100 : 0;
   const { onAIDetectTextEndings, onAITextEndingStop, onUndoTextEndingDetection, onResetSegments ,onSKIP } = actions;
-  const [isAllExpanded, setIsAllExpanded] = useState(false);
+  const { isAllSegmentsExpanded, toggleExpandAllSegments } = useActions();
 
   const queryClient = useQueryClient();
   const { documentId, document, isLoading, isRefetching, isSaving, isResetting } = useOutlinerDocument();
@@ -125,7 +125,13 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
           </Button>
         )}
 
-         {segmentsCount > 0 && <Menu onResetSegments={onResetSegments} isAllExpanded={isAllExpanded} setIsAllExpanded={setIsAllExpanded}/>}
+         {segmentsCount > 0 && (
+          <Menu
+            onResetSegments={onResetSegments}
+            isAllExpanded={isAllSegmentsExpanded}
+            onToggleExpandAll={toggleExpandAllSegments}
+          />
+        )}
          {segmentsCount > 0 && (
           <SubmitToReview
             disabled={checked_percentage < 100 || rejectedSegmentsCount > 0}
@@ -156,16 +162,17 @@ import ExpandAllButton from './ExpandAllButton';
 import { Progress } from '../ui/progress';
 import SubmitToReview from './SubmitToReview';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
+import { useActions } from './contexts';
 
 
 function Menu({
   onResetSegments,
   isAllExpanded,
-  setIsAllExpanded,
+  onToggleExpandAll,
 }: {
   readonly onResetSegments?: () => void;
   readonly isAllExpanded: boolean;
-  readonly setIsAllExpanded: (v: boolean) => void;
+  readonly onToggleExpandAll: () => void;
 }) {
   return (
     <DropdownMenu>
@@ -185,7 +192,7 @@ function Menu({
           </DropdownMenuItem>
         )}
       
-        <ExpandAllButton isAllExpanded={isAllExpanded} setIsAllExpanded={setIsAllExpanded}/>
+        <ExpandAllButton isAllExpanded={isAllExpanded} onToggleExpandAll={onToggleExpandAll}/>
       </DropdownMenuContent>
     </DropdownMenu>
   );

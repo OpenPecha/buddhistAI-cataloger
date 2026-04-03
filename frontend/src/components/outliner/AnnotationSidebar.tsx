@@ -495,7 +495,9 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
            />)}
         </div>
        
-        <div className="relative flex flex-col gap-4">
+        {
+         activeSegment.label!=='TOC' &&
+          <div className="relative flex flex-col gap-4">
           
           <TitleField
             formData={formData}
@@ -525,12 +527,14 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
             />
           )} */}
         </div>
+        }
+
       </div>
 
       <div className="shrink-0 flex gap-2 bg-white pt-3 mt-2 border-t border-gray-100">
         {activeSegment.status !== 'checked' ? (
           <>
-            <Button
+            {activeSegment.label!=='TOC' &&<Button
               type="button"
               className="flex-1"
               onClick={onSave}
@@ -542,11 +546,12 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
               }
             >
               <Save />Save
-            </Button>
+            </Button>}
             <Button
               type="button"
               onClick={onUnknown}
               variant="outline"
+              className='flex-1'
               disabled={!activeSegmentId}
             >
               <X /> N/A

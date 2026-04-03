@@ -16,6 +16,10 @@ interface ActionsContextValue {
   onLoadNewFile: () => void
   onSegmentStatusUpdate?: (segmentId: string, status: 'checked' | 'unchecked') => Promise<void>
   onResetSegments?: () => void
+  expandedSegmentIds: readonly string[]
+  toggleSegmentExpanded: (segmentId: string) => void
+  isAllSegmentsExpanded: boolean
+  toggleExpandAllSegments: () => void
 }
 
 const ActionsContext = createContext<ActionsContextValue | null>(null)
