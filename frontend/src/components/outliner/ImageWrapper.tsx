@@ -58,7 +58,7 @@ function ImageRow({
               src={imageUrl}
               alt={`volume page ${index + 1}`}
               loading="lazy"
-              className="max-h-[360px] w-auto rounded border border-gray-200"
+              className="object-contain w-auto rounded border border-gray-200"
             />
           </a>
         ) : (
