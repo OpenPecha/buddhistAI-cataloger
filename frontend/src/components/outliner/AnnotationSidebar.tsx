@@ -12,7 +12,7 @@ import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
 import type { SegmentUpdateRequest } from '@/api/outliner';
 import { toast } from 'sonner';
 import Comments from './comment/Comment';
-import { ListOrdered, RotateCcw, Save, User, X } from 'lucide-react';
+import { RotateCcw, Save, User, X } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 
@@ -474,9 +474,6 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   const isMetadataDisabled = !activeSegment || !hasLabelledSegment;
   const showBdrcMatch = activeSegment?.label === 'TEXT';
 
-  const aiTocEntries =document?.ai_toc_entries ?? []
-  const showAiTocPanel = Boolean(aiTocEntries && aiTocEntries.length > 0);
-
   const metadataContent = activeSegment ? (
     <div className="px-2 py-3 flex flex-col flex-1 min-h-0 h-full">
       <div className="overflow-y-auto h-min space-y-6">
@@ -572,39 +569,6 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       {showBdrcMatch && bdrcAuthorBlock.blocked && bdrcAuthorBlock.message && (
         <div className="shrink-0 text-red-500 text-xs italic animate-infinite animate-bounce pt-2">
           {bdrcAuthorBlock.message}
-        </div>
-      )}
-      {showAiTocPanel && aiTocEntries && (
-        <div className="flex flex-col flex-1 min-h-0 mt-3 rounded-lg border border-slate-200 bg-slate-50/90 overflow-hidden shadow-sm">
-          <div className="px-3 py-2 border-b border-slate-200/90 bg-slate-100/80 shrink-0">
-            <div className="text-xs font-semibold text-slate-700 uppercase tracking-wide flex items-center gap-2">
-              <ListOrdered className="h-3.5 w-3.5 shrink-0 text-slate-500" aria-hidden />
-              AI table of contents
-            </div>
-            <p className="text-[11px] text-slate-500 mt-0.5 normal-case font-normal tracking-normal">
-              {segments && aiTocEntries.length !== segments.filter((s) => s.label === 'TEXT').length && (
-                <span className="block text-xs mt-1">
-                  number of TEXT segments <span className="text-red-500">{segments?.filter((s) => s.label === 'TEXT').length}</span>  and TOC mismatch! Please fix it.
-                </span>
-              )}
-            </p>
-          </div>
-          <ul
-            className="overflow-y-auto flex-1 min-h-32 px-3 py-2 space-y-2 text-sm text-slate-800 font-monlam leading-snug"
-            aria-label="AI-extracted table of contents entries"
-          >
-            {aiTocEntries.map((line, i) => (
-              <li
-                key={i}
-                className="flex gap-2 border-b border-slate-200/60 pb-2 last:border-b-0 last:pb-0"
-              >
-                <span className="text-[10px] text-slate-400 font-mono tabular-nums shrink-0 w-5 text-right pt-0.5">
-                  {i + 1}
-                </span>
-                <span className="min-w-0 flex-1 whitespace-pre-wrap wrap-break-word">{line}</span>
-              </li>
-            ))}
-          </ul>
         </div>
       )}
       <hr className="shrink-0 mt-3 border-gray-200" />

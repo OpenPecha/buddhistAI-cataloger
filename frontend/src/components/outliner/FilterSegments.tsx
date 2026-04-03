@@ -4,7 +4,9 @@ import type { SegmentLabel } from './types';
 import { SEGMENT_LABEL_OPTIONS } from './segment-label';
 import { Button } from '@/components/ui/button';
 import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+
+const radioClassName =
+  'size-4 shrink-0 rounded-full border border-input text-primary accent-primary shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30'
 
 export type LabelFilterValue = SegmentLabel | 'none';
 
@@ -74,29 +76,52 @@ export function FilterSegments({
         <div className="space-y-4 p-3 min-w-[200px]">
           <div>
             <p id="filter-label" className="text-xs font-medium text-gray-600 mb-2">Label</p>
-            <RadioGroup value={selectValue} onValueChange={handleSelect} aria-labelledby="filter-label">
-              {FILTER_OPTIONS.map((opt) => (
-                <div key={opt.value} className="flex items-center gap-3">
-                  <RadioGroupItem value={opt.value} id={`label-filter-${opt.value}`} />
-                  <Label htmlFor={`label-filter-${opt.value}`} className="text-sm font-normal cursor-pointer text-gray-700 hover:text-gray-900">
-                    {opt.label}
-                  </Label>
-                </div>
-              ))}
-            </RadioGroup>
+            <div role="radiogroup" aria-labelledby="filter-label" className="grid gap-3">
+              {FILTER_OPTIONS.map((opt) => {
+                if(opt.value==='none') return null
+                const inputId = `label-filter-${opt.value}`
+                return (
+                  <div key={opt.value} className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      id={inputId}
+                      name="segment-label-filter"
+                      value={opt.value}
+                      checked={selectValue === opt.value}
+                      onChange={() => handleSelect(opt.value)}
+                      className={radioClassName}
+                    />
+                    <Label htmlFor={inputId} className="text-sm font-normal cursor-pointer text-gray-700 hover:text-gray-900">
+                      {opt.label}
+                    </Label>
+                  </div>
+                )
+              })}
+            </div>
           </div>
           <div>
             <p id="filter-completion" className="text-xs font-medium text-gray-600 mb-2">Completion</p>
-            <RadioGroup value={completionFilter} onValueChange={(v) => onCompletionFilterChange(v as CompletionFilterValue)} aria-labelledby="filter-completion">
-              {COMPLETION_OPTIONS.map((opt) => (
-                <div key={opt.value} className="flex items-center gap-3">
-                  <RadioGroupItem value={opt.value} id={`completion-filter-${opt.value}`} />
-                  <Label htmlFor={`completion-filter-${opt.value}`} className="text-sm font-normal cursor-pointer text-gray-700 hover:text-gray-900">
-                    {opt.label}
-                  </Label>
-                </div>
-              ))}
-            </RadioGroup>
+            <div role="radiogroup" aria-labelledby="filter-completion" className="grid gap-3">
+              {COMPLETION_OPTIONS.map((opt) => {
+                const inputId = `completion-filter-${opt.value}`
+                return (
+                  <div key={opt.value} className="flex items-center gap-3">
+                    <input
+                      type="radio"
+                      id={inputId}
+                      name="segment-completion-filter"
+                      value={opt.value}
+                      checked={completionFilter === opt.value}
+                      onChange={() => onCompletionFilterChange(opt.value)}
+                      className={radioClassName}
+                    />
+                    <Label htmlFor={inputId} className="text-sm font-normal cursor-pointer text-gray-700 hover:text-gray-900">
+                      {opt.label}
+                    </Label>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
       </div>

@@ -29,8 +29,10 @@ export const Workspace: React.FC = () => {
   });
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className='flex-1 flex flex-col '>
+
       <ImageWrapper/>
+    <div className="flex-1 flex ">
       <div ref={parentContainerRef} className="flex-1 flex flex-col overflow-hidden">
         {/* Workspace Header */}
         <WorkspaceHeader
@@ -87,8 +89,13 @@ export const Workspace: React.FC = () => {
       
         </div>
       </div>
-
+      <div className='flex-1'> 
+      <TocViewer />
     </div>
+    </div>
+   
+    </div>
+
   );
 };
 
@@ -96,6 +103,7 @@ export const Workspace: React.FC = () => {
 
 import { type RowComponentProps } from 'react-window'
 import ImageWrapper from './ImageWrapper'
+import TocViewer from './TOCViewer'
 
 function RowComponent({
   index,
