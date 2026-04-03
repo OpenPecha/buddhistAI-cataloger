@@ -150,16 +150,7 @@ function PageImagePreview({
         <div>
           Page {previewIndex + 1} / {pageCount}
         </div>
-        {imageLink ? (
-          <a
-            target="_blank"
-            rel="noreferrer"
-            href={imageLink}
-            className="text-blue-600 underline decoration-blue-600/40 underline-offset-2 hover:text-blue-800"
-          >
-            Open in BDRC library
-          </a>
-        ) : null}
+      
       </div>
 
       {imageUrl ? (
@@ -314,13 +305,26 @@ function ImageWrapper({ imageVisible, onImageVisibleChange }: ImageWrapperProps)
         <div className="text-xs text-gray-600">
           Page image {activeSegmentId ? '(active segment)' : '(no segment selected)'}
         </div>
+        <div className='flex gap-2 items-center'>
+
         <button
           type="button"
           className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
           onClick={() => onImageVisibleChange(!imageVisible)}
-        >
+          >
           {imageVisible ? 'Hide image' : 'Show image'}
         </button>
+        {imageLink ? (
+          <a
+          target="_blank"
+          rel="noreferrer"
+          href={imageLink}
+          className="text-blue-600 text-xs underline decoration-blue-600/40 underline-offset-2 hover:text-blue-800"
+          >
+            Open in BDRC library
+          </a>
+        ) : null}
+        </div>
       </div>
 
       {imageVisible && (
