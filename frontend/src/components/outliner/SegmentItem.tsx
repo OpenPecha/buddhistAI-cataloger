@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Loader2, ChevronDown, ChevronRight, Merge } from 'lucide-react'
+import { Loader2, ChevronDown, ChevronRight, Merge, ChevronUp } from 'lucide-react'
 import type { TextSegment, SegmentLabel } from './types'
 import { SegmentTextContent } from './SegmentTextContent'
 import { useDocument,useCursor, useActions } from './contexts'
@@ -155,6 +155,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
         }`}
       >
        
+    <div className="segment-label-bar flex flex-wrap items-center gap-2 mb-3 pb-2 border-b border-gray-200">
         
         
        <SegmentLabelSelector
@@ -162,7 +163,9 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
           validation={validation}
           isTocAiLoading={isTocAiLoading}
         />
-        
+        <ScrollController segmentId={segment.id}/>
+
+        </div>
       
         {activeSegmentId === segment.id && index > 0 && (
           <button
@@ -344,7 +347,7 @@ const SegmentLabelSelector = ({
     [segment.id, documentId, validation, updateSegmentMutation]
   )
   return (
-    <div className="segment-label-bar flex flex-wrap items-center gap-2 mb-3 pb-2 border-b border-gray-200">
+  <>
     <span className="text-xs font-medium text-gray-500 shrink-0">Label</span>
     <Select
     value={segment.label ?? 'none'}
@@ -369,6 +372,28 @@ const SegmentLabelSelector = ({
         Analyzing TOC…
       </span>
     )}
-  </div>
+  </>
   )
+}
+
+const ScrollController=({segmentId})=>{
+  const element =document.getElementById(segmentId)
+  const goup=()=>{
+    element?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+  const godown=()=>{
+    element?.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
+  }
+
+  const buttonClass="cursor-pointer"
+  return <div className='fixed  right-10 flex gap-2'>
+    <Button className={buttonClass} onClick={goup} variant="outline"><ChevronUp/></Button>
+    <Button className={buttonClass} onClick={godown} variant='outline'><ChevronDown/>    </Button>
+  </div>
 }

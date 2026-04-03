@@ -523,8 +523,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
               variant="default"
               disabled={
                 !activeSegmentId ||
-                (formData.title.name.trim() === '' && formData.author.name.trim() === '') ||
-                showBdrcMatch 
+                (formData.title.name.trim() === '' && formData.author.name.trim() === '') 
               }
             >
               <Save />Save
