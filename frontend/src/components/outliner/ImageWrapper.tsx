@@ -4,6 +4,7 @@ import { useOutlinerDocument } from '@/hooks/useOutlinerDocument'
 import { useBdrcOtVolume } from '@/features/outliner/bdrc/hook/useBdrcOtVolume'
 import { useDocument, useCursor, useSelection } from './contexts'
 import { List, type RowComponentProps, useDynamicRowHeight, useListRef } from 'react-window'
+import { Loader2 } from 'lucide-react'
 
 type BdrcPageLike = {
   pname?: string
@@ -323,7 +324,7 @@ function ImageWrapper({ imageVisible, onImageVisibleChange }: ImageWrapperProps)
           >
             Open in BDRC library
           </a>
-        ) : null}
+        ) : isLoading ? <Loader2 className="w-4 h-4 animate-spin" />: <div className="text-xs text-gray-600">No volume available.</div>}
         </div>
       </div>
 
