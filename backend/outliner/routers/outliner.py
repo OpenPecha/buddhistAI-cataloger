@@ -180,7 +180,7 @@ class DocumentListResponse(BaseModel):
     user_id: Optional[str] = None
     total_segments: int
     annotated_segments: int
-    rejection_count: int = 0  # Total segment rejection events in this document
+    rejection_count: int = 0  # Segments with status rejected in this document
     progress_percentage: float
     checked_segments: int  # Number of checked segments
     unchecked_segments: int  # Number of unchecked segments

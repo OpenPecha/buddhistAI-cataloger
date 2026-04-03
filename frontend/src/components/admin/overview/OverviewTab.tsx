@@ -7,6 +7,7 @@ import {
   Link2,
   MessageSquare,
   PenLine,
+  SkipForward,
 } from 'lucide-react'
 import {
   Chart as ChartJS,
@@ -144,7 +145,15 @@ const ANNOTATOR_LINE_OPTIONS = {
   },
 } as const
 
-const DOC_STATUS_ORDER = ['active', 'completed', 'approved', 'rejected', 'deleted', 'unknown'] as const
+const DOC_STATUS_ORDER = [
+  'active',
+  'completed',
+  'approved',
+  'rejected',
+  'skipped',
+  'deleted',
+  'unknown',
+] as const
 const SEG_STATUS_ORDER = ['unchecked', 'checked', 'approved', 'rejected'] as const
 
 const DOC_STATUS_COLORS: Record<string, string> = {
@@ -152,6 +161,7 @@ const DOC_STATUS_COLORS: Record<string, string> = {
   completed: '#059669',
   approved: '#7c3aed',
   rejected: '#dc2626',
+  skipped: '#ea580c',
   deleted: '#64748b',
   unknown: '#94a3b8',
 }
@@ -193,18 +203,20 @@ function formatChartLabel(key: string): string {
 function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
   const overviewBarData = useMemo(() => {
     if (!stats) return null
+    const skippedDocs = stats.document_status_counts.skipped ?? 0
     return {
-      labels: ['Documents', 'Total segments', 'With title/author', 'Rejections'],
+      labels: ['Documents', 'Total segments', 'With title/author', 'Skipped docs', 'Rejected segments'],
       datasets: [
         {
           data: [
             stats.document_count,
             stats.total_segments,
             stats.segments_with_title_or_author,
+            skippedDocs,
             stats.rejection_count,
           ],
-          backgroundColor: ['#2563eb', '#059669', '#7c3aed', '#dc2626'],
-          borderColor: ['#1d4ed8', '#047857', '#6d28d9', '#b91c1c'],
+          backgroundColor: ['#2563eb', '#059669', '#7c3aed', '#ea580c', '#dc2626'],
+          borderColor: ['#1d4ed8', '#047857', '#6d28d9', '#c2410c', '#b91c1c'],
           borderWidth: 1,
           borderRadius: 6,
         },
@@ -306,7 +318,7 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
           pointBackgroundColor: '#7c3aed',
         },
         {
-          label: 'Rejections',
+          label: 'Rejected segments',
           data: perf.map((r) => r.rejection_count),
           borderColor: '#dc2626',
           backgroundColor: 'rgba(220, 38, 38, 0.12)',
@@ -341,6 +353,7 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
   }
 
   const coverage = stats.annotation_coverage_pct
+  const skippedDocuments = stats.document_status_counts.skipped ?? 0
 
   return (
     <div className="space-y-8">
@@ -348,7 +361,7 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">
           Key metrics
         </h3>
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <StatsCard
             icon={<FileText className="h-6 w-6 text-blue-500" strokeWidth={1.75} />}
             title="Documents"
@@ -374,11 +387,22 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
             }
           />
           <StatsCard
+            icon={<SkipForward className="h-6 w-6 text-orange-500" strokeWidth={1.75} />}
+            title="Skipped documents"
+            value={skippedDocuments}
+            colorClass="text-orange-600"
+            hint={
+              stats.document_count && skippedDocuments > 0
+                ? `${Math.round((skippedDocuments / stats.document_count) * 100)}% of documents`
+                : undefined
+            }
+          />
+          <StatsCard
             icon={<Ban className="h-6 w-6 text-red-500" strokeWidth={1.75} />}
-            title="Segment rejections"
+            title="Rejected segments"
             value={stats.rejection_count}
             colorClass="text-red-600"
-            hint="Recorded rejection events"
+            hint="Segments with rejected status"
           />
         </div>
       </section>

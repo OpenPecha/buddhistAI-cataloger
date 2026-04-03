@@ -535,6 +535,7 @@ export interface AnnotatorPerformanceRow {
   document_count: number;
   segment_count: number;
   segments_with_title_or_author: number;
+  /** Segments with status rejected on that annotator's documents in range */
   rejection_count: number;
 }
 
@@ -542,6 +543,7 @@ export interface DashboardStats {
   document_count: number;
   total_segments: number;
   segments_with_title_or_author: number;
+  /** Segments with status rejected (same scope as other segment totals) */
   rejection_count: number;
   document_status_counts: Record<string, number>;
   document_category_counts: Record<string, number>;

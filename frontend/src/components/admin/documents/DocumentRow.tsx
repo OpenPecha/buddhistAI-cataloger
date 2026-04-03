@@ -61,7 +61,7 @@ function DocumentRow({ document, annotatorName, onSelect, onDelete }: DocumentRo
             {STATUS_LABEL[statusKey] || statusKey}
           </span>
           {typeof document.rejection_count === 'number' && document.rejection_count > 0 && (
-            <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full border border-red-200" title="Rejection Count">
+            <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full border border-red-200" title="Segments needing revision (rejected)">
               <svg className="w-3 h-3 text-red-400" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M8.257 3.099c.366-.756 1.42-.756 1.786 0l7.451 15.396A1 1 0 0 1 16.584 20H3.416a1 1 0 0 1-.91-1.505L8.257 3.1zM11 14a1 1 0 1 0-2 0 1 1 0 0 0 2 0zm-1-5a1 1 0 0 0-.993.883L9 10v2a1 1 0 0 0 1.993.117L11 12v-2a1 1 0 0 0-1-1z" />
               </svg>

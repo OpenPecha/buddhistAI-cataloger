@@ -76,7 +76,7 @@ export interface Document {
   user_id?: string | null
   total_segments: number
   annotated_segments: number
-  /** Total segment rejection events recorded for this document (admin list API) */
+  /** Segments with status rejected (admin list API) */
   rejection_count?: number
   progress_percentage: number
   status?: string | null

@@ -155,9 +155,11 @@ def list_documents(
         ).scalar() or 0
 
         rejection_count = (
-            db.query(func.count(SegmentRejection.id))
-            .join(OutlinerSegment, OutlinerSegment.id == SegmentRejection.segment_id)
-            .filter(OutlinerSegment.document_id == doc.id)
+            db.query(func.count(OutlinerSegment.id))
+            .filter(
+                OutlinerSegment.document_id == doc.id,
+                OutlinerSegment.status == "rejected",
+            )
             .scalar()
         ) or 0
 
@@ -1263,11 +1265,10 @@ def get_annotator_performance_breakdown(
         .all()
     )
     rej_rows = (
-        db.query(OutlinerDocument.user_id, func.count(SegmentRejection.id))
-        .select_from(SegmentRejection)
-        .join(OutlinerSegment, OutlinerSegment.id == SegmentRejection.segment_id)
-        .join(OutlinerDocument, OutlinerDocument.id == OutlinerSegment.document_id)
+        db.query(OutlinerDocument.user_id, func.count(OutlinerSegment.id))
+        .join(OutlinerSegment, OutlinerSegment.document_id == OutlinerDocument.id)
         .filter(doc_scope)
+        .filter(OutlinerSegment.status == "rejected")
         .group_by(OutlinerDocument.user_id)
         .all()
     )
@@ -1331,10 +1332,12 @@ def get_dashboard_stats(
         | (OutlinerSegment.author.isnot(None) & (OutlinerSegment.author != ""))
     ).with_entities(func.count(OutlinerSegment.id)).scalar() or 0
 
-    seg_ids_subq = seg_base.with_entities(OutlinerSegment.id).subquery()
-    rejection_count = db.query(func.count(SegmentRejection.id)).filter(
-        SegmentRejection.segment_id.in_(db.query(seg_ids_subq.c.id))
-    ).scalar() or 0
+    rejection_count = (
+        seg_base.filter(OutlinerSegment.status == "rejected")
+        .with_entities(func.count(OutlinerSegment.id))
+        .scalar()
+        or 0
+    )
 
     doc_id_filter = OutlinerDocument.id.in_(db.query(doc_ids_subq.c.id))
 
