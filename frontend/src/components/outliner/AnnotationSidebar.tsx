@@ -480,12 +480,13 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
           </div>
           {
             activeSegment.status !== 'checked' && (
-           <AISuggestionsBox
-                  suggestions={aiSuggestions.aiSuggestions}
-                  loading={aiSuggestions.aiLoading}
-                  onDetect={aiSuggestions.onAIDetect}
-                  onStop={aiSuggestions.onAIStop}
-           />)}
+              <AISuggestionsBox
+                suggestions={aiSuggestions.aiSuggestions}
+                loading={aiSuggestions.aiLoading}
+                onDetect={aiSuggestions.onAIDetect}
+                onStop={aiSuggestions.onAIStop}
+              />
+            )}
         </div>
        
         {

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { generateTitleAuthor, type GenerateTitleAuthorResponse } from '@/api/outliner';
 import { toast } from 'sonner';
@@ -41,9 +41,13 @@ export const useAISuggestions = ({
 }: UseAISuggestionsOptions) => {
   const queryClient = useQueryClient();
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestions | null>(null);
+  /** Segment IDs we have already started AI detect for (auto runs once per segment until cleared). */
+  const attemptedAutoDetectRef = useRef<Set<string>>(new Set());
   const aiAbortControllerRef = useRef<AbortController | null>(null);
   const persistAIAnnotationsRef = useRef(persistAIAnnotations);
   persistAIAnnotationsRef.current = persistAIAnnotations;
+
+  const handleAIDetectRef = useRef<() => Promise<void>>(async () => {});
 
   type AIMutationVars = {
     content: string;
@@ -57,6 +61,9 @@ export const useAISuggestions = ({
   const mutation = useMutation({
     mutationFn: ({ content, signal }: AIMutationVars) =>
       generateTitleAuthor({ content }, signal),
+    onMutate: (variables: AIMutationVars) => {
+      attemptedAutoDetectRef.current.add(variables.segmentId);
+    },
     onSuccess: async (data: GenerateTitleAuthorResponse, variables: AIMutationVars) => {
       setAiSuggestions(data as AISuggestions);
 
@@ -128,6 +135,42 @@ export const useAISuggestions = ({
     setAiSuggestions(null);
   }, [activeSegmentId]);
 
+  useEffect(() => {
+    attemptedAutoDetectRef.current.clear();
+  }, [documentId]);
+
+  /** Allow auto-detect again after reset (or server) clears both fields on the same segment. */
+  const prevSegmentSnapshotRef = useRef<{
+    id: string;
+    title: string;
+    author: string;
+  } | null>(null);
+  useEffect(() => {
+    if (!activeSegment) return;
+    const id = activeSegment.id;
+    const title = activeSegment.title?.trim() ?? '';
+    const author = activeSegment.author?.trim() ?? '';
+    const prev = prevSegmentSnapshotRef.current;
+    if (prev && prev.id === id) {
+      const hadContent = Boolean(prev.title.trim() || prev.author.trim());
+      const nowEmpty = !title && !author;
+      if (hadContent && nowEmpty) {
+        attemptedAutoDetectRef.current.delete(id);
+      }
+    }
+    prevSegmentSnapshotRef.current = { id, title, author };
+  }, [activeSegment]);
+
+  const aiEligible = useMemo(() => {
+    if (!activeSegment || !activeSegmentId) return false;
+    if (activeSegment.status === 'checked') return false;
+    if (activeSegment.label === 'TOC') return false;
+    const hasTitle = Boolean(activeSegment.title?.trim());
+    const hasAuthor = Boolean(activeSegment.author?.trim());
+    if (hasTitle || hasAuthor) return false;
+    return Boolean(activeSegment.text?.trim());
+  }, [activeSegment, activeSegmentId]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -139,6 +182,7 @@ export const useAISuggestions = ({
 
   const handleAIDetect = useCallback(async () => {
     if (!activeSegmentId || !activeSegment?.text) return;
+    if (activeSegment.status === 'checked') return;
 
     const text = activeSegment.text.trim();
     if (!text) return;
@@ -173,14 +217,26 @@ export const useAISuggestions = ({
     }
   }, [activeSegmentId, activeSegment, mutation, documentId]);
 
+  handleAIDetectRef.current = handleAIDetect;
+
+  // Auto-run detect once per segment when both title and author are empty.
+  useEffect(() => {
+    if (!aiEligible || !activeSegmentId || !activeSegment) return;
+    if (attemptedAutoDetectRef.current.has(activeSegmentId)) return;
+    void handleAIDetectRef.current();
+  }, [aiEligible, activeSegmentId, activeSegment]);
+
   const handleAIStop = useCallback(() => {
+    if (activeSegmentId && attemptedAutoDetectRef.current.has(activeSegmentId)) {
+      attemptedAutoDetectRef.current.delete(activeSegmentId);
+    }
     if (aiAbortControllerRef.current) {
       aiAbortControllerRef.current.abort();
       aiAbortControllerRef.current = null;
     }
     mutation.reset();
     setAiSuggestions(null);
-  }, [mutation]);
+  }, [mutation, activeSegmentId]);
 
   const handleAISuggestionUse = useCallback(
     (field: 'title' | 'author', value: string) => {
