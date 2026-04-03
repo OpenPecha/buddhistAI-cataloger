@@ -70,6 +70,22 @@ html[lang="bo"] label {
     overflow: hidden;
   }
 
+  /* Outliner: clear, draggable split dividers (library uses 1px inline; override for visibility) */
+  .outliner-split-pane.split-pane {
+    --split-pane-divider-size: 8px;
+    --split-pane-divider-hit-area: 6px;
+    --split-pane-divider-color: rgb(148 163 184);
+    --split-pane-divider-color-hover: rgb(100 116 139);
+  }
 
+  .outliner-split-pane .split-pane-divider.horizontal {
+    width: var(--split-pane-divider-size) !important;
+    min-width: var(--split-pane-divider-size);
+  }
+
+  .outliner-split-pane .split-pane-divider.vertical {
+    height: var(--split-pane-divider-size) !important;
+    min-height: var(--split-pane-divider-size);
+  }
 
   

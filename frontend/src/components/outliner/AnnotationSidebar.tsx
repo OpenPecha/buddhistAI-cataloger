@@ -590,7 +590,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   }, [isMetadataDisabled, activeTab]);
 
   return (
-    <div className="w-96 bg-white border-r border-gray-200 flex flex-col font-monlam-2">
+    <div className="h-full min-h-0 w-full bg-white flex flex-col font-monlam-2 border-r-2 border-gray-200">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
         <TabsList className="w-full shrink-0 border-b border-gray-200 rounded-none">
           <TabsTrigger value="outlines">Outlines</TabsTrigger>

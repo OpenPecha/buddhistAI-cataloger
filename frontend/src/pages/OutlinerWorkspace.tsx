@@ -19,6 +19,7 @@ import {
   ActionsProvider,
 } from '@/components/outliner/contexts'
 import { useListRef } from 'react-window';
+import { SplitPane, Pane } from 'react-split-pane';
 
 function getSelectionOffsetsInRoot(
   root: HTMLElement,
@@ -910,19 +911,26 @@ const OutlinerWorkspace: React.FC = () => {
             >
               <div className="flex flex-col bg-gray-50" style={{ height: 'calc(100vh - 4rem)' }}>
                 {/* Main Content */}
-                <div className="flex-1 flex overflow-hidden">
-                  {/* Sidebar */}
-                  <AnnotationSidebar
-                    ref={annotationSidebarRef}
-                    listRef={listRef}
-                    activeSegment={activeSegment}
-                    documentId={documentId || undefined}
-                    segments={currentSegments}
-                    onSegmentClick={(segmentId) => handleSegmentClick(segmentId)}
-                  />
-
-                  {/* Main Workspace */}
-                  <Workspace listRef={listRef}/>
+                <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+                  <SplitPane
+                    direction="horizontal"
+                    className="outliner-split-pane min-h-0 min-w-0 flex-1"
+                    dividerSize={8}
+                  >
+                    <Pane defaultSize={384} minSize={240} maxSize="55%">
+                      <AnnotationSidebar
+                        ref={annotationSidebarRef}
+                        listRef={listRef}
+                        activeSegment={activeSegment}
+                        documentId={documentId || undefined}
+                        segments={currentSegments}
+                        onSegmentClick={(segmentId) => handleSegmentClick(segmentId)}
+                      />
+                    </Pane>
+                    <Pane minSize={320}>
+                      <Workspace listRef={listRef} />
+                    </Pane>
+                  </SplitPane>
                 </div>
 
                 {/* Unsaved Changes Dialog */}

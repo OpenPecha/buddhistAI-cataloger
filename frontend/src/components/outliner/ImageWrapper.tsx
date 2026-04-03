@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument'
 import { useBdrcOtVolume } from '@/features/outliner/bdrc/hook/useBdrcOtVolume'
 import { useDocument } from './contexts'
@@ -69,8 +69,12 @@ function ImageRow({
   )
 }
 
-function ImageWrapper() {
-  const [isVisible, setIsVisible] = useState(false)
+type ImageWrapperProps = {
+  imageVisible: boolean
+  onImageVisibleChange: (visible: boolean) => void
+}
+
+function ImageWrapper({ imageVisible, onImageVisibleChange }: ImageWrapperProps) {
   const listRef = useListRef(null)
 
   const { document } = useOutlinerDocument()
@@ -122,7 +126,7 @@ function ImageWrapper() {
   }, [pages, volId, imageLink, autoPageIndex])
 
   useEffect(() => {
-    if (!isVisible) return
+    if (!imageVisible) return
     if (pageCount === 0) return
 
     listRef.current?.scrollToRow({
@@ -130,25 +134,25 @@ function ImageWrapper() {
       align: 'start',
       behavior: 'instant',
     })
-  }, [isVisible, autoPageIndex, pageCount, listRef])
+  }, [imageVisible, autoPageIndex, pageCount, listRef])
 
   return (
-    <div className="border-b border-gray-200 bg-white">
-      <div className="flex items-center justify-between px-3 py-2">
+    <div className="flex h-full min-h-0 min-w-0 flex-col border-b border-gray-200 bg-white">
+      <div className="flex shrink-0 items-center justify-between px-3 py-2">
         <div className="text-xs text-gray-600">
           Page image {activeSegmentId ? '(active segment)' : '(no segment selected)'}
         </div>
         <button
           type="button"
           className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
-          onClick={() => setIsVisible((v) => !v)}
+          onClick={() => onImageVisibleChange(!imageVisible)}
         >
-          {isVisible ? 'Hide image' : 'Show image'}
+          {imageVisible ? 'Hide image' : 'Show image'}
         </button>
       </div>
 
-      {isVisible && (
-        <div className="px-3 pb-3">
+      {imageVisible && (
+        <div className="flex min-h-0 flex-1 flex-col px-3 pb-3">
           {isLoading && <div className="text-xs text-gray-600">Loading volume…</div>}
           {!isLoading && error && (
             <div className="text-xs text-red-600">Failed to load volume: {error}</div>
@@ -160,7 +164,7 @@ function ImageWrapper() {
 
           {!isLoading && !error && pageCount > 0 && (
             <div
-              className="h-[40vh] w-full overflow-hidden rounded border border-gray-200 bg-gray-50"
+              className="min-h-0 flex-1 w-full overflow-hidden rounded border border-gray-200 bg-gray-50"
             >
               {rowProps && (
                 <List
