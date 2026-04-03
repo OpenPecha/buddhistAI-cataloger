@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Loader2, ChevronDown, ChevronRight, Merge } from 'lucide-react'
 import type { TextSegment, SegmentLabel } from './types'
 import { SegmentTextContent } from './SegmentTextContent'
-import { useDocument, useSelection, useCursor, useActions } from './contexts'
+import { useDocument,useCursor, useActions } from './contexts'
 import { SplitMenu } from './SplitMenu'
 import { BubbleMenu } from './BubbleMenu'
 import { SEGMENT_LABEL_OPTIONS } from './segment-label'
@@ -32,8 +32,8 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
 
 
   // Use new contexts
-  const { activeSegmentId, segmentLoadingStates, segments } = useDocument()
-  const { cursorPosition, onCursorChange } = useCursor()
+  const { activeSegmentId, segments } = useDocument()
+  const { onCursorChange } = useCursor()
   const {
     onSegmentClick,
     onActivate,
@@ -62,8 +62,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
     toggleSegmentExpanded(segment.id)
   }
   
-  const validation = useCallback(
-    async (value: string) => {
+  const validation =   async (value: string) => {
       if (value !== 'TOC') return
 
       if (segments.some((s) => s.label === 'TOC' && s.id !== segment.id)) {
@@ -94,9 +93,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
       } finally {
         setIsTocAiLoading(false)
       }
-    },
-    [segment.id, segment.text, segments, outlinerDocumentId, refetchDocument]
-  )
+    }
 
   return (
     <div className="relative">

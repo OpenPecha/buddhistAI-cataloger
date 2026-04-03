@@ -60,17 +60,8 @@ const OutlinerWorkspace: React.FC = () => {
     () => backendSegments.map(outlinerSegmentToTextSegment),
     [backendSegments]
   )
-
-  const segmentIdsKey = useMemo(
-    () => currentSegments.map((s) => s.id).join('\0'),
-    [currentSegments]
-  );
+  
   const [expandedSegmentIds, setExpandedSegmentIds] = useState<string[]>([]);
-
-  useEffect(() => {
-    const idSet = new Set(currentSegments.map((s) => s.id));
-    setExpandedSegmentIds((prev) => prev.filter((id) => idSet.has(id)));
-  }, [segmentIdsKey, currentSegments]);
 
   useEffect(() => {
     if (!activeSegmentId) return;
