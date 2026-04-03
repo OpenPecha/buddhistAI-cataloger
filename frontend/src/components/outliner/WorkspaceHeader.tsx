@@ -67,15 +67,13 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
 
 
   return (
-    <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+    <div className="bg-white border-b py-2 border-gray-200 px-6  flex items-center justify-between">
       <div>
         <div className="flex items-center gap-2">
-        <h2 className="text-lg font-semibold text-gray-900"> Workspace</h2> 
         {isLoadingOrSaving &&        <span className="text-sm text-gray-600">saving...</span>}
         </div>
         <div className="text-sm text-gray-600">
-          <Progress value={checked_percentage} title={`${checkedSegmentsCount} saved segments`}/>
-          <span>{segmentsCount} segment{segmentsCount !== 1 ? 's' : ''}</span>
+          <Progress value={checked_percentage} title={`${checkedSegmentsCount} saved segments`} className="w-40"/>
           {rejectedSegmentsCount > 0 && (
             <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
               {rejectedSegmentsCount} need{rejectedSegmentsCount === 1 ? 's' : ''} revision
@@ -88,8 +86,8 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
         <Button
           variant="outline"
           onClick={onAIDetectTextEndings}
-          disabled={aiTextEndingLoading}
-          title="AI Detect Text Endings"
+          disabled={true}
+          title="AI Detect Text Endings (coming soon)"
           className="flex items-center gap-2"
         >
           {aiTextEndingLoading ? (
