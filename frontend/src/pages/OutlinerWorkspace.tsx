@@ -18,6 +18,7 @@ import {
   CursorProvider,
   ActionsProvider,
 } from '@/components/outliner/contexts'
+import { useListRef } from 'react-window';
 
 function getSelectionOffsetsInRoot(
   root: HTMLElement,
@@ -356,7 +357,6 @@ const OutlinerWorkspace: React.FC = () => {
       setCursorPosition(null);
       return;
     }
-
     // Calculate character offset
     const preCaretRange = range.cloneRange();
     preCaretRange.selectNodeContents(element);
@@ -726,6 +726,7 @@ const OutlinerWorkspace: React.FC = () => {
     },
     [currentTextContent]
   );
+  const listRef= useListRef(null);
 
   // AI detect text endings and create new segmentation
   const handleAIDetectTextEndings = useCallback(async () => {
@@ -913,6 +914,7 @@ const OutlinerWorkspace: React.FC = () => {
                   {/* Sidebar */}
                   <AnnotationSidebar
                     ref={annotationSidebarRef}
+                    listRef={listRef}
                     activeSegment={activeSegment}
                     documentId={documentId || undefined}
                     segments={currentSegments}
@@ -920,7 +922,7 @@ const OutlinerWorkspace: React.FC = () => {
                   />
 
                   {/* Main Workspace */}
-                  <Workspace />
+                  <Workspace listRef={listRef}/>
                 </div>
 
                 {/* Unsaved Changes Dialog */}

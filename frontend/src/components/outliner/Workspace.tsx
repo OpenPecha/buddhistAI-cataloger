@@ -1,12 +1,11 @@
 import React, { useRef, useState, useCallback, useMemo, Activity } from 'react'
-import { List, useDynamicRowHeight } from 'react-window'
+import { List, useDynamicRowHeight,useListRef } from 'react-window'
 import { SegmentItemMemo as SegmentItem } from './SegmentItem'
 import { WorkspaceHeader } from './WorkspaceHeader'
 import { useDocument, useSelection,  useActions } from './contexts'
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument'
 import type { TextSegment } from './types'
-
-export const Workspace: React.FC = () => {
+export const Workspace: React.FC<{ listRef: React.RefObject<List> }> = ({ listRef }) => {
   const {  segments, aiTextEndingLoading } = useDocument()
   const { onTextSelection } = useSelection()
   const {
@@ -18,7 +17,6 @@ export const Workspace: React.FC = () => {
   const { isLoading: isLoadingDocument } = useOutlinerDocument()
   const containerRef = useRef<HTMLDivElement>(null);
   const parentContainerRef = useRef<HTMLDivElement>(null);
-
   // Save scroll position immediately when split happens, debounced value for restoration
   const scrollPositionRef = useRef<number | null>(null);
 
@@ -91,6 +89,7 @@ export const Workspace: React.FC = () => {
           <Activity mode={segments.length > 0 ? "visible" : "hidden"}>
             <div className="flex min-h-0 flex-1 flex-col px-2">
               <List
+              listRef={listRef}
                 className="min-h-0 w-full scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 [scrollbar-gutter:stable]"
                 style={{ height: '100%' }}
                 rowComponent={RowComponent}

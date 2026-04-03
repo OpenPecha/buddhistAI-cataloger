@@ -11,13 +11,13 @@ import { useAISuggestions, type PersistAIAnnotationsArgs } from '@/hooks/useAISu
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
 import type { SegmentUpdateRequest } from '@/api/outliner';
 import { toast } from 'sonner';
-import Comments from './comment/Comment';
 import { RotateCcw, Save, User, X } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 
 interface AnnotationSidebarProps {
   activeSegment: TextSegment | undefined;
+  listRef: React.RefObject<List>;
   documentId?: string;
   segments?: TextSegment[];
   onSegmentClick?: (segmentId: string) => void;
@@ -58,6 +58,7 @@ export interface AnnotationSidebarRef {
 
 export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSidebarProps>(({
   activeSegment,
+  listRef,
   documentId,
   segments = [],
   onSegmentClick,
@@ -65,7 +66,6 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   const { updateSegment: updateSegmentMutation, document } = useOutlinerDocument();
   const activeSegmentId = activeSegment?.id || null;
   const fullDocumentContent = document?.content ?? '';
-
   const titleSourceSpanRef = useRef<DocTextSpan | null>(null);
   const authorSourceSpanRef = useRef<DocTextSpan | null>(null);
   /** Last title/author strings applied by AI detect (for updated_* on save). Cleared when segment id changes or bubble selects text. */
@@ -455,9 +455,15 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   }
 
 
-  const handleTocClick = useCallback((segmentId: string) => {
+  const handleToClick = useCallback((segmentId: string) => {
     onSegmentClick?.(segmentId);
-    globalThis.document.getElementById(segmentId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const index = segments.findIndex((segment) => segment.id === segmentId);
+    const list = listRef.current;
+    list?.scrollToRow({
+      align: "start", // optional
+      behavior: "auto", // optional
+      index: index
+    });
   }, [onSegmentClick]);
 
   const hasLabelledSegment = Boolean(activeSegment?.label);
@@ -623,7 +629,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
                   <button
                     key={seg.id}
                     type="button"
-                    onClick={() => handleTocClick(seg.id)}
+                    onClick={() => handleToClick(seg.id)}
                     className={` w-full text-left px-3 py-2.5 rounded-md transition-colors cursor-pointer ${
                       isActive
                         ? 'bg-blue-50 border border-blue-300'
