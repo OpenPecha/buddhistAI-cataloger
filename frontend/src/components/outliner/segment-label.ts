@@ -1,7 +1,7 @@
 import type { SegmentLabel } from './types';
 
 export const SEGMENT_LABEL_OPTIONS: { value: SegmentLabel | 'none'; label: string }[] = [
-  { value: 'none', label: 'No label' },
+  { value: 'none', label: 'Segment type' },
   { value: 'FRONT_MATTER', label: 'Front matter' },
   { value: 'TOC', label: 'TOC' },
   { value: 'TEXT', label: 'Text' },
