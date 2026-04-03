@@ -1,6 +1,6 @@
 import React, { useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, Sparkles, Square, EllipsisVertical, Undo } from 'lucide-react';
+import { Loader2, Sparkles, Square, EllipsisVertical, Undo, PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { updateDocumentStatus } from '@/api/outliner';
@@ -24,11 +24,17 @@ interface WorkspaceHeaderActions {
 interface WorkspaceHeaderProps {
   headerConfig: WorkspaceHeaderConfig;
   actions: WorkspaceHeaderActions;
+  /** When set, shows a control next to Skip to show or hide the TOC panel. */
+  tocPanel?: {
+    visible: boolean;
+    onToggle: () => void;
+  };
 }
 
 export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
   headerConfig,
   actions,
+  tocPanel,
 }) => {
   const { segmentsCount, aiTextEndingLoading, hasPreviousSegments, checkedSegmentsCount, rejectedSegmentsCount } = headerConfig;
   const checked_percentage = segmentsCount > 0 ? (checkedSegmentsCount / segmentsCount) * 100 : 0;
@@ -70,7 +76,9 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
     <div className="bg-white border-b py-2 border-gray-200 px-6  flex items-center justify-between">
       <div>
         <div className="flex items-center gap-2">
-        {isLoadingOrSaving &&        <span className="text-sm text-gray-600">saving...</span>}
+          {isLoadingOrSaving && (
+            <span className="text-sm text-gray-600">saving...</span>
+          )}
         </div>
         <div className="text-sm text-gray-600">
           <Progress value={checked_percentage} title={`${checkedSegmentsCount} saved segments`} className="w-40"/>
@@ -142,6 +150,33 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
             }
           />
         )}
+        {tocPanel ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0 gap-1.5 px-2"
+            onClick={tocPanel.onToggle}
+            aria-pressed={tocPanel.visible}
+            aria-label={
+              tocPanel.visible
+                ? 'Hide table of contents panel'
+                : 'Show table of contents panel'
+            }
+            title={
+              tocPanel.visible
+                ? 'Hide table of contents panel'
+                : 'Show table of contents panel'
+            }
+          >
+            {tocPanel.visible ? (
+              <PanelRightClose className="h-4 w-4" aria-hidden />
+            ) : (
+              <PanelRightOpen className="h-4 w-4" aria-hidden />
+            )}
+            <span className="text-xs font-medium">TOC</span>
+          </Button>
+        ) : null}
         <Button
           variant="outline"
           onClick={handleSkip}

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, Activity } from 'react'
+import React, { useRef, useState, useCallback, useMemo, Activity } from 'react'
 import { List, useDynamicRowHeight } from 'react-window'
 import { SegmentItemMemo as SegmentItem } from './SegmentItem'
 import { WorkspaceHeader } from './WorkspaceHeader'
@@ -28,12 +28,25 @@ export const Workspace: React.FC = () => {
     defaultRowHeight: 50
   });
 
-  return (
-    <div className='flex-1 flex flex-col '>
+  const [tocPanelVisible, setTocPanelVisible] = useState(true)
+  const toggleTocPanel = useCallback(() => {
+    setTocPanelVisible((v) => !v)
+  }, [])
 
-      <ImageWrapper/>
-    <div className="flex-1 flex ">
-      <div ref={parentContainerRef} className="flex-1 flex flex-col overflow-hidden">
+  const hasTocSegment = useMemo(
+    () => segments.some((segment) => segment.label === 'TOC'),
+    [segments]
+  )
+  const showTocColumn = hasTocSegment && tocPanelVisible
+
+  return (
+    <div className="flex-1 flex flex-col min-h-0 min-w-0">
+      <ImageWrapper />
+      <div className="flex-1 flex min-h-0 min-w-0">
+        <div
+          ref={parentContainerRef}
+          className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden"
+        >
         {/* Workspace Header */}
         <WorkspaceHeader
           headerConfig={{
@@ -49,53 +62,57 @@ export const Workspace: React.FC = () => {
             onUndoTextEndingDetection,
             onResetSegments,
           }}
+          tocPanel={
+            hasTocSegment
+              ? { visible: tocPanelVisible, onToggle: toggleTocPanel }
+              : undefined
+          }
         />
           {isLoadingDocument && (
-      <div className="h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-          <p className="text-sm text-gray-600">Loading document...</p>
-        </div>
-      </div>
-    )
-  }
+            <div className="flex items-center justify-center py-12 shrink-0">
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2" />
+                <p className="text-sm text-gray-600">Loading document...</p>
+              </div>
+            </div>
+          )}
         {/* Text Display - Virtualized or Direct Rendering */}
 
         
 
         <div
           ref={containerRef}
-          className="flex-1 bg-white relative overflow-auto scroll-container"
+          className="relative flex flex-1 min-h-0 flex-col overflow-hidden bg-white scroll-container"
           onClick={onTextSelection}
-          style={{ minHeight: 0 }}
-          onScroll={(e) => {
-            const target = e.target as HTMLDivElement;
-            scrollPositionRef.current = target.scrollTop;
-          }}
           aria-label="Text workspace content area"
           role="section"
           onKeyDown={() => { }}
         >
           <Activity mode={segments.length > 0 ? "visible" : "hidden"}>
-            <div className="scrollbar-thin px-2 scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+            <div className="flex min-h-0 flex-1 flex-col px-2">
               <List
+                className="min-h-0 w-full scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 [scrollbar-gutter:stable]"
+                style={{ height: '100%' }}
                 rowComponent={RowComponent}
                 rowCount={segments.length}
                 rowHeight={rowHeight}
                 rowProps={{ segments }}
+                onScroll={(e) => {
+                  const target = e.target as HTMLDivElement;
+                  scrollPositionRef.current = target.scrollTop;
+                }}
               />
             </div>
           </Activity>
-      
         </div>
+        </div>
+        {showTocColumn ? (
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+            <TocViewer />
+          </div>
+        ) : null}
       </div>
-      <div className='flex-1'> 
-      <TocViewer />
     </div>
-    </div>
-   
-    </div>
-
   );
 };
 
