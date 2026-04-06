@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Loader2, ChevronDown, ChevronRight, Merge, ChevronUp } from 'lucide-react'
 import type { TextSegment, SegmentLabel } from './types'
@@ -17,6 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Input } from '../ui/input'
+import { findAllOccurrences } from './utils'
 
 
 
@@ -54,6 +56,14 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
   const { documentId: outlinerDocumentId, refetchDocument } = useOutlinerDocument()
 
   const [isTocAiLoading, setIsTocAiLoading] = useState(false)
+  const [segmentSearchQuery, setSegmentSearchQuery] = useState('')
+
+  const segmentSearchMatchCount = useMemo(
+    () => findAllOccurrences(segment.text, segmentSearchQuery).length,
+    [segment.text, segmentSearchQuery]
+  )
+
+
   const isExpanded =
     segments.length === 1 || expandedSegmentIds.includes(segment.id)
   const isCollapsed = !isExpanded
@@ -130,7 +140,8 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
             !(e.target as HTMLElement).closest('.split-menu') &&
             !(e.target as HTMLElement).closest('.bubble-menu') &&
             !(e.target as HTMLElement).closest('.cancel-split-button') &&
-            !(e.target as HTMLElement).closest('.collapse-button')
+            !(e.target as HTMLElement).closest('.collapse-button') &&
+            !(e.target as HTMLElement).closest('.segment-search-bar')
           ) {
             onSegmentClick(segment.id, e)
             if (!isExpanded) toggleSegmentExpanded(segment.id)
@@ -155,7 +166,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
         }`}
       >
        
-    <div className="segment-label-bar flex flex-wrap items-center gap-2 mb-3 pb-2 border-b border-gray-200">
+    <div className="segment-label-bar flex flex-wrap  items-center gap-2 mb-3 pb-2 border-b border-gray-200">
         
         
        <SegmentLabelSelector
@@ -163,7 +174,17 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
           validation={validation}
           isTocAiLoading={isTocAiLoading}
         />
-        <ScrollController segmentId={segment.id}/>
+<div
+          className="fixed right-10 flex gap-2 items-center z-10"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <SegmentSearch
+            segmentId={segment.id}
+            query={segmentSearchQuery}
+            onQueryChange={setSegmentSearchQuery}
+            matchCount={segmentSearchMatchCount}
+          />
+        </div>
 
         </div>
       
@@ -245,6 +266,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
                   text={segment.text}
                   title={segment.title}
                   author={segment.author}
+                  segmentSearchQuery={segmentSearchQuery}
                   onCursorChange={(segmentId, element) => onCursorChange(segmentId, element)}
                   onActivate={() => onActivate(segment.id)}
                   onInput={onInput}
@@ -376,24 +398,115 @@ const SegmentLabelSelector = ({
   )
 }
 
-const ScrollController=({segmentId})=>{
-  const element =document.getElementById(segmentId)
-  const goup=()=>{
-    element?.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
+const SegmentSearch = ({
+  segmentId,
+  query,
+  onQueryChange,
+  matchCount,
+}: {
+  segmentId: string
+  query: string
+  onQueryChange: (q: string) => void
+  matchCount: number
+}) => {
+  const [activeMatchIndex, setActiveMatchIndex]=useState(0);
+  const scrollSegmentToTop = useCallback(() => {
+    document.getElementById(segmentId)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    })
+  }, [segmentId])
+
+  const scrollSegmentToBottom = useCallback(() => {
+    document.getElementById(segmentId)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'end',
+    })
+  }, [segmentId])
+  
+
+  const handleActiveMatch = (index: number) => {
+    const segments = document.querySelectorAll('.segment-search-match')
+    const targetdom = segments[index]
+    if (targetdom) {
+      targetdom.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      })
+    }
   }
-  const godown=()=>{
-    element?.scrollIntoView({
-      behavior: "smooth",
-      block: "end",
-    });
+  
+  /** When there is no active search hit list, arrows scroll the segment in the page. */
+  const useScrollForArrows = !query.trim() || matchCount === 0
+
+  const goUp = ()=>{
+    if (useScrollForArrows) {
+      scrollSegmentToTop()
+      return
+    }
+    handleActiveMatch(activeMatchIndex)
+    setActiveMatchIndex(activeMatchIndex - 1)
   }
 
-  const buttonClass="cursor-pointer"
-  return <div className='fixed  right-10 flex gap-2'>
-    <Button className={buttonClass} onClick={goup} variant="outline"><ChevronUp/></Button>
-    <Button className={buttonClass} onClick={godown} variant='outline'><ChevronDown/>    </Button>
-  </div>
+  const goDown =()=> {
+    if (useScrollForArrows) {
+      scrollSegmentToBottom()
+      return
+    }
+    handleActiveMatch(activeMatchIndex)
+    setActiveMatchIndex(activeMatchIndex +1)
+
+  }
+
+  return (
+    <div className="segment-search-bar flex items-center gap-1   rounded-md px-1 py-0.5 ">
+      <Input
+        className="h-8 w-42 text-xs"
+        placeholder="Search"
+        value={query}
+        onChange={(e) => onQueryChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowUp') {
+            e.preventDefault()
+            e.stopPropagation()
+            goUp()
+          } else if (e.key === 'ArrowDown') {
+            e.preventDefault()
+            e.stopPropagation()
+            goDown()
+          }
+        }}
+        aria-label="Search within this segment"
+      />
+      {query.trim().length > 0 && (
+        <span className="text-[10px] text-muted-foreground tabular-nums whitespace-nowrap px-0.5">
+          {matchCount === 0 ? '0/0' : `${activeMatchIndex + 1}/${matchCount}`}
+        </span>
+      )}
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="h-8 w-8 shrink-0"
+        onClick={goUp}
+        aria-label={
+          useScrollForArrows ? 'Scroll segment to top' : 'Previous search match'
+        }
+      >
+        <ChevronUp className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="h-8 w-8 shrink-0"
+        onClick={goDown}
+        aria-label={
+          useScrollForArrows ? 'Scroll segment to bottom' : 'Next search match'
+        }
+      >
+        <ChevronDown className="h-4 w-4" />
+      </Button>
+    </div>
+  )
 }

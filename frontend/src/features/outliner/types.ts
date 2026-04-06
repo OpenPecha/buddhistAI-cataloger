@@ -42,6 +42,8 @@ export interface SegmentTextContentProps {
   text: string
   title?: string
   author?: string
+  /** Plain-text query; matches are highlighted in the segment (case-insensitive). */
+  segmentSearchQuery?: string
   onCursorChange: (segmentId: string, element: HTMLDivElement) => void
   onActivate: () => void
   onInput: (e: React.FormEvent<HTMLDivElement>) => void

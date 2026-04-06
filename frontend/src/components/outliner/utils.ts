@@ -34,21 +34,81 @@ export const escapeHtml = (text: string): string => {
   return div.innerHTML;
 };
 
-// Helper function to render text with markers
+type MarkerTransition = {
+  position: number;
+  kind: 'marker';
+  type: 'title' | 'author';
+  isStart: boolean;
+};
+
+type SearchTransition = {
+  position: number;
+  kind: 'search';
+  matchIndex: number;
+  isStart: boolean;
+};
+
+type UnifiedTransition = MarkerTransition | SearchTransition;
+
+function sortTransitions(a: UnifiedTransition, b: UnifiedTransition): number {
+  if (a.position !== b.position) return a.position - b.position;
+  // End transitions before start at the same index (e.g. adjacent search matches)
+  if (a.isStart !== b.isStart) return a.isStart ? 1 : -1;
+  return 0;
+}
+
+function wrapMarkerSpan(
+  markers: ('title' | 'author')[],
+  innerHtml: string,
+  part: { start: number; end: number }
+): string {
+  if (markers.length === 0) return innerHtml;
+
+  let bgClass = '';
+  let textClass = '';
+  let borderClass = '';
+
+  if (markers.includes('title') && markers.includes('author')) {
+    bgClass = 'bg-gradient-to-r from-yellow-100 to-purple-100';
+    textClass = 'text-gray-900';
+    borderClass = 'border border-yellow-300 border-dashed';
+  } else if (markers.includes('title')) {
+    bgClass = 'bg-yellow-100';
+    textClass = 'text-yellow-900';
+    borderClass = 'border border-yellow-300';
+  } else if (markers.includes('author')) {
+    bgClass = 'bg-purple-100';
+    textClass = 'text-purple-900';
+    borderClass = 'border border-purple-300';
+  }
+
+  const markerClasses = markers.map((m) => `marker-${m}`).join(' ');
+  return `<span class="text-marker ${markerClasses} ${bgClass} ${textClass} ${borderClass} px-1 rounded" data-marker-type="${markers.join(',')}" data-span-start="${part.start}" data-span-end="${part.end}">${innerHtml}</span>`;
+}
+
+function wrapSearchSpan(matchIndex: number | null, innerHtml: string): string {
+  if (matchIndex === null) return innerHtml;
+  return `<span class="segment-search-match bg-amber-200/80 rounded-sm">${innerHtml}</span>`;
+}
+
+// Helper function to render text with title/author markers and optional in-segment search highlights
 export const renderTextWithMarkers = (
   text: string,
   title?: string,
-  author?: string
+  author?: string,
+  searchQuery?: string
 ): string => {
-  if (!title && !author) {
+  const trimmedSearch = searchQuery?.trim() ?? '';
+  const hasSearch = trimmedSearch.length > 0;
+
+  if (!title && !author && !hasSearch) {
     return text;
   }
 
-  // Find all occurrences of title and author in the text
   const titleOccurrences = title ? findAllOccurrences(text, title) : [];
   const authorOccurrences = author ? findAllOccurrences(text, author) : [];
+  const searchOccurrences = hasSearch ? findAllOccurrences(text, trimmedSearch) : [];
 
-  // Combine all markers
   const markers: Array<{ start: number; end: number; type: 'title' | 'author' }> = [];
   titleOccurrences.forEach((occ) => {
     markers.push({ ...occ, type: 'title' });
@@ -57,36 +117,52 @@ export const renderTextWithMarkers = (
     markers.push({ ...occ, type: 'author' });
   });
 
-  if (markers.length === 0) {
+  if (markers.length === 0 && searchOccurrences.length === 0) {
     return text;
   }
 
-  // Create a list of all transition points (start and end of each marker)
-  interface TransitionPoint {
-    position: number;
-    type: 'title' | 'author';
-    isStart: boolean;
-  }
-
-  const transitions: TransitionPoint[] = [];
+  const transitions: UnifiedTransition[] = [];
   markers.forEach((marker) => {
-    transitions.push({ position: marker.start, type: marker.type, isStart: true });
-    transitions.push({ position: marker.end, type: marker.type, isStart: false });
+    transitions.push({
+      position: marker.start,
+      kind: 'marker',
+      type: marker.type,
+      isStart: true,
+    });
+    transitions.push({
+      position: marker.end,
+      kind: 'marker',
+      type: marker.type,
+      isStart: false,
+    });
+  });
+  searchOccurrences.forEach((occ, matchIndex) => {
+    transitions.push({
+      position: occ.start,
+      kind: 'search',
+      matchIndex,
+      isStart: true,
+    });
+    transitions.push({
+      position: occ.end,
+      kind: 'search',
+      matchIndex,
+      isStart: false,
+    });
   });
 
-  // Sort transitions by position
-  transitions.sort((a, b) => a.position - b.position);
+  transitions.sort(sortTransitions);
 
-  // Process transitions to build parts
-  // Group transitions at the same position
   let currentPos = 0;
   const activeMarkers = new Set<'title' | 'author'>();
+  let activeSearchMatch: number | null = null;
 
   interface TextPart {
     text: string;
     start: number;
     end: number;
     markers: ('title' | 'author')[];
+    searchMatchIndex: number | null;
   }
 
   const parts: TextPart[] = [];
@@ -95,23 +171,28 @@ export const renderTextWithMarkers = (
   while (i < transitions.length) {
     const position = transitions[i].position;
 
-    // Add text before this position if there's a gap
     if (position > currentPos) {
       parts.push({
         text: text.substring(currentPos, position),
         start: currentPos,
         end: position,
         markers: Array.from(activeMarkers),
+        searchMatchIndex: activeSearchMatch,
       });
     }
 
-    // Process all transitions at this position
     while (i < transitions.length && transitions[i].position === position) {
-      const transition = transitions[i];
-      if (transition.isStart) {
-        activeMarkers.add(transition.type);
-      } else {
-        activeMarkers.delete(transition.type);
+      const t = transitions[i];
+      if (t.kind === 'marker') {
+        if (t.isStart) {
+          activeMarkers.add(t.type);
+        } else {
+          activeMarkers.delete(t.type);
+        }
+      } else if (t.isStart) {
+        activeSearchMatch = t.matchIndex;
+      } else if (activeSearchMatch === t.matchIndex) {
+        activeSearchMatch = null;
       }
       i++;
     }
@@ -119,45 +200,22 @@ export const renderTextWithMarkers = (
     currentPos = position;
   }
 
-  // Add remaining text
   if (currentPos < text.length) {
     parts.push({
       text: text.substring(currentPos),
       start: currentPos,
       end: text.length,
-      markers: [],
+      markers: Array.from(activeMarkers),
+      searchMatchIndex: activeSearchMatch,
     });
   }
 
-  // Build HTML string
   let html = '';
   for (const part of parts) {
-    if (part.markers.length === 0) {
-      html += escapeHtml(part.text);
-    } else {
-      // Determine styling based on marker types
-      let bgClass = '';
-      let textClass = '';
-      let borderClass = '';
-
-      if (part.markers.includes('title') && part.markers.includes('author')) {
-        // Both markers overlap - use combined styling
-        bgClass = 'bg-gradient-to-r from-yellow-100 to-purple-100';
-        textClass = 'text-gray-900';
-        borderClass = 'border border-yellow-300 border-dashed';
-      } else if (part.markers.includes('title')) {
-        bgClass = 'bg-yellow-100';
-        textClass = 'text-yellow-900';
-        borderClass = 'border border-yellow-300';
-      } else if (part.markers.includes('author')) {
-        bgClass = 'bg-purple-100';
-        textClass = 'text-purple-900';
-        borderClass = 'border border-purple-300';
-      }
-
-      const markerClasses = part.markers.map((m) => `marker-${m}`).join(' ');
-      html += `<span class="text-marker ${markerClasses} ${bgClass} ${textClass} ${borderClass} px-1 rounded" data-marker-type="${part.markers.join(',')}" data-span-start="${part.start}" data-span-end="${part.end}">${escapeHtml(part.text)}</span>`;
-    }
+    let inner = escapeHtml(part.text);
+    inner = wrapSearchSpan(part.searchMatchIndex, inner);
+    inner = wrapMarkerSpan(part.markers, inner, { start: part.start, end: part.end });
+    html += inner;
   }
 
   return html;

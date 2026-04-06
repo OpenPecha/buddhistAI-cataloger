@@ -3,7 +3,20 @@ import type { SegmentTextContentProps } from './types'
 import { renderTextWithMarkers } from './utils'
 
 export const SegmentTextContent = React.forwardRef<HTMLDivElement, SegmentTextContentProps>(
-  ({ segmentId, text, title, author, onCursorChange, onActivate, onInput, onKeyDown }, ref) => {
+  (
+    {
+      segmentId,
+      text,
+      title,
+      author,
+      segmentSearchQuery,
+      onCursorChange,
+      onActivate,
+      onInput,
+      onKeyDown,
+    },
+    ref
+  ) => {
     const contentRef = useRef<HTMLDivElement>(null);
 
     // Combine refs
@@ -31,8 +44,13 @@ export const SegmentTextContent = React.forwardRef<HTMLDivElement, SegmentTextCo
           cursorOffset = preRange.toString().length
         }
 
-        // Render text with markers
-        const html = renderTextWithMarkers(text, title, author)
+        // Render text with markers and optional in-segment search highlights
+        const html = renderTextWithMarkers(
+          text,
+          title,
+          author,
+          segmentSearchQuery,
+        )
         contentRef.current.innerHTML = html
 
         // Restore cursor position if it was focused
@@ -72,7 +90,9 @@ export const SegmentTextContent = React.forwardRef<HTMLDivElement, SegmentTextCo
           }
         }
       }
-    }, [text, title, author])
+    }, [text, title, author, segmentSearchQuery])
+
+
 
     return (
       <div
