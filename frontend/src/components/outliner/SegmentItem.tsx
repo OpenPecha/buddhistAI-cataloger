@@ -530,8 +530,8 @@ const AlertMessage=({segment}: {segment: TextSegment}) => {
   return (
     <div className="alert-message flex items-center gap-2"> 
       <AlertCircle className="h-4 w-4 animate-bounce text-red-500" />
-      <span className="animate-pulse text-xs font-medium text-gray-500">
-         text subsegment (chapter, bampo, etc.)
+      <span className=" text-xs font-medium text-gray-500">
+         Text subsegment (chapter, bampo, etc.)
       </span>
     </div>
   )
