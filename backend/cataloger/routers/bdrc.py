@@ -1,12 +1,15 @@
 from typing import Annotated, Any, Dict, List, Literal, Optional
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Body, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
+from sqlalchemy.orm import Session
 
 from bdrc import search as bdrc_search_module
 from bdrc import work as bdrc_work_module
 from bdrc import person as bdrc_person_module
+from core.database import get_db
+from outliner.controller.outliner import sync_completed_documents_to_bdrc_in_review
 
 load_dotenv(override=True)
 
@@ -104,6 +107,32 @@ class CreatePersonRequest(BaseModel):
     alt_label_bo: Optional[List[str]] = None
     dates: Optional[str] = None
     modified_by: Optional[str] = None
+
+
+class BdrcBulkSyncRequest(BaseModel):
+    """Optional body for POST /bdrc/sync."""
+
+    document_ids: Optional[List[str]] = Field(
+        default=None,
+        description=(
+            "If set, only these outliner document IDs are candidates. "
+            "They must still be completed, have a BDRC volume id (filename), and all segments checked. "
+            "Omit or send null to sync all eligible documents."
+        ),
+    )
+
+
+def _normalize_bulk_sync_document_ids(raw: Optional[List[str]]) -> Optional[List[str]]:
+    if raw is None:
+        return None
+    out: List[str] = []
+    for x in raw:
+        if x is None:
+            continue
+        s = str(x).strip()
+        if s and s not in out:
+            out.append(s)
+    return out
 
 
 def _normalize_person_results(raw: Dict[str, Any], max_results: int = 10) -> List[Dict[str, Any]]:
@@ -240,6 +269,35 @@ async def get_work(work_id: str):
         "title": title,
         "authors": authors,
     }
+
+
+@router.post("/sync")
+async def sync_outliner_documents_to_bdrc(
+    db: Session = Depends(get_db),
+    body: BdrcBulkSyncRequest = Body(default_factory=BdrcBulkSyncRequest),
+):
+    """
+    Push every outliner document that is `completed`, has a BDRC volume id (`filename`),
+    has at least one segment, and has all segments `checked` to BDRC with status `in_review`.
+    `modified_by` per volume comes from that document's owner (user email, else user id).
+    Does not change local document status. Returns per-document success and failure lists.
+
+    JSON body is optional. Send `{"document_ids": ["<uuid>", ...]}` to restrict to those IDs only
+    (they must still satisfy the same eligibility rules). `{}` or omitting `document_ids` syncs all eligible.
+    """
+    try:
+        only_ids = _normalize_bulk_sync_document_ids(body.document_ids)
+        return await sync_completed_documents_to_bdrc_in_review(db, only_document_ids=only_ids)
+    except HTTPException:
+        raise
+    except TimeoutError:
+        raise HTTPException(status_code=504, detail="Request to BDRC API timed out")
+    except ConnectionError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/works")

@@ -29,6 +29,7 @@ class VolumeInput(BaseModel):
     status: STATUS
     base_text: Optional[str] = None
     segments: Optional[List[SegmentInput]] = None
+    modified_by: Optional[str] = None
 
 # Async HTTP client with connection pooling (reused across requests)
 _http_client: Optional[httpx.AsyncClient] = None
@@ -38,10 +39,11 @@ async def get_http_client() -> httpx.AsyncClient:
     """Get or create shared async HTTP client with connection pooling"""
     global _http_client
     if _http_client is None:
+        # No request timeout: large volume updates and bulk sync can exceed any fixed limit.
         _http_client = httpx.AsyncClient(
-            timeout=httpx.Timeout(10.0),
+            timeout=None,
             limits=httpx.Limits(max_keepalive_connections=20, max_connections=100),
-            follow_redirects=True
+            follow_redirects=True,
         )
     return _http_client
 
