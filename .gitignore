@@ -8,3 +8,4 @@ backend/venv
 __pycache__
 dependencies
 backend/dependencies
+outliner_cleaner

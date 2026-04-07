@@ -531,7 +531,7 @@ const AlertMessage=({segment}: {segment: TextSegment}) => {
     <div className="alert-message flex items-center gap-2"> 
       <AlertCircle className="h-4 w-4 animate-bounce text-red-500" />
       <span className="animate-pulse text-xs font-medium text-gray-500">
-        Don't segment this text, bonpo text detected
+         text subsegment (chapter, bampo, etc.)
       </span>
     </div>
   )
