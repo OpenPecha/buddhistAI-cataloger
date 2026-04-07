@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Loader2, ChevronDown, ChevronRight, Merge, ChevronUp } from 'lucide-react'
+import { Loader2, ChevronDown, ChevronRight, Merge, ChevronUp, AlertCircle } from 'lucide-react'
 import type { TextSegment, SegmentLabel } from './types'
 import { SegmentTextContent } from './SegmentTextContent'
 import { useDocument,useCursor, useActions } from './contexts'
@@ -174,6 +174,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
           validation={validation}
           isTocAiLoading={isTocAiLoading}
         />
+      
 <div
           className="fixed right-10 flex gap-2 items-center z-10"
           onClick={(e) => e.stopPropagation()}
@@ -231,6 +232,12 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
             )}
           </div>
           <div className={`flex-1 relative ${isChecked && !isRejected ? 'pointer-events-none' : ''}`}>
+          <div className='absolute right-2'>
+
+          <AlertMessage
+          segment={segment}
+          />
+          </div>
             {isCollapsed ? (
               <>
               <button
@@ -507,6 +514,25 @@ const SegmentSearch = ({
       >
         <ChevronDown className="h-4 w-4" />
       </Button>
+    </div>
+  )
+}
+
+const AlertMessage=({segment}: {segment: TextSegment}) => {
+  
+  // Check for additional patterns, allow case-insensitive/variant spacing, make extensible
+  const BONPO_PATTERNS = ['བམ་པོ', 'ལེའུ', 'བམཔོ', 'བམ་པོ་', 'ལེའུ་', 'བམ པོ'];
+  const normalizedText = segment.text.replace(/\s+/g, ''); // Remove extra whitespace
+  const showAlertMessage = BONPO_PATTERNS.some(pattern => 
+    normalizedText.includes(pattern.replace(/\s+/g, ''))
+  );
+  if (!showAlertMessage || segment.label !== 'TEXT') return null;
+  return (
+    <div className="alert-message flex items-center gap-2"> 
+      <AlertCircle className="h-4 w-4 animate-bounce text-red-500" />
+      <span className="animate-pulse text-xs font-medium text-gray-500">
+        Don't segment this text, bonpo text detected
+      </span>
     </div>
   )
 }
