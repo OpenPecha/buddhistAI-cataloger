@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { useTranslation } from 'react-i18next';
 
 interface UnsavedChangesDialogProps {
   open: boolean;
@@ -21,24 +22,25 @@ export function UnsavedChangesDialog({
   onDiscard,
   onCancel,
 }: UnsavedChangesDialogProps) {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
       <DialogContent showCloseButton={false}>
         <DialogHeader>
-          <DialogTitle>Unsaved Changes</DialogTitle>
+          <DialogTitle>{t('outliner.unsavedChanges.title')}</DialogTitle>
           <DialogDescription>
-            You have unsaved changes to the title or author fields. What would you like to do?
+            {t('outliner.unsavedChanges.description')}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={onCancel}>
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button  onClick={onDiscard}>
-            Discard
+            {t('outliner.unsavedChanges.discard')}
           </Button>
           <Button variant="destructive" onClick={onSave}>
-            Save
+            {t('common.save')}
           </Button>
         </DialogFooter>
       </DialogContent>

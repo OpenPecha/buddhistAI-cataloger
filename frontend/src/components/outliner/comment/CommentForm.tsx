@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
 import { useUser } from '@/hooks/useUser';
 import React, { useCallback, useState } from 'react'
@@ -9,6 +10,7 @@ import {  Send } from 'lucide-react';
 
 
 function CommentForm({ segmentId }: { segmentId: string }) {
+    const { t } = useTranslation();
     const { createCommentMutation } = useOutlinerDocument();
     const [commentContent, setCommentContent] = useState('');
     const { user } = useUser();
@@ -46,7 +48,7 @@ function CommentForm({ segmentId }: { segmentId: string }) {
    
 
     <Field orientation="horizontal">
-      <Input className='w-full bg-white'  value={commentContent} onChange={(e) => setCommentContent(e.target.value)} type="type"  placeholder="type your comment here..." />
+      <Input className='w-full bg-white'  value={commentContent} onChange={(e) => setCommentContent(e.target.value)} type="type"  placeholder={t('outliner.comments.placeholder')} />
       <Button onClick={handleCommentSubmit}
       disabled={createCommentMutation.isPending} >        <Send />
       </Button>

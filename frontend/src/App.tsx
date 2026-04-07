@@ -3,8 +3,8 @@ import { useEffect, lazy, Suspense } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { Navigation, ProtectedRoute } from '@app';
 import { getUserByEmail, createUser } from './api/settings';
-import { useUser } from './hooks/useUser';
 import OutlinerAdminLayout from './features/outliner/components/OutlinerAdminLayout';
+import { useUser } from './hooks/useUser';
 
 // Lazy load page components
 const TextsPage = lazy(() => import('./pages/Text'));
@@ -92,14 +92,13 @@ function App() {
 
         
       {!isLoginPage && <Navigation/>}
-      <div>
         <Suspense fallback={
           <div className="flex items-center justify-center min-h-screen">
             <div className="text-gray-600">Loading...</div>
           </div>
         }>
           <Routes>
-          <Route path="/login" element={<LoginPage />} />
+            <Route path="/login" element={<LoginPage />} />
           <Route path="/profile" element={
             <ProtectedRoute>
               <Profile />
@@ -205,7 +204,7 @@ function App() {
               </OutlinerAdminLayout>
             </ProtectedRoute>
           } />
-              <Route path="/outliner-admin/bdrc-library/persons" element={
+          <Route path="/outliner-admin/bdrc-library/persons" element={
             <ProtectedRoute>
               <OutlinerAdminLayout >
                 <OutlinerAdminBDRCPersonsLazy />
@@ -214,7 +213,6 @@ function App() {
           } />
         </Routes>
         </Suspense>
-        </div>
     </div>
     
    
@@ -222,6 +220,7 @@ function App() {
 
   );
 }
+
 
 
 

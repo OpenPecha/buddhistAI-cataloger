@@ -5,6 +5,8 @@ interface DocumentContextValue {
   textContent: string
   segments: TextSegment[]
   activeSegmentId: string | null
+  /** Current Title field value in the sidebar for the active segment (may differ from saved segment.title until Save). */
+  sidebarTitleDraft: string
   aiTextEndingLoading: boolean
   segmentLoadingStates: Map<string, boolean>
   isUploading?: boolean

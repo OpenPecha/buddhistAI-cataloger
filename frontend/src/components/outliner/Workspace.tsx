@@ -1,4 +1,5 @@
-import React, { useRef, useState, useCallback, useMemo, Activity } from 'react'
+import React, { useRef, useState, useCallback, Activity } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
   List,
   useDynamicRowHeight,
@@ -11,12 +12,12 @@ import { WorkspaceHeader } from './WorkspaceHeader'
 import { useDocument, useSelection, useActions } from './contexts'
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument'
 import type { TextSegment } from './types'
-import ImageWrapper from './ImageWrapper'
 import TocViewer from './TOCViewer'
 
 export const Workspace: React.FC<{ listRef: React.RefObject<ListImperativeAPI | null> }> = ({
   listRef,
 }) => {
+  const { t } = useTranslation()
   const { segments, aiTextEndingLoading } = useDocument()
   const { onTextSelection } = useSelection()
   const {
@@ -39,13 +40,7 @@ export const Workspace: React.FC<{ listRef: React.RefObject<ListImperativeAPI | 
     setTocPanelVisible((v) => !v)
   }, [])
 
-  const hasTocSegment = useMemo(
-    () => segments.some((segment) => segment.label === 'TOC'),
-    [segments]
-  )
-  const showTocColumn = hasTocSegment && tocPanelVisible
-
-  const [imageVisible, setImageVisible] = useState(false)
+  const showTocColumn = tocPanelVisible
 
   const mainColumn = (
     <div
@@ -68,15 +63,13 @@ export const Workspace: React.FC<{ listRef: React.RefObject<ListImperativeAPI | 
           onUndoTextEndingDetection,
           onResetSegments,
         }}
-        tocPanel={
-          hasTocSegment ? { visible: tocPanelVisible, onToggle: toggleTocPanel } : undefined
-        }
+        tocPanel={{ visible: tocPanelVisible, onToggle: toggleTocPanel }}
       />
       {isLoadingDocument && (
         <div className="flex shrink-0 items-center justify-center py-12">
           <div className="text-center">
             <div className="mb-2 inline-block h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600" />
-            <p className="text-sm text-gray-600">Loading document...</p>
+            <p className="text-sm text-gray-600">{t('outliner.workspace.loadingDocument')}</p>
           </div>
         </div>
       )}
@@ -84,7 +77,7 @@ export const Workspace: React.FC<{ listRef: React.RefObject<ListImperativeAPI | 
         ref={containerRef}
         className="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-white scroll-container"
         onClick={onTextSelection}
-        aria-label="Text workspace content area"
+        aria-label={t('outliner.workspace.contentAria')}
         role="section"
         onKeyDown={() => {}}
       >
@@ -126,29 +119,9 @@ export const Workspace: React.FC<{ listRef: React.RefObject<ListImperativeAPI | 
     mainColumn
   )
 
-  const imagePanel = (
-    <ImageWrapper imageVisible={imageVisible} onImageVisibleChange={setImageVisible} />
-  )
-
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col">
-      {imageVisible ? (
-        <SplitPane
-          direction="vertical"
-          className="outliner-split-pane flex-1 min-h-0"
-          dividerSize={8}
-        >
-          <Pane defaultSize="32%" minSize={100} maxSize="70%">
-            <div className="h-full min-h-0">{imagePanel}</div>
-          </Pane>
-          <Pane minSize={160}>{bottomPane}</Pane>
-        </SplitPane>
-      ) : (
-        <div className="flex h-full min-h-0 flex-col">
-          <div className="shrink-0">{imagePanel}</div>
-          <div className="min-h-0 flex-1">{bottomPane}</div>
-        </div>
-      )}
+      {bottomPane}
     </div>
   )
 }

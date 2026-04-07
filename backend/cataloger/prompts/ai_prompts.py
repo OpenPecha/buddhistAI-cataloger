@@ -35,6 +35,52 @@ Text to analyze:
 Provide all four fields (title, suggested_title, author, suggested_author) in the same language as the content."""
 
 
+def get_title_from_start_prompt(start_excerpt: str) -> str:
+    """
+    Prompt for title extraction/suggestion using only the opening of a segment.
+    """
+    return f"""You are given the BEGINNING of a text segment (first portion only). Infer or extract a title.
+IMPORTANT: title and suggested_title must be in the SAME LANGUAGE as this excerpt.
+
+Instructions:
+1. Detect the language of the excerpt.
+2. If a title appears explicitly at the start (headers, ༄༅-style lines, chapter lines), extract it (original language).
+3. If no clear title, suggest a short descriptive title from what you see (same language).
+4. Prefer Tibetan over Chinese/English/Hindi if multiple candidates appear.
+
+Fields:
+- title: extracted title if clearly present at the beginning, otherwise null
+- suggested_title: if title is null, a concise suggested title; otherwise null
+
+Excerpt (start of segment only):
+{start_excerpt}
+
+Respond with title and suggested_title only, in the content's language."""
+
+
+def get_author_from_end_prompt(end_excerpt: str) -> str:
+    """
+    Prompt for author extraction/suggestion using only the closing of a segment.
+    """
+    return f"""You are given the END of a text segment (last portion only). Infer or extract an author.
+IMPORTANT: author and suggested_author must be in the SAME LANGUAGE as this excerpt.
+
+Instructions:
+1. Detect the language of the excerpt.
+2. Look for colophons, signatures, scribe names, བཀྲ་ཤིས-style closings, or explicit author attribution near the end.
+3. If no author is indicated, suggest an author only if there are strong clues; otherwise null for both.
+4. Prioritize Tibetan over Chinese/English/Hindi if multiple names appear.
+
+Fields:
+- author: extracted author if explicitly indicated, otherwise null
+- suggested_author: if author is null and clues justify a guess, a suggested name; otherwise null
+
+Excerpt (end of segment only):
+{end_excerpt}
+
+Respond with author and suggested_author only, in the content's language."""
+
+
 def get_text_boundary_detection_prompt(content: str) -> str:
     """
     Generate prompt for detecting text boundaries in Tibetan texts.

@@ -14,6 +14,8 @@ from dotenv import load_dotenv
 from outliner.models.outliner import OutlinerDocument, OutlinerSegment
 from cataloger.prompts.ai_prompts import (
     get_title_author_prompt,
+    get_title_from_start_prompt,
+    get_author_from_end_prompt,
     get_text_boundary_detection_prompt,
     get_toc_parse_prompt,
 )
@@ -161,6 +163,98 @@ def generate_title_author(content: str, response_schema: Any) -> Dict[str, Optio
         raise HTTPException(
             status_code=500,
             detail=f"Error generating title and author: {str(e)}"
+        )
+
+
+_TITLE_START_MAX_CHARS = 2500
+_AUTHOR_END_MAX_CHARS = 2500
+
+
+def generate_title_from_start(content: str, response_schema: Any) -> Any:
+    """
+    Title only: model sees the opening of the segment (first ~2500 characters).
+    """
+    if not GEMINI_API_KEY:
+        raise HTTPException(
+            status_code=500,
+            detail="GEMINI_API_KEY environment variable is not set",
+        )
+    excerpt = content[:_TITLE_START_MAX_CHARS] if content else ""
+    if not excerpt.strip():
+        raise HTTPException(status_code=400, detail="Content is empty")
+
+    try:
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        prompt = get_title_from_start_prompt(excerpt)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-lite",
+            contents=prompt,
+            config={
+                "response_mime_type": "application/json",
+                "response_schema": response_schema,
+            },
+        )
+        if hasattr(response, "parsed") and response.parsed:
+            return response.parsed
+        if hasattr(response, "text") and response.text:
+            result = json.loads(response.text.strip())
+            return {
+                "title": result.get("title"),
+                "suggested_title": result.get("suggested_title"),
+            }
+        raise HTTPException(status_code=500, detail="No response received from the model")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generating title: {str(e)}",
+        )
+
+
+def generate_author_from_end(content: str, response_schema: Any) -> Any:
+    """
+    Author only: model sees the closing of the segment (last ~2500 characters).
+    """
+    if not GEMINI_API_KEY:
+        raise HTTPException(
+            status_code=500,
+            detail="GEMINI_API_KEY environment variable is not set",
+        )
+    if not content or not content.strip():
+        raise HTTPException(status_code=400, detail="Content is empty")
+    excerpt = (
+        content[-_AUTHOR_END_MAX_CHARS:]
+        if len(content) > _AUTHOR_END_MAX_CHARS
+        else content
+    )
+
+    try:
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        prompt = get_author_from_end_prompt(excerpt)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-lite",
+            contents=prompt,
+            config={
+                "response_mime_type": "application/json",
+                "response_schema": response_schema,
+            },
+        )
+        if hasattr(response, "parsed") and response.parsed:
+            return response.parsed
+        if hasattr(response, "text") and response.text:
+            result = json.loads(response.text.strip())
+            return {
+                "author": result.get("author"),
+                "suggested_author": result.get("suggested_author"),
+            }
+        raise HTTPException(status_code=500, detail="No response received from the model")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generating author: {str(e)}",
         )
 
 

@@ -1,39 +1,45 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { detectTextEndings, type DetectTextEndingsResponse } from '@/api/outliner';
+import { runAiOutline, type AiOutlineResponse } from '@/api/outliner';
 import { toast } from 'sonner';
+import i18n from '@/i18n/config';
 
 interface UseAITextEndingsOptions {
   documentId?: string;
-  onSuccess?: (data: DetectTextEndingsResponse) => void;
+  onSuccess?: (data: AiOutlineResponse) => void;
   onError?: (error: Error) => void;
 }
 
 /**
- * Hook for AI text ending detection using React Query
+ * Hook for AI document outline (TOC-based segmentation via /outliner/ai-outline).
  */
 export const useAITextEndings = (options?: UseAITextEndingsOptions) => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: ({ content, document_id, segment_id, signal }: { content: string; document_id: string; segment_id: string; signal?: AbortSignal }) =>
-      detectTextEndings({ content, document_id, segment_id }, signal),
+    mutationFn: ({ document_id, signal }: { document_id: string; signal?: AbortSignal }) =>
+      runAiOutline(document_id, signal),
     onSuccess: (data, variables) => {
-      // Invalidate document query to refetch updated segments
       if (variables.document_id) {
         queryClient.invalidateQueries({ queryKey: ['outliner-document', variables.document_id] });
       }
+      toast.success(
+        data.segments?.length
+          ? i18n.t('outliner.aiOutline.segmentsCreated', { count: data.segments.length })
+          : i18n.t('outliner.aiOutline.complete'),
+      );
       options?.onSuccess?.(data);
     },
     onError: (error: Error) => {
       if (error.name !== 'AbortError') {
-        toast.error(`Failed to detect text endings: ${error.message}`);
+        toast.error(i18n.t('outliner.aiOutline.failed', { message: error.message }));
         options?.onError?.(error);
       }
     },
   });
 
   return {
-    detectTextEndings: mutation.mutateAsync,
+    /** Runs TOC detection on the full document and replaces all segments. */
+    runAiOutline: mutation.mutateAsync,
     isLoading: mutation.isPending,
     error: mutation.error,
     reset: mutation.reset,

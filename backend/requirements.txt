@@ -40,3 +40,4 @@ redis
 
 # --- GenAI ---
 google-genai
+ai-text-outline

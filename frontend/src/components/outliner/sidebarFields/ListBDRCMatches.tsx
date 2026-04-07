@@ -1,4 +1,5 @@
-import { Loader2, User } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { Loader2 } from 'lucide-react'
 import type { TextSegment } from '../types'
 import { usePossibleMatch } from '../hooks/usePossibleMatch'
 import AuthorsListing from './AuthorsListing'
@@ -20,6 +21,7 @@ export function ListBDRCMatches({
   onSelectWorkId,
   disabled = false,
 }: Readonly<ListBDRCMatchesProps>) {
+  const { t } = useTranslation()
   const { suggestions, loading, error } = usePossibleMatch(
     segment,
     volumeId,
@@ -33,7 +35,7 @@ export function ListBDRCMatches({
   if (!volumeId?.trim()) {
     return (
       <p className="mt-2 text-xs text-amber-800/90">
-        Set the document filename to the BDRC volume id (e.g. V1CZ39) to see suggestions.
+        {t('outliner.listBdrcMatches.setVolumeHint')}
       </p>
     )
   }
@@ -42,7 +44,7 @@ export function ListBDRCMatches({
       {loading && (
         <div className="flex items-center gap-2 text-xs text-gray-500">
           <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" />
-          Matching…
+          {t('outliner.listBdrcMatches.matching')}
         </div>
       )}
       {error && !loading && (
@@ -51,11 +53,11 @@ export function ListBDRCMatches({
         </p>
       )}
       {!loading && !error && suggestions.length === 0 && (
-        <p className="text-xs text-gray-500">No suggestions for this segment.</p>
+        <p className="text-xs text-gray-500">{t('outliner.listBdrcMatches.noSuggestions')}</p>
       )}
       {!loading && suggestions.length > 0 && (
         <div className="flex flex-wrap gap-2  flex-col">
-          <span className="text-xs text-gray-500">suggestions:</span>
+          <span className="text-xs text-gray-500">{t('outliner.listBdrcMatches.suggestionsLabel')}</span>
           {suggestions.map((s) => {
             const label = (s.name?.trim() || s.id).slice(0, 80)
             const titleTip = [s.name, s.id].filter(Boolean).join(' — ')

@@ -461,6 +461,247 @@
     "loadingRelatedTexts": "正在加载相关文本...",
     "errorLoadingRelatedTexts": "加载相关文本时出错",
     "noRelatedTextsFound": "未找到相关文本"
+  },
+  "outliner": {
+    "segmentLabels": {
+      "none": "片段类型",
+      "FRONT_MATTER": "前置部分",
+      "TOC": "目录",
+      "TEXT": "正文",
+      "BACK_MATTER": "后置部分"
+    },
+    "filter": {
+      "filters": "筛选",
+      "label": "标签",
+      "completion": "完成状态",
+      "showAll": "显示全部",
+      "all": "全部",
+      "completed": "已完成",
+      "notCompleted": "未完成"
+    },
+    "unsavedChanges": {
+      "title": "未保存的更改",
+      "description": "标题或作者字段有未保存的更改。您希望如何处理？",
+      "discard": "放弃"
+    },
+    "annotation": {
+      "noSegmentSelected": "未选择片段",
+      "clickSegmentToAnnotate": "在工作区中点击一个片段以进行标注",
+      "textPrefix": "文本：",
+      "save": "保存",
+      "notApplicable": "不适用",
+      "reset": "重置",
+      "tabOutlines": "大纲",
+      "tabMetadata": "元数据",
+      "metadataDisabledHint": "仅对已设置类型的片段可用",
+      "noSegments": "没有可用片段",
+      "noMatchingFilters": "没有符合所选筛选条件的片段",
+      "authorBadge": "作者",
+      "labelBadge": "标签",
+      "toastNoSegment": "未选择片段",
+      "toastNeedTitleOrAuthor": "请至少填写标题或作者",
+      "toastSaved": "标注已成功保存",
+      "toastSaveFailed": "保存标注失败"
+    },
+    "segment": {
+      "oneTocOnly": "文档中只能有一个目录（TOC）片段",
+      "notTocLike": "该片段看起来不像目录",
+      "tocCountMismatch": "正文片段数（{{textCount}}）与 AI 目录条目数（{{entriesCount}}）不一致",
+      "attached": "✓ 已附加",
+      "attachParent": "附加父级",
+      "mergePrevious": "与上一片段合并",
+      "expandSegment": "展开片段",
+      "collapseSegment": "折叠片段",
+      "rejected": "已驳回",
+      "rejectedMany": "已驳回 {{count}} 次",
+      "failedUpdateLabel": "更新标签失败",
+      "labelField": "标签",
+      "noLabelPlaceholder": "无标签",
+      "searchPlaceholder": "搜索",
+      "searchInSegment": "在此片段内搜索",
+      "scrollToTop": "将片段滚动到顶部",
+      "prevMatch": "上一处匹配",
+      "scrollToBottom": "将片段滚动到底部",
+      "nextMatch": "下一处匹配",
+      "subsegmentWarning": "请勿在章节、品（bampo）等子层级上再分片段",
+      "analyzingToc": "正在分析目录…"
+    },
+    "tocPanel": {
+      "sideAria": "图像与目录",
+      "tabImages": "图像",
+      "tabToc": "目录",
+      "tabTocDisabledTitle": "请在工作区将某片段类型设为目录（TOC）以启用此标签页。",
+      "ariaDocumentToc": "文档目录",
+      "emptyNoTocSegment": "没有目录片段。请将某片段类型设为 TOC 以在此显示其文本。",
+      "ariaTocLines": "文档目录行",
+      "emptyNoLinesInToc": "此目录片段中尚无非空行。",
+      "tocSegmentHeading": "目录片段 {{n}}",
+      "ariaTocPart": "文档目录，第 {{n}} 部分",
+      "emptyNoLinesInSegment": "此片段中无非空行。",
+      "mismatch": "正文片段数 {{textCount}} 与 AI 目录条目数 {{aiCount}} 不一致，请修正。",
+      "ariaAiEntries": "AI 提取的目录条目",
+      "emptyAiEntries": "尚无 AI 提取的条目。请在工作区对目录片段运行目录检测。"
+    },
+    "workspace": {
+      "loadingDocument": "正在加载文档...",
+      "contentAria": "文本工作区内容区域",
+      "saving": "正在保存...",
+      "savedSegmentsTitle": "已保存 {{count}} 个片段",
+      "revisionBadge": "{{count}} 个片段需要修订",
+      "revisionBadge_plural": "{{count}} 个片段需要修订",
+      "aiOutlineTitle": "AI 大纲：检测藏文目录并将文档拆分为片段（会替换当前片段）",
+      "detecting": "正在检测...",
+      "stopDetection": "停止检测",
+      "undoAiTitle": "撤销 AI 分段",
+      "undo": "撤销",
+      "hideSidePanel": "隐藏侧栏（图像与目录）",
+      "showSidePanel": "显示侧栏（图像与目录）",
+      "skipped": "已跳过",
+      "skipping": "正在跳过...",
+      "skip": "跳过",
+      "resetAllSegments": "重置所有片段",
+      "documentMarkedSkipped": "文档已标记为跳过",
+      "skipFailed": "跳过文档失败：{{message}}",
+      "confirmSkip": "确定要跳过此文档吗？",
+      "submitNotSaved": "尚有 {{count}} 个片段未保存",
+      "submitNotSaved_plural": "尚有 {{count}} 个片段未保存"
+    },
+    "expand": {
+      "expandAll": "全部展开",
+      "collapseAll": "全部折叠"
+    },
+    "bubbleMenu": {
+      "useSelectionAs": "将所选文本用作：",
+      "title": "标题",
+      "author": "作者"
+    },
+    "splitMenu": {
+      "splitHere": "在此处拆分"
+    },
+    "submitReview": {
+      "success": "已提交审核并同步至 BDRC",
+      "noDocumentId": "未找到文档 ID",
+      "title": "提交审核",
+      "submit": "提交"
+    },
+    "upload": {
+      "uploading": "正在上传文档..."
+    },
+    "loadError": {
+      "title": "加载文档失败",
+      "retry": "重试"
+    },
+    "aiOutline": {
+      "segmentsCreated": "AI 大纲：已创建 {{count}} 个片段",
+      "segmentsCreated_plural": "AI 大纲：已创建 {{count}} 个片段",
+      "complete": "AI 大纲完成",
+      "failed": "AI 大纲失败：{{message}}"
+    },
+    "aiSuggestions": {
+      "failed": "生成 AI 建议失败：{{message}}"
+    },
+    "aiDetect": {
+      "stop": "停止 AI 建议",
+      "detectTitleAuthor": "检测标题与作者"
+    },
+    "images": {
+      "pageTitle": "第 {{n}} 页",
+      "volumePageAlt": "卷第 {{n}} 页",
+      "noImage": "无可用图像。",
+      "syncOn": "页面跟随文本光标。点击以保持当前页不变。",
+      "syncOff": "点击使页面跳转到与光标对应的位置。",
+      "sync": "同步",
+      "openBdrcLibrary": "在 BDRC 书库中打开",
+      "noVolume": "无可用卷。",
+      "loadingVolume": "正在加载卷…",
+      "loadVolumeFailed": "加载卷失败：{{message}}",
+      "noPages": "无可用页面。",
+      "thumbnailsAria": "页面缩略图",
+      "pagesScrollAria": "卷内页面，滚动浏览"
+    },
+    "comments": {
+      "title": "评论",
+      "loading": "正在加载评论...",
+      "placeholder": "在此输入评论..."
+    },
+    "listBdrcMatches": {
+      "setVolumeHint": "请将文档文件名设为 BDRC 卷 ID（例如 V1CZ39）以显示建议。",
+      "matching": "正在匹配…",
+      "noSuggestions": "此片段暂无建议。",
+      "suggestionsLabel": "建议："
+    },
+    "unknownAuthor": "未知作者",
+    "idLabel": "ID：{{id}}",
+    "titleField": {
+      "label": "标题",
+      "reconstructedHint": "根据正文重构的标题 / 标题不清晰",
+      "reconstructedCheckbox": "重构",
+      "placeholderReconstructed": "标注员重构的标题",
+      "placeholder": "输入标题"
+    },
+    "unknownTitle": "未知标题",
+    "authorField": {
+      "label": "作者",
+      "matchBdrcTitle": "与所选 BDRC 作者匹配",
+      "placeholder": "输入作者姓名",
+      "matchedPercent": "匹配 {{pct}}%"
+    },
+    "bdrc": {
+      "captchaMismatch": "验证码不匹配。请重试或请求新验证码。",
+      "captchaFirstOk": "第一遍验证通过。请输入第二遍验证码。",
+      "authorMismatchWarning": "此片段有作者，但匹配的 BDRC 作品没有作者。请编辑 BDRC 作品并添加作者后再保存。",
+      "workUpdated": "BDRC 作品已更新",
+      "workUpdateFailed": "更新 BDRC 作品失败",
+      "searchTitlePlaceholder": "输入标题以搜索 BDRC...",
+      "loadingWork": "正在加载作品…",
+      "editWorkTitle": "编辑 BDRC 作品",
+      "clearSelectionTitle": "清除 BDRC 选择",
+      "noWorkInfo": "无作品信息",
+      "titleLabel": "标题",
+      "authorsLabel": "作者",
+      "addAuthorConfirm": "是否添加另一位作者？仅注释类作品允许多位注释者。",
+      "add": "添加",
+      "searchAuthorPlaceholder": "搜索或创建作者…",
+      "removeAuthorAria": "移除作者",
+      "saveToBdrc": "保存到 BDRC",
+      "viewWorkDetailsTitle": "查看已匹配 BDRC 作品的详情",
+      "matchWorkFirstTitle": "请先匹配 BDRC 作品以查看详情",
+      "identifyDuplicates": "识别可能重复项",
+      "originPrefix": "来源：",
+      "duplicateBadge": "重复",
+      "createWork": "创建作品",
+      "confirmCreateTitle": "创建作品前请确认",
+      "confirmCreateDescription": "请连续两次正确输入下方验证码（第一次通过后会出现新码）。用于防止误创建 BDRC 作品。",
+      "captchaStep": "第 {{step}} 步，共 2 步",
+      "typeTheCode": "输入验证码",
+      "newCode": "新验证码"
+    },
+    "duplicates": {
+      "dialogTitle": "识别可能重复项",
+      "currentWork": "当前作品：",
+      "loading": "正在加载…",
+      "canonicalAuthorLabel": "规范作者（将重复项合并到此人物）",
+      "searchPersonByName": "按人物姓名搜索 BDRC",
+      "canonicalPerson": "规范人物：",
+      "noLinkedAuthors": "此作品上的作者均未关联 BDRC 人物 ID。请先关联作者后再搜索并合并重复人物。",
+      "close": "关闭",
+      "searchByTitle": "按标题搜索…",
+      "noWorksMatch": "没有与此搜索匹配的其他作品。",
+      "selectedWork": "所选作品",
+      "title": "标题",
+      "workId": "作品 ID",
+      "authors": "作者",
+      "duplicateButton": "标为重复",
+      "mergedWork": "已将重复项合并到此作品",
+      "mergeFailed": "合并失败",
+      "canonicalAuthors": "作者",
+      "searchByName": "按姓名搜索…",
+      "noPersonsMatch": "没有与此搜索匹配的其他人物。",
+      "selectedPerson": "所选人物",
+      "name": "姓名",
+      "personId": "人物 ID",
+      "mergedAuthor": "已将重复项合并到此作者"
+    }
   }
 }
 

@@ -1,15 +1,18 @@
-import type { SegmentLabel } from './types';
+import type { SegmentLabel } from './types'
 
-export const SEGMENT_LABEL_OPTIONS: { value: SegmentLabel | 'none'; label: string }[] = [
-  { value: 'none', label: 'Segment type' },
-  { value: 'FRONT_MATTER', label: 'Front matter' },
-  { value: 'TOC', label: 'TOC' },
-  { value: 'TEXT', label: 'Text' },
-  { value: 'BACK_MATTER', label: 'Back matter' },
-];
+/** Ordered values for label dropdowns and filters (includes `none` for “no type”). */
+export const SEGMENT_LABEL_VALUES: (SegmentLabel | 'none')[] = [
+  'none',
+  'FRONT_MATTER',
+  'TOC',
+  'TEXT',
+  'BACK_MATTER',
+]
 
-export function segmentLabelDisplay(label: SegmentLabel | undefined | null): string {
-  if (!label) return '';
-  const opt = SEGMENT_LABEL_OPTIONS.find((o) => o.value === label);
-  return opt?.label ?? label;
+/** i18n key under `outliner.segmentLabels.*` */
+export function segmentLabelI18nKey(
+  value: SegmentLabel | 'none' | undefined | null
+): string {
+  const v = value == null || value === '' ? 'none' : value
+  return `outliner.segmentLabels.${v}`
 }

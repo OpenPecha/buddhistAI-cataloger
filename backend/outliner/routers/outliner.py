@@ -1,8 +1,9 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
 from pydantic import BaseModel, Field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 from datetime import datetime
+from ai_text_outline import extract_toc_indices
 from core.database import get_db
 from outliner.controller.outliner import (
     create_document as create_document_ctrl,
@@ -161,14 +162,10 @@ class SegmentResponseDocument(BaseModel):
 
 class DocumentResponse(BaseModel):
     id: str
-    content: str
     filename: Optional[str] = None
     user_id: Optional[str] = None
     status: Optional[str] = None  # active, completed, deleted, approved, rejected
-    created_at: datetime
     is_supplied_title: Optional[bool] = None
-    updated_at: datetime
-    ai_toc_entries: Optional[List[str]] = None
     segments: List[SegmentResponseDocument] = []
 
     class Config:
@@ -224,6 +221,26 @@ class SegmentStatusUpdate(BaseModel):
 
 
 # ==================== Helper Functions ====================
+
+def _spans_from_toc_indices(content: str, indices: Optional[List]) -> List[Tuple[int, int]]:
+    """Turn character offsets from extract_toc_indices into non-overlapping [start, end) spans."""
+    n = len(content)
+    starts: List[int] = []
+    for i in indices or []:
+        try:
+            s = int(i)
+        except (TypeError, ValueError):
+            continue
+        if 0 <= s <= n:
+            starts.append(s)
+    split_points = sorted(set([0] + [s for s in starts if s > 0]))
+    spans: List[Tuple[int, int]] = []
+    for idx, start in enumerate(split_points):
+        end = split_points[idx + 1] if idx + 1 < len(split_points) else n
+        if start < end:
+            spans.append((start, end))
+    return spans if spans else [(0, n)]
+
 
 def _build_segment_response(segment, db: Session = None) -> SegmentResponse:
     """Helper to build SegmentResponse from segment model"""
@@ -462,7 +479,7 @@ async def get_segment(
     return _build_segment_response(segment, db)
 
 
-@router.put("/segments/{segment_id}", response_model=SegmentResponse)
+@router.put("/segments/{segment_id}",status_code=201)
 async def update_segment(
     segment_id: str,
     segment_update: SegmentUpdate,
@@ -483,7 +500,7 @@ async def update_segment(
     """
     patch = segment_update.model_dump(exclude_unset=True)
     segment = update_segment_ctrl(db, segment_id, patch)
-    return _build_segment_response(segment, db)
+    return {"message":"segment updated","id":segment.id}
 
 
 @router.put("/segments/bulk", response_model=List[SegmentResponse])
@@ -726,6 +743,41 @@ async def approve_document(
 ):
     """Approve all segments for a document"""
     return await approve_document_ctrl(db, document_id)
+
+
+
+@router.post("/ai-outline", response_model=DocumentResponse)
+async def ai_outline(
+    document_id: str,
+    db: Session = Depends(get_db)
+):
+    """Split document text into segments using TOC character indices from ai_text_outline."""
+    document = get_document_ctrl(db, document_id, include_segments=False)
+    indices = extract_toc_indices(text=document.content)
+    spans = _spans_from_toc_indices(document.content, indices)
+    reset_segments_ctrl(db, document_id)
+    segments_data = [
+        {"segment_index": i, "span_start": start, "span_end": end}
+        for i, (start, end) in enumerate(spans)
+    ]
+    create_segments_bulk_ctrl(db, document_id, segments_data)
+    document = get_document_ctrl(db, document_id, include_segments=True)
+    segments_resp = [
+        SegmentResponseDocument(**{k: s[k] for k in SegmentResponseDocument.model_fields if k in s})
+        for s in document.segment_list
+    ]
+    return DocumentResponse(
+        id=document.id,
+        content=document.content,
+        filename=document.filename,
+        user_id=document.user_id,
+        status=getattr(document, "status", None),
+        created_at=document.created_at,
+        updated_at=document.updated_at,
+        is_supplied_title=getattr(document, "is_supplied_title", None),
+        ai_toc_entries=getattr(document, "ai_toc_entries", None),
+        segments=segments_resp,
+    )
 
 
 # ==================== Dashboard Stats ====================

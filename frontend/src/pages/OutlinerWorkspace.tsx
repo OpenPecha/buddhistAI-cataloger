@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { UnsavedChangesDialog } from '@/components/outliner/UnsavedChangesDialog';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument'
@@ -36,6 +37,7 @@ function getSelectionOffsetsInRoot(
 }
 
 const OutlinerWorkspace: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   // Get activeSegmentId from URL
@@ -745,63 +747,39 @@ const OutlinerWorkspace: React.FC = () => {
   );
   const listRef= useListRef(null);
 
-  // AI detect text endings and create new segmentation
+  const [sidebarTitleDraft, setSidebarTitleDraft] = useState('');
+
+  // AI outline: full-document TOC indices → replace segments (/outliner/ai-outline)
   const handleAIDetectTextEndings = useCallback(async () => {
-    if (!currentTextContent || currentTextContent.trim().length === 0) return;
+    if (!documentId || !currentTextContent?.trim()) return;
 
-    // Require an active segment since segment_id is required by backend
-    if (!activeSegmentId) {
-      console.error('No active segment selected. Please select a segment to segment.');
-      return;
-    }
-
-    const activeSegment = currentSegments.find((seg) => seg.id === activeSegmentId);
-    if (!activeSegment) {
-      console.error('Active segment not found');
-      return;
-    }
-
-    // Abort any existing request
     if (aiTextEndingAbortControllerRef.current) {
       aiTextEndingAbortControllerRef.current.abort();
     }
 
-    // Create new AbortController for this request
     const abortController = new AbortController();
     aiTextEndingAbortControllerRef.current = abortController;
 
     try {
-      // Backend handles segmentation and creates child segments
-      const data = await aiTextEndings.detectTextEndings({
-        content: activeSegment.text,
-        document_id: documentId || '',
-        segment_id: activeSegmentId,
+      const data = await aiTextEndings.runAiOutline({
+        document_id: documentId,
         signal: abortController.signal,
-      })
+      });
 
-      // Validate response
-      if (!data.segment_ids || !Array.isArray(data.segment_ids) || data.segment_ids.length === 0) {
-        throw new Error('Invalid response format: no segments created');
-      }
-
-      // Backend has created the segments, so we just need to wait for query invalidation
-      // The segments will be refetched automatically via React Query
-      // Set the first created segment as active
-      if (data.segment_ids.length > 0) {
-        setSearchParams({ segmentId: data.segment_ids[0] }, { replace: true });
+      const firstId = data.segments?.[0]?.id;
+      if (firstId) {
+        setSearchParams({ segmentId: firstId }, { replace: true });
       }
     } catch (error) {
-      // Don't log error if it was aborted
       if (error instanceof Error && error.name !== 'AbortError') {
-        console.error('Error detecting text endings:', error);
+        console.error('AI outline failed:', error);
       }
     } finally {
-      // Only reset abort controller if this request wasn't aborted
       if (!abortController.signal.aborted) {
         aiTextEndingAbortControllerRef.current = null;
       }
     }
-  }, [currentTextContent, currentSegments, activeSegmentId, aiTextEndings, setSearchParams, documentId])
+  }, [currentTextContent, aiTextEndings, setSearchParams, documentId]);
 
   // Stop AI text ending detection request
   const handleAITextEndingStop = useCallback(() => {
@@ -833,14 +811,14 @@ const OutlinerWorkspace: React.FC = () => {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center max-w-md px-4">
-          <p className="text-red-600 font-medium mb-2">Failed to load document</p>
+          <p className="text-red-600 font-medium mb-2">{t('outliner.loadError.title')}</p>
           <p className="text-sm text-gray-600 mb-4">{loadError.message}</p>
           <button
             type="button"
             onClick={() => refetchDocument()}
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
           >
-            Retry
+            {t('outliner.loadError.retry')}
           </button>
         </div>
       </div>
@@ -853,6 +831,7 @@ const OutlinerWorkspace: React.FC = () => {
         textContent: currentTextContent,
         segments: currentSegments,
         activeSegmentId,
+        sidebarTitleDraft,
         aiTextEndingLoading: aiTextEndings.isLoading,
         segmentLoadingStates: segmentLoadingStates || new Map(),
         isUploading: isLoadingDocument || isSaving,
@@ -941,6 +920,7 @@ const OutlinerWorkspace: React.FC = () => {
                         documentId={documentId || undefined}
                         segments={currentSegments}
                         onSegmentClick={(segmentId) => handleSegmentClick(segmentId)}
+                        onTitleDraftChange={setSidebarTitleDraft}
                       />
                     </Pane>
                     <Pane minSize={320}>

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { Scissors } from 'lucide-react'
 import type { SplitMenuProps } from './types'
@@ -6,6 +7,7 @@ import { useMenuPosition } from './hooks/useMenuPosition'
 import { useActions, useCursor } from './contexts'
 
 export const SplitMenu: React.FC<SplitMenuProps> = ({ segmentId }) => {
+  const { t } = useTranslation()
   const {onSplitSegment:onSplit}  =  useActions()
   const { cursorPosition } = useCursor()
   const position=cursorPosition?.menuPosition??{x:0,y:0}
@@ -60,7 +62,7 @@ export const SplitMenu: React.FC<SplitMenuProps> = ({ segmentId }) => {
         className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-md transition-colors flex items-center gap-2"
       >
         <Scissors className="w-4 h-4" />
-        Split Here
+        {t('outliner.splitMenu.splitHere')}
       </button>
     </div>
   )

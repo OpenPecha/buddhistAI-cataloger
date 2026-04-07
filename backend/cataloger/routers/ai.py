@@ -11,6 +11,8 @@ from core.database import get_db
 from outliner.models.outliner import OutlinerDocument
 from cataloger.controller.ai import (
     generate_title_author,
+    generate_title_from_start,
+    generate_author_from_end,
     segment_and_create_from_parent,
     parse_toc_from_text,
 )
@@ -32,6 +34,16 @@ class TitleAuthorResponse(BaseModel):
     suggested_title: Optional[str] = Field(None, description="Suggested title if not found in content, in the same language as the content")
     author: Optional[str] = Field(None, description="Extracted author name from the content if explicitly mentioned")
     suggested_author: Optional[str] = Field(None, description="Suggested author name if not found in content, in the same language as the content")
+
+
+class TitleOnlyResponse(BaseModel):
+    title: Optional[str] = Field(None, description="Extracted title from the start of the text")
+    suggested_title: Optional[str] = Field(None, description="Suggested title from the opening lines")
+
+
+class AuthorOnlyResponse(BaseModel):
+    author: Optional[str] = Field(None, description="Extracted author from the end of the text")
+    suggested_author: Optional[str] = Field(None, description="Suggested author from closing lines / colophon")
 
 
 class TextEndingDetectionResponse(BaseModel):
@@ -100,6 +112,24 @@ async def generate_title_author_route(request: ContentRequest):
     if isinstance(result, TitleAuthorResponse):
         return result
     return TitleAuthorResponse(**result)
+
+
+@router.post("/generate-title-from-start", response_model=TitleOnlyResponse)
+async def generate_title_from_start_route(request: ContentRequest):
+    """Extract or suggest title using only the beginning of the text."""
+    result = generate_title_from_start(request.content, TitleOnlyResponse)
+    if isinstance(result, TitleOnlyResponse):
+        return result
+    return TitleOnlyResponse(**result)
+
+
+@router.post("/generate-author-from-end", response_model=AuthorOnlyResponse)
+async def generate_author_from_end_route(request: ContentRequest):
+    """Extract or suggest author using only the end of the text."""
+    result = generate_author_from_end(request.content, AuthorOnlyResponse)
+    if isinstance(result, AuthorOnlyResponse):
+        return result
+    return AuthorOnlyResponse(**result)
 
 
 @router.post("/detect-text-endings", response_model=SegmentCreationResponse)

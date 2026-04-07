@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import FileUploadZone from '@/components/textCreation/FileUploadZone';
 
 interface OutlinerFileUploadZoneProps {
@@ -14,6 +15,7 @@ export const OutlinerFileUploadZone: React.FC<OutlinerFileUploadZoneProps> = ({
   onFileUpload,
   isUploading = false,
 }) => {
+  const { t } = useTranslation();
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handleFileUpload = async (content: string, filename: string) => {
@@ -54,7 +56,7 @@ export const OutlinerFileUploadZone: React.FC<OutlinerFileUploadZoneProps> = ({
         <div className="absolute inset-0 bg-white/80 flex items-center justify-center rounded-lg">
           <div className="text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-            <p className="text-sm text-gray-600">Uploading document...</p>
+            <p className="text-sm text-gray-600">{t('outliner.upload.uploading')}</p>
           </div>
         </div>
       )}

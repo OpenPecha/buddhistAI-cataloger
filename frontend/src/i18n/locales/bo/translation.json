@@ -461,6 +461,247 @@
     "loadingRelatedTexts": "འབྲེལ་ཡོད་དཔེ་ཆ་འགེལ་བཞིན་པ...",
     "errorLoadingRelatedTexts": "འབྲེལ་ཡོད་དཔེ་ཆ་འཐེན་སྐབས་ནོར་འཁྲུལ།",
     "noRelatedTextsFound": "འབྲེལ་ཡོད་དཔེ་ཆ་མ་རྙེད།"
+  },
+  "outliner": {
+    "segmentLabels": {
+      "none": "ཆ་ཤས་རིགས།",
+      "FRONT_MATTER": "མདུན་ཆ།",
+      "TOC": "TOC",
+      "TEXT": "ཡི་གེ",
+      "BACK_MATTER": "རྗེས་ཆ།"
+    },
+    "filter": {
+      "filters": "ཚགས་མ།",
+      "label": "ཁ་བྱང་།",
+      "completion": "ལེགས་གྲུབ།",
+      "showAll": "ཡོངས་རྫོགས་སྟོན།",
+      "all": "ཡོངས་རྫོགས།",
+      "completed": "ལེགས་གྲུབ།",
+      "notCompleted": "མ་ལེགས་གྲུབ།"
+    },
+    "unsavedChanges": {
+      "title": "ཉར་མེད་པའི་བཟོ་བཅོས།",
+      "description": "མཚན་དང་རྩོམ་པ་པོའི་ཁ་བྱང་ལ་ཉར་མེད་པའི་བཟོ་བཅོས་ཡོད། ཅི་བྱེད་དགོས།",
+      "discard": "དོར་བ།"
+    },
+    "annotation": {
+      "noSegmentSelected": "ཆ་ཤས་འདེམས་མེད།",
+      "clickSegmentToAnnotate": "ལས་སྟེགས་ནང་ཆ་ཤས་ཤིག་ལ་སྣུན་ནས་ཁ་བརྒྱབ་རོགས།",
+      "textPrefix": "ཡི་གེ།",
+      "save": "ཉར་ཚགས།",
+      "notApplicable": "མེད།",
+      "reset": "སླར་གསོ།",
+      "tabOutlines": "ས་བཀྲ།",
+      "tabMetadata": "གཞི་གྲངས།",
+      "metadataDisabledHint": "ཁ་བཏགས་ཡོད་པའི་ཆ་ཤས་ལ་ཁོ་ནར་ཐོབ།",
+      "noSegments": "ཆ་ཤས་མེད།",
+      "noMatchingFilters": "ཚགས་མ་དང་མཐུན་པའི་ཆ་ཤས་མེད།",
+      "authorBadge": "རྩོམ་པ་པོ།",
+      "labelBadge": "ཁ་བྱང་།",
+      "toastNoSegment": "ཆ་ཤས་འདེམས་མེད།",
+      "toastNeedTitleOrAuthor": "མཚན་ཡང་ན་རྩོམ་པ་པོ་ཤིག་ངེས་པར་སྤྲོད་རོགས།",
+      "toastSaved": "ཁ་བརྒྱབ་ཉར་ཚགས་ལེགས།",
+      "toastSaveFailed": "ཁ་བརྒྱབ་ཉར་ཚགས་མ་ཐུབ།"
+    },
+    "segment": {
+      "oneTocOnly": "ཡིག་ཆའི་ནང TOC་གཅིག་ཁོ་ན་ཡོད་ཆོག",
+      "notTocLike": "ཆ་ཤས་འདི་མུ་ཤུགས་འགོ་བརྗོད་དང་མཚུངས་མིན་འདུག",
+      "tocCountMismatch": "TEXT ཆ་ཤས་གྲངས་({{textCount}}) དང AI TOC ཐོ་འགོད་({{entriesCount}}) མི་མཐུན།",
+      "attached": "✓ སྦྲེལ་ཟིན།",
+      "attachParent": "ཕ་མ་སྦྲེལ།",
+      "mergePrevious": "ཆ་ཤས་སྔོན་མ་དང་སྦྱོར།",
+      "expandSegment": "ཆ་ཤས་ཁ་ཕྱེ།",
+      "collapseSegment": "ཆ་ཤས་བསྡུ།",
+      "rejected": "ཕྱིར་ལན།",
+      "rejectedMany": "ཐེངས་{{count}} ཕྱིར་ལན།",
+      "failedUpdateLabel": "ཁ་བྱང་གསར་སྒྱུར་མ་ཐུབ།",
+      "labelField": "ཁ་བྱང་།",
+      "noLabelPlaceholder": "ཁ་བྱང་མེད།",
+      "searchPlaceholder": "འཚོལ་བ།",
+      "searchInSegment": "ཆ་ཤས་འདིའི་ནང་འཚོལ།",
+      "scrollToTop": "ཆ་ཤས་སྟེང་དུ་འགུལ།",
+      "prevMatch": "འཚོལ་མཐུན་སྔོན་མ།",
+      "scrollToBottom": "ཆ་ཤས་འོག་ཏུ་འགུལ།",
+      "nextMatch": "འཚོལ་མཐུན་རྗེས་མ།",
+      "subsegmentWarning": "ཡི་གེའི་ཆ་ཤས་ཆུང་ཆུང་(ལེའུ། བམ་པོ་སོགས)ལ་ཆ་ཤས་མ་བཟོ།",
+      "analyzingToc": "TOC དབྱེ་ཞིབ་བཞིན་པ..."
+    },
+    "tocPanel": {
+      "sideAria": "པར་དང་མུ་ཤུགས་འགོ་བརྗོད།",
+      "tabImages": "པར།",
+      "tabToc": "མུ་ཤུགས་འགོ་བརྗོད།",
+      "tabTocDisabledTitle": "ལས་སྟེགས་སུ་ཆ་ཤས་ཀྱི་རིགས་TOC བཟོས་ནས་ཤོག་ངོས་འདི་ཁ་ཕྱེ།",
+      "ariaDocumentToc": "ཡིག་ཆའི་མུ་ཤུགས་འགོ་བརྗོད།",
+      "emptyNoTocSegment": "TOC ཆ་ཤས་མེད། མུ་ཤུགས་འདིར་ཡི་གེ་སྟོན་པར་ཆ་ཤས་རིགས་TOC བཟོ།",
+      "ariaTocLines": "ཡིག་ཆའི་མུ་ཤུགས་ཐིག་རིས།",
+      "emptyNoLinesInToc": "TOC ཆ་ཤས་འདིར་ད་དུང་ཐིག་སྟོང་པ་མེད།",
+      "tocSegmentHeading": "TOC ཆ་ཤས་{{n}}",
+      "ariaTocPart": "ཡིག་ཆའི་མུ་ཤུགས། ཆ་ཤས་{{n}}",
+      "emptyNoLinesInSegment": "ཆ་ཤས་འདིར་ཐིག་སྟོང་པ་མེད།",
+      "mismatch": "TEXT ཆ་ཤས་གྲངས་{{textCount}} དང AI TOC ཐོ་འགོད་{{aiCount}} མི་མཐུན། བཅོས་རོགས།",
+      "ariaAiEntries": "AI གྱིས་འཐེན་པའི་མུ་ཤུགས་ཐོ་འགོད།",
+      "emptyAiEntries": "AI འཐེན་ཐོ་འགོད་ད་དུང་མེད། TOC ཆ་ཤས་ལ་མུ་ཤུགས་ངོས་འཛིན་བྱོས།"
+    },
+    "workspace": {
+      "loadingDocument": "ཡིག་ཆ་འགེལ་བཞིན་པ...",
+      "contentAria": "ཡི་གེ་ལས་སྟེགས་ཁུལ།",
+      "saving": "ཉར་བཞིན་པ...",
+      "savedSegmentsTitle": "ཆ་ཤས་{{count}} ཉར་ཟིན།",
+      "revisionBadge": "ཆ་ཤས་{{count}} ལ་བསྐྱར་བཅོས་དགོས།",
+      "revisionBadge_plural": "ཆ་ཤས་{{count}} ལ་བསྐྱར་བཅོས་དགོས།",
+      "aiOutlineTitle": "AI སྒྲིག་བཀོད། བོད་ཡིག་མུ་ཤུགས་ངོས་འཛིན་དང་ཡིག་ཆ་ཆ་ཤས་སུ་དབྱེ།(ཆ་ཤས་སྔོན་མ་ཚབ་བརྗེ།)",
+      "detecting": "ངོས་འཛིན་བཞིན་པ...",
+      "stopDetection": "ངོས་འཛིན་མཚམས་འཇོག",
+      "undoAiTitle": "AI ཆ་ཤས་དབྱེ་བ་ཕྱིར་ལོག",
+      "undo": "ཕྱིར་ལོག",
+      "hideSidePanel": "ཟུར་ངོས་སྦ།(པར་དང་མུ་ཤུགས།)",
+      "showSidePanel": "ཟུར་ངོས་སྟོན།(པར་དང་མུ་ཤུགས།)",
+      "skipped": "བསྐྱུར་ཟིན།",
+      "skipping": "བསྐྱུར་བཞིན་པ...",
+      "skip": "བསྐྱུར།",
+      "resetAllSegments": "ཆ་ཤས་ཡོངས་སླར་གསོ།",
+      "documentMarkedSkipped": "ཡིག་ཆ་བསྐྱུར་ཟིན་དུ་བཏགས།",
+      "skipFailed": "ཡིག་ཆ་བསྐྱུར་མ་ཐུབ།: {{message}}",
+      "confirmSkip": "ཡིག་ཆ་འདི་བསྐྱུར་རྒྱུ་ངེས་སམ།",
+      "submitNotSaved": "ཆ་ཤས་{{count}} ད་དུང་ཉར་མེད།",
+      "submitNotSaved_plural": "ཆ་ཤས་{{count}} ད་དུང་ཉར་མེད།"
+    },
+    "expand": {
+      "expandAll": "ཡོངས་ཁ་ཕྱེ།",
+      "collapseAll": "ཡོངས་བསྡུ།"
+    },
+    "bubbleMenu": {
+      "useSelectionAs": "འདེམས་པའི་ཡི་གེ་འདི་ལ་སྤྱོད།",
+      "title": "མཚན།",
+      "author": "རྩོམ་པ་པོ།"
+    },
+    "splitMenu": {
+      "splitHere": "འདིར་ཆ་ཤས་དབྱེ།"
+    },
+    "submitReview": {
+      "success": "བསྐྱར་ཞིབ་ཏུ་བཏང་ཞིང་BDRC དང་མཉམ་བགྲོད།",
+      "noDocumentId": "ཡིག་ཆའི་ཨང་རྟགས་མ་རྙེད།",
+      "title": "བསྐྱར་ཞིབ་ཏུ་བཏང་།",
+      "submit": "བཏང་།"
+    },
+    "upload": {
+      "uploading": "ཡིག་ཆ་མཐོ་འདོན་བཞིན་པ..."
+    },
+    "loadError": {
+      "title": "ཡིག་ཆ་འཐེན་མ་ཐུབ།",
+      "retry": "ཡང་བསྐྱར་ཚོད་ལྟ།"
+    },
+    "aiOutline": {
+      "segmentsCreated": "AI སྒྲིག་བཀོད། ཆ་ཤས་{{count}} བཟོས་ཟིན།",
+      "segmentsCreated_plural": "AI སྒྲིག་བཀོད། ཆ་ཤས་{{count}} བཟོས་ཟིན།",
+      "complete": "AI སྒྲིག་བཀོད་ལེགས་གྲུབ།",
+      "failed": "AI སྒྲིག་བཀོད་ཕམ།: {{message}}"
+    },
+    "aiSuggestions": {
+      "failed": "AI འོས་སྦྱོར་བཟོ་མ་ཐུབ།: {{message}}"
+    },
+    "aiDetect": {
+      "stop": "AI འོས་སྦྱོར་མཚམས་འཇོག",
+      "detectTitleAuthor": "མཚན་དང་རྩོམ་པ་པོ་ངོས་འཛིན།"
+    },
+    "images": {
+      "pageTitle": "ཤོག་ངོས་{{n}}",
+      "volumePageAlt": "དེབ་ཤོག་{{n}}",
+      "noImage": "པར་མེད།",
+      "syncOn": "ཤོག་ངོས་ཡི་གེའི་འགྲོ་སར་འགྲོ། སྣུན་ནས་ཤོག་གནས་སོར་འཇོག",
+      "syncOff": "སྣུན་ནས་ཡི་གེའི་འགྲོ་ས་དང་མཐུན་པའི་ཤོག་ལ་འཕར།",
+      "sync": "མཉམ་སྒྱུར།",
+      "openBdrcLibrary": "BDRC དཔེ་མཛོད་ནང་ཁ་ཕྱེ།",
+      "noVolume": "དེབ་ཆ་མེད།",
+      "loadingVolume": "དེབ་ཆ་འགེལ་བཞིན་པ...",
+      "loadVolumeFailed": "དེབ་ཆ་འཐེན་མ་ཐུབ།: {{message}}",
+      "noPages": "ཤོག་ངོས་མེད།",
+      "thumbnailsAria": "ཤོག་ངོས་ཆུང་པར།",
+      "pagesScrollAria": "དེབ་ཤོག — འཁོར་སྐྱོད་ནས་ལྟ་བ།"
+    },
+    "comments": {
+      "title": "བསམ་ཚུལ།",
+      "loading": "བསམ་ཚུལ་འགེལ་བཞིན་པ...",
+      "placeholder": "བསམ་ཚུལ་འདིར་འབྲི།..."
+    },
+    "listBdrcMatches": {
+      "setVolumeHint": "འོས་སྦྱོར་སྟོན་པར་ཡིག་ཆའི་ཡིག་མིང་BDRC དེབ་ཨང་(དཔེར་ན V1CZ39)བཟོ།",
+      "matching": "མཐུན་པ་འཚོལ་བཞིན་པ...",
+      "noSuggestions": "ཆ་ཤས་འདིར་འོས་སྦྱོར་མེད།",
+      "suggestionsLabel": "འོས་སྦྱོར།"
+    },
+    "unknownAuthor": "རྩོམ་པ་པོ་མི་ཤེས།",
+    "idLabel": "ཨང་། {{id}}",
+    "titleField": {
+      "label": "མཚན།",
+      "reconstructedHint": "ཡི་གེ་ནས་བསྐྱར་བཟོས་པའི་མཚན།/མཚན་གསལ་པོ་མེད།",
+      "reconstructedCheckbox": "བསྐྱར་བཟོས།",
+      "placeholderReconstructed": "ཁ་བརྒྱབ་མཁན་གྱིས་བསྐྱར་བཟོས་པའི་མཚན།",
+      "placeholder": "མཚན་འབྲི།"
+    },
+    "unknownTitle": "མཚན་མི་ཤེས།",
+    "authorField": {
+      "label": "རྩོམ་པ་པོ།",
+      "matchBdrcTitle": "འདེམས་ཟིན་པའི་BDRC རྩོམ་པ་པོ་དང་མཐུན་པར་བཟོ།",
+      "placeholder": "རྩོམ་པ་པོའི་མིང་འབྲི།",
+      "matchedPercent": "{{pct}}% མཐུན།"
+    },
+    "bdrc": {
+      "captchaMismatch": "ཨང་མི་མཐུན། ཡང་བསྐྱར་ཚོད་ལྟ། ཡང་ན་ཨང་གསར་ཤོག",
+      "captchaFirstOk": "ཨང་དང་པོ་ངེས། ཨང་གཉིས་པ་འབྲི།",
+      "authorMismatchWarning": "ཆ་ཤས་ལ་རྩོམ་པ་པོ་ཡོད་མོད། མཐུན་པའི་BDRC ལས་དེབ་ལ་རྩོམ་པ་པོ་མེད། BDRC ལས་དེབ་རྩོམ་སྒྲིག་དང་རྩོམ་པ་པོ་ཁ་སྣོན་བྱོས།",
+      "workUpdated": "BDRC ལས་དེབ་གསར་སྒྱུར་ཟིན།",
+      "workUpdateFailed": "BDRC ལས་དེབ་གསར་སྒྱུར་མ་ཐུབ།",
+      "searchTitlePlaceholder": "མཚན་བཙུགས་ནས་BDRC འཚོལ...",
+      "loadingWork": "ལས་དེབ་འགེལ་བཞིན་པ...",
+      "editWorkTitle": "BDRC ལས་དེབ་རྩོམ་སྒྲིག",
+      "clearSelectionTitle": "BDRC འདེམས་པ་སུབ།",
+      "noWorkInfo": "ལས་དེབ་ཆ་འཕྲ་མེད།",
+      "titleLabel": "མཚན།",
+      "authorsLabel": "རྩོམ་པ་པོ།",
+      "addAuthorConfirm": "རྩོམ་པ་པོ་གཞན་ཁ་སྣོན། འགྲེལ་བ་ཁོ་ནར་རྩོམ་པ་པོ་མང་པོ་ཆོག",
+      "add": "ཁ་སྣོན།",
+      "searchAuthorPlaceholder": "རྩོམ་པ་པོ་འཚོལ་ཡང་ན་གསར་བཟོ...",
+      "removeAuthorAria": "རྩོམ་པ་པོ་སུབ།",
+      "saveToBdrc": "BDRC ལ་ཉར།",
+      "viewWorkDetailsTitle": "མཐུན་པའི་BDRC ལས་དེབ་ཞིབ་ཕྲ་ལྟ།",
+      "matchWorkFirstTitle": "ཞིབ་ཕྲ་སྟོན་པར་སྔོན་ལ་BDRC ལས་དེབ་མཐུན་པར་བཟོ།",
+      "identifyDuplicates": "འདྲ་བཟོ་སྲིད་པ་ངོས་འཛིན།",
+      "originPrefix": "ཁུངས།",
+      "duplicateBadge": "འདྲ་བཟོ།",
+      "createWork": "ལས་དེབ་གསར་བཟོ།",
+      "confirmCreateTitle": "ལས་དེབ་གསར་བཟོ་སྔོན་ངེས་དཔྱད།",
+      "confirmCreateDescription": "འོག་གི་ཨང་ཐེངས་གཉིས་ཡང་དག་འབྲི།(དང་པོ་རྗེས་ཨང་གསར་ཤོག)་BDRC ལས་དེབ་བྱུང་བྱུང་གསར་བཟོ་འགོག་པར་རོགས།",
+      "captchaStep": "གོམ་སྟབས་{{step}}/༢",
+      "typeTheCode": "ཨང་འབྲི།",
+      "newCode": "ཨང་གསར་པ།"
+    },
+    "duplicates": {
+      "dialogTitle": "འདྲ་བཟོ་སྲིད་པ་ངོས་འཛིན།",
+      "currentWork": "ད་ལྟའི་ལས་དེབ།",
+      "loading": "འགེལ་བཞིན་པ...",
+      "canonicalAuthorLabel": "ཚད་ལྡན་རྩོམ་པ་པོ།(འདྲ་བཟོ་མི་སྣ་འདིར་སྦྱོར།)",
+      "searchPersonByName": "མི་སྣའི་མིང་གིས་BDRC འཚོལ།",
+      "canonicalPerson": "ཚད་ལྡན་མི་སྣ།",
+      "noLinkedAuthors": "ལས་དེབ་འདིར་BDRC མི་སྣ་ཨང་དང་སྦྲེལ་བའི་རྩོམ་པ་པོ་མེད། སྔོན་ལ་རྩོམ་པ་པོ་སྦྲེལ་ནས་འདྲ་བཟོ་མི་སྣ་འཚོལ་དང་སྦྱོར།",
+      "close": "སྒོ་བརྒྱབ།",
+      "searchByTitle": "མཚན་གྱིས་འཚོལ...",
+      "noWorksMatch": "འཚོལ་བ་དང་མཐུན་པའི་ལས་དེབ་གཞན་མེད།",
+      "selectedWork": "འདེམས་ཟིན་པའི་ལས་དེབ།",
+      "title": "མཚན།",
+      "workId": "ལས་དེབ་ཨང་།",
+      "authors": "རྩོམ་པ་པོ།",
+      "duplicateButton": "འདྲ་བཟོ།",
+      "mergedWork": "འདྲ་བཟོ་འདིའི་ལས་དེབ་ལ་སྦྱོར་ཟིན།",
+      "mergeFailed": "སྦྱོར་མ་ཐུབ།",
+      "canonicalAuthors": "རྩོམ་པ་པོ།",
+      "searchByName": "མིང་གིས་འཚོལ...",
+      "noPersonsMatch": "འཚོལ་བ་དང་མཐུན་པའི་མི་སྣ་གཞན་མེད།",
+      "selectedPerson": "འདེམས་ཟིན་པའི་མི་སྣ།",
+      "name": "མིང་།",
+      "personId": "མི་སྣ་ཨང་།",
+      "mergedAuthor": "འདྲ་བཟོ་འདིའི་རྩོམ་པ་པོ་ལ་སྦྱོར་ཟིན།"
+    }
   }
 }
 

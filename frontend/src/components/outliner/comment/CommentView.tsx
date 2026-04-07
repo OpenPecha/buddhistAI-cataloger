@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MessageCircle, UserIcon } from 'lucide-react';
 import type { Comment } from '@/api/outliner';
 import { formatDistanceToNow } from 'date-fns';
@@ -9,6 +10,7 @@ interface CommentViewProps {
 }
 
 function CommentView({ comments, showFull = false }: CommentViewProps) {
+  const { t } = useTranslation();
   const commentsEndRef = useRef<HTMLDivElement | null>(null);
 
   // Always scroll to the last message on load or when comments change (for full view)
@@ -24,7 +26,7 @@ function CommentView({ comments, showFull = false }: CommentViewProps) {
       <div className="flex-1 h-full">
         <div className="flex items-center gap-2 mb-3">
           <MessageCircle className="h-4 w-4 text-gray-500" />
-          <h3 className="text-sm font-semibold text-gray-900">Comments</h3>
+          <h3 className="text-sm font-semibold text-gray-900">{t('outliner.comments.title')}</h3>
           <span className="text-xs text-gray-500">({comments.length})</span>
         </div>
         <div className="space-y-3 max-h-[40vh] overflow-y-auto" style={{ position: 'relative' }}>

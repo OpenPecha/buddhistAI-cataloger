@@ -584,29 +584,27 @@ export const getDashboardStats = async (
 
 // ==================== AI Endpoints ====================
 
-export interface DetectTextEndingsRequest {
-  document_id: string;
-  content: string;
-  segment_id: string;
-}
+/** Result of POST /outliner/ai-outline — same shape as a full document with segments. */
+export type AiOutlineResponse = Pick<
+  OutlinerDocument,
+  'id' | 'content' | 'filename' | 'user_id' | 'status' | 'created_at' | 'updated_at' | 'ai_toc_entries'
+> & {
+  is_supplied_title?: boolean | null;
+  segments: OutlinerSegment[];
+};
 
-export interface DetectTextEndingsResponse {
-  message: string;
-  segments_created: number;
-  segment_ids: string[];
-}
-
-export const detectTextEndings = async (
-  request: DetectTextEndingsRequest,
+/**
+ * Run AI TOC detection on the full document and replace segments with splits at detected indices
+ * (backend: ai_text_outline.extract_toc_indices).
+ */
+export const runAiOutline = async (
+  documentId: string,
   signal?: AbortSignal
-): Promise<DetectTextEndingsResponse> => {
-  const response = await fetch(`${API_URL}/ai/detect-text-endings`, {
+): Promise<AiOutlineResponse> => {
+  const params = new URLSearchParams({ document_id: documentId });
+  const response = await fetch(`${API_URL}/outliner/ai-outline?${params.toString()}`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      accept: 'application/json',
-    },
-    body: JSON.stringify(request),
+    headers: { accept: 'application/json' },
     signal,
   });
 

@@ -1,4 +1,5 @@
 import React, { useRef, useImperativeHandle, forwardRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { FormDataType, Title, Author } from '../AnnotationSidebar';
@@ -24,6 +25,7 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
   onSuppliedTitleChange,
   disabled = false,
 }, ref) => {
+  const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   // Allow parent to set/get title value programmatically
@@ -47,7 +49,7 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
   return (
     <div>
       <div className="flex items-center gap-2 justify-between">
-        <Label htmlFor="title" className="">Title</Label>
+        <Label htmlFor="title" className="">{t('outliner.titleField.label')}</Label>
         <div className="flex items-center gap-2 mb-2">
           <input
             type="checkbox"
@@ -59,10 +61,10 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
           />
           <Label 
             htmlFor="reconstructed-title" 
-            title="Title reconstructed from the text / title not clear"
+            title={t('outliner.titleField.reconstructedHint')}
             className="text-sm text-gray-500 font-normal cursor-pointer"
           >
-            reconstructed
+            {t('outliner.titleField.reconstructedCheckbox')}
           </Label>
         </div>
       </div>
@@ -71,7 +73,7 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
         id="title"
         value={titleSearch}
         onChange={(e) => setTitleSearch(e.target.value)}
-        placeholder={suppliedTitleChecked ? 'Title reconstructed by the annotator' : 'Enter title'}
+        placeholder={suppliedTitleChecked ? t('outliner.titleField.placeholderReconstructed') : t('outliner.titleField.placeholder')}
         className="w-full"
         disabled={disabled}
       />

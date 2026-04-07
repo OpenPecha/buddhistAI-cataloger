@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { BDRC_AUTHOR_DIFFICULT_TO_IDENTIFY, BdrcAuthorSelector } from '@/components/bdrc/BdrcAuthorSelector';
@@ -55,6 +56,7 @@ export const AuthorField = ({
   resetForm,
   disabled = false,
 }: AuthorFieldProps) => {
+  const { t } = useTranslation();
   const authorSearch = formData?.author?.name || '';
   const setAuthorSearch = (value: string) => {
     onUpdate('author', { name: value, bdrc_id: '' });
@@ -85,13 +87,13 @@ export const AuthorField = ({
   return (
     <div>
       <div className="relative flex items-center gap-2">
-      <Label htmlFor="author" className="mb-2">Author</Label>
+      <Label htmlFor="author" className="mb-2">{t('outliner.authorField.label')}</Label>
       {matchPercentage !== null &&  authorSearch!=="Difficult to identify" && (
         <div
           className={`mb-1 h-full inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${matchIndicatorClass}`}
-          title="Match with selected BDRC author"
+          title={t('outliner.authorField.matchBdrcTitle')}
         >
-          {matchPercentage}% matched
+          {t('outliner.authorField.matchedPercent', { pct: matchPercentage })}
         </div>
       )}
         </div>
@@ -100,7 +102,7 @@ export const AuthorField = ({
         id="author"
         value={authorSearch}
         onChange={(e) => setAuthorSearch(e.target.value)}
-        placeholder="Enter author name"
+        placeholder={t('outliner.authorField.placeholder')}
         className="w-full"
         disabled={disabled}
       />

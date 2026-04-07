@@ -1,4 +1,5 @@
 import React,{ useState, useRef, useEffect, Activity, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { CreateBdrcWorkModal } from '@/components/bdrc/CreateBdrcWorkModal'
 import {
   BDRC_AUTHOR_DIFFICULT_TO_IDENTIFY,
@@ -112,6 +113,7 @@ function BDRCField({
   annotatorAuthorName = '',
   onBdrcAuthorBlockingChange,
 }: Readonly<BDRCFieldProps>) {
+  const { t } = useTranslation()
   const { user } = useAuth0()
   const bdrcId = formData?.title?.bdrc_id || segment.title_bdrc_id || ''
   const titleFromProp = formData?.title?.name || ''
@@ -180,7 +182,7 @@ function BDRCField({
 
   const handleCaptchaContinue = () => {
     if (captchaInput.trim().toUpperCase() !== captchaExpected) {
-      toast.error('Code does not match. Try again or request a new code.')
+      toast.error(t('outliner.bdrc.captchaMismatch'))
       setCaptchaInput('')
       setCaptchaExpected(generateCaptchaCode())
       return
@@ -189,7 +191,7 @@ function BDRCField({
       setCaptchaStep(2)
       setCaptchaExpected(generateCaptchaCode())
       setCaptchaInput('')
-      toast.success('First code verified. Enter the second code.')
+      toast.success(t('outliner.bdrc.captchaFirstOk'))
       return
     }
     handleCaptchaGateOpenChange(false)
@@ -235,10 +237,10 @@ function BDRCField({
     } else {
       reportBlocking(
         true,
-        '⚠️This segment has an author, but the matched BDRC work has no author. Edit the BDRC work and add author(s), then save.'
+        t('outliner.bdrc.authorMismatchWarning')
       )
     }
-  }, [annotatorAuthorName, bdrcId, workLoading, fetchedWork, onBdrcAuthorBlockingChange, reportBlocking])
+  }, [annotatorAuthorName, bdrcId, workLoading, fetchedWork, onBdrcAuthorBlockingChange, reportBlocking, t])
 
   const displayInfo =
     (fetchedWork
@@ -266,11 +268,11 @@ function BDRCField({
         authors: authors.length ? authors : undefined,
         ...(modifiedBy ? { modified_by: modifiedBy } : {}),
       })
-      toast.success('BDRC work updated')
+      toast.success(t('outliner.bdrc.workUpdated'))
       await refetch()
       setEditingBdrc(false)
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to update BDRC work')
+      toast.error(e instanceof Error ? e.message : t('outliner.bdrc.workUpdateFailed'))
     } finally {
       setSavingBdrc(false)
     }
@@ -290,7 +292,7 @@ function BDRCField({
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => !disabled && setIsBdrcFocused(true)}
               onBlur={() => setIsBdrcFocused(false)}
-              placeholder="Type title to search BDRC..."
+              placeholder={t('outliner.bdrc.searchTitlePlaceholder')}
               className="w-full pr-8 text-sm font-monlam"
               disabled={disabled}
             />
@@ -320,12 +322,12 @@ function BDRCField({
                     <AuthorsListing authors={title.authors ?? []} isLink={false} />
                     {title.origin && title.origin !== "imported" && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 mr-1">
-                        Origin: {title.origin}
+                        {t('outliner.bdrc.originPrefix')} {title.origin}
                       </span>
                     )}
                     {title.record_status === "duplicate" && (
                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-red-100 text-red-800">
-                        Duplicate
+                        {t('outliner.bdrc.duplicateBadge')}
                       </span>
                     )}
                   </div>
@@ -341,7 +343,7 @@ function BDRCField({
                 className="w-full px-4 py-2 text-left hover:bg-gray-100 border-t border-gray-200 flex items-center gap-2 text-sm text-primary font-medium"
               >
                 <Plus className="h-4 w-4 shrink-0" />
-                Create work
+                {t('outliner.bdrc.createWork')}
               </button>
             </div>
           </Activity>
@@ -353,7 +355,7 @@ function BDRCField({
           {workLoading && (
             <div className="flex items-center gap-2 text-gray-500">
               <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-              <span className="text-sm">Loading work…</span>
+              <span className="text-sm">{t('outliner.bdrc.loadingWork')}</span>
             </div>
           )}
           {workError && !workLoading && (
@@ -375,7 +377,7 @@ function BDRCField({
                     size="sm"
                     className="h-8 px-2"
                     onClick={openEdit}
-                    title="Edit BDRC work"
+                    title={t('outliner.bdrc.editWorkTitle')}
                   >
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
@@ -385,7 +387,7 @@ function BDRCField({
                     size="sm"
                     className="h-8 px-2"
                     onClick={handleClearSelection}
-                    title="Clear BDRC selection"
+                    title={t('outliner.bdrc.clearSelectionTitle')}
                   >
                     <X className="h-3.5 w-3.5" />
                   </Button>
@@ -395,12 +397,12 @@ function BDRCField({
             </div>
           )}
           {!workLoading && !displayInfo && !editingBdrc && (
-            <div className="text-sm text-gray-500">No work info</div>
+            <div className="text-sm text-gray-500">{t('outliner.bdrc.noWorkInfo')}</div>
           )}
           {!disabled && editingBdrc && (
             <div className="space-y-2 pt-1">
               <div>
-                <Label className="text-xs text-gray-500">Title </Label>
+                <Label className="text-xs text-gray-500">{t('outliner.bdrc.titleLabel')} </Label>
                 <Input
                   value={editPrefLabel}
                   onChange={(e) => setEditPrefLabel(e.target.value)}
@@ -409,7 +411,7 @@ function BDRCField({
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs text-gray-500">Authors</Label>
+                  <Label className="text-xs text-gray-500">{t('outliner.bdrc.authorsLabel')}</Label>
                   <Button
                     type="button"
                     variant="ghost"
@@ -417,8 +419,8 @@ function BDRCField({
                     className="h-8 gap-1"
                     onClick={() => {
                       if (
-                        confirm(
-                          'Add another author? Multiple commentators are only allowed for commentaries.'
+                        window.confirm(
+                          t('outliner.bdrc.addAuthorConfirm')
                         )
                       ) {
                         setEditAuthorRows((prev) => [
@@ -429,7 +431,7 @@ function BDRCField({
                     }}
                   >
                     <Plus className="h-4 w-4" />
-                    Add
+                    {t('outliner.bdrc.add')}
                   </Button>
                 </div>
                 <div className="flex flex-col gap-2">
@@ -465,7 +467,7 @@ function BDRCField({
                               ? row.searchHint
                               : undefined
                           }
-                          placeholder="Search or create author…"
+                          placeholder={t('outliner.bdrc.searchAuthorPlaceholder')}
                         />
                       </div>
                       <Button
@@ -481,7 +483,7 @@ function BDRCField({
                             return next
                           })
                         }
-                        aria-label="Remove author"
+                        aria-label={t('outliner.bdrc.removeAuthorAria')}
                         className="shrink-0 h-9 w-9 mt-0.5"
                       >
                         <X className="h-4 w-4" />
@@ -493,7 +495,7 @@ function BDRCField({
               <div className="flex gap-2 pt-1">
                 <Button type="button" size="xs" onClick={handleSaveBdrc} disabled={savingBdrc}>
                   {savingBdrc ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                  Save to BDRC
+                  {t('outliner.bdrc.saveToBdrc')}
                 </Button>
                 <Button
                   type="button"
@@ -502,7 +504,7 @@ function BDRCField({
                   onClick={() => setEditingBdrc(false)}
                   disabled={savingBdrc}
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
               </div>
             </div>
@@ -520,7 +522,7 @@ function BDRCField({
         disabled={disabled || !bdrcId.trim()}
         onClick={() => setWorkDetailModalOpen(true)}
       >
-        Identify possible duplicates
+        {t('outliner.bdrc.identifyDuplicates')}
       </Button>
         </div>
       )}
@@ -528,13 +530,12 @@ function BDRCField({
       <Dialog open={captchaGateOpen} onOpenChange={handleCaptchaGateOpenChange}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Confirm before creating a work</DialogTitle>
+            <DialogTitle>{t('outliner.bdrc.confirmCreateTitle')}</DialogTitle>
             <DialogDescription>
-              Enter the code below correctly twice (a new code appears after the first). This helps prevent
-              accidental BDRC work creation.
+              {t('outliner.bdrc.confirmCreateDescription')}
             </DialogDescription>
             <p className="text-sm font-medium text-foreground" aria-live="polite">
-              Step {captchaStep} of 2
+              {t('outliner.bdrc.captchaStep', { step: captchaStep })}
             </p>
           </DialogHeader>
           <div className="space-y-3">
@@ -575,15 +576,15 @@ function BDRCField({
                 requestAnimationFrame(() => captchaFieldRef.current?.focus())
               }}
             >
-              New code
+              {t('outliner.bdrc.newCode')}
             </Button>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => handleCaptchaGateOpenChange(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button type="button" onClick={handleCaptchaContinue}>
-              Continue
+              {t('common.continue')}
             </Button>
           </DialogFooter>
         </DialogContent>

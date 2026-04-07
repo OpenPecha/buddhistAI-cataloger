@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState, type MouseEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
     Dialog,
     DialogContent,
@@ -43,6 +44,7 @@ export function DuplicateModal({
   isOpen,
   onOpenChange,
 }: DuplicateModalProps) {
+  const { t } = useTranslation()
   const { user: apiUser } = useUser()
   const { user: auth0User } = useAuth0()
   const modifiedBy =
@@ -58,7 +60,7 @@ export function DuplicateModal({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl">
         <DialogHeader>
-          <DialogTitle>Identify possible duplicates</DialogTitle>
+          <DialogTitle>{t('outliner.duplicates.dialogTitle')}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3 text-sm">
           {workError && !workLoading && (
@@ -77,7 +79,7 @@ export function DuplicateModal({
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-            Close
+            {t('outliner.duplicates.close')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -144,9 +146,9 @@ function BDRCSearch({ parentWork, isOpen, modifiedBy }: BDRCSearchProps) {
         ...(modifiedBy ? { modified_by: modifiedBy } : {}),
       })
       await queryClient.invalidateQueries({ queryKey: bdrcSearchQueryKeyRoot })
-      toast.success('Duplicate merged into this work')
+      toast.success(t('outliner.duplicates.mergedWork'))
     } catch (err) {
-      setMergeError(err instanceof Error ? err.message : 'Merge failed')
+      setMergeError(err instanceof Error ? err.message : t('outliner.duplicates.mergeFailed'))
     } finally {
       setMergingWorkId(null)
     }
@@ -166,7 +168,7 @@ function BDRCSearch({ parentWork, isOpen, modifiedBy }: BDRCSearchProps) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by title…"
+            placeholder={t('outliner.duplicates.searchByTitle')}
             className="w-full pr-9 text-sm"
           />
           {isLoading && (
@@ -190,7 +192,7 @@ function BDRCSearch({ parentWork, isOpen, modifiedBy }: BDRCSearchProps) {
       {query.trim() && !isLoading && !error && (
         <div className="max-h-48 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-sm">
           {filteredResults.length === 0 ? (
-            <p className="p-3 text-xs text-gray-500">No other works match this search.</p>
+            <p className="p-3 text-xs text-gray-500">{t('outliner.duplicates.noWorksMatch')}</p>
           ) : (
             <ul className="divide-y divide-gray-100">
               {filteredResults.map((item, index) => (
@@ -206,7 +208,7 @@ function BDRCSearch({ parentWork, isOpen, modifiedBy }: BDRCSearchProps) {
                       </div>
                       <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs text-gray-500">
                         <PersonStandingIcon className="h-3.5 w-3.5 shrink-0" />
-                        <span>{item.authors?.[0]?.name ?? 'unknown author'}</span>
+                        <span>{item.authors?.[0]?.name ?? t('outliner.unknownAuthor')}</span>
                       </div>
                     </button>
                     <div className="flex shrink-0 items-center border-l border-gray-100 px-2">
@@ -221,7 +223,7 @@ function BDRCSearch({ parentWork, isOpen, modifiedBy }: BDRCSearchProps) {
                         {mergingWorkId === item.workId?.trim() ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         ) : (
-                          'Duplicate'
+                          t('outliner.duplicates.duplicateButton')
                         )}
                       </Button>
                     </div>
@@ -235,11 +237,11 @@ function BDRCSearch({ parentWork, isOpen, modifiedBy }: BDRCSearchProps) {
 
       {selectedWorkId && (
         <div className="rounded-md border border-emerald-200/90 bg-emerald-50/50 p-3 text-sm">
-          <div className="text-xs font-medium text-emerald-900/90">Selected work</div>
+          <div className="text-xs font-medium text-emerald-900/90">{t('outliner.duplicates.selectedWork')}</div>
           {selectedLoading && (
             <div className="mt-2 flex items-center gap-2 text-xs text-gray-600">
               <Loader2 className="h-4 w-4 animate-spin shrink-0" />
-              Loading…
+              {t('outliner.duplicates.loading')}
             </div>
           )}
           {selectedError && !selectedLoading && (
@@ -256,11 +258,11 @@ function BDRCSearch({ parentWork, isOpen, modifiedBy }: BDRCSearchProps) {
                 </BDRCSeachWrapper>
               </div>
               <div>
-                <div className="text-xs text-gray-500">Work ID</div>
+                <div className="text-xs text-gray-500">{t('outliner.duplicates.workId')}</div>
                 <div className="mt-0.5 font-mono text-xs text-gray-700">{selectedWork.workId}</div>
               </div>
               <div>
-                <div className="text-xs text-gray-500">Authors</div>
+                <div className="text-xs text-gray-500">{t('outliner.duplicates.authors')}</div>
                 <ul className="mt-1">
                   <AuthorsListing authors={selectedWork.authors ?? []} />
                 </ul>
@@ -292,6 +294,7 @@ type BDRCPersonDuplicateSearchProps = Readonly<{
 }>
 
 function BDRCPersonDuplicateSearch({ authors, isOpen, modifiedBy }: BDRCPersonDuplicateSearchProps) {
+  const { t } = useTranslation()
   const queryClient = useQueryClient()
   const authorsWithBdrc = useMemo(
     () => authors.filter((a) => Boolean(a.id?.trim())),
@@ -357,9 +360,9 @@ function BDRCPersonDuplicateSearch({ authors, isOpen, modifiedBy }: BDRCPersonDu
         ...(modifiedBy ? { modified_by: modifiedBy } : {}),
       })
       await queryClient.invalidateQueries({ queryKey: bdrcSearchQueryKeyRoot })
-      toast.success('Duplicate merged into this author')
+      toast.success(t('outliner.duplicates.mergedAuthor'))
     } catch (err) {
-      setPersonMergeError(err instanceof Error ? err.message : 'Merge failed')
+      setPersonMergeError(err instanceof Error ? err.message : t('outliner.duplicates.mergeFailed'))
     } finally {
       setMergingPersonId(null)
     }
@@ -377,7 +380,7 @@ function BDRCPersonDuplicateSearch({ authors, isOpen, modifiedBy }: BDRCPersonDu
         <>
           <div>
             <Label htmlFor="duplicate-canonical-author" className="text-xs text-gray-500">
-              Canonical author (merge duplicates into this person)
+              {t('outliner.duplicates.canonicalAuthorLabel')}
             </Label>
             <select
               id="duplicate-canonical-author"
@@ -394,10 +397,10 @@ function BDRCPersonDuplicateSearch({ authors, isOpen, modifiedBy }: BDRCPersonDu
           </div>
           <div>
             <Label htmlFor="duplicate-bdrc-person-search" className="text-xs text-gray-500">
-              Search BDRC by person name
+              {t('outliner.duplicates.searchPersonByName')}
             </Label>
             <p className="mt-0.5 text-[11px] text-gray-400">
-              Canonical person:{' '}
+              {t('outliner.duplicates.canonicalPerson')}{' '}
               <span className="font-mono text-gray-600">{parentPersonId}</span>
             </p>
             <div className="relative mt-1">
@@ -406,7 +409,7 @@ function BDRCPersonDuplicateSearch({ authors, isOpen, modifiedBy }: BDRCPersonDu
                 type="text"
                 value={personQuery}
                 onChange={(e) => setPersonQuery(e.target.value)}
-                placeholder="Search by name…"
+                placeholder={t('outliner.duplicates.searchByName')}
                 className="w-full pr-9 text-sm"
               />
               {personLoading && (
@@ -430,7 +433,7 @@ function BDRCPersonDuplicateSearch({ authors, isOpen, modifiedBy }: BDRCPersonDu
           {personQuery.trim() && !personLoading && !personSearchError && (
             <div className="max-h-48 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-sm">
               {filteredPersonResults.length === 0 ? (
-                <p className="p-3 text-xs text-gray-500">No other persons match this search.</p>
+                <p className="p-3 text-xs text-gray-500">{t('outliner.duplicates.noPersonsMatch')}</p>
               ) : (
                 <ul className="divide-y divide-gray-100">
                   {filteredPersonResults.map((item, index) => {
@@ -459,7 +462,7 @@ function BDRCPersonDuplicateSearch({ authors, isOpen, modifiedBy }: BDRCPersonDu
                               {mergingPersonId === item.bdrc_id?.trim() ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                               ) : (
-                                'Duplicate'
+                                t('outliner.duplicates.duplicateButton')
                               )}
                             </Button>
                           </div>
@@ -474,10 +477,10 @@ function BDRCPersonDuplicateSearch({ authors, isOpen, modifiedBy }: BDRCPersonDu
 
           {selectedPerson?.bdrc_id?.trim() && (
             <div className="rounded-md border border-emerald-200/90 bg-emerald-50/50 p-3 text-sm">
-              <div className="text-xs font-medium text-emerald-900/90">Selected person</div>
+              <div className="text-xs font-medium text-emerald-900/90">{t('outliner.duplicates.selectedPerson')}</div>
               <div className="mt-2 space-y-2">
                 <div>
-                  <div className="text-xs text-gray-500">Name</div>
+                  <div className="text-xs text-gray-500">{t('outliner.duplicates.name')}</div>
                   <BDRCSeachWrapper bdrcId={selectedPerson.bdrc_id.trim()}>
                     <div className="mt-0.5 font-monlam font-medium text-gray-900">
                       {selectedPerson.name?.trim() || '—'}
@@ -485,7 +488,7 @@ function BDRCPersonDuplicateSearch({ authors, isOpen, modifiedBy }: BDRCPersonDu
                   </BDRCSeachWrapper>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-500">Person ID</div>
+                  <div className="text-xs text-gray-500">{t('outliner.duplicates.personId')}</div>
                   <div className="mt-0.5 font-mono text-xs text-gray-700">
                     {selectedPerson.bdrc_id.trim()}
                   </div>

@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import ImageZoom from 'react-image-zooom'
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument'
 import { useBdrcOtVolume } from '@/features/outliner/bdrc/hook/useBdrcOtVolume'
 import { useDocument, useCursor, useSelection } from './contexts'
-import { List, type RowComponentProps, useDynamicRowHeight, useListRef } from 'react-window'
-import { Loader2 } from 'lucide-react'
+import {
+  List,
+  useListRef,
+  type RowComponentProps,
+} from 'react-window'
+import { Link2, Loader2 } from 'lucide-react'
 
 type BdrcPageLike = {
   pname?: string
@@ -36,133 +41,51 @@ function pageIndexForDocumentCharIndex(
   return 0
 }
 
-function thumbUrlForPage(volId: string | null, pname: string | undefined) {
-  return volId && pname
-    ? `https://iiif.bdrc.io/bdr:${volId}::${pname}/full/225,100/0/default.jpg`
-    : null
-}
-
-/** Reserved height for main page image so layout doesn’t jump when IIIF loads (matches IIIF 225×100 thumb aspect at ~92px width). */
-const THUMB_IMAGE_SLOT_CLASS =
-  'relative mx-auto block h-[41px] w-full max-w-[92px] overflow-hidden rounded-sm bg-gray-200'
-
-/** Reserved slot for full page scan preview. */
 const MAIN_IMAGE_SLOT_CLASS =
-  'relative flex h-[min(52vh,30rem)] w-full items-center justify-center overflow-hidden rounded border border-gray-200 bg-gray-100'
+  'relative flex min-h-0 flex-1 w-full items-center justify-center overflow-hidden rounded border border-gray-200 bg-gray-100'
 
-type ThumbListItemData = {
+type PageImageRowProps = {
   pages: BdrcPageLike[]
   volId: string | null
-  selectedIndex: number
-  onSelectPage: (index: number) => void
+  volumePageAlt: (pageNum1Based: number) => string
+  noImageLabel: string
+  rowViewportHeight: number
+  activeIndex: number
 }
 
-function ThumbRow({
+function PageImageRow({
   ariaAttributes,
   index,
   style,
   pages,
   volId,
-  selectedIndex,
-  onSelectPage,
-}: RowComponentProps<ThumbListItemData>) {
+  volumePageAlt,
+  noImageLabel,
+  activeIndex,
+}: RowComponentProps<PageImageRowProps>) {
   const pname = pages[index]?.pname
-  const thumb = thumbUrlForPage(volId, pname)
-  const isSelected = index === selectedIndex
-  const [thumbLoaded, setThumbLoaded] = useState(false)
-
-  useEffect(() => {
-    setThumbLoaded(false)
-  }, [thumb])
-
-  return (
-    <div {...ariaAttributes} style={style} className="px-1.5 py-[3px]">
-      <button
-        type="button"
-        onClick={() => onSelectPage(index)}
-        disabled={!thumb}
-        title={`Page ${index + 1}`}
-        className={[
-          'relative box-border w-full overflow-hidden rounded border bg-white p-0.5 text-left transition-shadow',
-          isSelected
-            ? 'border-blue-500 ring-2 ring-blue-400 ring-offset-1'
-            : 'border-gray-200 hover:border-gray-400',
-          thumb ? 'cursor-pointer' : 'cursor-not-allowed opacity-50',
-        ].join(' ')}
-      >
-        {thumb ? (
-          <span className={THUMB_IMAGE_SLOT_CLASS}>
-            {!thumbLoaded && (
-              <span
-                className="absolute inset-0 animate-pulse bg-linear-to-b from-gray-200 to-gray-300"
-                aria-hidden
-              />
-            )}
-            <img
-              src={thumb}
-              alt=""
-              loading="lazy"
-              onLoad={() => setThumbLoaded(true)}
-              className={[
-                'relative z-1 h-full w-full object-contain transition-opacity duration-150',
-                thumbLoaded ? 'opacity-100' : 'opacity-0',
-              ].join(' ')}
-            />
-          </span>
-        ) : (
-          <span className={THUMB_IMAGE_SLOT_CLASS}>
-            <span className="flex h-full w-full items-center justify-center text-[10px] text-gray-500">
-              —
-            </span>
-          </span>
-        )}
-        <span className="absolute bottom-0.5 right-0.5 z-30 rounded bg-black/55 px-1 text-[9px] leading-tight text-white">
-          {index + 1}
-        </span>
-      </button>
-    </div>
-  )
-}
-
-type PageImagePreviewProps = {
-  pages: BdrcPageLike[]
-  volId: string | null
-  imageLink: string | null
-  previewIndex: number
-  pageCount: number
-}
-
-function PageImagePreview({
-  pages,
-  volId,
-  imageLink,
-  previewIndex,
-  pageCount,
-}: PageImagePreviewProps) {
-  const pname = pages[previewIndex]?.pname
   const imageUrl =
     volId && pname
       ? `https://iiif.bdrc.io/bdr:${volId}::${pname}/full/max/0/default.jpg`
       : null
 
-  return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-auto rounded border border-gray-200 bg-white p-3">
-      <div className="mb-2 flex shrink-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs text-gray-600">
-        <div>
-          Page {previewIndex + 1} / {pageCount}
-        </div>
-      
-      </div>
+  const isActive = index === activeIndex
 
-      {imageUrl ? (
-        <div className="w-full shrink-0">
-          <p className="mb-1.5 text-[11px] text-gray-500">
-            Click to zoom, move the pointer to pan, click again to reset.
-          </p>
+  return (
+    <div {...ariaAttributes} style={style} className="box-border">
+      <div
+        className={[
+          'flex h-full min-h-0 w-full flex-col overflow-hidden rounded',
+          isActive
+            ? 'ring-2 ring-blue-400 ring-offset-1 ring-offset-white'
+            : '',
+        ].join(' ')}
+      >
+        {imageUrl ? (
           <div className={MAIN_IMAGE_SLOT_CLASS}>
             <ImageZoom
               src={imageUrl}
-              alt={`Volume page ${previewIndex + 1}`}
+              alt={volumePageAlt(index + 1)}
               zoom={250}
               fullWidth
               theme={{
@@ -175,23 +98,27 @@ function PageImagePreview({
               }}
             />
           </div>
+        ) : (
+          <div className={MAIN_IMAGE_SLOT_CLASS}>
+            <span className="text-xs text-gray-500">{noImageLabel}</span>
+          </div>
+        )}
+        <div className="mt-1 shrink-0 text-center text-[11px] tabular-nums text-gray-500">
+          {index + 1} / {pages.length}
         </div>
-      ) : (
-        <div className={MAIN_IMAGE_SLOT_CLASS}>
-          <span className="text-xs text-gray-500">No image available.</span>
-        </div>
-      )}
+      </div>
     </div>
   )
 }
 
-type ImageWrapperProps = {
-  imageVisible: boolean
-  onImageVisibleChange: (visible: boolean) => void
+export type VolumeImagePanelProps = {
+  /** When false, list does not auto-scroll on sync (e.g. tab hidden). */
+  panelActive?: boolean
 }
 
-function ImageWrapper({ imageVisible, onImageVisibleChange }: ImageWrapperProps) {
-  const thumbListRef = useListRef(null)
+export function VolumeImagePanel({ panelActive = true }: VolumeImagePanelProps) {
+  const { t } = useTranslation()
+  const listRef = useListRef(null)
 
   const { document } = useOutlinerDocument()
   const volumeId = document?.filename ?? null
@@ -252,6 +179,9 @@ function ImageWrapper({ imageVisible, onImageVisibleChange }: ImageWrapperProps)
   }, [pages, documentCharIndexForImage])
 
   const [previewIndex, setPreviewIndex] = useState(0)
+  /** When true, the list scrolls to the page that matches the caret / selection in the active segment. */
+  const [syncWithEditor, setSyncWithEditor] = useState(false)
+  const [listViewportHeight, setListViewportHeight] = useState(480)
 
   useEffect(() => {
     setPreviewIndex(0)
@@ -262,117 +192,131 @@ function ImageWrapper({ imageVisible, onImageVisibleChange }: ImageWrapperProps)
     setPreviewIndex((i) => Math.min(i, pageCount - 1))
   }, [pageCount])
 
-  /** Keep preview + sidebar selection aligned with caret/selection → BDRC page when we can resolve it */
+  /** Follow BDRC page from document position only while sync is enabled */
   useEffect(() => {
+    if (!syncWithEditor) return
     if (autoPageIndex < 0) return
     setPreviewIndex(autoPageIndex)
-  }, [autoPageIndex])
+    if (!panelActive) return
+    listRef.current?.scrollToRow({
+      index: autoPageIndex,
+      align: 'smart',
+      behavior: 'smooth',
+    })
+  }, [autoPageIndex, syncWithEditor, panelActive, listRef])
 
-  const thumbRowHeight = useDynamicRowHeight({
-    defaultRowHeight: 58,
-    key: 'page-image-thumbs',
-  })
+  const onRowsRendered = useCallback(
+    (visible: { startIndex: number; stopIndex: number }) => {
+      setPreviewIndex((prev) => {
+        const next = visible.startIndex
+        return prev === next ? prev : next
+      })
+    },
+    []
+  )
 
-  const selectPage = useCallback((index: number) => {
-    if (index < 0 || index >= pageCount) return
-    setPreviewIndex(index)
-  }, [pageCount])
+  const onListResize = useCallback(
+    (size: { height: number; width: number }) => {
+      setListViewportHeight((h) =>
+        Math.abs(h - size.height) < 1 ? h : Math.max(size.height, 120)
+      )
+    },
+    []
+  )
 
-  const thumbRowProps = useMemo<ThumbListItemData | null>(() => {
+  const rowHeight = useCallback(
+    (_index: number, props: { rowViewportHeight: number }) => {
+      const h = props.rowViewportHeight
+      return Math.max(h, 120)
+    },
+    []
+  )
+
+  const rowProps = useMemo((): PageImageRowProps | null => {
     if (!pages || !Array.isArray(pages) || pages.length === 0) return null
     return {
       pages,
       volId: volId?.trim() ? volId : null,
-      selectedIndex: previewIndex,
-      onSelectPage: selectPage,
+      volumePageAlt: (n: number) => t('outliner.images.volumePageAlt', { n }),
+      noImageLabel: t('outliner.images.noImage'),
+      rowViewportHeight: listViewportHeight,
+      activeIndex: previewIndex,
     }
-  }, [pages, volId, previewIndex, selectPage])
-
-  useEffect(() => {
-    if (!imageVisible) return
-    if (pageCount === 0) return
-    thumbListRef.current?.scrollToRow({
-      index: previewIndex,
-      align: 'smart',
-      behavior: 'smooth',
-    })
-  }, [imageVisible, previewIndex, pageCount, thumbListRef])
-
-  const v = volId?.trim() ? volId : null
+  }, [pages, volId, listViewportHeight, previewIndex, t])
 
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-col border-b border-gray-200 bg-white">
-      <div className="flex shrink-0 items-center justify-between px-3 py-2">
-        <div className="text-xs text-gray-600">
-          Page image {activeSegmentId ? '(active segment)' : '(no segment selected)'}
-        </div>
-        <div className='flex gap-2 items-center'>
-
+    <div className="flex h-full min-h-0 min-w-0 flex-col bg-white">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-gray-200 px-3 py-2">
         <button
           type="button"
-          className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
-          onClick={() => onImageVisibleChange(!imageVisible)}
-          >
-          {imageVisible ? 'Hide image' : 'Show image'}
+          aria-pressed={syncWithEditor}
+          title={
+            syncWithEditor
+              ? t('outliner.images.syncOn')
+              : t('outliner.images.syncOff')
+          }
+          className={[
+            'inline-flex items-center gap-1 rounded border px-2 py-1 text-xs font-medium transition-colors',
+            syncWithEditor
+              ? 'border-blue-500 bg-blue-50 text-blue-800'
+              : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50',
+          ].join(' ')}
+          onClick={() => setSyncWithEditor((x) => !x)}
+        >
+          <Link2 className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          {t('outliner.images.sync')}
         </button>
         {imageLink ? (
           <a
-          target="_blank"
-          rel="noreferrer"
-          href={imageLink}
-          className="text-blue-600 text-xs underline decoration-blue-600/40 underline-offset-2 hover:text-blue-800"
+            target="_blank"
+            rel="noreferrer"
+            href={imageLink}
+            className="text-xs text-blue-600 underline decoration-blue-600/40 underline-offset-2 hover:text-blue-800"
           >
-            Open in BDRC library
+            {t('outliner.images.openBdrcLibrary')}
           </a>
-        ) : isLoading ? <Loader2 className="w-4 h-4 animate-spin" />: <div className="text-xs text-gray-600">No volume available.</div>}
-        </div>
+        ) : isLoading ? (
+          <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+        ) : (
+          <div className="text-xs text-gray-600">{t('outliner.images.noVolume')}</div>
+        )}
       </div>
 
-      {imageVisible && (
-        <div className="flex min-h-0 flex-1 flex-col px-3 pb-3">
-          {isLoading && <div className="text-xs text-gray-600">Loading volume…</div>}
-          {!isLoading && error && (
-            <div className="text-xs text-red-600">Failed to load volume: {error}</div>
-          )}
+      <div className="flex min-h-0 flex-1 flex-col px-3 pb-3 pt-2">
+        {isLoading && <div className="text-xs text-gray-600">{t('outliner.images.loadingVolume')}</div>}
+        {!isLoading && error && (
+          <div className="text-xs text-red-600">
+            {t('outliner.images.loadVolumeFailed', { message: String(error) })}
+          </div>
+        )}
 
-          {!isLoading && !error && pageCount === 0 && (
-            <div className="text-xs text-gray-600">No pages available.</div>
-          )}
+        {!isLoading && !error && pageCount === 0 && (
+          <div className="text-xs text-gray-600">{t('outliner.images.noPages')}</div>
+        )}
 
-          {!isLoading && !error && pageCount > 0 && pages && (
-            <div className="flex min-h-0 flex-1 gap-2 overflow-hidden">
-              <aside
-                className="flex w-[104px] shrink-0 flex-col overflow-hidden rounded border border-gray-200 bg-gray-100"
-                aria-label="Page thumbnails"
-              >
-                <div className="min-h-0 flex-1 overflow-hidden">
-                  {thumbRowProps && (
-                    <List
-                      className="w-full"
-                      style={{ height: '100%' }}
-                      listRef={thumbListRef}
-                      rowCount={pageCount}
-                      rowHeight={thumbRowHeight}
-                      rowComponent={ThumbRow}
-                      rowProps={thumbRowProps}
-                      overscanCount={5}
-                    />
-                  )}
-                </div>
-              </aside>
-              <PageImagePreview
-                pages={pages}
-                volId={v}
-                imageLink={imageLink}
-                previewIndex={previewIndex}
-                pageCount={pageCount}
-              />
-            </div>
-          )}
-        </div>
-      )}
+        {!isLoading && !error && pageCount > 0 && pages && rowProps && (
+          <div
+            className="flex min-h-0 flex-1 flex-col overflow-hidden rounded border border-gray-200 bg-gray-50"
+            aria-label={t('outliner.images.pagesScrollAria')}
+          >
+            <List
+              key={volumeId ?? 'no-volume'}
+              listRef={listRef}
+              className="min-h-0 w-full scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 [scrollbar-gutter:stable]"
+              style={{ height: '100%' }}
+              rowCount={pageCount}
+              rowHeight={rowHeight}
+              rowComponent={PageImageRow}
+              rowProps={rowProps}
+              overscanCount={1}
+              onRowsRendered={onRowsRendered}
+              onResize={onListResize}
+            />
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
-export default ImageWrapper
+export default VolumeImagePanel

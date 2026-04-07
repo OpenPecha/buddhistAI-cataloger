@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import type { BubbleMenuProps } from './types';
 import { useMenuPosition } from './hooks/useMenuPosition';
@@ -7,6 +8,7 @@ import { useSelection } from './contexts';
 const DEFAULT_POSITION = { x: 0, y: 0 };
 
 export const BubbleMenu: React.FC<BubbleMenuProps> = ({ segmentId }) => {
+  const { t } = useTranslation();
   const [isVisible, setIsVisible] = useState(false);
   const { bubbleMenuState, onBubbleMenuSelect } = useSelection();
   
@@ -104,19 +106,19 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({ segmentId }) => {
       }}
     >
       <div className="text-xs text-gray-500 mb-2 px-2 py-1 border-b border-gray-200">
-        Use selected text as:
+        {t('outliner.bubbleMenu.useSelectionAs')}
       </div>
       <button
         onClick={handleTitleSelect}
         className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-md transition-colors"
       >
-        📄 Title
+        📄 {t('outliner.bubbleMenu.title')}
       </button>
       <button
         onClick={handleAuthorSelect}
         className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-md transition-colors"
       >
-        👤 Author
+        👤 {t('outliner.bubbleMenu.author')}
       </button>
     </div>
   );

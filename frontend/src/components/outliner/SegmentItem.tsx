@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Loader2, ChevronDown, ChevronRight, Merge, ChevronUp, AlertCircle } from 'lucide-react'
 import type { TextSegment, SegmentLabel } from './types'
@@ -6,7 +7,7 @@ import { SegmentTextContent } from './SegmentTextContent'
 import { useDocument,useCursor, useActions } from './contexts'
 import { SplitMenu } from './SplitMenu'
 import { BubbleMenu } from './BubbleMenu'
-import { SEGMENT_LABEL_OPTIONS } from './segment-label'
+import { SEGMENT_LABEL_VALUES, segmentLabelI18nKey } from './segment-label'
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument'
 import { parseTocFromText } from '@/api/outliner'
 import { toast } from 'sonner'
@@ -31,7 +32,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
   segment,
   index,
 }) => {
-
+  const { t } = useTranslation()
 
   // Use new contexts
   const { activeSegmentId, segments } = useDocument()
@@ -53,7 +54,6 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
   const isAttached = isFirstSegment && (segment.is_attached ?? false)
   const isActive = segment.id === activeSegmentId
 
-  const { documentId: outlinerDocumentId, refetchDocument } = useOutlinerDocument()
 
   const [isTocAiLoading, setIsTocAiLoading] = useState(false)
   const [segmentSearchQuery, setSegmentSearchQuery] = useState('')
@@ -72,38 +72,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
     toggleSegmentExpanded(segment.id)
   }
   
-  const validation =   async (value: string) => {
-      if (value !== 'TOC') return
-
-      if (segments.some((s) => s.label === 'TOC' && s.id !== segment.id)) {
-        toast.error('There can be only one TOC in the document')
-        throw new Error('There can be only one TOC in the document')
-      }
-
-      setIsTocAiLoading(true)
-      try {
-        const { is_toc, entries } = await parseTocFromText({
-          content: segment.text,
-          ...(outlinerDocumentId ? { document_id: outlinerDocumentId } : {}),
-        })
-
-        await refetchDocument()
-
-        if (!is_toc) {
-          toast.error('This segment does not look like a table of contents')
-          return
-        }
-
-        const textSegmentCount = segments.filter((s) => s.label === 'TEXT').length
-        if (textSegmentCount !== entries.length) {
-          toast.warning(
-            `TEXT segment count (${textSegmentCount}) does not match AI TOC entries (${entries.length})`
-          )
-        }
-      } finally {
-        setIsTocAiLoading(false)
-      }
-    }
+  
 
   return (
     <div className="relative">
@@ -124,7 +93,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
                 : 'border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}
           >
-            {isAttached ? '✓ Attached' : 'Attach Parent'}
+            {isAttached ? t('outliner.segment.attached') : t('outliner.segment.attachParent')}
           </Button>
         </div>
       )}
@@ -171,7 +140,6 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
         
        <SegmentLabelSelector
           segment={segment}
-          validation={validation}
           isTocAiLoading={isTocAiLoading}
         />
       
@@ -197,7 +165,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
               onMergeWithPrevious(segment.id)
             }}
             className="cancel-split-button cursor-pointer z-100 absolute -top-3 left-1/2 -translate-x-1/2  bg-white border-2 border-red-500 rounded-full p-1.5 shadow-lg hover:bg-red-50 transition-colors"
-            title="Merge with previous segment"
+            title={t('outliner.segment.mergePrevious')}
           >
             <Merge className="w-4 h-4 text-red-600" />
           </button>
@@ -208,7 +176,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
               type="button"
               onClick={toggleCollapse}
               className="p-1 hover:bg-gray-200 rounded transition-colors collapse-button"
-              aria-label={isCollapsed ? 'Expand segment' : 'Collapse segment'}
+              aria-label={isCollapsed ? t('outliner.segment.expandSegment') : t('outliner.segment.collapseSegment')}
             >
               {isCollapsed ? (
                 <ChevronRight className="w-4 h-4 text-gray-600" />
@@ -226,8 +194,17 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
               {index + 1}
             </div>
             {isRejected && (
-              <span className="text-[10px] font-semibold text-red-600" title={`Rejected${(segment.rejection_count ?? 0) > 1 ? ` ${segment.rejection_count} times` : ''}`}>
-                Rejected{(segment.rejection_count ?? 0) > 1 ? ` (${segment.rejection_count}x)` : ''}
+              <span
+                className="text-[10px] font-semibold text-red-600"
+                title={
+                  (segment.rejection_count ?? 0) > 1
+                    ? t('outliner.segment.rejectedMany', { count: segment.rejection_count ?? 0 })
+                    : t('outliner.segment.rejected')
+                }
+              >
+                {(segment.rejection_count ?? 0) > 1
+                  ? `${t('outliner.segment.rejected')} (${segment.rejection_count}x)`
+                  : t('outliner.segment.rejected')}
               </span>
             )}
           </div>
@@ -255,7 +232,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
                   }
                 }}
                 tabIndex={0}
-                aria-label="Expand segment"
+                aria-label={t('outliner.segment.expandSegment')}
               >
                 {segment.text.slice(0,200) +"..."}
               </button>
@@ -348,49 +325,39 @@ const TitleAndAuthor = ({
 
 const SegmentLabelSelector = ({
   segment,
-  validation,
   isTocAiLoading,
 }: {
   segment: TextSegment
-  validation: (value: string) => Promise<void>
   isTocAiLoading: boolean
 }) => {
+  const { t } = useTranslation()
   const { documentId, updateSegment: updateSegmentMutation } = useOutlinerDocument()
 
-  const handleLabelChange = useCallback(
+  const handleLabelChange = 
     async (value: string) => {
       if (!segment.id || !documentId) return
-
-      try {
-        await validation(value)
-      } catch {
-        return
-      }
-
       const label = value === 'none' || value === '' ? undefined : (value as SegmentLabel)
       updateSegmentMutation(segment.id, { label }).catch((err) => {
         console.error('Failed to update segment label:', err)
-        toast.error(err instanceof Error ? err.message : 'Failed to update label')
+        toast.error(err instanceof Error ? err.message : t('outliner.segment.failedUpdateLabel'))
       })
-    },
-    [segment.id, documentId, validation, updateSegmentMutation]
-  )
+    }
   return (
   <>
-    <span className="text-xs font-medium text-gray-500 shrink-0">Label</span>
+    <span className="text-xs font-medium text-gray-500 shrink-0">{t('outliner.segment.labelField')}</span>
     <Select
     value={segment.label ?? 'none'}
     onValueChange={handleLabelChange}
-      disabled={!documentId || isTocAiLoading}
+      disabled={!documentId || isTocAiLoading || segment.status==='checked'}
     >
       <SelectTrigger className="h-8 text-xs flex-1 max-w-[180px]" id={`segment-label-${segment.id}`}>
-        <SelectValue placeholder="No label" />
+        <SelectValue placeholder={t('outliner.segment.noLabelPlaceholder')} />
       </SelectTrigger>
       <SelectContent>
     
-        {SEGMENT_LABEL_OPTIONS.map((opt) => (
-          <SelectItem key={opt.value} value={opt.value}>
-            {opt.label}
+        {SEGMENT_LABEL_VALUES.map((opt) => (
+          <SelectItem key={opt} value={opt}>
+            {t(segmentLabelI18nKey(opt))}
           </SelectItem>
         ))}
       </SelectContent>
@@ -398,7 +365,7 @@ const SegmentLabelSelector = ({
     {isTocAiLoading && (
       <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground" aria-live="polite">
         <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" aria-hidden />
-        Analyzing TOC…
+        {t('outliner.segment.analyzingToc')}
       </span>
     )}
   </>
@@ -416,6 +383,7 @@ const SegmentSearch = ({
   onQueryChange: (q: string) => void
   matchCount: number
 }) => {
+  const { t } = useTranslation()
   const [activeMatchIndex, setActiveMatchIndex]=useState(0);
   const scrollSegmentToTop = useCallback(() => {
     document.getElementById(segmentId)?.scrollIntoView({
@@ -469,7 +437,7 @@ const SegmentSearch = ({
     <div className="segment-search-bar flex items-center gap-1   rounded-md px-1 py-0.5 ">
       <Input
         className="h-8 w-42 text-xs"
-        placeholder="Search"
+        placeholder={t('outliner.segment.searchPlaceholder')}
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
         onKeyDown={(e) => {
@@ -483,7 +451,7 @@ const SegmentSearch = ({
             goDown()
           }
         }}
-        aria-label="Search within this segment"
+        aria-label={t('outliner.segment.searchInSegment')}
       />
       {query.trim().length > 0 && (
         <span className="text-[10px] text-muted-foreground tabular-nums whitespace-nowrap px-0.5">
@@ -497,7 +465,7 @@ const SegmentSearch = ({
         className="h-8 w-8 shrink-0"
         onClick={goUp}
         aria-label={
-          useScrollForArrows ? 'Scroll segment to top' : 'Previous search match'
+          useScrollForArrows ? t('outliner.segment.scrollToTop') : t('outliner.segment.prevMatch')
         }
       >
         <ChevronUp className="h-4 w-4" />
@@ -509,7 +477,7 @@ const SegmentSearch = ({
         className="h-8 w-8 shrink-0"
         onClick={goDown}
         aria-label={
-          useScrollForArrows ? 'Scroll segment to bottom' : 'Next search match'
+          useScrollForArrows ? t('outliner.segment.scrollToBottom') : t('outliner.segment.nextMatch')
         }
       >
         <ChevronDown className="h-4 w-4" />
@@ -518,20 +486,27 @@ const SegmentSearch = ({
   )
 }
 
-const AlertMessage=({segment}: {segment: TextSegment}) => {
-  
-  // Check for additional patterns, allow case-insensitive/variant spacing, make extensible
-  const BONPO_PATTERNS = ['བམ་པོ', 'ལེའུ', 'བམཔོ', 'བམ་པོ་', 'ལེའུ་', 'བམ པོ'];
-  const normalizedText = segment.text.replace(/\s+/g, ''); // Remove extra whitespace
-  const showAlertMessage = BONPO_PATTERNS.some(pattern => 
-    normalizedText.includes(pattern.replace(/\s+/g, ''))
-  );
-  if (!showAlertMessage || segment.label !== 'TEXT') return null;
+const AlertMessage = ({ segment }: { segment: TextSegment }) => {
+  const { t } = useTranslation()
+  const { activeSegmentId, sidebarTitleDraft } = useDocument()
+
+  const BONPO_PATTERNS = ['་པོབམ', 'ལེའུ', 'བམཔོ', 'བམ་པོ་', 'ལེའུ་', 'བམ པོ']
+  const textMatchesPattern = (text: string | undefined) =>
+    Boolean(text && BONPO_PATTERNS.some((pattern) => text.includes(pattern)))
+
+  const savedTitle = segment.title ?? ''
+  const draftTitle =
+    segment.id === activeSegmentId ? (sidebarTitleDraft ?? '') : ''
+
+  const showAlertMessage =
+    textMatchesPattern(savedTitle) || textMatchesPattern(draftTitle)
+  const hasAnyTitle = Boolean(savedTitle.trim() || draftTitle.trim())
+  if (!hasAnyTitle || !showAlertMessage || segment.label !== 'TEXT') return null
   return (
     <div className="alert-message flex items-center gap-2"> 
       <AlertCircle className="h-4 w-4 animate-bounce text-red-500" />
       <span className=" text-xs font-medium text-gray-500">
-         Text subsegment (chapter, bampo, etc.)
+         {t('outliner.segment.subsegmentWarning')}
       </span>
     </div>
   )

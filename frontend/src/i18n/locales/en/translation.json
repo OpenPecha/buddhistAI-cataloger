@@ -461,6 +461,247 @@
     "loadingRelatedTexts": "Loading related texts...",
     "errorLoadingRelatedTexts": "Error loading related texts",
     "noRelatedTextsFound": "No Related Texts Found"  
+  },
+  "outliner": {
+    "segmentLabels": {
+      "none": "Segment type",
+      "FRONT_MATTER": "Front matter",
+      "TOC": "TOC",
+      "TEXT": "Text",
+      "BACK_MATTER": "Back matter"
+    },
+    "filter": {
+      "filters": "Filters",
+      "label": "Label",
+      "completion": "Completion",
+      "showAll": "Show all",
+      "all": "All",
+      "completed": "Completed",
+      "notCompleted": "Not completed"
+    },
+    "unsavedChanges": {
+      "title": "Unsaved Changes",
+      "description": "You have unsaved changes to the title or author fields. What would you like to do?",
+      "discard": "Discard"
+    },
+    "annotation": {
+      "noSegmentSelected": "No segment selected",
+      "clickSegmentToAnnotate": "Click on a segment in the workspace to annotate it",
+      "textPrefix": "Text:",
+      "save": "Save",
+      "notApplicable": "N/A",
+      "reset": "Reset",
+      "tabOutlines": "Outlines",
+      "tabMetadata": "Metadata",
+      "metadataDisabledHint": "Only available for labelled segments",
+      "noSegments": "No segments available",
+      "noMatchingFilters": "No segments match the selected filters",
+      "authorBadge": "Author",
+      "labelBadge": "Label",
+      "toastNoSegment": "No segment selected",
+      "toastNeedTitleOrAuthor": "Please provide at least a title or author",
+      "toastSaved": "Annotations saved successfully",
+      "toastSaveFailed": "Failed to save annotations"
+    },
+    "segment": {
+      "oneTocOnly": "There can be only one TOC in the document",
+      "notTocLike": "This segment does not look like a table of contents",
+      "tocCountMismatch": "TEXT segment count ({{textCount}}) does not match AI TOC entries ({{entriesCount}})",
+      "attached": "✓ Attached",
+      "attachParent": "Attach Parent",
+      "mergePrevious": "Merge with previous segment",
+      "expandSegment": "Expand segment",
+      "collapseSegment": "Collapse segment",
+      "rejected": "Rejected",
+      "rejectedMany": "Rejected {{count}} times",
+      "failedUpdateLabel": "Failed to update label",
+      "labelField": "Label",
+      "noLabelPlaceholder": "No label",
+      "searchPlaceholder": "Search",
+      "searchInSegment": "Search within this segment",
+      "scrollToTop": "Scroll segment to top",
+      "prevMatch": "Previous search match",
+      "scrollToBottom": "Scroll segment to bottom",
+      "nextMatch": "Next search match",
+      "subsegmentWarning": "Don't segment on text subsegments (chapters, bampo, etc.)",
+      "analyzingToc": "Analyzing TOC…"
+    },
+    "tocPanel": {
+      "sideAria": "Images and table of contents",
+      "tabImages": "Images",
+      "tabToc": "Table of contents",
+      "tabTocDisabledTitle": "Set a segment's type to TOC in the workspace to enable this tab.",
+      "ariaDocumentToc": "Document table of contents",
+      "emptyNoTocSegment": "No TOC segment. Set a segment's type to TOC in the workspace to show its text here.",
+      "ariaTocLines": "Document table of contents lines",
+      "emptyNoLinesInToc": "No non-empty lines in this TOC segment yet.",
+      "tocSegmentHeading": "TOC segment {{n}}",
+      "ariaTocPart": "Document table of contents, part {{n}}",
+      "emptyNoLinesInSegment": "No non-empty lines in this segment.",
+      "mismatch": "Number of TEXT segments {{textCount}} does not match AI TOC entries ({{aiCount}}). Please fix it.",
+      "ariaAiEntries": "AI-extracted table of contents entries",
+      "emptyAiEntries": "No AI-extracted entries yet. Run TOC detection on a TOC segment in the workspace."
+    },
+    "workspace": {
+      "loadingDocument": "Loading document...",
+      "contentAria": "Text workspace content area",
+      "saving": "Saving...",
+      "savedSegmentsTitle": "{{count}} saved segments",
+      "revisionBadge": "{{count}} segment needs revision",
+      "revisionBadge_plural": "{{count}} segments need revision",
+      "aiOutlineTitle": "AI outline: detect Tibetan TOC and split the document into segments (replaces current segments)",
+      "detecting": "Detecting...",
+      "stopDetection": "Stop detection",
+      "undoAiTitle": "Undo AI segmentation",
+      "undo": "Undo",
+      "hideSidePanel": "Hide side panel (images and table of contents)",
+      "showSidePanel": "Show side panel (images and table of contents)",
+      "skipped": "Skipped",
+      "skipping": "Skipping...",
+      "skip": "SKIP",
+      "resetAllSegments": "Reset All Segments",
+      "documentMarkedSkipped": "Document marked as skipped",
+      "skipFailed": "Failed to skip document: {{message}}",
+      "confirmSkip": "Are you sure you want to skip this document?",
+      "submitNotSaved": "{{count}} segment not yet saved",
+      "submitNotSaved_plural": "{{count}} segments not yet saved"
+    },
+    "expand": {
+      "expandAll": "Expand All",
+      "collapseAll": "Collapse All"
+    },
+    "bubbleMenu": {
+      "useSelectionAs": "Use selected text as:",
+      "title": "Title",
+      "author": "Author"
+    },
+    "splitMenu": {
+      "splitHere": "Split Here"
+    },
+    "submitReview": {
+      "success": "Submitted to review and synced to BDRC",
+      "noDocumentId": "Document ID not found",
+      "title": "Submit to Review",
+      "submit": "Submit"
+    },
+    "upload": {
+      "uploading": "Uploading document..."
+    },
+    "loadError": {
+      "title": "Failed to load document",
+      "retry": "Retry"
+    },
+    "aiOutline": {
+      "segmentsCreated": "AI outline: {{count}} segment created",
+      "segmentsCreated_plural": "AI outline: {{count}} segments created",
+      "complete": "AI outline complete",
+      "failed": "AI outline failed: {{message}}"
+    },
+    "aiSuggestions": {
+      "failed": "Failed to generate AI suggestions: {{message}}"
+    },
+    "aiDetect": {
+      "stop": "Stop AI suggestion",
+      "detectTitleAuthor": "Detect Title & Author"
+    },
+    "images": {
+      "pageTitle": "Page {{n}}",
+      "volumePageAlt": "Volume page {{n}}",
+      "noImage": "No image available.",
+      "syncOn": "Page follows cursor in text. Click to keep the current page while you edit.",
+      "syncOff": "Click to jump the page to match the cursor position in the text.",
+      "sync": "Sync",
+      "openBdrcLibrary": "See the full image on BDRC",
+      "noVolume": "No volume available.",
+      "loadingVolume": "Loading volume…",
+      "loadVolumeFailed": "Failed to load volume: {{message}}",
+      "noPages": "No pages available.",
+      "thumbnailsAria": "Page thumbnails",
+      "pagesScrollAria": "Volume pages — scroll to browse"
+    },
+    "comments": {
+      "title": "Comments",
+      "loading": "Loading comments...",
+      "placeholder": "Type your comment here..."
+    },
+    "listBdrcMatches": {
+      "setVolumeHint": "Set the document filename to the BDRC volume id (e.g. V1CZ39) to see suggestions.",
+      "matching": "Matching…",
+      "noSuggestions": "No suggestions for this segment.",
+      "suggestionsLabel": "Suggestions:"
+    },
+    "unknownAuthor": "Unknown author",
+    "idLabel": "ID: {{id}}",
+    "titleField": {
+      "label": "Title",
+      "reconstructedHint": "Title reconstructed from the text / title not clear",
+      "reconstructedCheckbox": "reconstructed",
+      "placeholderReconstructed": "Title reconstructed by the annotator",
+      "placeholder": "Enter title"
+    },
+    "authorField": {
+      "label": "Author",
+      "matchBdrcTitle": "Match with selected BDRC author",
+      "placeholder": "Enter author name",
+      "matchedPercent": "{{pct}}% matched"
+    },
+    "unknownTitle": "Unknown title",
+    "bdrc": {
+      "captchaMismatch": "Code does not match. Try again or request a new code.",
+      "captchaFirstOk": "First code verified. Enter the second code.",
+      "authorMismatchWarning": "This segment has an author, but the matched BDRC work has no author. Edit the BDRC work and add author(s), then save.",
+      "workUpdated": "BDRC work updated",
+      "workUpdateFailed": "Failed to update BDRC work",
+      "searchTitlePlaceholder": "Type title to search BDRC...",
+      "loadingWork": "Loading work…",
+      "editWorkTitle": "Edit BDRC work",
+      "clearSelectionTitle": "Clear BDRC selection",
+      "noWorkInfo": "No work info",
+      "titleLabel": "Title",
+      "authorsLabel": "Authors",
+      "addAuthorConfirm": "Add another author? Multiple commentators are only allowed for commentaries.",
+      "add": "Add",
+      "searchAuthorPlaceholder": "Search or create author…",
+      "removeAuthorAria": "Remove author",
+      "saveToBdrc": "Save to BDRC",
+      "viewWorkDetailsTitle": "View details of the matched BDRC work",
+      "matchWorkFirstTitle": "Match a BDRC work first to view its details",
+      "identifyDuplicates": "Identify possible duplicates",
+      "originPrefix": "Origin:",
+      "duplicateBadge": "Duplicate",
+      "createWork": "Create work",
+      "confirmCreateTitle": "Confirm before creating a work",
+      "confirmCreateDescription": "Enter the code below correctly twice (a new code appears after the first). This helps prevent accidental BDRC work creation.",
+      "captchaStep": "Step {{step}} of 2",
+      "typeTheCode": "Type the code",
+      "newCode": "New code"
+    },
+    "duplicates": {
+      "dialogTitle": "Identify possible duplicates",
+      "currentWork": "Current work:",
+      "loading": "Loading…",
+      "canonicalAuthorLabel": "Canonical author (merge duplicates into this person)",
+      "searchPersonByName": "Search BDRC by person name",
+      "canonicalPerson": "Canonical person:",
+      "noLinkedAuthors": "No authors on this work are linked to BDRC person IDs. Link an author first to search and merge duplicate persons.",
+      "close": "Close",
+      "searchByTitle": "Search by title…",
+      "noWorksMatch": "No other works match this search.",
+      "selectedWork": "Selected work",
+      "title": "Title",
+      "workId": "Work ID",
+      "authors": "Authors",
+      "duplicateButton": "Duplicate",
+      "mergedWork": "Duplicate merged into this work",
+      "mergeFailed": "Merge failed",
+      "canonicalAuthors": "Authors",
+      "searchByName": "Search by name…",
+      "noPersonsMatch": "No other persons match this search.",
+      "selectedPerson": "Selected person",
+      "name": "Name",
+      "personId": "Person ID",
+      "mergedAuthor": "Duplicate merged into this author"
+    }
   }
 }
 

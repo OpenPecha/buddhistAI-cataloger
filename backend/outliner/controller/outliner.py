@@ -12,6 +12,10 @@ from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import func, case, or_, and_, exists
 from sqlalchemy.orm.session import identity
 from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentRejection, SegmentLabels
+from outliner.utils.segment_title_author_auto import (
+    apply_auto_author_to_segment,
+    apply_auto_title_to_segment,
+)
 from user.models.user import User
 from core.redis import invalidate_document_content_cache
 from outliner.utils.outliner_utils import (
@@ -445,6 +449,11 @@ def create_segments_bulk(
                 raise HTTPException(status_code=400, detail=f"Invalid span addresses for segment at index {segment_data['segment_index']}")
             segment_text = document.content[span_start:span_end]
         
+        is_karchak=segment_text.__contains__("དཀར་ཆག")
+        if is_karchak:
+            label=SegmentLabels.TOC
+        else:
+            label=SegmentLabels.TEXT
         db_segment = OutlinerSegment(
             id=str(uuid.uuid4()),
             document_id=document_id,
@@ -453,6 +462,7 @@ def create_segments_bulk(
             span_start=segment_data['span_start'],
             span_end=segment_data['span_end'],
             title=segment_data.get('title'),
+            label=label,
             author=segment_data.get('author'),
             title_bdrc_id=segment_data.get('title_bdrc_id'),
             author_bdrc_id=segment_data.get('author_bdrc_id'),
@@ -508,6 +518,8 @@ def update_segment(
     segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
     if not segment:
         raise HTTPException(status_code=404, detail="Segment not found")
+
+    old_label = segment.label
 
     # Track old annotation status for incremental update
     old_is_annotated = segment.is_annotated
@@ -578,6 +590,21 @@ def update_segment(
     if "updated_author" in patch:
         segment.updated_author = patch["updated_author"]
 
+    # Server-side title/author when label becomes TEXT (no extra client PUT)
+    label_became_text = (
+        "label" in patch
+        and patch.get("label") == "TEXT"
+        and old_label != SegmentLabels.TEXT
+    )
+    user_nonempty_title = (
+        "title" in patch
+        and patch.get("title") is not None
+        and str(patch.get("title")).strip() != ""
+    )
+    # Title only when label becomes TEXT (author runs when a following segment is created, e.g. split)
+    if label_became_text and not user_nonempty_title:
+        apply_auto_title_to_segment(db, segment)
+
     # Update annotation status flag
     segment.update_annotation_status()
     new_is_annotated = segment.is_annotated
@@ -616,6 +643,8 @@ def update_segments_bulk(
         segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
         if not segment:
             continue
+
+        old_label = segment.label
         
         document_ids.add(segment.document_id)
         
@@ -655,6 +684,20 @@ def update_segments_bulk(
         ):
             if span_key in segment_update:
                 setattr(segment, span_key, segment_update[span_key])
+
+        label_became_text = (
+            'label' in segment_update
+            and segment.label == SegmentLabels.TEXT
+            and old_label != SegmentLabels.TEXT
+        )
+        user_nonempty_title = (
+            'title' in segment_update
+            and segment_update.get('title') is not None
+            and str(segment_update.get('title')).strip() != ''
+        )
+        if label_became_text and not user_nonempty_title:
+            apply_auto_title_to_segment(db, segment)
+
         segment.update_annotation_status()
         segment.updated_at = datetime.utcnow()
         updated_segments.append(segment)
@@ -707,6 +750,7 @@ def split_segment(
                     title=None,
                     author=None,
                     parent_segment_id=None,
+                    label=SegmentLabels.FRONT_MATTER,
                     status='unchecked'  # Default to unchecked
                 )
                 initial_segment.update_annotation_status()
@@ -737,12 +781,19 @@ def split_segment(
     text_before = segment.text[:split_position]
     text_after = segment.text[split_position:]
 
-    
     # Update first segment (preserve whitespace/newlines; update span_end using split_position)
     segment.text = text_before
     segment.span_end = new_first_span_end
-    segment.update_annotation_status()
-    
+    is_karchak = text_after.__contains__("དཀར་ཆག")
+    if is_karchak:
+        segment.label = SegmentLabels.FRONT_MATTER
+        label = SegmentLabels.TOC
+    else:
+        label = SegmentLabels.TEXT
+
+    # Upper segment: title from start only when labeled TEXT
+    if segment.label == SegmentLabels.TEXT:
+        apply_auto_title_to_segment(db, segment, skip_last_segment_check=True)
     # Create second segment
     new_segment = OutlinerSegment(
         id=str(uuid.uuid4()),
@@ -753,7 +804,7 @@ def split_segment(
         span_end=old_span_end,
         title=None,
         author=None,        
-        label=SegmentLabels.TEXT,
+        label=label,
         parent_segment_id=segment.parent_segment_id,
         status=segment.status or 'unchecked'
     )
@@ -768,6 +819,13 @@ def split_segment(
         seg.segment_index += 1
     
     db.add(new_segment)
+    # Author on upper segment (TEXT only) once the next segment exists
+    if segment.label == SegmentLabels.TEXT:
+        apply_auto_author_to_segment(db, segment, skip_last_segment_check=True)
+    if new_segment.label == SegmentLabels.TEXT:
+        apply_auto_title_to_segment(db, new_segment, skip_last_segment_check=True)
+    segment.update_annotation_status()
+    new_segment.update_annotation_status()
     db.commit()
     db.refresh(segment)
     db.refresh(new_segment)

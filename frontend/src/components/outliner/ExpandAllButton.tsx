@@ -1,5 +1,6 @@
 import { Button } from "../ui/button";
 import { Expand, ListCollapse } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface ExpandAllButtonProps {
   readonly isAllExpanded: boolean;
@@ -7,6 +8,7 @@ interface ExpandAllButtonProps {
 }
 
 function ExpandAllButton({ isAllExpanded, onToggleExpandAll }: ExpandAllButtonProps) {
+    const { t } = useTranslation();
     const toggleAllExpanded = (e: React.MouseEvent) => {
       e.stopPropagation();
       onToggleExpandAll();
@@ -21,7 +23,7 @@ function ExpandAllButton({ isAllExpanded, onToggleExpandAll }: ExpandAllButtonPr
         onClick={toggleAllExpanded}
       >
         {isAllExpanded ? <ListCollapse/> : <Expand/>}
-        {isAllExpanded ? 'Collapse All' : 'Expand All'}
+        {isAllExpanded ? t('outliner.expand.collapseAll') : t('outliner.expand.expandAll')}
       </Button>
     );
   }

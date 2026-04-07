@@ -1,7 +1,8 @@
 import { forwardRef, useImperativeHandle, useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import type { TextSegment } from './types';
-import { segmentLabelDisplay } from './segment-label';
+import { segmentLabelI18nKey } from './segment-label';
 import { FilterSegments, type LabelFilterValue, type CompletionFilterValue } from './FilterSegments';
 import { TitleField } from './sidebarFields/TitleField';
 import { AuthorField } from './sidebarFields/AuthorField';
@@ -21,6 +22,8 @@ interface AnnotationSidebarProps {
   documentId?: string;
   segments?: TextSegment[];
   onSegmentClick?: (segmentId: string) => void;
+  /** Fired when the sidebar Title field value changes (for UI that must reflect unsaved title text). */
+  onTitleDraftChange?: (name: string) => void;
 }
 
 export interface Title {
@@ -62,7 +65,9 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   documentId,
   segments = [],
   onSegmentClick,
+  onTitleDraftChange,
 }, ref) => {
+  const { t } = useTranslation();
   const { updateSegment: updateSegmentMutation, document } = useOutlinerDocument();
   const activeSegmentId = activeSegment?.id || null;
   const fullDocumentContent = document?.content ?? '';
@@ -90,30 +95,33 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
 
   // Reset formData and is_supplied_title checkbox when segment changes
   useEffect(() => {
-    if (activeSegment) {
-      if (loadedSegmentIdRef.current !== activeSegment.id) {
-        loadedSegmentIdRef.current = activeSegment.id;
-        aiBaselineTitleRef.current = null;
-        aiBaselineAuthorRef.current = null;
-      }
-      const initialFormData = {
-        title: { name: title, bdrc_id: activeSegment.title_bdrc_id || '' },
-        author: { name: author, bdrc_id: activeSegment.author_bdrc_id || '' },
-      };
-      setFormData(initialFormData);
-      originalFormDataRef.current = initialFormData;
-      setIsDirtyState(false);
-      setSuppliedTitleChecked(activeSegment.is_supplied_title ?? false);
-      titleSourceSpanRef.current =
-        activeSegment.title_span_start != null && activeSegment.title_span_end != null
-          ? { start: activeSegment.title_span_start, end: activeSegment.title_span_end }
-          : null;
-      authorSourceSpanRef.current =
-        activeSegment.author_span_start != null && activeSegment.author_span_end != null
-          ? { start: activeSegment.author_span_start, end: activeSegment.author_span_end }
-          : null;
+    if (!activeSegment) {
+      onTitleDraftChange?.('');
+      return;
     }
-  }, [activeSegment, title, author]);
+    if (loadedSegmentIdRef.current !== activeSegment.id) {
+      loadedSegmentIdRef.current = activeSegment.id;
+      aiBaselineTitleRef.current = null;
+      aiBaselineAuthorRef.current = null;
+    }
+    const initialFormData = {
+      title: { name: title, bdrc_id: activeSegment.title_bdrc_id || '' },
+      author: { name: author, bdrc_id: activeSegment.author_bdrc_id || '' },
+    };
+    setFormData(initialFormData);
+    originalFormDataRef.current = initialFormData;
+    setIsDirtyState(false);
+    setSuppliedTitleChecked(activeSegment.is_supplied_title ?? false);
+    titleSourceSpanRef.current =
+      activeSegment.title_span_start != null && activeSegment.title_span_end != null
+        ? { start: activeSegment.title_span_start, end: activeSegment.title_span_end }
+        : null;
+    authorSourceSpanRef.current =
+      activeSegment.author_span_start != null && activeSegment.author_span_end != null
+        ? { start: activeSegment.author_span_start, end: activeSegment.author_span_end }
+        : null;
+    onTitleDraftChange?.(initialFormData.title.name);
+  }, [activeSegment, title, author, onTitleDraftChange]);
 
   const persistAIAnnotations = useCallback(
     async ({
@@ -170,6 +178,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
 
   // Handle title update
   const handleTitleUpdate = useCallback((value: string) => {
+    onTitleDraftChange?.(value);
     setFormData(prev => {
       const updatedTitle: Title = { ...prev.title, name: value };
       const updated = { ...prev, title: updatedTitle };
@@ -180,7 +189,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       checkDirtyState(updated);
       return updated;
     });
-  }, [activeSegmentId, checkDirtyState]);
+  }, [activeSegmentId, checkDirtyState, onTitleDraftChange]);
 
   // Handle author update
   const handleAuthorUpdate = useCallback((value: string) => {
@@ -209,6 +218,9 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
           name: field === 'title' ? value : prev.title?.name || '',
           bdrc_id: field === 'title_bdrc_id' ? value : prev.title?.bdrc_id || ''
         };
+        if (field === 'title') {
+          onTitleDraftChange?.(updatedTitle.name);
+        }
         return { ...prev, title: updatedTitle };
       });
     } else if (field === 'author' || field === 'author_bdrc_id') {
@@ -220,7 +232,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
         return { ...prev, author: updatedAuthor };
       });
     }
-  }, []);
+  }, [onTitleDraftChange]);
 
   // AI suggestions hook
   const aiSuggestions = useAISuggestions({
@@ -237,7 +249,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   const onSave = useCallback(async () => {
     // Validate that we have an active segment
     if (!activeSegment || !activeSegmentId) {
-      toast.error('No segment selected');
+      toast.error(t('outliner.annotation.toastNoSegment'));
       return;
     }
 
@@ -246,7 +258,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
     const authorName = formData.author?.name?.trim() || '';
 
     if (!titleName && !authorName) {
-      toast.error('Please provide at least a title or author');
+      toast.error(t('outliner.annotation.toastNeedTitleOrAuthor'));
       return;
     }
 
@@ -311,7 +323,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       if (authorName) {
         aiBaselineAuthorRef.current = authorName.trim();
       }
-      toast.success('Annotations saved successfully');
+      toast.success(t('outliner.annotation.toastSaved'));
       // Clear pending changes for this segment
       if (pendingChangesRef.current.has(activeSegmentId)) {
         pendingChangesRef.current.delete(activeSegmentId);
@@ -321,7 +333,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       originalFormDataRef.current = { ...formData };
     } catch (error) {
       console.error('Failed to save annotations:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to save annotations');
+      toast.error(error instanceof Error ? error.message : t('outliner.annotation.toastSaveFailed'));
     }
   }, [
     activeSegment,
@@ -330,11 +342,13 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
     suppliedTitleChecked,
     updateSegmentMutation,
     fullDocumentContent,
+    t,
   ]);
 
   // Expose methods via ref
   useImperativeHandle(ref, () => ({
     setTitleValueWithoutUpdate: (value: string, docSpan?: DocTextSpan | null) => {
+      onTitleDraftChange?.(value);
       if (docSpan !== undefined) {
         titleSourceSpanRef.current = docSpan;
         if (docSpan != null) {
@@ -391,10 +405,11 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
         originalFormDataRef.current = { ...formData };
       }
     },
-  }), [isDirtyState, onSave, activeSegment, formData, activeSegmentId, checkDirtyState]);
+  }), [isDirtyState, onSave, activeSegment, formData, activeSegmentId, checkDirtyState, onTitleDraftChange]);
 
   function onUpdate(field: 'title' | 'author', value: Title | Author) {
     if (field === 'title') {
+      onTitleDraftChange?.((value as Title).name);
       setFormData(prev => {
         const updated = { ...prev, title: value as Title };
         checkDirtyState(updated);
@@ -409,6 +424,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
     }
   }
   function resetForm() {
+    onTitleDraftChange?.('');
     setFormData({ title: { name: '', bdrc_id: '' }, author: { name: '', bdrc_id: '' } });
     setIsDirtyState(false);
   }
@@ -468,18 +484,17 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
 
   const hasLabelledSegment = Boolean(activeSegment?.label);
   const isMetadataDisabled = !activeSegment || !hasLabelledSegment;
-  const showBdrcMatch = activeSegment?.label === 'TEXT';
-
+  const isTextSegment = activeSegment?.label === 'TEXT';
   const metadataContent = activeSegment ? (
     <div className="px-2 py-3 flex flex-col flex-1 min-h-0 h-full">
       <div className="overflow-y-auto h-min space-y-6">
         <div className="relative">
           <div className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-md ">
-            <div className="font-medium mb-1">Text:</div>
+            <div className="font-medium mb-1">{t('outliner.annotation.textPrefix')}</div>
             <div className="text-gray-800">{activeSegment.text.slice(0, 100)}...</div>
           </div>
           {
-            activeSegment.status !== 'checked' && (
+            activeSegment.status !== 'checked'&& isTextSegment && (
               <AISuggestionsBox
                 suggestions={aiSuggestions.aiSuggestions}
                 loading={aiSuggestions.aiLoading}
@@ -490,7 +505,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
         </div>
        
         {
-         activeSegment.label!=='TOC' &&
+         isTextSegment &&
           <div className="relative flex flex-col gap-4">
           
           <TitleField
@@ -517,7 +532,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
       <div className="shrink-0 flex gap-2 bg-white pt-3 mt-2 border-t border-gray-100">
         {activeSegment.status !== 'checked' ? (
           <>
-            {activeSegment.label!=='TOC' &&<Button
+            {isTextSegment &&<Button
               type="button"
               className="flex-1"
               onClick={onSave}
@@ -527,7 +542,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
                 (formData.title.name.trim() === '' && formData.author.name.trim() === '') 
               }
             >
-              <Save />Save
+              <Save />{t('outliner.annotation.save')}
             </Button>}
             <Button
               type="button"
@@ -536,7 +551,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
               className='flex-1'
               disabled={!activeSegmentId}
             >
-              <X /> N/A
+              <X /> {t('outliner.annotation.notApplicable')}
             </Button>
           </>
         ) : (
@@ -547,7 +562,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
             disabled={!activeSegmentId}
             className="w-full"
           >
-            <RotateCcw /> Reset
+            <RotateCcw /> {t('outliner.annotation.reset')}
           </Button>
         )}
       </div>
@@ -558,8 +573,8 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
     </div>
   ) : (
     <div className="text-center text-gray-500 py-12">
-      <p>No segment selected</p>
-      <p className="text-sm mt-2">Click on a segment in the workspace to annotate it</p>
+      <p>{t('outliner.annotation.noSegmentSelected')}</p>
+      <p className="text-sm mt-2">{t('outliner.annotation.clickSegmentToAnnotate')}</p>
     </div>
   );
 
@@ -593,13 +608,13 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
     <div className="h-full min-h-0 w-full bg-white flex flex-col font-monlam-2 border-r-2 border-gray-200">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
         <TabsList className="w-full shrink-0 border-b border-gray-200 rounded-none">
-          <TabsTrigger value="outlines">Outlines</TabsTrigger>
+          <TabsTrigger value="outlines">{t('outliner.annotation.tabOutlines')}</TabsTrigger>
           <span
-            title={isMetadataDisabled ? 'Only available for labelled segments' : undefined}
+            title={isMetadataDisabled ? t('outliner.annotation.metadataDisabledHint') : undefined}
             className={`flex-1 flex ${isMetadataDisabled ? 'inline-flex ' : undefined}`}
           >
             <TabsTrigger value="metadata" disabled={isMetadataDisabled}>
-              Metadata
+              {t('outliner.annotation.tabMetadata')}
             </TabsTrigger>
           </span>
         </TabsList>
@@ -619,7 +634,7 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
             {filteredSegments.length === 0 ? (
               <div className="text-center text-gray-500 py-12">
                 <p className="text-sm">
-                  {segments.length === 0 ? 'No segments available' : 'No segments match the selected filters'}
+                  {segments.length === 0 ? t('outliner.annotation.noSegments') : t('outliner.annotation.noMatchingFilters')}
                 </p>
               </div>
             ) : (
@@ -654,11 +669,10 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
                         </p>
                         {(seg.label || seg.title || seg.author) && (
                           <div className="flex flex-wrap gap-2 mt-2 items-center justify-between">
-                            
-                            {seg.author ? (
+                            { seg.author ? (
                               <span
                                 className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-violet-50 border border-violet-200 text-violet-900 text-xs font-semibold"
-                                title="Author"
+                                title={t('outliner.annotation.authorBadge')}
                               >
                                <User/> <span> {seg.author}</span>
                               </span>
@@ -666,9 +680,9 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
                             {seg.label && (
                               <span
                                 className=" inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-slate-50 border border-slate-200 text-slate-700 text-xs"
-                                title="Label"
+                                title={t('outliner.annotation.labelBadge')}
                               >
-                                {segmentLabelDisplay(seg.label)}
+                                {t(segmentLabelI18nKey(seg.label))}
                               </span>
                             )}
                           </div>
