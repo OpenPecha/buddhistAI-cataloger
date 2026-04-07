@@ -1490,40 +1490,31 @@ async def assign_volume(db: Session, user_id: str) -> OutlinerDocument:
     
 # ==================== Approval Operations ====================
 
-async def approve_document(db: Session, document_id: str) -> OutlinerDocument:
-    document = get_document(db, document_id , include_segments=True)
-    if not document:
-        raise HTTPException(status_code=404, detail="Document not found")
-    
-    non_approved = db.query(func.count(OutlinerSegment.id)).filter(
-        OutlinerSegment.document_id == document_id,
-        OutlinerSegment.status != 'approved'
-    ).scalar() or 0
-    if non_approved > 0:
+async def _push_document_segments_to_bdrc(
+    document: OutlinerDocument,
+    bdrc_status: str,
+) -> Dict[str, Any]:
+    """Sync document content and segments to BDRC OTAPI for the volume in document.filename."""
+    if not document.filename or not str(document.filename).strip():
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot approve document: {non_approved} segment(s) are not yet approved"
+            detail="Document has no BDRC volume ID (filename); cannot sync to BDRC",
         )
-    
-    volume_id=document.filename
-    #get volume from bdrc
+    volume_id = str(document.filename).strip()
     volume = await get_volume(volume_id)
-    
-  
-    rep_id=volume["rep_id"]
-    vol_id=volume["vol_id"]
-    vol_version=volume["vol_version"]
-    status="reviewed"
-    base_text=document.content
-    db_segments=document.segments
+    rep_id = volume["rep_id"]
+    vol_id = volume["vol_id"]
+    vol_version = volume["vol_version"]
+    base_text = document.content
+    db_segments = document.segments
     segment_inputs = []
     for segment in db_segments:
-        segment_start=int(segment.span_start)
-        segment_end=int(segment.span_end)
-        segment_title=segment.title
-        segment_author=segment.author
-        mw_id=f'{volume["mw_id"]}_{segment.id}'
-        wa_id=segment.title_bdrc_id or ''
+        segment_start = int(segment.span_start)
+        segment_end = int(segment.span_end)
+        segment_title = segment.title
+        segment_author = segment.author
+        mw_id = f'{volume["mw_id"]}_{segment.id}'
+        wa_id = segment.title_bdrc_id or ''
         segment_inputs.append(SegmentInput(
             cstart=segment_start,
             cend=segment_end,
@@ -1533,15 +1524,42 @@ async def approve_document(db: Session, document_id: str) -> OutlinerDocument:
             wa_id=wa_id,
             part_type="text" if wa_id != '' else "editorial"
         ))
-    
-    response_bdrc = await update_volume(volume_id, VolumeInput(
-        rep_id=rep_id,
-        vol_id=vol_id,
-        vol_version=vol_version,
-        status=status,
-        base_text=base_text,
-        segments=segment_inputs
-    ))
-    
+    return await update_volume(
+        volume_id,
+        VolumeInput(
+            rep_id=rep_id,
+            vol_id=vol_id,
+            vol_version=vol_version,
+            status=bdrc_status,
+            base_text=base_text,
+            segments=segment_inputs,
+        ),
+    )
+
+
+async def submit_document_to_bdrc_in_review(db: Session, document_id: str) -> Dict[str, Any]:
+    """Push current outline to BDRC with status in_review, then set document status to completed."""
+    document = get_document(db, document_id, include_segments=True)
+    bdrc_response = await _push_document_segments_to_bdrc(document, "in_review")
+    update_document_status(db, document_id, "completed")
+    return bdrc_response
+
+
+async def approve_document(db: Session, document_id: str) -> OutlinerDocument:
+    document = get_document(db, document_id , include_segments=True)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    non_approved = db.query(func.count(OutlinerSegment.id)).filter(
+        OutlinerSegment.document_id == document_id,
+        OutlinerSegment.status != 'approved'
+    ).scalar() or 0
+    if non_approved > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot approve document: {non_approved} segment(s) are not yet approved"
+        )
+
+    response_bdrc = await _push_document_segments_to_bdrc(document, "reviewed")
     update_document_status(db, document_id, "approved")
     return response_bdrc

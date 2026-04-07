@@ -461,6 +461,17 @@ export const updateDocumentStatus = async (
   return handleApiResponse(response);
 };
 
+/** Push outline to BDRC OTAPI with status in_review and set document status to completed (single round-trip). */
+export const submitDocumentToBdrcInReview = async (
+  documentId: string
+): Promise<Record<string, unknown>> => {
+  const response = await fetch(
+    `${API_URL}/outliner/documents/${documentId}/submit-bdrc-in-review`,
+    { method: 'POST' }
+  );
+  return handleApiResponse(response);
+};
+
 export const rejectSegment = async (
   segmentId: string,
   reviewerId?: string

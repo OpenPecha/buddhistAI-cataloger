@@ -1,7 +1,7 @@
 import { Button } from "../ui/button";
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
-import { updateDocumentStatus } from '@/api/outliner';
+import { submitDocumentToBdrcInReview } from '@/api/outliner';
 import { toast } from 'sonner';
 import { Send, Loader2 } from 'lucide-react';
 
@@ -15,13 +15,13 @@ function SubmitToReview({ disabled, disabledReason }: SubmitToReviewProps) {
     const navigate = useNavigate();
 
     const updateStatusMutation = useMutation({
-        mutationFn: () => updateDocumentStatus(documentId!, 'completed'),
+        mutationFn: () => submitDocumentToBdrcInReview(documentId!),
         onSuccess: () => {
-            toast.success('Document status updated to completed');
+            toast.success('Submitted to review and synced to BDRC');
             navigate('/outliner')
         },
         onError: (error: Error) => {
-            toast.error(`Failed to update document status: ${error.message}`);
+            toast.error(error.message);
         },
     });
 

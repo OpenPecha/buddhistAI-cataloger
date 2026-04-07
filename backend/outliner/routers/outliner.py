@@ -31,6 +31,7 @@ from outliner.controller.outliner import (
     delete_segment_comment as delete_segment_comment_ctrl,
     assign_volume as assign_volume_ctrl,
     approve_document as approve_document_ctrl,
+    submit_document_to_bdrc_in_review as submit_document_to_bdrc_in_review_ctrl,
     reject_segment as reject_segment_ctrl,
     reject_segments_bulk as reject_segments_bulk_ctrl,
     get_segment_rejection_count as get_segment_rejection_count_ctrl,
@@ -707,6 +708,15 @@ async def reject_segments_bulk(
     """Reject multiple checked segments at once"""
     segments = reject_segments_bulk_ctrl(db, request.segment_ids, request.reviewer_id)
     return [_build_segment_response(seg, db) for seg in segments]
+
+
+@router.post("/documents/{document_id}/submit-bdrc-in-review")
+async def submit_document_to_bdrc_in_review(
+    document_id: str,
+    db: Session = Depends(get_db),
+):
+    """Push outline to BDRC with status in_review and set document status to completed."""
+    return await submit_document_to_bdrc_in_review_ctrl(db, document_id)
 
 
 @router.post("/documents/{document_id}/approve")
