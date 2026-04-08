@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 
 interface MenuPosition {
   x: number
@@ -24,8 +24,8 @@ export function useMenuPosition({
   const menuRef = useRef<HTMLDivElement>(null)
   const prevPositionRef = useRef<{ x: number; y: number } | null>(null)
 
-  // Convert relative position to viewport coordinates and adjust for viewport boundaries
-  useEffect(() => {
+  // Convert relative position to viewport coordinates before paint (avoids split-menu flash).
+  useLayoutEffect(() => {
     // Only update if position values actually changed
     const positionChanged =
       prevPositionRef.current?.x !== position.x ||

@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { forwardRef, memo, useImperativeHandle, useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import type { TextSegment } from './types';
@@ -59,7 +59,7 @@ export interface AnnotationSidebarRef {
   resetDirtyState: () => void;
 }
 
-export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSidebarProps>(({
+const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSidebarProps>(({
   activeSegment,
   listRef,
   documentId,
@@ -705,4 +705,6 @@ export const AnnotationSidebar = forwardRef<AnnotationSidebarRef, AnnotationSide
   );
 });
 
-AnnotationSidebar.displayName = 'AnnotationSidebar';
+AnnotationSidebarInner.displayName = 'AnnotationSidebar';
+
+export const AnnotationSidebar = memo(AnnotationSidebarInner);

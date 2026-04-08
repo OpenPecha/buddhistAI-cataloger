@@ -234,12 +234,14 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
               >
                 {segment.text.slice(0,200) +"..."}
               </button>
+              {segment.label==='TEXT' &&
                 <TitleAndAuthor
                 title={segment.title}
                 author={segment.author}
                 title_bdrc_id={segment.title_bdrc_id}
                 author_bdrc_id={segment.author_bdrc_id}
-              />
+                />
+              }
               </>
             ) : (
               <>

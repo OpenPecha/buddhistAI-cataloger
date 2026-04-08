@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef } from 'react'
 import type { SegmentTextContentProps } from './types'
 import Highlighter from "react-highlight-words";
 export const SegmentTextContent = React.forwardRef<HTMLDivElement, SegmentTextContentProps>(
@@ -34,10 +34,9 @@ export const SegmentTextContent = React.forwardRef<HTMLDivElement, SegmentTextCo
           }
         }}
         onClick={() => {
-          if (contentRef.current) {
-            onCursorChange(segmentId, contentRef.current)
-            onActivate()
-          }
+          // Caret updates are handled in onSelect; calling onCursorChange here too doubled
+          // Range#toString work and React updates (major click/mouseup handler cost).
+          onActivate()
         }}
       >
         <Highlighter

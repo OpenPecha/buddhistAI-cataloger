@@ -179,29 +179,29 @@ const OutlinerWorkspace: React.FC = () => {
   // Handle text selection in workspace
   const handleTextSelection = useCallback(() => {
     const selection = globalThis.getSelection();
-    if (!selection) {
+    if (!selection || selection.rangeCount === 0) {
       setBubbleMenuState(null);
       return;
     }
 
+    const range = selection.getRangeAt(0);
+    const common = range.commonAncestorContainer;
+    const segmentTextEl =
+      common.nodeType === Node.TEXT_NODE
+        ? common.parentElement?.closest('.segment-text-content')
+        : (common as Element).closest?.('.segment-text-content');
+
     const selectedText = selection.toString().trim();
     const hasTextSelection = selectedText.length > 0;
 
-    // Find which segment contains the selection
-    let targetSegmentId: string | null = null;
-    let targetSegmentElement: Element | null = null;
-
-    for (const segment of currentSegments) {
-      const segmentElement = document.querySelector(`[data-segment-id="${segment.id}"]`);
-      if (segmentElement) {
-        const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-        if (range && segmentElement.contains(range.commonAncestorContainer)) {
-          targetSegmentId = segment.id;
-          targetSegmentElement = segmentElement;
-          break;
-        }
-      }
+    if (!segmentTextEl) {
+      setBubbleMenuState(null);
+      setCursorPosition(null);
+      return;
     }
+
+    const targetSegmentId = segmentTextEl.getAttribute('data-segment-id');
+    const targetSegmentElement = segmentTextEl.closest('[data-segment-container-id]');
 
     if (!targetSegmentId || !targetSegmentElement) {
       setBubbleMenuState(null);
@@ -209,18 +209,12 @@ const OutlinerWorkspace: React.FC = () => {
       return;
     }
 
-    const range = selection.getRangeAt(0);
-
     // If text is selected, show bubble menu (title/author) and hide split menu
     if (hasTextSelection) {
       // Get selection range
       const rect = range.getBoundingClientRect();
-      const segmentContainer = targetSegmentElement.closest(
-        '[data-segment-container-id]'
-      ) as HTMLElement;
-
-      if (segmentContainer) {
-        const segmentRect = segmentContainer.getBoundingClientRect();
+      const segmentContainer = targetSegmentElement as HTMLElement;
+      const segmentRect = segmentContainer.getBoundingClientRect();
         const menuWidth = 150; // Bubble menu width
         const menuHeight = 100; // Approximate bubble menu height
         const gap = 8; // Gap between selection and menu
@@ -261,15 +255,9 @@ const OutlinerWorkspace: React.FC = () => {
           adjustedY = viewportHeight - padding - menuHeight - segmentRect.top;
         }
 
-        const contentEl = targetSegmentElement.querySelector(
-          '.segment-text-content'
-        ) as HTMLDivElement | null
+        const contentEl = segmentTextEl as HTMLDivElement
         let selectionStartOffset = 0
-        if (
-          contentEl &&
-          range &&
-          contentEl.contains(range.commonAncestorContainer)
-        ) {
+        if (contentEl.contains(range.commonAncestorContainer)) {
           const preRange = range.cloneRange()
           preRange.selectNodeContents(contentEl)
           preRange.setEnd(range.startContainer, range.startOffset)
@@ -284,12 +272,11 @@ const OutlinerWorkspace: React.FC = () => {
           selectionStartOffset,
         });
         setCursorPosition(null); // Hide split menu
-      }
     } else {
       // No text selected, hide bubble menu
       setBubbleMenuState(null);
     }
-  }, [currentSegments]);
+  }, []);
 
   // Handle segment click - update URL (with unsaved changes check)
   const handleSegmentClick = useCallback((segmentId: string, event?: React.MouseEvent) => {
@@ -337,6 +324,15 @@ const OutlinerWorkspace: React.FC = () => {
   const handleUnsavedChangesCancel = useCallback(() => {
     setUnsavedChangesDialog({ open: false, pendingSegmentId: null });
   }, []);
+
+  const handleActivateSegment = useCallback(
+    (segmentId: string) => {
+      if (segmentId !== activeSegmentId) {
+        setSearchParams({ segmentId }, { replace: true });
+      }
+    },
+    [activeSegmentId, setSearchParams]
+  );
 
   // Handle cursor position change in contentEditable
   const handleCursorChange = useCallback((segmentId: string, element: HTMLDivElement) => {
@@ -715,6 +711,15 @@ const OutlinerWorkspace: React.FC = () => {
  
   const listRef= useListRef(null);
 
+  const cursorContextValue = useMemo(
+    () => ({
+      cursorPosition,
+      setCursorPosition,
+      onCursorChange: handleCursorChange,
+    }),
+    [cursorPosition, handleCursorChange]
+  );
+
   const [sidebarTitleDraft, setSidebarTitleDraft] = useState('');
 
   // AI outline: full-document TOC indices → replace segments (/outliner/ai-outline)
@@ -813,13 +818,7 @@ const OutlinerWorkspace: React.FC = () => {
           onBubbleMenuSelect: handleBubbleMenuSelect,
         }}
       >
-        <CursorProvider
-          value={{
-            cursorPosition,
-            setCursorPosition,
-            onCursorChange: handleCursorChange,
-          }}
-        >
+        <CursorProvider value={cursorContextValue}>
           <ActionsProvider
             value={{
               expandedSegmentIds,
@@ -829,7 +828,7 @@ const OutlinerWorkspace: React.FC = () => {
               onFileUpload: () => {},
               onFileUploadToBackend: undefined,
               onSegmentClick: handleSegmentClick,
-              onActivate: (segmentId: string) => setSearchParams({ segmentId }, { replace: true }),
+              onActivate: handleActivateSegment,
               onInput: handleContentEditableInput,
               onKeyDown: handleContentEditableKeyDown,
               onAttachParent: handleAttachParent,
@@ -858,7 +857,7 @@ const OutlinerWorkspace: React.FC = () => {
                 onTextSelection: handleTextSelection,
                 onSegmentClick: handleSegmentClick,
                 onCursorChange: handleCursorChange,
-                onActivate: (segmentId: string) => setSearchParams({ segmentId }, { replace: true }),
+                onActivate: handleActivateSegment,
                 onInput: handleContentEditableInput,
                 onKeyDown: handleContentEditableKeyDown,
                 onAttachParent: handleAttachParent,
@@ -887,7 +886,7 @@ const OutlinerWorkspace: React.FC = () => {
                         activeSegment={activeSegment}
                         documentId={documentId || undefined}
                         segments={currentSegments}
-                        onSegmentClick={(segmentId) => handleSegmentClick(segmentId)}
+                        onSegmentClick={handleSegmentClick}
                         onTitleDraftChange={setSidebarTitleDraft}
                       />
                     </Pane>

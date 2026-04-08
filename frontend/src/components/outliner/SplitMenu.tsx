@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
 import { Scissors } from 'lucide-react'
@@ -9,42 +9,38 @@ import { useActions, useCursor } from './contexts'
 export const SplitMenu: React.FC<SplitMenuProps> = ({ segmentId }) => {
   const { t } = useTranslation()
   const {onSplitSegment:onSplit}  =  useActions()
-  const { cursorPosition } = useCursor()
-  const position=cursorPosition?.menuPosition??{x:0,y:0}
-  const [isVisible, setIsVisible] = useState(false)
+  const { cursorPosition, setCursorPosition } = useCursor()
+  const position = cursorPosition?.menuPosition ?? { x: 0, y: 0 }
   const { viewportPosition, menuRef } = useMenuPosition({
     position,
     segmentId,
     menuWidth: 180,
     menuHeight: 50,
   })
-  useEffect(() => {
-    if(viewportPosition)  setIsVisible(true)
-  }, [viewportPosition])
-  // Handle outside click: close only when click is outside both the menu and the segment that owns it
+
+  const showSplitMenu = cursorPosition?.segmentId === segmentId && cursorPosition.menuPosition
+
+  // Close split UI by clearing cursor (only the segment that owns the cursor handles the event).
   const handleClickOutside = useCallback(
     (event: MouseEvent) => {
+      if (cursorPosition?.segmentId !== segmentId) return
       const target = event.target as Node
-      if (!viewportPosition || !menuRef.current) return
-      if (menuRef.current.contains(target)) return
+      if (menuRef.current?.contains(target)) return
       const segmentEl = document.getElementById(segmentId)
       if (segmentEl?.contains(target)) return
-      setIsVisible(false)
+      setCursorPosition(null)
     },
-    [segmentId, viewportPosition, menuRef]
+    [cursorPosition?.segmentId, segmentId, setCursorPosition, menuRef]
   )
 
-  React.useEffect(() => {
+  useEffect(() => {
     document.addEventListener('click', handleClickOutside, true)
     return () => {
       document.removeEventListener('click', handleClickOutside, true)
     }
   }, [handleClickOutside])
 
-  const showSplitMenu = cursorPosition?.segmentId === segmentId && cursorPosition.menuPosition
-
- // Don't show if document.selection is not present
- if(!position||!isVisible || !showSplitMenu) return null;
+  if (!showSplitMenu) return null
   const menuContent = (
     <div
       ref={menuRef}
@@ -57,7 +53,6 @@ export const SplitMenu: React.FC<SplitMenuProps> = ({ segmentId }) => {
       <button
         onClick={() => {
           onSplit()
-          setIsVisible(false)
         }}
         className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-md transition-colors flex items-center gap-2"
       >
