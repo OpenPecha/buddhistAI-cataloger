@@ -79,7 +79,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
   }, [skipMutation, t]);
 
   const notSavedCount = segmentsCount - checkedSegmentsCount;
-
+  const disableAIButton = isLoadingOrSaving || aiTextEndingLoading || !documentId ;
   return (
     <div className="bg-white border-b py-2 border-gray-200 px-6  flex items-center justify-between">
       <div>
@@ -101,12 +101,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
         <Button
           variant="outline"
           onClick={onAIDetectTextEndings}
-          disabled={
-            isLoadingOrSaving ||
-            aiTextEndingLoading ||
-            !documentId ||
-            !document?.content?.trim()
-          }
+          disabled={disableAIButton}
           title={t('outliner.workspace.aiOutlineTitle')}
           className="flex items-center gap-2"
         >

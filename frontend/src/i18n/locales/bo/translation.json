@@ -538,7 +538,7 @@
       "tocSegmentHeading": "TOC ཆ་ཤས་{{n}}",
       "ariaTocPart": "ཡིག་ཆའི་མུ་ཤུགས། ཆ་ཤས་{{n}}",
       "emptyNoLinesInSegment": "ཆ་ཤས་འདིར་ཐིག་སྟོང་པ་མེད།",
-      "mismatch": "TEXT ཆ་ཤས་གྲངས་{{textCount}} དང AI TOC ཐོ་འགོད་{{aiCount}} མི་མཐུན། བཅོས་རོགས།",
+      "mismatch": "པད་དེབ་ཆ་ཤས་གྲངས་ {{textCount}} དཀར་ཆག་ཐོ་འགོད་ {{aiCount}} མི་མཐུན། བཅོས་རོགས།",
       "ariaAiEntries": "AI གྱིས་འཐེན་པའི་མུ་ཤུགས་ཐོ་འགོད།",
       "emptyAiEntries": "AI འཐེན་ཐོ་འགོད་ད་དུང་མེད། TOC ཆ་ཤས་ལ་མུ་ཤུགས་ངོས་འཛིན་བྱོས།"
     },

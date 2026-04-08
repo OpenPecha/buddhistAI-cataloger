@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { runAiOutline, type AiOutlineResponse } from '@/api/outliner';
+import { outlinerDocumentAiTocQueryKey } from '@/hooks/useOutlinerDocumentAiTocEntries';
 import { toast } from 'sonner';
 import i18n from '@/i18n/config';
 
@@ -21,6 +22,9 @@ export const useAITextEndings = (options?: UseAITextEndingsOptions) => {
     onSuccess: (data, variables) => {
       if (variables.document_id) {
         queryClient.invalidateQueries({ queryKey: ['outliner-document', variables.document_id] });
+        queryClient.invalidateQueries({
+          queryKey: outlinerDocumentAiTocQueryKey(variables.document_id),
+        });
       }
       toast.success(
         data.segments?.length

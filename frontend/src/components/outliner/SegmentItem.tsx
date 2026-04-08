@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Input } from '../ui/input'
-import { findAllOccurrences } from './utils'
+import { findAllOccurrences } from '@/features/outliner'
 
 
 
@@ -55,7 +55,6 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
   const isActive = segment.id === activeSegmentId
 
 
-  const [isTocAiLoading, setIsTocAiLoading] = useState(false)
   const [segmentSearchQuery, setSegmentSearchQuery] = useState('')
 
   const segmentSearchMatchCount = useMemo(
@@ -140,7 +139,6 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
         
        <SegmentLabelSelector
           segment={segment}
-          isTocAiLoading={isTocAiLoading}
         />
       
 <div
@@ -325,10 +323,8 @@ const TitleAndAuthor = ({
 
 const SegmentLabelSelector = ({
   segment,
-  isTocAiLoading,
 }: {
   segment: TextSegment
-  isTocAiLoading: boolean
 }) => {
   const { t } = useTranslation()
   const { documentId, updateSegment: updateSegmentMutation } = useOutlinerDocument()
@@ -348,7 +344,7 @@ const SegmentLabelSelector = ({
     <Select
     value={segment.label ?? 'none'}
     onValueChange={handleLabelChange}
-      disabled={!documentId || isTocAiLoading || segment.status==='checked'}
+      disabled={!documentId  || segment.status==='checked'}
     >
       <SelectTrigger className="h-8 text-xs flex-1 max-w-[180px]" id={`segment-label-${segment.id}`}>
         <SelectValue placeholder={t('outliner.segment.noLabelPlaceholder')} />
@@ -362,12 +358,7 @@ const SegmentLabelSelector = ({
         ))}
       </SelectContent>
     </Select>
-    {isTocAiLoading && (
-      <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground" aria-live="polite">
-        <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" aria-hidden />
-        {t('outliner.segment.analyzingToc')}
-      </span>
-    )}
+   
   </>
   )
 }
@@ -401,8 +392,9 @@ const SegmentSearch = ({
   
 
   const handleActiveMatch = (index: number) => {
-    const segments = document.querySelectorAll('.segment-search-match')
-    const targetdom = segments[index]
+    const segment= document.getElementById(segmentId);
+    const segments = segment?.querySelectorAll('.highlighter')
+    const targetdom = segments?.[index]
     if (targetdom) {
       targetdom.scrollIntoView({
         behavior: 'smooth',

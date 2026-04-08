@@ -11,12 +11,16 @@ from outliner.controller.outliner import (
     list_documents as list_documents_ctrl,
     get_document as get_document_ctrl,
     update_document_content as update_document_content_ctrl,
+    update_document_ai_toc_entries as update_document_ai_toc_entries_ctrl,
+    get_document_ai_toc_entries as get_document_ai_toc_entries_ctrl,
+    ai_toc_db_value_to_api_items,
     delete_document as delete_document_ctrl,
     update_document_status as update_document_status_ctrl,
     get_document_progress as get_document_progress_ctrl,
     reset_segments as reset_segments_ctrl,
     create_segment as create_segment_ctrl,
     create_segments_bulk as create_segments_bulk_ctrl,
+    replace_document_segments_and_ai_toc as replace_document_segments_and_ai_toc_ctrl,
     list_segments as list_segments_ctrl,
     get_segment as get_segment_ctrl,
     update_segment as update_segment_ctrl,
@@ -170,6 +174,15 @@ class DocumentResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class AiTocEntryItem(BaseModel):
+    page_no: int
+    title: str
+
+
+class AiTocEntriesResponse(BaseModel):
+    entries: List[AiTocEntryItem] = []
 
 
 class DocumentListResponse(BaseModel):
@@ -378,7 +391,6 @@ async def get_document(
             created_at=document.created_at,
             updated_at=document.updated_at,
             is_supplied_title=getattr(document, 'is_supplied_title', None),
-            ai_toc_entries=getattr(document, 'ai_toc_entries', None),
             segments=segments_resp,
         )
     return DocumentResponse(
@@ -390,9 +402,22 @@ async def get_document(
         created_at=document.created_at,
         updated_at=document.updated_at,
         is_supplied_title=getattr(document, 'is_supplied_title', None),
-        ai_toc_entries=getattr(document, 'ai_toc_entries', None),
         segments=[],
     )
+
+
+@router.get(
+    "/documents/{document_id}/ai-toc-entries",
+    response_model=AiTocEntriesResponse,
+)
+async def get_document_ai_toc_entries(
+    document_id: str,
+    db: Session = Depends(get_db),
+):
+    """Return AI / stored TOC as page numbers and titles (not included on the main document payload)."""
+    raw = get_document_ai_toc_entries_ctrl(db, document_id)
+    items = ai_toc_db_value_to_api_items(raw)
+    return AiTocEntriesResponse(entries=[AiTocEntryItem(**row) for row in items])
 
 
 @router.put("/documents/{document_id}/content")
@@ -753,18 +778,23 @@ async def ai_outline(
 ):
     """Split document text into segments using TOC character indices from ai_text_outline."""
     document = get_document_ctrl(db, document_id, include_segments=False)
-    indices = extract_toc_indices(text=document.content)
+    result = extract_toc_indices(text=document.content)
+
+    indices = result["breakpoints"]
+    toc = result.get("toc")
     spans = _spans_from_toc_indices(document.content, indices)
-    reset_segments_ctrl(db, document_id)
     segments_data = [
         {"segment_index": i, "span_start": start, "span_end": end}
         for i, (start, end) in enumerate(spans)
     ]
-    create_segments_bulk_ctrl(db, document_id, segments_data)
-    document = get_document_ctrl(db, document_id, include_segments=True)
+    document, segment_payload = replace_document_segments_and_ai_toc_ctrl(
+        db, document_id, segments_data, toc
+    )
     segments_resp = [
-        SegmentResponseDocument(**{k: s[k] for k in SegmentResponseDocument.model_fields if k in s})
-        for s in document.segment_list
+        SegmentResponseDocument(
+            **{k: d[k] for k in SegmentResponseDocument.model_fields if k in d}
+        )
+        for d in segment_payload
     ]
     return DocumentResponse(
         id=document.id,
@@ -775,7 +805,6 @@ async def ai_outline(
         created_at=document.created_at,
         updated_at=document.updated_at,
         is_supplied_title=getattr(document, "is_supplied_title", None),
-        ai_toc_entries=getattr(document, "ai_toc_entries", None),
         segments=segments_resp,
     )
 

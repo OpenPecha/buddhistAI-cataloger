@@ -1,4 +1,5 @@
 from enum import Enum as PyEnum
+from typing import Any
 from sqlalchemy import Boolean, String, Text, Integer, Float, DateTime, ForeignKey, Index, JSON, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
@@ -43,7 +44,7 @@ class OutlinerDocument(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     status: Mapped[str|None] = mapped_column(String, default="active",nullable=True) #  active ,completed, deleted ,approved ,rejected, skipped
-    ai_toc_entries: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    ai_toc_entries: Mapped[Any | None] = mapped_column(JSON, nullable=True)
     segments: Mapped[list["OutlinerSegment"]] = relationship(
         "OutlinerSegment",
         back_populates="document",

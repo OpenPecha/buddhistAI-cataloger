@@ -1,7 +1,6 @@
 """
 AI router for text analysis and detection endpoints.
 """
-from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -9,6 +8,7 @@ from typing import Optional, List
 from sqlalchemy.orm import Session
 from core.database import get_db
 from outliner.models.outliner import OutlinerDocument
+from outliner.controller.outliner import update_document_ai_toc_entries
 from cataloger.controller.ai import (
     generate_title_author,
     generate_title_from_start,
@@ -89,12 +89,8 @@ async def parse_toc_route(request: ParseTocRequest, db: Session = Depends(get_db
             .first()
         )
         if document:
-            if parsed.is_toc and parsed.entries:
-                document.ai_toc_entries = list(parsed.entries)
-            else:
-                document.ai_toc_entries = None
-            document.updated_at = datetime.utcnow()
-            db.commit()
+            payload = list(parsed.entries) if (parsed.is_toc and parsed.entries) else None
+            update_document_ai_toc_entries(db, request.document_id, payload)
 
     return parsed
 

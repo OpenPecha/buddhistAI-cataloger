@@ -22,9 +22,17 @@ export interface OutlinerDocument {
   progress_percentage: number;
   created_at: string;
   updated_at: string;
-  /** AI-parsed TOC lines stored on the document when a TOC segment is analyzed */
-  ai_toc_entries?: string[] | null;
   segments?: OutlinerSegment[];
+}
+
+/** GET /outliner/documents/:id/ai-toc-entries */
+export interface AiTocEntryItem {
+  page_no: number;
+  title: string;
+}
+
+export interface OutlinerDocumentAiTocEntries {
+  entries: AiTocEntryItem[];
 }
 
 export interface OutlinerDocumentListItem {
@@ -203,6 +211,13 @@ export const getOutlinerDocument = async (
 ): Promise<OutlinerDocument> => {
   const url = `${API_URL}/outliner/documents/${documentId}?include_segments=${includeSegments}`;
   const response = await fetch(url);
+  return handleApiResponse(response);
+};
+
+export const getOutlinerDocumentAiTocEntries = async (
+  documentId: string
+): Promise<OutlinerDocumentAiTocEntries> => {
+  const response = await fetch(`${API_URL}/outliner/documents/${documentId}/ai-toc-entries`);
   return handleApiResponse(response);
 };
 
@@ -587,7 +602,7 @@ export const getDashboardStats = async (
 /** Result of POST /outliner/ai-outline — same shape as a full document with segments. */
 export type AiOutlineResponse = Pick<
   OutlinerDocument,
-  'id' | 'content' | 'filename' | 'user_id' | 'status' | 'created_at' | 'updated_at' | 'ai_toc_entries'
+  'id' | 'content' | 'filename' | 'user_id' | 'status' | 'created_at' | 'updated_at'
 > & {
   is_supplied_title?: boolean | null;
   segments: OutlinerSegment[];

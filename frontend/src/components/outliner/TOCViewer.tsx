@@ -1,20 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDocument } from './contexts'
-import { useOutlinerDocument } from '@/hooks/useOutlinerDocument'
+import { useOutlinerDocumentAiTocEntries } from '@/hooks/useOutlinerDocumentAiTocEntries'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import type { AiTocEntryItem } from '@/api/outliner'
 import { VolumeImagePanel } from './ImageWrapper'
 
-function TocNumberedList({
-  lines,
+function AiTocPageTitleList({
+  items,
   ariaLabel,
   emptyMessage,
 }: Readonly<{
-  lines: readonly string[]
+  items: readonly AiTocEntryItem[]
   ariaLabel: string
   emptyMessage: string
 }>) {
-  if (lines.length === 0) {
+  if (items.length === 0) {
     return (
       <p className="px-3 py-4 text-sm text-slate-500 text-center">{emptyMessage}</p>
     )
@@ -24,15 +25,18 @@ function TocNumberedList({
       className="px-3 py-2 space-y-2 text-sm text-slate-800 font-monlam leading-snug"
       aria-label={ariaLabel}
     >
-      {lines.map((line, i) => (
+      {items.map((row, i) => (
         <li
-          key={`${i}-${line}`}
+          key={`${row.page_no}-${i}-${row.title}`}
           className="flex gap-2 border-b border-slate-200/60 pb-2 last:border-b-0 last:pb-0"
         >
-          <span className="text-[10px] text-slate-400 font-mono tabular-nums shrink-0 w-5 text-right pt-0.5">
-            {i + 1}
+          <span
+            className="text-xs text-slate-500 font-mono tabular-nums shrink-0 min-w-[2.25rem] text-right pt-0.5"
+            title={String(row.page_no)}
+          >
+            {row.page_no}
           </span>
-          <span className="min-w-0 flex-1 whitespace-pre-wrap wrap-break-word">{line}</span>
+          <span className="min-w-0 flex-1 whitespace-pre-wrap wrap-break-word">{row.title}</span>
         </li>
       ))}
     </ul>
@@ -45,7 +49,7 @@ type TocSourceTab = 'document' | 'ai'
 export default function TocViewer() {
   const { t } = useTranslation()
   const { segments } = useDocument()
-  const { document } = useOutlinerDocument()
+  const { data: aiTocPayload, isLoading: isLoadingAiToc } = useOutlinerDocumentAiTocEntries()
 
   const [sideTab, setSideTab] = useState<SidePanelTab>('images')
 
@@ -54,10 +58,7 @@ export default function TocViewer() {
     [segments]
   )
   const hasTocSegment = tocSegments.length > 0
-  const aiTocEntries = useMemo(
-    () => document?.ai_toc_entries ?? [],
-    [document?.ai_toc_entries]
-  )
+  const aiTocEntries: AiTocEntryItem[] = aiTocPayload?.entries ?? []
 
   const textSegmentCount = useMemo(
     () => segments.filter((s) => s.label === 'TEXT').length,
@@ -84,10 +85,11 @@ export default function TocViewer() {
   }, [tocSegments.length, aiTocEntries.length, tocSourceTab, sideTab])
 
   const subtitle = tocMismatch ? (
-    <span className="block text-xs mt-1 text-slate-600">
+    <span className="block text-[18px] font-monlam mt-1 text-red-400 animate-pulse" >
       {t('outliner.tocPanel.mismatch', {
         textCount: textSegmentCount,
         aiCount: aiTocEntries.length,
+        lng: 'bo'
       })}
     </span>
   ) : null
@@ -134,12 +136,18 @@ export default function TocViewer() {
           value="toc"
           className="mt-0 flex min-h-0 overflow-auto flex-1 flex-col px-3 pb-3 pt-2"
         >
-          <div className=' text-white p-2 rounded-md'>{subtitle}</div>
-         <TocNumberedList
-                  lines={aiTocEntries}
-                  ariaLabel={t('outliner.tocPanel.ariaAiEntries')}
-                  emptyMessage={t('outliner.tocPanel.emptyAiEntries')}
-                />
+          {subtitle ? <div className="mb-2">{subtitle}</div> : null}
+          {isLoadingAiToc ? (
+            <p className="px-3 py-4 text-sm text-slate-500 text-center">
+              {t('common.loading')}
+            </p>
+          ) : (
+            <AiTocPageTitleList
+              items={aiTocEntries}
+              ariaLabel={t('outliner.tocPanel.ariaAiEntries')}
+              emptyMessage={t('outliner.tocPanel.emptyAiEntries')}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </section>

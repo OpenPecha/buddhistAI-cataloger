@@ -1,10 +1,11 @@
 """
 Controller for outliner document and segment operations.
 """
+import json
 import logging
 import uuid
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
@@ -281,6 +282,140 @@ def update_document_content(
     return {"message": "Document content updated", "document_id": document_id}
 
 
+def normalize_ai_toc_for_storage(entries: Any) -> Optional[Any]:
+    """
+    Normalize TOC payload for JSON storage.
+
+    Accepts:
+    - dict mapping title (str) -> page number (int), optionally JSON-serialized as a string
+    - list of title strings (legacy: page numbers are assigned when serving the API)
+    - list of dicts with title + page_no (or page)
+    """
+    if entries is None:
+        return None
+    if isinstance(entries, str):
+        s = entries.strip()
+        if not s:
+            return None
+        try:
+            return normalize_ai_toc_for_storage(json.loads(s))
+        except json.JSONDecodeError:
+            return [s]
+    if isinstance(entries, dict):
+        out: Dict[str, int] = {}
+        for k, v in entries.items():
+            title = str(k).strip()
+            if not title:
+                continue
+            try:
+                out[title] = int(v)
+            except (TypeError, ValueError):
+                continue
+        return out if out else None
+    if isinstance(entries, (list, tuple)):
+        if not entries:
+            return None
+        first = entries[0]
+        if isinstance(first, dict):
+            out_map: Dict[str, int] = {}
+            for el in entries:
+                if not isinstance(el, dict):
+                    continue
+                tit = el.get("title")
+                pn = el.get("page_no", el.get("page"))
+                if tit is None or pn is None:
+                    continue
+                try:
+                    out_map[str(tit).strip()] = int(pn)
+                except (TypeError, ValueError):
+                    continue
+            return out_map if out_map else None
+        lines = [str(x).strip() for x in entries if str(x).strip()]
+        return lines if lines else None
+    return None
+
+
+def ai_toc_db_value_to_api_items(raw: Any) -> List[Dict[str, Any]]:
+    """Turn stored ``ai_toc_entries`` into sorted ``[{page_no, title}, ...]`` for the API."""
+    if raw is None:
+        return []
+    if isinstance(raw, str):
+        s = raw.strip()
+        if not s:
+            return []
+        try:
+            return ai_toc_db_value_to_api_items(json.loads(s))
+        except json.JSONDecodeError:
+            return [{"page_no": 1, "title": s}]
+    if isinstance(raw, dict):
+        items: List[Dict[str, Any]] = []
+        for title, page in raw.items():
+            t = str(title).strip()
+            if not t:
+                continue
+            try:
+                items.append({"page_no": int(page), "title": t})
+            except (TypeError, ValueError):
+                continue
+        items.sort(key=lambda x: (x["page_no"], x["title"]))
+        return items
+    if isinstance(raw, (list, tuple)):
+        if not raw:
+            return []
+        if isinstance(raw[0], dict):
+            out: List[Dict[str, Any]] = []
+            for el in raw:
+                if not isinstance(el, dict):
+                    continue
+                pn = el.get("page_no", el.get("page"))
+                tit = el.get("title", el.get("name"))
+                if pn is None or tit is None:
+                    continue
+                try:
+                    out.append({"page_no": int(pn), "title": str(tit).strip()})
+                except (TypeError, ValueError):
+                    continue
+            out.sort(key=lambda x: (x["page_no"], x["title"]))
+            return out
+        result: List[Dict[str, Any]] = []
+        for i, s in enumerate(raw):
+            t = str(s).strip()
+            if t:
+                result.append({"page_no": i + 1, "title": t})
+        return result
+    return []
+
+
+def update_document_ai_toc_entries(
+    db: Session,
+    document_id: str,
+    entries: Any,
+) -> None:
+    """Store AI / parsed TOC on the document (title→page map as JSON text, or legacy list of titles)."""
+    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    normalized = normalize_ai_toc_for_storage(entries)
+    if isinstance(normalized, dict):
+        document.ai_toc_entries = json.dumps(normalized, ensure_ascii=False)
+    else:
+        document.ai_toc_entries = normalized
+    document.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(document)
+
+
+def get_document_ai_toc_entries(
+    db: Session,
+    document_id: str,
+) -> Any:
+    """Return raw stored ``ai_toc_entries`` (dict, list, or JSON string)."""
+    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return document.ai_toc_entries
+
+
 def delete_document(db: Session, document_id: str) -> None:
     """Delete a document and all its segments"""
     document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
@@ -377,6 +512,106 @@ def reset_segments(db: Session, document_id: str) -> None:
     db.commit()
 
 
+def segment_orm_to_document_response_dict(seg: OutlinerSegment) -> Dict[str, Any]:
+    """Flat dict for SegmentResponseDocument (stable across commit / session expiry)."""
+    return {
+        "id": seg.id,
+        "text": seg.text,
+        "segment_index": seg.segment_index,
+        "span_start": seg.span_start,
+        "span_end": seg.span_end,
+        "title": seg.title,
+        "author": seg.author,
+        "title_span_start": seg.title_span_start,
+        "title_span_end": seg.title_span_end,
+        "updated_title": seg.updated_title,
+        "author_span_start": seg.author_span_start,
+        "author_span_end": seg.author_span_end,
+        "updated_author": seg.updated_author,
+        "title_bdrc_id": seg.title_bdrc_id,
+        "author_bdrc_id": seg.author_bdrc_id,
+        "parent_segment_id": seg.parent_segment_id,
+        "is_annotated": seg.is_annotated,
+        "is_attached": seg.is_attached,
+        "status": seg.status,
+        "label": seg.label.name if seg.label else None,
+        "is_supplied_title": seg.is_supplied_title,
+    }
+
+
+def _segment_orms_from_bulk_data(
+    document_id: str,
+    document_content: str,
+    segments_data: List[Dict[str, Any]],
+) -> List[OutlinerSegment]:
+    """Build OutlinerSegment instances for bulk insert (not yet added to the session)."""
+    db_segments: List[OutlinerSegment] = []
+    for segment_data in segments_data:
+        segment_text = segment_data.get("text")
+        if not segment_text:
+            span_start = segment_data["span_start"]
+            span_end = segment_data["span_end"]
+            if span_start < 0 or span_end > len(document_content):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid span addresses for segment at index {segment_data['segment_index']}",
+                )
+            segment_text = document_content[span_start:span_end]
+
+        is_karchak = "དཀར་ཆག" in segment_text
+        label = SegmentLabels.TOC if is_karchak else SegmentLabels.TEXT
+        db_segment = OutlinerSegment(
+            id=str(uuid.uuid4()),
+            document_id=document_id,
+            text=segment_text,
+            segment_index=segment_data["segment_index"],
+            span_start=segment_data["span_start"],
+            span_end=segment_data["span_end"],
+            title=segment_data.get("title"),
+            label=label,
+            author=segment_data.get("author"),
+            title_bdrc_id=segment_data.get("title_bdrc_id"),
+            author_bdrc_id=segment_data.get("author_bdrc_id"),
+            parent_segment_id=segment_data.get("parent_segment_id"),
+            status="unchecked",
+        )
+        db_segment.update_annotation_status()
+        db_segments.append(db_segment)
+    return db_segments
+
+
+def replace_document_segments_and_ai_toc(
+    db: Session,
+    document_id: str,
+    segments_data: List[Dict[str, Any]],
+    toc_entries: Any,
+) -> Tuple[OutlinerDocument, List[Dict[str, Any]]]:
+    """
+    Delete all segments, insert new ones, and update AI TOC in a single transaction.
+    Avoids multiple commits and a full document re-fetch after outline generation.
+    """
+    document = get_document_with_cache(db, document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    db.query(OutlinerSegment).filter(OutlinerSegment.document_id == document_id).delete(
+        synchronize_session=False
+    )
+
+    normalized = normalize_ai_toc_for_storage(toc_entries)
+    if isinstance(normalized, dict):
+        document.ai_toc_entries = json.dumps(normalized, ensure_ascii=False)
+    else:
+        document.ai_toc_entries = normalized
+    document.updated_at = datetime.utcnow()
+
+    db_segments = _segment_orms_from_bulk_data(document_id, document.content, segments_data)
+    db.add_all(db_segments)
+    segment_payload = [segment_orm_to_document_response_dict(s) for s in db_segments]
+    db.commit()
+    return document, segment_payload
+
+
 # ==================== Segment Operations ====================
 
 def create_segment(
@@ -437,47 +672,10 @@ def create_segments_bulk(
     document = get_document_with_cache(db, document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
-    
-    db_segments = []
-    for segment_data in segments_data:
-        # Extract text from document content using span addresses if text not provided
-        segment_text = segment_data.get('text')
-        if not segment_text:
-            span_start = segment_data['span_start']
-            span_end = segment_data['span_end']
-            if span_start < 0 or span_end > len(document.content):
-                raise HTTPException(status_code=400, detail=f"Invalid span addresses for segment at index {segment_data['segment_index']}")
-            segment_text = document.content[span_start:span_end]
-        
-        is_karchak=segment_text.__contains__("དཀར་ཆག")
-        if is_karchak:
-            label=SegmentLabels.TOC
-        else:
-            label=SegmentLabels.TEXT
-        db_segment = OutlinerSegment(
-            id=str(uuid.uuid4()),
-            document_id=document_id,
-            text=segment_text,
-            segment_index=segment_data['segment_index'],
-            span_start=segment_data['span_start'],
-            span_end=segment_data['span_end'],
-            title=segment_data.get('title'),
-            label=label,
-            author=segment_data.get('author'),
-            title_bdrc_id=segment_data.get('title_bdrc_id'),
-            author_bdrc_id=segment_data.get('author_bdrc_id'),
-            parent_segment_id=segment_data.get('parent_segment_id'),
-            status='unchecked'  # Default to unchecked
-        )
-        db_segment.update_annotation_status()
-        db_segments.append(db_segment)
-        db.add(db_segment)
-    
+
+    db_segments = _segment_orms_from_bulk_data(document_id, document.content, segments_data)
+    db.add_all(db_segments)
     db.commit()
-
-    for seg in db_segments:
-        db.refresh(seg)
-
     return db_segments
 
 

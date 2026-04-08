@@ -712,46 +712,14 @@ const OutlinerWorkspace: React.FC = () => {
     };
   }, []);
 
-  // Helper function to create segments from starting positions
-  const createSegmentsFromPositions = useCallback(
-    (startingPositions: number[]): TextSegment[] => {
-      const textLength = currentTextContent.length;
-      const validPositions = startingPositions
-        .map((pos) => Math.max(0, Math.min(pos, textLength)))
-        .filter((pos, index, arr) => index === 0 || pos > arr[index - 1]); // Remove duplicates and ensure sorted
-
-      if (validPositions.length === 0) {
-        return [];
-      }
-
-      const newSegments: TextSegment[] = [];
-      const timestamp = Date.now();
-      for (let i = 0; i < validPositions.length; i++) {
-        const start = validPositions[i];
-        const end = i < validPositions.length - 1 ? validPositions[i + 1] : textLength;
-
-        const segmentText = currentTextContent.substring(start, end).trim();
-
-        if (segmentText.length > 0) {
-          newSegments.push({
-            id: `segment-${timestamp}-${i}`,
-            text: segmentText,
-            comments: [],
-          })
-        }
-      }
-
-      return newSegments;
-    },
-    [currentTextContent]
-  );
+ 
   const listRef= useListRef(null);
 
   const [sidebarTitleDraft, setSidebarTitleDraft] = useState('');
 
   // AI outline: full-document TOC indices → replace segments (/outliner/ai-outline)
-  const handleAIDetectTextEndings = useCallback(async () => {
-    if (!documentId || !currentTextContent?.trim()) return;
+  const handleAIDetectTextEndings = async () => {
+    if (!documentId) return;
 
     if (aiTextEndingAbortControllerRef.current) {
       aiTextEndingAbortControllerRef.current.abort();
@@ -779,7 +747,7 @@ const OutlinerWorkspace: React.FC = () => {
         aiTextEndingAbortControllerRef.current = null;
       }
     }
-  }, [currentTextContent, aiTextEndings, setSearchParams, documentId]);
+  }
 
   // Stop AI text ending detection request
   const handleAITextEndingStop = useCallback(() => {
