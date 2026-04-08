@@ -410,6 +410,7 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
       // Reset dirty state after successful save
       setIsDirtyState(false);
       originalFormDataRef.current = { ...formData };
+      onSidebarActiveTabChange('outlines');
     } catch (error) {
       console.error('Failed to save annotations:', error);
       toast.error(error instanceof Error ? error.message : t('outliner.annotation.toastSaveFailed'));
@@ -422,6 +423,7 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
     updateSegmentMutation,
     fullDocumentContent,
     t,
+    onSidebarActiveTabChange,
   ]);
 
   const resetMetadataForm = useCallback(() => {
@@ -488,20 +490,26 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
     aiBaselineTitleRef.current = null;
     aiBaselineAuthorRef.current = null;
     if (!activeSegmentId) return;
-    await updateSegmentMutation(activeSegmentId, {
-      title: '',
-      author: '',
-      title_bdrc_id: '',
-      author_bdrc_id: '',
-      title_span_start: null,
-      title_span_end: null,
-      updated_title: null,
-      author_span_start: null,
-      author_span_end: null,
-      updated_author: null,
-      status: 'checked',
-    });
-  }, [activeSegmentId, updateSegmentMutation]);
+    try {
+      await updateSegmentMutation(activeSegmentId, {
+        title: '',
+        author: '',
+        title_bdrc_id: '',
+        author_bdrc_id: '',
+        title_span_start: null,
+        title_span_end: null,
+        updated_title: null,
+        author_span_start: null,
+        author_span_end: null,
+        updated_author: null,
+        status: 'checked',
+      });
+      onSidebarActiveTabChange('outlines');
+    } catch (error) {
+      console.error('Failed to mark segment as not applicable:', error);
+      toast.error(error instanceof Error ? error.message : t('outliner.annotation.toastSaveFailed'));
+    }
+  }, [activeSegmentId, updateSegmentMutation, onSidebarActiveTabChange, t]);
 
   // Expose methods via ref
   useImperativeHandle(ref, () => ({

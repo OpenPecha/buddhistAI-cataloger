@@ -19,7 +19,7 @@ export const AISuggestionsBox: React.FC<AISuggestionsBoxProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  const button_classname: string = "h-auto p-0 hover:bg-transparent hover:text-primary float-right absolute right-0 top-2 cursor-pointer";
+  const button_classname: string = "h-auto m-2 p-0 hover:bg-transparent hover:text-primary float-right absolute right-0 top-2 cursor-pointer";
 
   return (
     <>
@@ -29,10 +29,10 @@ export const AISuggestionsBox: React.FC<AISuggestionsBoxProps> = ({
             type="button"
             variant="ghost"
             onClick={onStop}
-            className={button_classname}
+            className={button_classname+" animate-spin"}
             title={t('outliner.aiDetect.stop')}
           >
-            <Square className="w-4 h-4 fill-current" fill="currentColor" />
+               <Sparkles className="w-4 h-4" />
           </Button>
         ): <Button
         type="button"
@@ -43,7 +43,7 @@ export const AISuggestionsBox: React.FC<AISuggestionsBoxProps> = ({
         className={button_classname}
       >
       
-            <Sparkles className="w-4 h-4" />
+      <Sparkles className="w-4 h-4" />
       </Button>}
 
       
