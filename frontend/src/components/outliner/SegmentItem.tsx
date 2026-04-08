@@ -214,7 +214,6 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
           />
           </div>
             {isCollapsed ? (
-              <>
               <button
                 type="button"
                 className="text-gray-600  font-monlam cursor-pointer text-lg py-2 text-left w-full rounded px-2 -mx-2 transition-colors max-h-[100px] overflow-hidden whitespace-pre-wrap break-words [display:-webkit-box] [WebkitBoxOrient:vertical] [WebkitLineClamp:4]"
@@ -234,17 +233,8 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
               >
                 {segment.text.slice(0,200) +"..."}
               </button>
-              {segment.label==='TEXT' &&
-                <TitleAndAuthor
-                title={segment.title}
-                author={segment.author}
-                title_bdrc_id={segment.title_bdrc_id}
-                author_bdrc_id={segment.author_bdrc_id}
-                />
-              }
-              </>
+              
             ) : (
-              <>
                 <SegmentTextContent
                   segmentId={segment.id}
                   text={segment.text}
@@ -256,14 +246,16 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
                   onInput={onInput}
                   onKeyDown={onKeyDown}
                 />
-                <TitleAndAuthor
-                  title={segment.title}
-                  author={segment.author}
-                  title_bdrc_id={segment.title_bdrc_id}
-                  author_bdrc_id={segment.author_bdrc_id}
-                />
-              </>
+               
             )}
+            {segment.label==='TEXT' &&
+                <TitleAndAuthor
+                title={segment.title}
+                author={segment.author}
+                title_bdrc_id={segment.title_bdrc_id}
+                author_bdrc_id={segment.author_bdrc_id}
+                />
+              }
           </div>
         </div>
       </div>

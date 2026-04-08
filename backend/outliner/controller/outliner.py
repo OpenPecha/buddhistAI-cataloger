@@ -24,6 +24,7 @@ from outliner.utils.outliner_utils import (
     incremental_update_document_progress,
     get_annotation_status_delta,
     get_comments_list,
+    infer_segment_label_from_text,
     remove_escape_chars_except_newline,
     set_document_content_in_cache,
     validate_segment_status_transition,
@@ -558,8 +559,7 @@ def _segment_orms_from_bulk_data(
                 )
             segment_text = document_content[span_start:span_end]
 
-        is_karchak = "དཀར་ཆག" in segment_text
-        label = SegmentLabels.TOC if is_karchak else SegmentLabels.TEXT
+        label = infer_segment_label_from_text(segment_text)
         db_segment = OutlinerSegment(
             id=str(uuid.uuid4()),
             document_id=document_id,
@@ -652,6 +652,7 @@ def create_segment(
         title_bdrc_id=title_bdrc_id,
         author_bdrc_id=author_bdrc_id,
         parent_segment_id=parent_segment_id,
+        label=infer_segment_label_from_text(segment_text),
         status='unchecked'  # Default to unchecked
     )
     db_segment.update_annotation_status()
@@ -982,12 +983,11 @@ def split_segment(
     # Update first segment (preserve whitespace/newlines; update span_end using split_position)
     segment.text = text_before
     segment.span_end = new_first_span_end
-    is_karchak = text_after.__contains__("དཀར་ཆག")
-    if is_karchak:
+    upper_label = infer_segment_label_from_text(text_before)
+    lower_label = infer_segment_label_from_text(text_after)
+    if lower_label == SegmentLabels.TOC or upper_label == SegmentLabels.FRONT_MATTER:
         segment.label = SegmentLabels.FRONT_MATTER
-        label = SegmentLabels.TOC
-    else:
-        label = SegmentLabels.TEXT
+    label = lower_label
 
     # Upper segment: title from start only when labeled TEXT
     if segment.label == SegmentLabels.TEXT:
@@ -1277,6 +1277,7 @@ def bulk_segment_operations(
                 title_bdrc_id=segment_data.get('title_bdrc_id'),
                 author_bdrc_id=segment_data.get('author_bdrc_id'),
                 parent_segment_id=segment_data.get('parent_segment_id'),
+                label=infer_segment_label_from_text(segment_text),
                 status='unchecked'  # Default to unchecked
             )
             db_segment.update_annotation_status()

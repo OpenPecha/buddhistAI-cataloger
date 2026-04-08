@@ -11,7 +11,13 @@ from core.redis import (
     get_document_content_from_cache,
     set_document_content_in_cache,
 )
-from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentStatus, SEGMENT_STATUS_TRANSITIONS
+from outliner.models.outliner import (
+    OutlinerDocument,
+    OutlinerSegment,
+    SegmentLabels,
+    SegmentStatus,
+    SEGMENT_STATUS_TRANSITIONS,
+)
 
 
 def remove_escape_chars_except_newline(text: str) -> str:
@@ -151,3 +157,29 @@ def validate_segment_status_transition(
         return False, f"Cannot transition from '{current.value}' to '{target.value}'. Allowed transitions: {allowed_str}"
     
     return True, ""
+
+
+# Tibetan section headings typical of front / paratext (publisher’s note, foreword, etc.).
+# If any appear in segment text, label as FRONT_MATTER (takes precedence over TOC).
+FRONT_MATTER_PHRASES: Tuple[str, ...] = (
+    "དཔེ་སྐྲུན་གསལ་བཤད",
+    "སྔོན་གླེང",
+    "རྩོམ་བསྒྲིགས་པའི་གཏམ",
+    "ཐོར་བུ",
+    "སྤར་བྱང་སྨོན་ཚིག",
+    "མཇུག་བྱང",
+    "རྩོམ་པ་པོས་དོ་སྣང་མཛད་དགོས་པའི་གནད་དོན་འགའ་ཞིག",
+    "དུས་དེབ་མངགས་ཉོའི་གསལ་བརྡ",
+    "རྩོམ་པ་པོའི་ངོ་སྤྲོད་མདོར་བསྡུས",
+    "བསྡུ་སྒྲིག་པའི་གླེང་བརྗོད",
+    "བསྒྲིགས་རྗེས་ཀྱི་གཏམ",
+)
+
+
+def infer_segment_label_from_text(segment_text: str) -> SegmentLabels:
+    """Infer segment label from content (front matter phrases, then table of contents, else body)."""
+    if any(phrase in segment_text for phrase in FRONT_MATTER_PHRASES):
+        return SegmentLabels.FRONT_MATTER
+    if "དཀར་ཆག" in segment_text:
+        return SegmentLabels.TOC
+    return SegmentLabels.TEXT

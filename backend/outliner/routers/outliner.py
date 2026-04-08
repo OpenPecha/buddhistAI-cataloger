@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_serializer
 from typing import Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 from datetime import datetime
@@ -144,8 +144,8 @@ class SegmentResponseDocument(BaseModel):
     segment_index: int
     span_start: int
     span_end: int
-    title: Optional[str] = None
-    author: Optional[str] = None
+    title: Optional[str] 
+    author: Optional[str] 
     title_span_start: Optional[int] = None
     title_span_end: Optional[int] = None
     updated_title: Optional[str] = None
@@ -161,8 +161,14 @@ class SegmentResponseDocument(BaseModel):
     label: Optional[str] = None  # FRONT_MATTER, TOC, TEXT, BACK_MATTER
     is_supplied_title: Optional[bool] = None  # Title supplied by annotator (not from source)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+    @model_serializer(mode="wrap")
+    def _serialize_omit_nulls(self, serializer):
+        data = serializer(self)
+        if not isinstance(data, dict):
+            return data
+        return {k: v for k, v in data.items() if v is not None}
 
 class DocumentResponse(BaseModel):
     id: str
