@@ -1,7 +1,7 @@
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState, memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
-import { Loader2, ChevronDown, ChevronRight, Merge, ChevronUp, AlertCircle } from 'lucide-react'
+import { ChevronDown, ChevronRight, Merge, ChevronUp, AlertCircle } from 'lucide-react'
 import type { TextSegment, SegmentLabel } from './types'
 import { SegmentTextContent } from './SegmentTextContent'
 import { useDocument,useCursor, useActions } from './contexts'
@@ -9,7 +9,6 @@ import { SplitMenu } from './SplitMenu'
 import { BubbleMenu } from './BubbleMenu'
 import { SEGMENT_LABEL_VALUES, segmentLabelI18nKey } from './segment-label'
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument'
-import { parseTocFromText } from '@/api/outliner'
 import { toast } from 'sonner'
 import {
   Select,
@@ -21,7 +20,8 @@ import {
 import { Input } from '../ui/input'
 import { findAllOccurrences } from '@/features/outliner'
 
-
+/** Hoisted: avoid recreating array each render (see js-hoist-regexp / stable references). */
+const BONPO_TITLE_PATTERNS = ['་པོབམ', 'ལེའུ', 'བམཔོ', 'བམ་པོ་', 'ལེའུ་', 'བམ པོ'] as const
 
 interface SegmentItemProps {
   segment: TextSegment
@@ -323,7 +323,7 @@ const SegmentLabelSelector = ({
   const { t } = useTranslation()
   const { documentId, updateSegment: updateSegmentMutation } = useOutlinerDocument()
 
-  const handleLabelChange = 
+  const handleLabelChange = useCallback(
     async (value: string) => {
       if (!segment.id || !documentId) return
       const label = value === 'none' || value === '' ? undefined : (value as SegmentLabel)
@@ -331,7 +331,9 @@ const SegmentLabelSelector = ({
         console.error('Failed to update segment label:', err)
         toast.error(err instanceof Error ? err.message : t('outliner.segment.failedUpdateLabel'))
       })
-    }
+    },
+    [documentId, segment.id, updateSegmentMutation, t]
+  )
   return (
   <>
     <span className="text-xs font-medium text-gray-500 shrink-0">{t('outliner.segment.labelField')}</span>
@@ -357,7 +359,7 @@ const SegmentLabelSelector = ({
   )
 }
 
-const SegmentSearch = ({
+const SegmentSearch = memo(function SegmentSearch({
   segmentId,
   query,
   onQueryChange,
@@ -367,9 +369,10 @@ const SegmentSearch = ({
   query: string
   onQueryChange: (q: string) => void
   matchCount: number
-}) => {
+}) {
   const { t } = useTranslation()
-  const [activeMatchIndex, setActiveMatchIndex]=useState(0);
+  const [activeMatchIndex, setActiveMatchIndex] = useState(0)
+
   const scrollSegmentToTop = useCallback(() => {
     document.getElementById(segmentId)?.scrollIntoView({
       behavior: 'smooth',
@@ -383,41 +386,49 @@ const SegmentSearch = ({
       block: 'end',
     })
   }, [segmentId])
-  
 
-  const handleActiveMatch = (index: number) => {
-    const segment= document.getElementById(segmentId);
-    const segments = segment?.querySelectorAll('.highlighter')
-    const targetdom = segments?.[index]
-    if (targetdom) {
-      targetdom.scrollIntoView({
+  const scrollToMatchIndex = useCallback(
+    (index: number) => {
+      const root = document.getElementById(segmentId)
+      const hits = root?.querySelectorAll('.highlighter')
+      hits?.[index]?.scrollIntoView({
         behavior: 'smooth',
         block: 'center',
       })
-    }
-  }
-  
+    },
+    [segmentId]
+  )
+
+  useEffect(() => {
+    setActiveMatchIndex(0)
+  }, [query, matchCount])
+
   /** When there is no active search hit list, arrows scroll the segment in the page. */
   const useScrollForArrows = !query.trim() || matchCount === 0
 
-  const goUp = ()=>{
+  const goUp = useCallback(() => {
     if (useScrollForArrows) {
       scrollSegmentToTop()
       return
     }
-    handleActiveMatch(activeMatchIndex)
-    setActiveMatchIndex(activeMatchIndex - 1)
-  }
+    setActiveMatchIndex((prev) => {
+      const next = (prev - 1 + matchCount) % matchCount
+      requestAnimationFrame(() => scrollToMatchIndex(next))
+      return next
+    })
+  }, [useScrollForArrows, scrollSegmentToTop, matchCount, scrollToMatchIndex])
 
-  const goDown =()=> {
+  const goDown = useCallback(() => {
     if (useScrollForArrows) {
       scrollSegmentToBottom()
       return
     }
-    handleActiveMatch(activeMatchIndex)
-    setActiveMatchIndex(activeMatchIndex +1)
-
-  }
+    setActiveMatchIndex((prev) => {
+      const next = (prev + 1) % matchCount
+      requestAnimationFrame(() => scrollToMatchIndex(next))
+      return next
+    })
+  }, [useScrollForArrows, scrollSegmentToBottom, matchCount, scrollToMatchIndex])
 
   return (
     <div className="segment-search-bar flex items-center gap-1   rounded-md px-1 py-0.5 ">
@@ -470,15 +481,14 @@ const SegmentSearch = ({
       </Button>
     </div>
   )
-}
+})
 
 const AlertMessage = ({ segment }: { segment: TextSegment }) => {
   const { t } = useTranslation()
   const { activeSegmentId, sidebarTitleDraft } = useDocument()
 
-  const BONPO_PATTERNS = ['་པོབམ', 'ལེའུ', 'བམཔོ', 'བམ་པོ་', 'ལེའུ་', 'བམ པོ']
   const textMatchesPattern = (text: string | undefined) =>
-    Boolean(text && BONPO_PATTERNS.some((pattern) => text.includes(pattern)))
+    Boolean(text && BONPO_TITLE_PATTERNS.some((pattern) => text.includes(pattern)))
 
   const savedTitle = segment.title ?? ''
   const draftTitle =

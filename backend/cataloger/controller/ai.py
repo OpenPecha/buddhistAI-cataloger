@@ -25,77 +25,7 @@ from outliner.utils.outliner_utils import incremental_update_document_progress, 
 load_dotenv(override=True)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
-
-def detect_text_boundaries_rule_based(content: str) -> Optional[List[int]]:
-    """
-    Rule-based detection of text boundaries using regex patterns.
-    Returns list of starting positions if patterns are found, None otherwise.
-    
-    Args:
-        content: The text content to analyze
-        
-    Returns:
-        List of starting positions or None if no patterns found
-    """
-    # Define split markers matching the frontend patterns
-    split_markers = [
-        # Tibetan markers
-        {'pattern': '༄༅༅། །', 'type': 'string'},
-        {'pattern': '༄༅༅', 'type': 'string'},
-        {'pattern': r'༄༅༅[།\s]*', 'type': 'regex'},
-        
-        # Common chapter/section markers
-        {'pattern': r'\n\s*第[一二三四五六七八九十百千万]+[章节卷篇回]\s*', 'type': 'regex'},
-        {'pattern': r'\n\s*Chapter\s+\d+\s*[:-]?\s*', 'type': 'regex', 'flags': re.IGNORECASE},
-        {'pattern': r'\n\s*Section\s+\d+\s*[:-]?\s*', 'type': 'regex', 'flags': re.IGNORECASE},
-        
-        # Sanskrit/Tibetan text boundaries
-        {'pattern': r'\n\s*[ༀ-༿]+\s*\n', 'type': 'regex'},
-    ]
-    
-    all_positions = set()
-    
-    # Check each marker pattern and collect all matching positions
-    for marker in split_markers:
-        positions = []
-        
-        if marker['type'] == 'string':
-            # Exact string match
-            pattern_str = marker['pattern']
-            search_index = 0
-            while True:
-                index = content.find(pattern_str, search_index)
-                if index == -1:
-                    break
-                positions.append(index)
-                search_index = index + 1
-        else:
-            # Regex match
-            flags = marker.get('flags', 0)
-            pattern = re.compile(marker['pattern'], flags)
-            for match in pattern.finditer(content):
-                positions.append(match.start())
-        
-        # Add all found positions
-        all_positions.update(positions)
-    
-    # If we found any patterns, return the starting positions
-    if all_positions:
-        # Convert to sorted list and ensure 0 is included
-        starting_positions = sorted(set(all_positions))
-        if not starting_positions or starting_positions[0] != 0:
-            starting_positions.insert(0, 0)
-        
-        # Remove duplicates and ensure we don't exceed text length
-        starting_positions = sorted(set(starting_positions))
-        text_length = len(content)
-        starting_positions = [pos for pos in starting_positions if pos <= text_length]
-        
-        return starting_positions
-    
-    return None
-
+GEMINI_API_MODEL = "gemini-2.5-flash"
 
 def generate_title_author(content: str, response_schema: Any) -> Dict[str, Optional[str]]:
     """
@@ -131,7 +61,7 @@ def generate_title_author(content: str, response_schema: Any) -> Dict[str, Optio
         
         # Generate content with structured output using Pydantic schema
         response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
+            model=GEMINI_API_MODEL,
             contents=prompt,
             config={
                 "response_mime_type": "application/json",
@@ -187,7 +117,7 @@ def generate_title_from_start(content: str, response_schema: Any) -> Any:
         client = genai.Client(api_key=GEMINI_API_KEY)
         prompt = get_title_from_start_prompt(excerpt)
         response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
+            model=GEMINI_API_MODEL,
             contents=prompt,
             config={
                 "response_mime_type": "application/json",
@@ -233,7 +163,7 @@ def generate_author_from_end(content: str, response_schema: Any) -> Any:
         client = genai.Client(api_key=GEMINI_API_KEY)
         prompt = get_author_from_end_prompt(excerpt)
         response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
+            model=GEMINI_API_MODEL,
             contents=prompt,
             config={
                 "response_mime_type": "application/json",
@@ -255,51 +185,6 @@ def generate_author_from_end(content: str, response_schema: Any) -> Any:
         raise HTTPException(
             status_code=500,
             detail=f"Error generating author: {str(e)}",
-        )
-
-
-def parse_toc_from_text(content: str, response_schema: Any) -> Any:
-    """
-    Use Gemini to decide whether text is a TOC and return a list of entry strings.
-    """
-    if not GEMINI_API_KEY:
-        raise HTTPException(
-            status_code=500,
-            detail="GEMINI_API_KEY environment variable is not set",
-        )
-
-    try:
-        client = genai.Client(api_key=GEMINI_API_KEY)
-        prompt = get_toc_parse_prompt(content)
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
-            contents=prompt,
-            config={
-                "response_mime_type": "application/json",
-                "response_schema": response_schema,
-            },
-        )
-
-        if hasattr(response, "parsed") and response.parsed:
-            p = response.parsed
-            if isinstance(p, response_schema):
-                return p
-            if isinstance(p, dict):
-                return response_schema(**p)
-            return response_schema.model_validate(p)
-        if hasattr(response, "text") and response.text:
-            result = json.loads(response.text.strip())
-            return response_schema(**result)
-        raise HTTPException(
-            status_code=500,
-            detail="No response received from the model",
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error parsing TOC: {str(e)}",
         )
 
 
@@ -331,7 +216,7 @@ def detect_text_endings_ai(content: str) -> List[int]:
         
         # Generate content with structured output
         response = client.models.generate_content(
-            model="gemini-2.5-flash-lite",
+            model=GEMINI_API_MODEL,
             contents=prompt,
             config={
                 "response_mime_type": "application/json",
@@ -476,247 +361,3 @@ def create_segments_from_positions(
     db.commit()
     
     return len(db_segments)
-
-
-def detect_text_endings(content: str, document_id: str, db: Session) -> tuple[List[int], int]:
-    """
-    Detect text endings using rule-based or AI detection and create segments.
-    
-    Args:
-        content: The text content to analyze
-        document_id: The document ID to associate segments with
-        db: Database session
-        
-    Returns:
-        Tuple of (starting_positions, total_segments)
-        
-    Raises:
-        HTTPException: If detection fails
-    """
-    try:
-        # First, try rule-based detection
-        rule_based_positions = detect_text_boundaries_rule_based(content)
-        
-        if rule_based_positions:
-            starting_positions = rule_based_positions
-        else:
-            # If no rule-based patterns found, proceed with AI detection
-            starting_positions = detect_text_endings_ai(content)
-        
-        if not starting_positions:
-            raise HTTPException(
-                status_code=500,
-                detail="Could not detect any text segments"
-            )
-        
-        # Create segments in database
-        total_segments = create_segments_from_positions(
-            db=db,
-            content=content,
-            document_id=document_id,
-            starting_positions=starting_positions
-        )
-        
-        return starting_positions, total_segments
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error detecting text endings: {str(e)}"
-        )
-
-
-def segment_and_create_from_parent(
-    db: Session,
-    segment_id: str,
-    content: Optional[str] = None
-) -> tuple[int, List[str]]:
-    """
-    Segment a parent segment and create child segments in the database.
-    
-    Args:
-        db: Database session
-        document_id: The document ID
-        segment_id: The parent segment ID to segment
-        content: Optional content override (if not provided, uses segment text)
-        
-    Returns:
-        Tuple of (number of segments created, list of segment IDs)
-        
-    Raises:
-        HTTPException: If segment not found, validation fails, or creation fails
-    """
-    try:
-        # Get the parent segment
-        parent_segment = get_segment(db, segment_id)
-        document_id = parent_segment.document_id
-        
-        # Verify segment belongs to the document
-        if parent_segment.document_id != document_id:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Segment {segment_id} does not belong to document {document_id}"
-            )
-        
-        # Get document content
-        document = get_document_with_cache(db, document_id)
-        if not document:
-            raise HTTPException(status_code=404, detail="Document not found")
-        
-        # Extract content from segment's span positions
-        segment_start = parent_segment.span_start
-        segment_end = parent_segment.span_end
-        
-        # Validate span positions
-        if segment_start < 0 or segment_end > len(document.content):
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid span positions: start={segment_start}, end={segment_end}, document_length={len(document.content)}"
-            )
-        
-        if segment_start >= segment_end:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid span: start ({segment_start}) must be less than end ({segment_end})"
-            )
-        
-        # Extract the segment content
-        segment_content = document.content[segment_start:segment_end]
-        
-        # Use provided content if available, otherwise use extracted content
-        content_to_segment = content if content is not None else segment_content
-        
-        # Perform segmentation: rule-based first, then Gemini if needed
-        rule_based_positions = detect_text_boundaries_rule_based(content_to_segment)
-        if rule_based_positions:
-            relative_positions = rule_based_positions
-        if len(rule_based_positions) == 1:
-            # If only one segment found by rule-based method, proceed with AI detection
-            relative_positions = detect_text_endings_ai(content_to_segment)
-        
-        if not relative_positions:
-            raise HTTPException(
-                status_code=500,
-                detail="Could not detect any text segments"
-            )
-        
-        # Validate segmentation boundaries
-        # First segment should start at position 0 (relative to segment content)
-        if relative_positions[0] != 0:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid segmentation: first segment does not start at beginning. Expected 0, got {relative_positions[0]}"
-            )
-        
-        # Last segment should end at the end of the segment content
-        content_length = len(content_to_segment)
-        
-        # Calculate end positions for validation
-        end_positions = []
-        for idx, start_pos in enumerate(relative_positions):
-            end_pos = (
-                relative_positions[idx + 1]
-                if idx + 1 < len(relative_positions)
-                else content_length
-            )
-            end_positions.append(end_pos)
-        
-        last_segment_end = end_positions[-1]
-        
-        if last_segment_end != content_length:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid segmentation: last segment does not end at segment boundary. Expected {content_length}, got {last_segment_end}"
-            )
-        
-        # Convert relative positions to absolute positions in document
-        absolute_positions = [segment_start + pos for pos in relative_positions]
-        
-        # Get number of segments to create
-        num_new_segments = len(absolute_positions)
-        parent_index = parent_segment.segment_index
-        
-        # Store parent segment's annotation status for progress tracking
-        parent_was_annotated = parent_segment.is_annotated
-        
-        # Get segments that come after the parent segment
-        # They are currently at indices: parent_index+1, parent_index+2, ...
-        following_segments = db.query(OutlinerSegment).filter(
-            OutlinerSegment.document_id == document_id,
-            OutlinerSegment.segment_index > parent_index
-        ).all()
-        
-        # Delete the parent segment (it will be replaced by child segments)
-        db.delete(parent_segment)
-        
-       
-        for seg in following_segments:
-            seg.segment_index += (num_new_segments - 1)
-        
-        # Create segments in database with absolute positions
-        db_segments = []
-        segment_ids = []
-        
-        for idx, abs_start_pos in enumerate(absolute_positions):
-            abs_end_pos = (
-                absolute_positions[idx + 1]
-                if idx + 1 < len(absolute_positions)
-                else segment_end
-            )
-            
-            # Extract text for this segment
-            segment_text = document.content[abs_start_pos:abs_end_pos]
-            
-            # Generate segment ID
-            segment_uuid = str(uuid.uuid4())
-            segment_ids.append(segment_uuid)
-            
-            # Calculate segment_index: replace parent segment starting at parent_index
-            new_segment_index = parent_index + idx
-            
-            db_segments.append({
-                "id": segment_uuid,
-                "document_id": document_id,
-                "text": segment_text,
-                "segment_index": new_segment_index,
-                "span_start": abs_start_pos,
-                "span_end": abs_end_pos,
-                "parent_segment_id": None,  # Child segments don't need parent_segment_id since parent is deleted
-                "status": "unchecked",
-                "is_annotated": False,
-            })
-        
-        # Bulk insert segments
-        db.bulk_insert_mappings(OutlinerSegment, db_segments)
-        
-     
-        annotated_delta = -1 if parent_was_annotated else 0
-        
-        incremental_update_document_progress(
-            db=db,
-            document_id=document_id,
-            total_delta=num_new_segments - 1,  # -1 for deleted parent, +num_new_segments for new segments
-            annotated_delta=annotated_delta
-        )
-        
-        # Commit all changes
-        db.commit()
-        
-        # Refresh segments to get updated data
-        for seg_id in segment_ids:
-            segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == seg_id).first()
-            if segment:
-                db.refresh(segment)
-        
-        return len(db_segments), segment_ids
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error segmenting and creating segments: {str(e)}"
-        )

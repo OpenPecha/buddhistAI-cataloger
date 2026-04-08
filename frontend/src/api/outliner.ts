@@ -665,22 +665,6 @@ export interface ParseTocResponse {
   entries: string[];
 }
 
-export const parseTocFromText = async (
-  request: ParseTocRequest,
-  signal?: AbortSignal
-): Promise<ParseTocResponse> => {
-  const response = await fetch(`${API_URL}/ai/parse-toc`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      accept: 'application/json',
-    },
-    body: JSON.stringify(request),
-    signal,
-  });
-
-  return handleApiResponse(response);
-};
 
 // ==================== Utility Functions ====================
 

@@ -2,9 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { BDRC_AUTHOR_DIFFICULT_TO_IDENTIFY, BdrcAuthorSelector } from '@/components/bdrc/BdrcAuthorSelector';
-import type { TextSegment } from '../types';
-import type { Author, FormDataType, Title } from '../AnnotationSidebar';
+import { useAnnotationMetadata } from '../contexts/AnnotationMetadataContext';
 
 /** Levenshtein distance. */
 function levenshtein(a: string, b: string): number {
@@ -41,22 +39,10 @@ function getMatchIndicatorClass(pct: number | null): string {
   return 'bg-red-100 text-red-800 border-red-200';
 }
 
-interface AuthorFieldProps {
-  segment: TextSegment;
-  formData: FormDataType;
-  onUpdate: (field: 'title' | 'author', value: Title | Author) => void;
-  resetForm: () => void;
-  disabled?: boolean;
-}
-
-export const AuthorField = ({
-  segment,
-  formData,
-  onUpdate,
-  resetForm,
-  disabled = false,
-}: AuthorFieldProps) => {
+export const AuthorField = () => {
   const { t } = useTranslation();
+  const { activeSegment: segment, formData, onFormFieldUpdate: onUpdate } = useAnnotationMetadata();
+  const disabled = segment.status === 'checked';
   const authorSearch = formData?.author?.name || '';
   const setAuthorSearch = (value: string) => {
     onUpdate('author', { name: value, bdrc_id: '' });

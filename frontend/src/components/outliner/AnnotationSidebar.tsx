@@ -1,51 +1,114 @@
 import { forwardRef, memo, useImperativeHandle, useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
 import type { TextSegment } from './types';
 import { segmentLabelI18nKey } from './segment-label';
 import { FilterSegments, type LabelFilterValue, type CompletionFilterValue } from './FilterSegments';
-import { TitleField } from './sidebarFields/TitleField';
-import { AuthorField } from './sidebarFields/AuthorField';
-import BDRCField from './sidebarFields/BDRCField';
-import { AISuggestionsBox } from './AISuggestionsBox';
 import { useAISuggestions, type PersistAIAnnotationsArgs } from '@/hooks/useAISuggestions';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
 import type { SegmentUpdateRequest } from '@/api/outliner';
 import { toast } from 'sonner';
-import { RotateCcw, Save, User, X } from 'lucide-react';
+import { User } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import type { ListImperativeAPI } from 'react-window';
+import { AnnotationMetadataTab } from './AnnotationMetadataTab';
+import type { Author, FormDataType, Title } from './annotationSidebarFormTypes';
+import {
+  AnnotationMetadataProvider,
+  type AnnotationMetadataContextValue,
+} from './contexts/AnnotationMetadataContext';
+import type { AnnotationSidebarTab } from './annotationSidebarTab';
 
+export type { Title, Author, FormDataType } from './annotationSidebarFormTypes';
+export type { AnnotationSidebarTab } from './annotationSidebarTab';
+
+const noopShowDropdown = () => {};
+
+interface OutlineSegmentRowProps {
+  seg: TextSegment;
+  displayIndex: number;
+  isActive: boolean;
+  onNavigate: (segmentId: string) => void;
+}
+
+const OutlineSegmentRow = memo(function OutlineSegmentRow({
+  seg,
+  displayIndex,
+  isActive,
+  onNavigate,
+}: OutlineSegmentRowProps) {
+  const { t } = useTranslation();
+  const preview =
+    seg.title ? seg.title : seg.text.length > 80 ? `${seg.text.slice(0, 80)}...` : seg.text;
+  const showMetaRow = Boolean(seg.label || seg.title || seg.author);
+
+  return (
+    <button
+      type="button"
+      onClick={() => onNavigate(seg.id)}
+      className={` w-full text-left px-3 py-2.5 rounded-md transition-colors cursor-pointer ${
+        isActive ? 'bg-blue-50 border border-blue-300' : 'hover:bg-gray-50 border border-transparent'
+      }`}
+    >
+      <div className="flex items-start gap-2">
+        <span
+          className={`shrink-0 text-xs font-medium mt-0.5 w-6 h-6 rounded-full flex items-center justify-center ${
+            seg.status === 'checked' ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'
+          }`}
+        >
+          {displayIndex + 1}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p
+            className={`text-sm leading-snug font-monlam ${
+              isActive ? 'text-blue-900' : 'text-gray-700'
+            } ${seg.status === 'checked' ? 'opacity-50' : ''}`}
+          >
+            {preview}
+          </p>
+          {showMetaRow ? (
+            <div className="flex flex-wrap gap-2 mt-2 items-center justify-between">
+              {seg.author ? (
+                <span
+                  className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-violet-50 border border-violet-200 text-violet-900 text-xs font-semibold"
+                  title={t('outliner.annotation.authorBadge')}
+                >
+                  <User /> <span> {seg.author}</span>
+                </span>
+              ) : (
+                <div />
+              )}
+              {seg.label ? (
+                <span
+                  className=" inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-slate-50 border border-slate-200 text-slate-700 text-xs"
+                  title={t('outliner.annotation.labelBadge')}
+                >
+                  {t(segmentLabelI18nKey(seg.label))}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </button>
+  );
+});
 
 interface AnnotationSidebarProps {
   activeSegment: TextSegment | undefined;
-  listRef: React.RefObject<List>;
+  listRef: React.RefObject<ListImperativeAPI | null>;
   documentId?: string;
   segments?: TextSegment[];
   onSegmentClick?: (segmentId: string) => void;
   /** Fired when the sidebar Title field value changes (for UI that must reflect unsaved title text). */
   onTitleDraftChange?: (name: string) => void;
-}
-
-export interface Title {
-  name: string,
-  bdrc_id: string
-}
-
-export interface Author {
-  id: string,
-  name: string,
-  bdrc_id: string
+  sidebarActiveTab: AnnotationSidebarTab;
+  onSidebarActiveTabChange: (tab: AnnotationSidebarTab) => void;
 }
 
 interface PendingChanges {
   segmentId: string;
   title?: Title;
   author?: Author;
-}
-
-export interface FormDataType {
-  title: Title;
-  author: Author;
 }
 
 export type DocTextSpan = { start: number; end: number };
@@ -66,6 +129,8 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
   segments = [],
   onSegmentClick,
   onTitleDraftChange,
+  sidebarActiveTab,
+  onSidebarActiveTabChange,
 }, ref) => {
   const { t } = useTranslation();
   const { updateSegment: updateSegmentMutation, document } = useOutlinerDocument();
@@ -81,14 +146,22 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
   const author = activeSegment?.author || '';
 
 
+  const emptyAuthor = (): Author => ({ id: '', name: '', bdrc_id: '' });
+
   // Form data that resets when segment changes
-  const [formData, setFormData] = useState<FormDataType>({ title: { name: title, bdrc_id: '' }, author: { name: author, bdrc_id: '' } });
+  const [formData, setFormData] = useState<FormDataType>({
+    title: { name: title, bdrc_id: '' },
+    author: { id: '', name: author, bdrc_id: '' },
+  });
   // Track pending changes per segment
   const pendingChangesRef = useRef<Map<string, FormDataType>>(new Map());
   
   // Track if form has been modified (dirty state)
   const [isDirtyState, setIsDirtyState] = useState(false);
-  const originalFormDataRef = useRef<FormDataType>({ title: { name: '', bdrc_id: '' }, author: { name: '', bdrc_id: '' } });
+  const originalFormDataRef = useRef<FormDataType>({
+    title: { name: '', bdrc_id: '' },
+    author: emptyAuthor(),
+  });
 
   // Local state for "title supplied by annotator" checkbox; only persisted on save
   const [suppliedTitleChecked, setSuppliedTitleChecked] = useState(false);
@@ -106,7 +179,11 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
     }
     const initialFormData = {
       title: { name: title, bdrc_id: activeSegment.title_bdrc_id || '' },
-      author: { name: author, bdrc_id: activeSegment.author_bdrc_id || '' },
+      author: {
+        id: '',
+        name: author,
+        bdrc_id: activeSegment.author_bdrc_id || '',
+      },
     };
     setFormData(initialFormData);
     originalFormDataRef.current = initialFormData;
@@ -194,7 +271,7 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
   // Handle author update
   const handleAuthorUpdate = useCallback((value: string) => {
     setFormData(prev => {
-      const updatedAuthor: Author = { ...prev.author, name: value };
+      const updatedAuthor: Author = { ...prev.author, id: prev.author.id ?? '', name: value };
       const updated = { ...prev, author: updatedAuthor };
       if (activeSegmentId) {
         const current = pendingChangesRef.current.get(activeSegmentId) || prev;
@@ -226,8 +303,9 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
     } else if (field === 'author' || field === 'author_bdrc_id') {
       setFormData(prev => {
         const updatedAuthor: Author = {
+          id: prev.author?.id ?? '',
           name: field === 'author' ? value : prev.author?.name || '',
-          bdrc_id: field === 'author_bdrc_id' ? value : prev.author?.bdrc_id || ''
+          bdrc_id: field === 'author_bdrc_id' ? value : prev.author?.bdrc_id || '',
         };
         return { ...prev, author: updatedAuthor };
       });
@@ -242,10 +320,11 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
     onUpdate: handleAIUpdate,
     onTitleChange: handleTitleUpdate,
     onAuthorChange: handleAuthorUpdate,
-    onShowTitleDropdown: () => { },
-    onShowAuthorDropdown: () => { },
+    onShowTitleDropdown: noopShowDropdown,
+    onShowAuthorDropdown: noopShowDropdown,
     persistAIAnnotations,
   });
+
   const onSave = useCallback(async () => {
     // Validate that we have an active segment
     if (!activeSegment || !activeSegmentId) {
@@ -345,6 +424,85 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
     t,
   ]);
 
+  const resetMetadataForm = useCallback(() => {
+    onTitleDraftChange?.('');
+    setFormData({
+      title: { name: '', bdrc_id: '' },
+      author: { id: '', name: '', bdrc_id: '' },
+    });
+    setIsDirtyState(false);
+  }, [onTitleDraftChange]);
+
+  const handleMetadataFormUpdate = useCallback(
+    (field: 'title' | 'author', value: Title | Author) => {
+      if (field === 'title') {
+        const v = value as Title;
+        onTitleDraftChange?.(v.name);
+        setFormData(prev => {
+          const updated = { ...prev, title: v };
+          if (activeSegmentId) {
+            const current = pendingChangesRef.current.get(activeSegmentId) || prev;
+            pendingChangesRef.current.set(activeSegmentId, { ...current, title: v });
+          }
+          checkDirtyState(updated);
+          return updated;
+        });
+      } else {
+        const v = value as Author;
+        setFormData(prev => {
+          const author: Author = { ...v, id: v.id ?? '' };
+          const updated = { ...prev, author };
+          if (activeSegmentId) {
+            const current = pendingChangesRef.current.get(activeSegmentId) || prev;
+            pendingChangesRef.current.set(activeSegmentId, { ...current, author });
+          }
+          checkDirtyState(updated);
+          return updated;
+        });
+      }
+    },
+    [activeSegmentId, checkDirtyState, onTitleDraftChange]
+  );
+
+  const handleAnnotationsReset = useCallback(async () => {
+    resetMetadataForm();
+    aiBaselineTitleRef.current = null;
+    aiBaselineAuthorRef.current = null;
+    if (!activeSegmentId) return;
+    await updateSegmentMutation(activeSegmentId, {
+      title: '',
+      author: '',
+      title_bdrc_id: '',
+      author_bdrc_id: '',
+      title_span_start: null,
+      title_span_end: null,
+      updated_title: null,
+      author_span_start: null,
+      author_span_end: null,
+      updated_author: null,
+      status: 'unchecked',
+    });
+  }, [activeSegmentId, resetMetadataForm, updateSegmentMutation]);
+
+  const handleNotApplicable = useCallback(async () => {
+    aiBaselineTitleRef.current = null;
+    aiBaselineAuthorRef.current = null;
+    if (!activeSegmentId) return;
+    await updateSegmentMutation(activeSegmentId, {
+      title: '',
+      author: '',
+      title_bdrc_id: '',
+      author_bdrc_id: '',
+      title_span_start: null,
+      title_span_end: null,
+      updated_title: null,
+      author_span_start: null,
+      author_span_end: null,
+      updated_author: null,
+      status: 'checked',
+    });
+  }, [activeSegmentId, updateSegmentMutation]);
+
   // Expose methods via ref
   useImperativeHandle(ref, () => ({
     setTitleValueWithoutUpdate: (value: string, docSpan?: DocTextSpan | null) => {
@@ -374,7 +532,7 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
         }
       }
       setFormData(prev => {
-        const updatedAuthor: Author = { ...prev.author, name: value };
+        const updatedAuthor: Author = { ...prev.author, id: prev.author.id ?? '', name: value };
         const updated = { ...prev, author: updatedAuthor };
         if (activeSegmentId) {
           const current = pendingChangesRef.current.get(activeSegmentId) || prev;
@@ -407,178 +565,33 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
     },
   }), [isDirtyState, onSave, activeSegment, formData, activeSegmentId, checkDirtyState, onTitleDraftChange]);
 
-  function onUpdate(field: 'title' | 'author', value: Title | Author) {
-    if (field === 'title') {
-      onTitleDraftChange?.((value as Title).name);
-      setFormData(prev => {
-        const updated = { ...prev, title: value as Title };
-        checkDirtyState(updated);
-        return updated;
-      });
-    } else if (field === 'author') {
-      setFormData(prev => {
-        const updated = { ...prev, author: value as Author };
-        checkDirtyState(updated);
-        return updated;
-      });
-    }
-  }
-  function resetForm() {
-    onTitleDraftChange?.('');
-    setFormData({ title: { name: '', bdrc_id: '' }, author: { name: '', bdrc_id: '' } });
-    setIsDirtyState(false);
-  }
-  async function onReset() {
-    resetForm();
-    aiBaselineTitleRef.current = null;
-    aiBaselineAuthorRef.current = null;
-    if (activeSegmentId) {
-      const newPayload: SegmentUpdateRequest = {
-        title: '',
-        author: '',
-        title_bdrc_id: '',
-        author_bdrc_id: '',
-        title_span_start: null,
-        title_span_end: null,
-        updated_title: null,
-        author_span_start: null,
-        author_span_end: null,
-        updated_author: null,
-        status: 'unchecked',
-      };
-      await updateSegmentMutation(activeSegmentId, newPayload);
-    }
-  }
-  async function onUnknown() {
-    aiBaselineTitleRef.current = null;
-    aiBaselineAuthorRef.current = null;
-    if (activeSegmentId) {
-      const newPayload: SegmentUpdateRequest = {
-        title: '',
-        author: '',
-        title_bdrc_id: '',
-        author_bdrc_id: '',
-        title_span_start: null,
-        title_span_end: null,
-        updated_title: null,
-        author_span_start: null,
-        author_span_end: null,
-        updated_author: null,
-        status: 'checked',
-      };
-      await updateSegmentMutation(activeSegmentId, newPayload);
-    }
-  }
+ 
 
 
-  const handleToClick = useCallback((segmentId: string) => {
-    onSegmentClick?.(segmentId);
-    const index = segments.findIndex((segment) => segment.id === segmentId);
-    const list = listRef.current;
-    list?.scrollToRow({
-      align: "start", // optional
-      behavior: "auto", // optional
-      index: index
-    });
-  }, [onSegmentClick]);
+  const segmentIndexById = useMemo(() => {
+    const map = new Map<string, number>();
+    segments.forEach((s, i) => map.set(s.id, i));
+    return map;
+  }, [segments]);
+
+  const handleToClick = useCallback(
+    (segmentId: string) => {
+      onSegmentClick?.(segmentId);
+      const index = segmentIndexById.get(segmentId) ?? -1;
+      if (index < 0) return;
+      listRef.current?.scrollToRow({
+        align: 'start',
+        behavior: 'auto',
+        index,
+      });
+    },
+    [onSegmentClick, segmentIndexById, listRef]
+  );
 
   const hasLabelledSegment = Boolean(activeSegment?.label);
   const isMetadataDisabled = !activeSegment || !hasLabelledSegment;
-  const isTextSegment = activeSegment?.label === 'TEXT';
-  const metadataContent = activeSegment ? (
-    <div className="px-2 py-3 flex flex-col flex-1 min-h-0 h-full">
-      <div className="overflow-y-auto h-min space-y-6">
-        <div className="relative">
-          <div className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-md ">
-            <div className="font-medium mb-1">{t('outliner.annotation.textPrefix')}</div>
-            <div className="text-gray-800">{activeSegment.text.slice(0, 100)}...</div>
-          </div>
-          {
-            activeSegment.status !== 'checked'&& isTextSegment && (
-              <AISuggestionsBox
-                suggestions={aiSuggestions.aiSuggestions}
-                loading={aiSuggestions.aiLoading}
-                onDetect={aiSuggestions.onAIDetect}
-                onStop={aiSuggestions.onAIStop}
-              />
-            )}
-        </div>
-       
-        {
-         isTextSegment &&
-          <div className="relative flex flex-col gap-4">
-          
-          <TitleField
-            formData={formData}
-            onUpdate={onUpdate}
-            suppliedTitleChecked={suppliedTitleChecked}
-            onSuppliedTitleChange={handleSuppliedTitleChange}
-            disabled={activeSegment.status === 'checked'}
-          />
-          <AuthorField
-            segment={activeSegment}
-            formData={formData}
-            onUpdate={onUpdate}
-            resetForm={resetForm}
-            disabled={activeSegment.status === 'checked'}
-          />
+  
 
-      
-        </div>
-        }
-
-      </div>
-
-      <div className="shrink-0 flex gap-2 bg-white pt-3 mt-2 border-t border-gray-100">
-        {activeSegment.status !== 'checked' ? (
-          <>
-            {isTextSegment &&<Button
-              type="button"
-              className="flex-1"
-              onClick={onSave}
-              variant="default"
-              disabled={
-                !activeSegmentId ||
-                (formData.title.name.trim() === '' && formData.author.name.trim() === '') 
-              }
-            >
-              <Save />{t('outliner.annotation.save')}
-            </Button>}
-            <Button
-              type="button"
-              onClick={onUnknown}
-              variant="outline"
-              className='flex-1'
-              disabled={!activeSegmentId}
-            >
-              <X /> {t('outliner.annotation.notApplicable')}
-            </Button>
-          </>
-        ) : (
-          <Button
-            type="button"
-            onClick={onReset}
-            variant="outline"
-            disabled={!activeSegmentId}
-            className="w-full"
-          >
-            <RotateCcw /> {t('outliner.annotation.reset')}
-          </Button>
-        )}
-      </div>
-      
-      <hr className="shrink-0 mt-3 border-gray-200" />
-
-      {/* <Comments segmentId={activeSegmentId || ''} /> */}
-    </div>
-  ) : (
-    <div className="text-center text-gray-500 py-12">
-      <p>{t('outliner.annotation.noSegmentSelected')}</p>
-      <p className="text-sm mt-2">{t('outliner.annotation.clickSegmentToAnnotate')}</p>
-    </div>
-  );
-
-  const [activeTab, setActiveTab] = useState('outlines');
   const [labelFilter, setLabelFilter] = useState<LabelFilterValue[]>([]);
   const [completionFilter, setCompletionFilter] = useState<CompletionFilterValue>('all');
 
@@ -599,14 +612,50 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
   }, [segments, labelFilter, completionFilter]);
 
   useEffect(() => {
-    if (isMetadataDisabled && activeTab === 'metadata') {
-      setActiveTab('outlines');
+    if (isMetadataDisabled && sidebarActiveTab === 'metadata') {
+      onSidebarActiveTabChange('outlines');
     }
-  }, [isMetadataDisabled, activeTab]);
+  }, [isMetadataDisabled, sidebarActiveTab, onSidebarActiveTabChange]);
+
+  const metadataContextValue = useMemo((): AnnotationMetadataContextValue | null => {
+    if (!activeSegment) return null;
+    return {
+      activeSegment,
+      documentId,
+      isMetadataTabSelected: sidebarActiveTab === 'metadata',
+      aiSuggestionsControls: aiSuggestions,
+      formData,
+      suppliedTitleChecked,
+      activeSegmentId: activeSegment.id,
+      onFormFieldUpdate: handleMetadataFormUpdate,
+      resetForm: resetMetadataForm,
+      onSuppliedTitleChange: handleSuppliedTitleChange,
+      onSave,
+      onNotApplicable: handleNotApplicable,
+      onResetAnnotations: handleAnnotationsReset,
+    };
+  }, [
+    activeSegment,
+    documentId,
+    sidebarActiveTab,
+    aiSuggestions,
+    formData,
+    suppliedTitleChecked,
+    handleMetadataFormUpdate,
+    resetMetadataForm,
+    handleSuppliedTitleChange,
+    onSave,
+    handleNotApplicable,
+    handleAnnotationsReset,
+  ]);
 
   return (
     <div className="h-full min-h-0 w-full bg-white flex flex-col font-monlam-2 border-r-2 border-gray-200">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 overflow-hidden">
+      <Tabs
+        value={sidebarActiveTab}
+        onValueChange={(v) => onSidebarActiveTabChange(v as AnnotationSidebarTab)}
+        className="flex flex-col flex-1 overflow-hidden"
+      >
         <TabsList className="w-full shrink-0 border-b border-gray-200 rounded-none">
           <TabsTrigger value="outlines">{t('outliner.annotation.tabOutlines')}</TabsTrigger>
           <span
@@ -629,6 +678,7 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
               completionFilter={completionFilter}
               onCompletionFilterChange={setCompletionFilter}
             />
+
             <div className=" px-2 py-2">
 
             {filteredSegments.length === 0 ? (
@@ -638,67 +688,31 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
                 </p>
               </div>
             ) : (
-              filteredSegments.map((seg, index) => {
-                const isActive = seg.id === activeSegmentId;
-                return (
-                  <button
-                    key={seg.id}
-                    type="button"
-                    onClick={() => handleToClick(seg.id)}
-                    className={` w-full text-left px-3 py-2.5 rounded-md transition-colors cursor-pointer ${
-                      isActive
-                        ? 'bg-blue-50 border border-blue-300'
-                        : 'hover:bg-gray-50 border border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-start gap-2">
-                      <span className={`shrink-0 text-xs font-medium mt-0.5 w-6 h-6 rounded-full flex items-center justify-center ${
-                        seg.status === 'checked'
-                          ? 'bg-green-600 text-white'
-                          : 'bg-gray-200 text-gray-600'
-                      }`}>
-                        {index + 1}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className={`text-sm leading-snug font-monlam ${
-                          isActive ? 'text-blue-900' : 'text-gray-700'
-                        } ${seg.status === 'checked' ? 'opacity-50' : ''}`}>
-                          { seg.title? seg.title : seg.text.length > 80
-                            ? seg.text.slice(0, 80) + '...'
-                            : seg.text}
-                        </p>
-                        {(seg.label || seg.title || seg.author) && (
-                          <div className="flex flex-wrap gap-2 mt-2 items-center justify-between">
-                            { seg.author ? (
-                              <span
-                                className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-violet-50 border border-violet-200 text-violet-900 text-xs font-semibold"
-                                title={t('outliner.annotation.authorBadge')}
-                              >
-                               <User/> <span> {seg.author}</span>
-                              </span>
-                            ):<div/>}
-                            {seg.label && (
-                              <span
-                                className=" inline-flex items-center space-x-1 px-2 py-0.5 rounded-md bg-slate-50 border border-slate-200 text-slate-700 text-xs"
-                                title={t('outliner.annotation.labelBadge')}
-                              >
-                                {t(segmentLabelI18nKey(seg.label))}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })
+              filteredSegments.map((seg, index) => (
+                <OutlineSegmentRow
+                  key={seg.id}
+                  seg={seg}
+                  displayIndex={index}
+                  isActive={seg.id === activeSegmentId}
+                  onNavigate={handleToClick}
+                />
+              ))
             )}
             </div>
 
           </div>
         </TabsContent>
         <TabsContent value="metadata" className="flex flex-1 flex-col min-h-0 overflow-hidden">
-          {metadataContent}
+          {!activeSegment ? (
+            <div className="text-center text-gray-500 py-12">
+              <p>{t('outliner.annotation.noSegmentSelected')}</p>
+              <p className="text-sm mt-2">{t('outliner.annotation.clickSegmentToAnnotate')}</p>
+            </div>
+          ) : (
+            <AnnotationMetadataProvider value={metadataContextValue!}>
+              <AnnotationMetadataTab />
+            </AnnotationMetadataProvider>
+          )}
         </TabsContent>
       </Tabs>
     </div>

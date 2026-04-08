@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import i18n from '@/i18n/config';
 import { generateTitleAuthor, type GenerateTitleAuthorResponse } from '@/api/outliner';
@@ -36,8 +36,6 @@ export const useAISuggestions = ({
   onUpdate,
   onTitleChange,
   onAuthorChange,
-  onShowTitleDropdown,
-  onShowAuthorDropdown,
   persistAIAnnotations,
 }: UseAISuggestionsOptions) => {
   const queryClient = useQueryClient();
@@ -45,6 +43,12 @@ export const useAISuggestions = ({
   const aiAbortControllerRef = useRef<AbortController | null>(null);
   const persistAIAnnotationsRef = useRef(persistAIAnnotations);
   persistAIAnnotationsRef.current = persistAIAnnotations;
+  const onUpdateRef = useRef(onUpdate);
+  onUpdateRef.current = onUpdate;
+  const onTitleChangeRef = useRef(onTitleChange);
+  onTitleChangeRef.current = onTitleChange;
+  const onAuthorChangeRef = useRef(onAuthorChange);
+  onAuthorChangeRef.current = onAuthorChange;
 
   type AIMutationVars = {
     content: string;
@@ -102,10 +106,10 @@ export const useAISuggestions = ({
       }
 
       if (titleValue) {
-        onTitleChange(titleValue);
+        onTitleChangeRef.current(titleValue);
       }
       if (authorValue) {
-        onAuthorChange(authorValue);
+        onAuthorChangeRef.current(authorValue);
       }
 
       if (docId && !persistFn) {
@@ -188,21 +192,30 @@ export const useAISuggestions = ({
   const handleAISuggestionUse = useCallback(
     (field: 'title' | 'author', value: string) => {
       if (!activeSegmentId) return;
-      onUpdate(activeSegmentId, field, value);
+      void onUpdateRef.current(activeSegmentId, field, value);
       if (field === 'title') {
-        onTitleChange(value);
+        onTitleChangeRef.current(value);
       } else {
-        onAuthorChange(value);
+        onAuthorChangeRef.current(value);
       }
     },
-    [activeSegmentId, onUpdate, onTitleChange, onAuthorChange]
+    [activeSegmentId]
   );
 
-  return {
-    aiSuggestions,
-    aiLoading: mutation.isPending,
-    onAIDetect: handleAIDetect,
-    onAIStop: handleAIStop,
-    onAISuggestionUse: handleAISuggestionUse,
-  };
+  return useMemo(
+    () => ({
+      aiSuggestions,
+      aiLoading: mutation.isPending,
+      onAIDetect: handleAIDetect,
+      onAIStop: handleAIStop,
+      onAISuggestionUse: handleAISuggestionUse,
+    }),
+    [
+      aiSuggestions,
+      mutation.isPending,
+      handleAIDetect,
+      handleAIStop,
+      handleAISuggestionUse,
+    ]
+  );
 };

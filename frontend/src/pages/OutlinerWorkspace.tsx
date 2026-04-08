@@ -10,7 +10,11 @@ import type {
   BubbleMenuState,
   CursorPosition,
 } from '@/components/outliner'
-import { AnnotationSidebar, type AnnotationSidebarRef } from '@/components/outliner/AnnotationSidebar';
+import {
+  AnnotationSidebar,
+  type AnnotationSidebarRef,
+  type AnnotationSidebarTab,
+} from '@/components/outliner/AnnotationSidebar';
 import { Workspace } from '@/components/outliner/Workspace';
 import { OutlinerProvider } from '@/components/outliner/OutlinerContext'
 import {
@@ -159,21 +163,17 @@ const OutlinerWorkspace: React.FC = () => {
   // Get active segment
   const activeSegment = currentSegments.find((seg) => seg.id === activeSegmentId) as TextSegment;
 
-  // Apply pending bubble menu value when segment becomes active
+  // Apply pending bubble menu value after segment becomes active (runs after child form reset in AnnotationSidebar)
   useEffect(() => {
-    if (pendingBubbleMenuValueRef.current && activeSegmentId === pendingBubbleMenuValueRef.current.segmentId) {
-      const { field, text, docSpan } = pendingBubbleMenuValueRef.current;
-
-      // Use requestAnimationFrame to ensure sidebar has updated
-      requestAnimationFrame(() => {
-        if (field === 'title') {
-          annotationSidebarRef.current?.setTitleValueWithoutUpdate(text, docSpan);
-        } else if (field === 'author') {
-          annotationSidebarRef.current?.setAuthorValueWithoutUpdate(text, docSpan);
-        }
-        pendingBubbleMenuValueRef.current = null;
-      });
+    const pending = pendingBubbleMenuValueRef.current;
+    if (!pending || activeSegmentId !== pending.segmentId) return;
+    const { field, text, docSpan } = pending;
+    if (field === 'title') {
+      annotationSidebarRef.current?.setTitleValueWithoutUpdate(text, docSpan);
+    } else if (field === 'author') {
+      annotationSidebarRef.current?.setAuthorValueWithoutUpdate(text, docSpan);
     }
+    pendingBubbleMenuValueRef.current = null;
   }, [activeSegmentId]);
 
   // Handle text selection in workspace
@@ -637,6 +637,8 @@ const OutlinerWorkspace: React.FC = () => {
 
   // Ref for AnnotationSidebar to access its methods
   const annotationSidebarRef = useRef<AnnotationSidebarRef>(null);
+  const [annotationSidebarTab, setAnnotationSidebarTab] =
+    useState<AnnotationSidebarTab>('outlines');
 
   // Handle bubble menu selection
   const handleBubbleMenuSelect = useCallback(
@@ -663,22 +665,21 @@ const OutlinerWorkspace: React.FC = () => {
         }
       }
 
-      pendingBubbleMenuValueRef.current = { field, segmentId, text, docSpan };
+      if (activeSegmentId === segmentId) {
+        pendingBubbleMenuValueRef.current = null;
+        if (field === 'title') {
+          annotationSidebarRef.current?.setTitleValueWithoutUpdate(text, docSpan);
+        } else {
+          annotationSidebarRef.current?.setAuthorValueWithoutUpdate(text, docSpan);
+        }
+      } else {
+        pendingBubbleMenuValueRef.current = { field, segmentId, text, docSpan };
+      }
 
       setSearchParams({ segmentId }, { replace: true });
 
-      if (activeSegmentId === segmentId) {
-        requestAnimationFrame(() => {
-          if (field === 'title') {
-            annotationSidebarRef.current?.setTitleValueWithoutUpdate(text, docSpan);
-          } else if (field === 'author') {
-            annotationSidebarRef.current?.setAuthorValueWithoutUpdate(text, docSpan);
-          }
-          pendingBubbleMenuValueRef.current = null;
-        });
-      }
-
       setBubbleMenuState(null);
+      setAnnotationSidebarTab('metadata');
     },
     [setSearchParams, activeSegmentId, currentSegments]
   );
@@ -816,6 +817,7 @@ const OutlinerWorkspace: React.FC = () => {
           setBubbleMenuState,
           onTextSelection: handleTextSelection,
           onBubbleMenuSelect: handleBubbleMenuSelect,
+         
         }}
       >
         <CursorProvider value={cursorContextValue}>
@@ -888,6 +890,8 @@ const OutlinerWorkspace: React.FC = () => {
                         segments={currentSegments}
                         onSegmentClick={handleSegmentClick}
                         onTitleDraftChange={setSidebarTitleDraft}
+                        sidebarActiveTab={annotationSidebarTab}
+                        onSidebarActiveTabChange={setAnnotationSidebarTab}
                       />
                     </Pane>
                     <Pane minSize={320}>

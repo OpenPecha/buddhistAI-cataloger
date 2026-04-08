@@ -11,10 +11,6 @@ from outliner.models.outliner import OutlinerDocument
 from outliner.controller.outliner import update_document_ai_toc_entries
 from cataloger.controller.ai import (
     generate_title_author,
-    generate_title_from_start,
-    generate_author_from_end,
-    segment_and_create_from_parent,
-    parse_toc_from_text,
 )
 
 router = APIRouter()
@@ -70,29 +66,6 @@ class SegmentCreationResponse(BaseModel):
     segment_ids: List[str] = Field(..., description="List of created segment IDs")
 
 
-@router.post("/parse-toc", response_model=ParseTocResponse)
-async def parse_toc_route(request: ParseTocRequest, db: Session = Depends(get_db)):
-    """
-    Check if the given text is a table of contents; if so, return the list of TOC entries.
-    When document_id is provided, stores entries on the outliner document (or clears them if not a TOC).
-    """
-    result = parse_toc_from_text(request.content, ParseTocResponse)
-    if isinstance(result, ParseTocResponse):
-        parsed = result
-    else:
-        parsed = ParseTocResponse(**result)
-
-    if request.document_id:
-        document = (
-            db.query(OutlinerDocument)
-            .filter(OutlinerDocument.id == request.document_id)
-            .first()
-        )
-        if document:
-            payload = list(parsed.entries) if (parsed.is_toc and parsed.entries) else None
-            update_document_ai_toc_entries(db, request.document_id, payload)
-
-    return parsed
 
 
 @router.post("/generate-title-author", response_model=TitleAuthorResponse)
@@ -110,54 +83,6 @@ async def generate_title_author_route(request: ContentRequest):
     return TitleAuthorResponse(**result)
 
 
-@router.post("/generate-title-from-start", response_model=TitleOnlyResponse)
-async def generate_title_from_start_route(request: ContentRequest):
-    """Extract or suggest title using only the beginning of the text."""
-    result = generate_title_from_start(request.content, TitleOnlyResponse)
-    if isinstance(result, TitleOnlyResponse):
-        return result
-    return TitleOnlyResponse(**result)
 
 
-@router.post("/generate-author-from-end", response_model=AuthorOnlyResponse)
-async def generate_author_from_end_route(request: ContentRequest):
-    """Extract or suggest author using only the end of the text."""
-    result = generate_author_from_end(request.content, AuthorOnlyResponse)
-    if isinstance(result, AuthorOnlyResponse):
-        return result
-    return AuthorOnlyResponse(**result)
 
-
-@router.post("/detect-text-endings", response_model=SegmentCreationResponse)
-async def detect_text_endings_route(
-    request: TextEndingDetectionRequest,
-    db: Session = Depends(get_db)
-):
-    """
-    Detect text endings and create segments from a parent segment.
-    
-    Requires segment_id. Extracts content from the segment's span, performs segmentation
-    (rule-based first, then Gemini AI if needed), validates boundaries, and creates
-    child segments in the database.
-    
-    Returns success response with created segment IDs.
-    """
-    try:
-        segments_created, segment_ids = segment_and_create_from_parent(
-            db=db,
-            segment_id=request.segment_id,
-            content=request.content
-        )
-        
-        return SegmentCreationResponse(
-            message="Segments created successfully",
-            segments_created=segments_created,
-            segment_ids=segment_ids
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error creating segments: {str(e)}"
-        )

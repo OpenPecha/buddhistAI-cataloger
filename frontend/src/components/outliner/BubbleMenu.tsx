@@ -33,7 +33,9 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({ segmentId }) => {
     segmentId,
     menuWidth: 150,
     menuHeight: 120,
-  });
+  }); 
+
+
 
   const onSelect = (field: 'title' | 'author') => {
     onBubbleMenuSelect(field, segmentId, selectedText);
@@ -82,6 +84,8 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({ segmentId }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [menuRef]);
 
+
+ 
   const handleTitleSelect = () => {
     onSelect('title');
     setIsVisible(false)

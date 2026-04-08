@@ -2,30 +2,23 @@ import React, { useRef, useImperativeHandle, forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import type { FormDataType, Title, Author } from '../AnnotationSidebar';
-
-interface TitleFieldProps {
-  formData: FormDataType;
-  onUpdate: (field: 'title' | 'author', value: Title | Author) => void;
-  suppliedTitleChecked: boolean;
-  onSuppliedTitleChange: (checked: boolean) => void;
-  disabled?: boolean;
-}
+import { useAnnotationMetadata } from '../contexts/AnnotationMetadataContext';
 
 export interface TitleFieldRef {
   setValueWithoutUpdate: (value: string) => void;
   getValue: () => string;
 }
 
-
-export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
-  formData,
-  onUpdate,
-  suppliedTitleChecked,
-  onSuppliedTitleChange,
-  disabled = false,
-}, ref) => {
+export const TitleField = forwardRef<TitleFieldRef>(function TitleField(_props, ref) {
   const { t } = useTranslation();
+  const {
+    formData,
+    onFormFieldUpdate: onUpdate,
+    suppliedTitleChecked,
+    onSuppliedTitleChange,
+    activeSegment,
+  } = useAnnotationMetadata();
+  const disabled = activeSegment.status === 'checked';
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   // Allow parent to set/get title value programmatically
@@ -80,3 +73,6 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(({
     </div>
   );
 });
+
+TitleField.displayName = 'TitleField';
+
