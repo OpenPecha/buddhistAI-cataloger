@@ -8,7 +8,6 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   
   const serverUrl = env.VITE_SERVER_URL || 'http://localhost:8000'
-  const openpechaUrl =env.VITE_OPENPECHA_URL || ""
   const bdrcServerUrl = env.VITE_BDRC_BACKEND_URL || 'http://localhost:8000'
   
   return {
@@ -41,12 +40,6 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
           rewrite: (path) => path.replace(/^\/bdrc\/api/, ''),
-        },
-        '/openpecha/api':{
-          target: openpechaUrl,
-          changeOrigin: true,
-          secure: false,
-          rewrite: (path) => path.replace(/^\/openpecha\/api/, ''),
         }
       },
     },

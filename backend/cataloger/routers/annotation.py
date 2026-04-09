@@ -1,16 +1,15 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional, Union, Literal
-import requests
-import os
 from fast_antx.core import transfer
-from dotenv import load_dotenv
 
-load_dotenv(override=True)
+from cataloger.controller.openpecha_api.annotations import (
+    create_annotation_for_instance as openpecha_create_annotation_for_instance,
+    get_annotation as openpecha_get_annotation,
+    update_annotation_body as openpecha_update_annotation_body,
+)
 
 router = APIRouter()
-
-API_ENDPOINT = os.getenv("OPENPECHA_ENDPOINT")
 
 
 class Span(BaseModel):
@@ -124,10 +123,7 @@ class AnnotationResponse(BaseModel):
 @router.get("/{annotation_id}")
 async def get_annotation(annotation_id: str):
     """Get annotation by ID"""
-    response = requests.get(f"{API_ENDPOINT}/annotations/{annotation_id}")
-    if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.text)
-    return response.json()
+    return openpecha_get_annotation(annotation_id)
 
 
 
@@ -135,59 +131,24 @@ async def get_annotation(annotation_id: str):
 @router.put("/{annotation_id}/annotation")
 async def update_annotation(annotation_id: str, annotation: UpdateAnnotation):
     """Update an annotation by ID"""
-    response = requests.put(
-        f"{API_ENDPOINT}/annotations/{annotation_id}/annotation", 
-        json=annotation.dict()
-    )
-    if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.text)
-    return response.json()
+    return openpecha_update_annotation_body(annotation_id, annotation.dict())
 
 @router.post("/{instance_id}/annotation")
 async def create_annotation(instance_id: str, annotation: CreateAnnotation):
     """Create an annotation for a specific instance"""
-    response = requests.post(
-        f"{API_ENDPOINT}/annotations/{instance_id}/annotation", 
-        json=annotation.dict()
-    )
-    if response.status_code != 201:
-        raise HTTPException(status_code=response.status_code, detail=response.text)
-    return response.json()
+    return openpecha_create_annotation_for_instance(instance_id, annotation.dict())
 
 
 
 @router.post("/clean-annotation",  status_code=201)
 async def clean_annotation(request: CleanAnnotationRequest):
-    if not API_ENDPOINT:
-        raise HTTPException(
-            status_code=500, 
-            detail="OPENPECHA_ENDPOINT environment variable is not set"
-        )
-    
+    text_content = request.text.replace("\n", "")
     try:
-        #  function takes text, samplet text
-        annotation_list = []
-        text_content = request.text.replace('\n', '')
-        #  use the annotation from sample text to generate the annotation for the new text 
-        # sample text is the text thats being used to get the line breaks, base text is the text thats being annotated
-        try:
-            annotation_list = generate_clean_annotation(text_content, request.sample_text)
-        except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Error generating clean annotation: {str(e)}"
-            )
-        #  return the annoation list
-        return annotation_list
-    except requests.exceptions.Timeout:
-        raise HTTPException(
-            status_code=504,
-            detail="Request to OpenPecha API timed out after 30 seconds"
-        )
-    except requests.exceptions.RequestException as e:
+        return generate_clean_annotation(text_content, request.sample_text)
+    except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Error connecting to OpenPecha API: {str(e)}"
+            detail=f"Error generating clean annotation: {str(e)}",
         )
 
 

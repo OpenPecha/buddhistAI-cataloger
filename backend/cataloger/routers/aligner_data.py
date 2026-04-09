@@ -1,15 +1,18 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
-import requests
-import os
-from dotenv import load_dotenv
 
-load_dotenv(override=True)
+from cataloger.controller.openpecha_api.annotations import (
+    get_annotation as openpecha_get_annotation,
+)
+from cataloger.controller.openpecha_api.instances import (
+    get_instance as openpecha_get_instance,
+    list_related_instances as openpecha_list_related_instances,
+)
 
 router = APIRouter()
 
-API_ENDPOINT = os.getenv("OPENPECHA_ENDPOINT")
+_INSTANCE_QUERY = {"annotation": "true", "content": "true"}
 
 
 class Span(BaseModel):
@@ -99,171 +102,146 @@ def reconstruct_segments(
 def prepare_data(source_instance_id: str, target_instance_id: str) -> Dict[str, Any]:
     """Prepare data by fetching instances, checking related instances first for alignment,
     then falling back to segmentation annotations if no alignment exists"""
-    if not API_ENDPOINT:
-        raise HTTPException(
-            status_code=500,
-            detail="OPENPECHA_ENDPOINT environment variable is not set"
-        )
-    
     try:
-        # Fetch source instance
-        source_response = requests.get(
-            f"{API_ENDPOINT}/instances/{source_instance_id}",
-            params={"annotation": "true", "content": "true"},
-            timeout=30
+        source_instance = openpecha_get_instance(
+            source_instance_id,
+            query_params=_INSTANCE_QUERY,
+            timeout=30,
         )
-        if source_response.status_code != 200:
-            raise HTTPException(
-                status_code=source_response.status_code,
-                detail=f"Error fetching source instance: {source_response.text}"
-            )
-        source_instance = source_response.json()
-        
-        # Fetch target instance
-        target_response = requests.get(
-            f"{API_ENDPOINT}/instances/{target_instance_id}",
-            params={"annotation": "true", "content": "true"},
-            timeout=30
+    except HTTPException as e:
+        raise HTTPException(
+            status_code=e.status_code,
+            detail=f"Error fetching source instance: {e.detail}",
+        ) from e
+
+    try:
+        target_instance = openpecha_get_instance(
+            target_instance_id,
+            query_params=_INSTANCE_QUERY,
+            timeout=30,
         )
-        if target_response.status_code != 200:
-            raise HTTPException(
-                status_code=target_response.status_code,
-                detail=f"Error fetching target instance: {target_response.text}"
-            )
-        target_instance = target_response.json()
-        
-        source_text = source_instance.get("content", "")
-        target_text = target_instance.get("content", "")
-        
-        has_alignment = False
-        annotation_data = None
-        
-        # Step 1: Check for related instance relationship first
-        # Check if target is in source's related instances (or vice versa)
-        related_response = requests.get(
-            f"{API_ENDPOINT}/instances/{source_instance_id}/related",
-            timeout=30
+    except HTTPException as e:
+        raise HTTPException(
+            status_code=e.status_code,
+            detail=f"Error fetching target instance: {e.detail}",
+        ) from e
+
+    source_text = source_instance.get("content", "")
+    target_text = target_instance.get("content", "")
+
+    has_alignment = False
+    annotation_data = None
+
+    # Step 1: Check for related instance relationship first
+    # Check if target is in source's related instances (or vice versa)
+    try:
+        related_instances = openpecha_list_related_instances(
+            source_instance_id,
+            timeout=30,
         )
-        
-        alignment_ann_id = None
-        if related_response.status_code == 200:
-            related_instances = related_response.json()
-            # Handle both list and dict with results key
-            if isinstance(related_instances, dict) and "results" in related_instances:
-                related_instances = related_instances["results"]
-            
-            # Check if target_instance_id is in related instances and has annotation
-            for related in related_instances:
-                if isinstance(related, dict):
-                    related_id = related.get("instance_id")
-                    if related_id == target_instance_id:
-                        # Found relationship, check for annotation
-                        alignment_ann_id = related.get("annotation")
-                        if alignment_ann_id:
-                            break
-        
-        # Step 2: If no annotation from related check, check alignment_targets field
-        if not alignment_ann_id:
-            alignment_targets = source_instance.get("alignment_targets", [])
-            if isinstance(alignment_targets, list) and target_instance_id in alignment_targets:
-                # Check source annotations for alignment type
-                source_annotations = source_instance.get("annotations", [])
-                for ann in source_annotations:
-                    if ann.get("type") == "alignment":
-                        alignment_ann_id = ann.get("annotation_id")
+    except HTTPException:
+        related_instances = None
+
+    alignment_ann_id = None
+    if related_instances is not None:
+        if isinstance(related_instances, dict) and "results" in related_instances:
+            related_instances = related_instances["results"]
+
+        for related in related_instances:
+            if isinstance(related, dict):
+                related_id = related.get("instance_id")
+                if related_id == target_instance_id:
+                    alignment_ann_id = related.get("annotation")
+                    if alignment_ann_id:
                         break
-        
-        # Step 3: If still no alignment annotation ID, check annotations directly
-        if not alignment_ann_id:
+
+    # Step 2: If no annotation from related check, check alignment_targets field
+    if not alignment_ann_id:
+        alignment_targets = source_instance.get("alignment_targets", [])
+        if isinstance(alignment_targets, list) and target_instance_id in alignment_targets:
             source_annotations = source_instance.get("annotations", [])
             for ann in source_annotations:
                 if ann.get("type") == "alignment":
                     alignment_ann_id = ann.get("annotation_id")
                     break
-        
-        # Step 4: Fetch alignment annotation if found
-        if alignment_ann_id:
-            alignment_response = requests.get(
-                f"{API_ENDPOINT}/annotations/{alignment_ann_id}",
-                timeout=30
-            )
-            if alignment_response.status_code == 200:
-                alignment_data = alignment_response.json()
-                annotation_data = alignment_data.get("data")
-                if (
-                    annotation_data
-                    and isinstance(annotation_data.get("target_annotation"), list)
-                    and isinstance(annotation_data.get("alignment_annotation"), list)
-                    and len(annotation_data.get("target_annotation", [])) > 0
-                    and len(annotation_data.get("alignment_annotation", [])) > 0
-                ):
-                    has_alignment = True
-        
-        # Step 5: Fetch segmentation annotations if no alignment exists
-        source_segmentation_data = None
-        target_segmentation_data = None
-        
-        if not has_alignment:
-            # Find segmentation annotation for source
-            source_annotations = source_instance.get("annotations", [])
-            source_seg_ann_ref = None
-            for ann in source_annotations:
-                if ann.get("type") == "segmentation":
-                    source_seg_ann_ref = ann
-                    break
-            
-            if source_seg_ann_ref:
-                source_seg_ann_id = source_seg_ann_ref.get("annotation_id")
-                if source_seg_ann_id:
-                    source_seg_response = requests.get(
-                        f"{API_ENDPOINT}/annotations/{source_seg_ann_id}",
-                        timeout=30
+
+    # Step 3: If still no alignment annotation ID, check annotations directly
+    if not alignment_ann_id:
+        source_annotations = source_instance.get("annotations", [])
+        for ann in source_annotations:
+            if ann.get("type") == "alignment":
+                alignment_ann_id = ann.get("annotation_id")
+                break
+
+    # Step 4: Fetch alignment annotation if found
+    if alignment_ann_id:
+        try:
+            alignment_data = openpecha_get_annotation(alignment_ann_id, timeout=30)
+        except HTTPException:
+            alignment_data = None
+        if alignment_data is not None:
+            annotation_data = alignment_data.get("data")
+            if (
+                annotation_data
+                and isinstance(annotation_data.get("target_annotation"), list)
+                and isinstance(annotation_data.get("alignment_annotation"), list)
+                and len(annotation_data.get("target_annotation", [])) > 0
+                and len(annotation_data.get("alignment_annotation", [])) > 0
+            ):
+                has_alignment = True
+
+    # Step 5: Fetch segmentation annotations if no alignment exists
+    source_segmentation_data = None
+    target_segmentation_data = None
+
+    if not has_alignment:
+        source_annotations = source_instance.get("annotations", [])
+        source_seg_ann_ref = None
+        for ann in source_annotations:
+            if ann.get("type") == "segmentation":
+                source_seg_ann_ref = ann
+                break
+
+        if source_seg_ann_ref:
+            source_seg_ann_id = source_seg_ann_ref.get("annotation_id")
+            if source_seg_ann_id:
+                try:
+                    source_seg_data = openpecha_get_annotation(
+                        source_seg_ann_id, timeout=30
                     )
-                    if source_seg_response.status_code == 200:
-                        source_seg_data = source_seg_response.json()
-                        source_segmentation_data = source_seg_data.get("data")
-            
-            # Find segmentation annotation for target
-            target_annotations = target_instance.get("annotations", [])
-            target_seg_ann_ref = None
-            for ann in target_annotations:
-                if ann.get("type") == "segmentation":
-                    target_seg_ann_ref = ann
-                    break
-            
-            if target_seg_ann_ref:
-                target_seg_ann_id = target_seg_ann_ref.get("annotation_id")
-                if target_seg_ann_id:
-                    target_seg_response = requests.get(
-                        f"{API_ENDPOINT}/annotations/{target_seg_ann_id}",
-                        timeout=30
+                except HTTPException:
+                    source_seg_data = None
+                if source_seg_data is not None:
+                    source_segmentation_data = source_seg_data.get("data")
+
+        target_annotations = target_instance.get("annotations", [])
+        target_seg_ann_ref = None
+        for ann in target_annotations:
+            if ann.get("type") == "segmentation":
+                target_seg_ann_ref = ann
+                break
+
+        if target_seg_ann_ref:
+            target_seg_ann_id = target_seg_ann_ref.get("annotation_id")
+            if target_seg_ann_id:
+                try:
+                    target_seg_data = openpecha_get_annotation(
+                        target_seg_ann_id, timeout=30
                     )
-                    if target_seg_response.status_code == 200:
-                        target_seg_data = target_seg_response.json()
-                        target_segmentation_data = target_seg_data.get("data")
-        
-        return {
-            "source_text": source_text,
-            "target_text": target_text,
-            "has_alignment": has_alignment,
-            "annotation_id": alignment_ann_id,
-            "annotation": annotation_data,
-            "source_segmentation_data": source_segmentation_data,
-            "target_segmentation_data": target_segmentation_data,
-        }
-    
-    except HTTPException:
-        raise
-    except requests.exceptions.Timeout:
-        raise HTTPException(
-            status_code=504,
-            detail="Request to OpenPecha API timed out after 30 seconds"
-        )
-    except requests.exceptions.RequestException as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error connecting to OpenPecha API: {str(e)}"
-        )
+                except HTTPException:
+                    target_seg_data = None
+                if target_seg_data is not None:
+                    target_segmentation_data = target_seg_data.get("data")
+
+    return {
+        "source_text": source_text,
+        "target_text": target_text,
+        "has_alignment": has_alignment,
+        "annotation_id": alignment_ann_id,
+        "annotation": annotation_data,
+        "source_segmentation_data": source_segmentation_data,
+        "target_segmentation_data": target_segmentation_data,
+    }
 
 
 @router.get("/prepare-alignment-data/{source_instance_id}/{target_instance_id}")
@@ -278,12 +256,6 @@ async def prepare_alignment_data(
     This endpoint replicates the logic from the frontend useEffect hook that loads
     texts from URL parameters and prepares them for display.
     """
-    if not API_ENDPOINT:
-        raise HTTPException(
-            status_code=500,
-            detail="OPENPECHA_ENDPOINT environment variable is not set"
-        )
-    
     try:
         # Prepare data (fetch instances, annotations, etc.)
         prepared_data = prepare_data(source_instance_id, target_instance_id)

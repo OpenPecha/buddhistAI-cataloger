@@ -1,17 +1,12 @@
 from typing_extensions import Literal
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks
 from pydantic import BaseModel
-from dotenv import load_dotenv
-import os
-import requests
 from botok.tokenizers.sentencetokenizer import sentence_tokenizer
 from botok.tokenizers.wordtokenizer import WordTokenizer
 from botok.config import Config
 from pathlib import Path
-load_dotenv(override=True)
 
 router = APIRouter()
-API_ENDPOINT = os.getenv("OPENPECHA_ENDPOINT")
 
 
 class TokenizeRequest(BaseModel):
@@ -21,21 +16,8 @@ class TokenizeRequest(BaseModel):
 
 @router.post("")
 async def tokenize(request: TokenizeRequest):
-    if not API_ENDPOINT:
-        raise HTTPException(
-            status_code=500, 
-            detail="OPENPECHA_ENDPOINT environment variable is not set"
-        )
-    
-    try: 
-        tokenized_text = tokenize_text(request.text, request.type)
-        return tokenized_text
-    except requests.exceptions.Timeout:
-        raise HTTPException(
-            status_code=504,
-            detail="Request to OpenPecha API timed out after 30 seconds"
-        )
-    
+    return tokenize_text(request.text, request.type)
+
 
 config = Config(dialect_name="general", base_path=Path("config_botok"))
 
