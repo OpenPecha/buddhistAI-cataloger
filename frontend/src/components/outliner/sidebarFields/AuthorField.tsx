@@ -39,7 +39,11 @@ function getMatchIndicatorClass(pct: number | null): string {
   return 'bg-red-100 text-red-800 border-red-200';
 }
 
-export const AuthorField = () => {
+export type AuthorFieldProps = {
+  disabled?: boolean;
+};
+
+export const AuthorField = ({ disabled: disabledFromParent }: AuthorFieldProps = {}) => {
   const { t } = useTranslation();
   const {
     activeSegment: segment,
@@ -47,7 +51,7 @@ export const AuthorField = () => {
     onFormFieldUpdate: onUpdate,
     aiSuggestionsControls,
   } = useAnnotationMetadata();
-  const disabled = segment.status === 'checked';
+  const disabled = segment.status === 'checked' || Boolean(disabledFromParent);
   const authorSearch = formData?.author?.name || '';
   const setAuthorSearch = (value: string) => {
     onUpdate('author', { name: value, bdrc_id: '' });

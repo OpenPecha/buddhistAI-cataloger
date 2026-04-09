@@ -1,4 +1,4 @@
-import React, { useRef, useImperativeHandle, forwardRef } from 'react';
+import { useRef, useImperativeHandle, forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,7 +9,14 @@ export interface TitleFieldRef {
   getValue: () => string;
 }
 
-export const TitleField = forwardRef<TitleFieldRef>(function TitleField(_props, ref) {
+export type TitleFieldProps = {
+  disabled?: boolean;
+};
+
+export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(function TitleField(
+  { disabled: disabledFromParent },
+  ref,
+) {
   const { t } = useTranslation();
   const {
     formData,
@@ -19,7 +26,7 @@ export const TitleField = forwardRef<TitleFieldRef>(function TitleField(_props, 
     activeSegment,
     aiSuggestionsControls,
   } = useAnnotationMetadata();
-  const disabled = activeSegment.status === 'checked';
+  const disabled = activeSegment.status === 'checked' || Boolean(disabledFromParent);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   // Allow parent to set/get title value programmatically

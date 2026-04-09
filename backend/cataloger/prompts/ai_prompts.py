@@ -1,7 +1,6 @@
 def get_title_author_prompt(clipped_content: str) -> str:
   
     return f"""Analyze the following text and provide both extracted and suggested values for title and author.
-IMPORTANT: All responses (title, suggested_title, author, suggested_author) must be in the SAME LANGUAGE as the content itself.
 
 Instructions:
 1. Detect the language of the content
@@ -9,7 +8,8 @@ Instructions:
 3. If title is not found, suggest an appropriate title based on the content's theme, subject matter, and context (in the same language as the content)
 4. If author is not found, suggest an author name if there are clues (signatures, colophons, style indicators, etc.), otherwise use null (in the same language as the content)
 5. It give priority to the title found at the beginning of a text
-6. Prioritize Tibetan over Chinese/English/Hindi if multiple title or author are detected
+6. Prioritize Tibetan over Chinese/English/Hindi if multiple title or author are detected 
+7. ((ཤེས|ཅེས)་བྱ་བ)?་བཞུགས་སོ། strip these characters and add a ། or ་། at the end of the title or author
 
 Fields to provide:
 - title: The extracted title if explicitly mentioned, otherwise null
@@ -33,7 +33,7 @@ Instructions:
 2. If a title appears explicitly at the start (headers, ༄༅-style lines, chapter lines), extract it (original language).
 3. If no clear title, suggest a short descriptive title from what you see (same language).
 4. Prefer Tibetan over Chinese/English/Hindi if multiple candidates appear.
-
+5. ((ཤེས|ཅེས)་བྱ་བ)?་བཞུགས་སོ། strip these characters and add a ། or ་། at the end of the title or author
 Fields:
 - title: extracted title if clearly present at the beginning, otherwise null
 - suggested_title: if title is null, a concise suggested title; otherwise null
@@ -54,7 +54,7 @@ Instructions:
 2. Look for colophons, signatures, scribe names, བཀྲ་ཤིས-style closings, or explicit author attribution near the end.
 3. If no author is indicated, suggest an author only if there are strong clues; otherwise null for both.
 4. Prioritize Tibetan over Chinese/English/Hindi if multiple names appear.
-
+5. ((ཤེས|ཅེས)་བྱ་བ)?་བཞུགས་སོ། strip these characters and add a ། or ་། at the end of the title or author
 Fields:
 - author: extracted author if explicitly indicated, otherwise null
 - suggested_author: if author is null and clues justify a guess, a suggested name; otherwise null

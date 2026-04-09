@@ -515,7 +515,7 @@
       "rejected": "Rejected",
       "rejectedMany": "Rejected {{count}} times",
       "failedUpdateLabel": "Failed to update label",
-      "labelField": "Label",
+      "labelField": "Segment type",
       "noLabelPlaceholder": "No label",
       "searchPlaceholder": "Search",
       "searchInSegment": "Search within this segment",
