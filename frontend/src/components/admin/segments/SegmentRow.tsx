@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { useParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { updateSegment, rejectSegment } from '@/api/outliner';
 import { toast } from 'sonner';
-import { FileText, MessageCircle, User } from 'lucide-react';
+import { FileText, Loader2, MessageCircle, User } from 'lucide-react';
 import type { Segment } from '../shared/types';
 import type { TextSegment } from '@/components/outliner/types';
 import type { FormDataType, Title, Author } from '@/components/outliner/AnnotationSidebar';
@@ -69,6 +70,57 @@ function SegmentRow({
     setIsSaving(true);
     statusMutation.mutate('unchecked');
   };
+
+  // --- Inline title / author (admin list) ---
+  const [titleEditOpen, setTitleEditOpen] = useState(false);
+  const [authorEditOpen, setAuthorEditOpen] = useState(false);
+  const [titleInput, setTitleInput] = useState(() => segment.title || '');
+  const [authorInput, setAuthorInput] = useState(() => segment.author || '');
+
+  useEffect(() => {
+    if (!titleEditOpen) setTitleInput(segment.title || '');
+  }, [segment.title, segment.id, titleEditOpen]);
+
+  useEffect(() => {
+    if (!authorEditOpen) setAuthorInput(segment.author || '');
+  }, [segment.author, segment.id, authorEditOpen]);
+
+  const { mutate: patchTitleOrAuthor, isPending: titleAuthorSaving } = useMutation({
+    mutationFn: (payload: { title?: string; author?: string }) => updateSegment(segment.id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] });
+      toast.success('Title / author updated');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to update: ${error.message}`);
+    },
+  });
+
+  const commitTitle = useCallback(() => {
+    const next = titleInput.trim();
+    const prev = (segment.title || '').trim();
+    setTitleEditOpen(false);
+    if (next === prev) return;
+    patchTitleOrAuthor({ title: next });
+  }, [titleInput, segment.title, patchTitleOrAuthor]);
+
+  const commitAuthor = useCallback(() => {
+    const next = authorInput.trim();
+    const prev = (segment.author || '').trim();
+    setAuthorEditOpen(false);
+    if (next === prev) return;
+    patchTitleOrAuthor({ author: next });
+  }, [authorInput, segment.author, patchTitleOrAuthor]);
+
+  const cancelTitleEdit = useCallback(() => {
+    setTitleInput(segment.title || '');
+    setTitleEditOpen(false);
+  }, [segment.title]);
+
+  const cancelAuthorEdit = useCallback(() => {
+    setAuthorInput(segment.author || '');
+    setAuthorEditOpen(false);
+  }, [segment.author]);
 
   // --- BDRC field state ---
   const [formData, setFormData] = useState<FormDataType>({
@@ -208,10 +260,100 @@ function SegmentRow({
           </span>
         </div>
       </TableCell>
-      <TableCell className="px-6 py-4">
-        <div className="text-sm flex flex-col gap-1">
-          <span className="font-medium text-gray-900 flex gap-1 items-center"><FileText className="w-4 h-4"/>{segment.title || "---"}</span>
-          <span className="text-xs text-gray-500 flex gap-1 items-center"><User className="w-4 h-4"/>{segment.author || "---"}</span>
+      <TableCell
+        className="px-6 py-4 align-top"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className=" relative text-sm flex flex-col gap-2 min-w-48 max-w-xs">
+        {titleAuthorSaving && (
+          <div className="absolute top-0 left-0 z-10 w-full h-full bg-white/50 backdrop-blur-sm flex items-center justify-center">
+            <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" aria-hidden />
+            Saving...
+          </div>
+        )}
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-gray-500 flex gap-1 items-center">
+              <FileText className="w-3.5 h-3.5 shrink-0" aria-hidden />
+              
+            {titleEditOpen ? (
+              <Input
+                autoFocus
+                value={titleInput}
+                onChange={(e) => setTitleInput(e.target.value)}
+                onBlur={() => commitTitle()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    commitTitle();
+                  }
+                  if (e.key === 'Escape') {
+                    e.preventDefault();
+                    cancelTitleEdit();
+                  }
+                }}
+                disabled={titleAuthorSaving}
+                className="h-8 text-sm font-monlam"
+              />
+            ) : (
+              <button
+                type="button"
+                className="text-left font-medium text-gray-900 font-monlam rounded px-1 py-0.5 -mx-1 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
+                onClick={() => {
+                  setAuthorEditOpen(false);
+                  setTitleInput(segment.title || '');
+                  setTitleEditOpen(true);
+                }}
+                disabled={titleAuthorSaving}
+                title="Click to edit title"
+              >
+                {segment.title?.trim() ? segment.title : '— Click to set —'}
+              </button>
+            )}
+            </span>
+
+          </div>
+          <div className="flex flex-col gap-1">
+            
+            <span className="text-xs font-medium text-gray-500 flex gap-1 items-center">
+              <User className="w-3.5 h-3.5 shrink-0" aria-hidden />
+             
+            {authorEditOpen ? (
+              <Input
+                autoFocus
+                value={authorInput}
+                onChange={(e) => setAuthorInput(e.target.value)}
+                onBlur={() => commitAuthor()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    commitAuthor();
+                  }
+                  if (e.key === 'Escape') {
+                    e.preventDefault();
+                    cancelAuthorEdit();
+                  }
+                }}
+                disabled={titleAuthorSaving}
+                className="h-8 text-sm font-monlam"
+              />
+            ) : (
+              <button
+                type="button"
+                className="text-left text-gray-700 text-sm font-monlam rounded px-1 py-0.5 -mx-1 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
+                onClick={() => {
+                  setTitleEditOpen(false);
+                  setAuthorInput(segment.author || '');
+                  setAuthorEditOpen(true);
+                }}
+                disabled={titleAuthorSaving}
+                title="Click to edit author"
+              >
+                {segment.author?.trim() ? segment.author : '— Click to set —'}
+              </button>
+            )}
+            </span>
+
+          </div>
         </div>
       </TableCell>
       <TableCell className="px-6 py-4 min-w-[280px]">
