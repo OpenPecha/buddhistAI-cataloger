@@ -643,7 +643,7 @@
       "placeholder": "Enter title"
     },
     "authorField": {
-      "label": "Author",
+      "label": "Author name in the text",
       "matchBdrcTitle": "Match with selected BDRC author",
       "placeholder": "Enter author name",
       "matchedPercent": "{{pct}}% matched"

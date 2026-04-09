@@ -99,8 +99,8 @@ export function AnnotationMetadataTab() {
 
         {isTextSegment ? (
           <div className="relative flex flex-col gap-4">
-            <TitleField disabled={aiSuggestionsControls.aiLoading}/>
-            <AuthorField disabled={aiSuggestionsControls.aiLoading}/>
+            <TitleField />
+            <AuthorField />
           </div>
         ) : null}
       </div>

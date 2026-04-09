@@ -644,7 +644,7 @@
     },
     "unknownTitle": "མཚན་མི་ཤེས།",
     "authorField": {
-      "label": "རྩོམ་པ་པོ།",
+      "label": "དེབ་ནང་གི་རྩོམ་པ་པོའི་མིང་།",
       "matchBdrcTitle": "འདེམས་ཟིན་པའི་BDRC རྩོམ་པ་པོ་དང་མཐུན་པར་བཟོ།",
       "placeholder": "རྩོམ་པ་པོའི་མིང་འབྲི།",
       "matchedPercent": "{{pct}}% མཐུན།"
