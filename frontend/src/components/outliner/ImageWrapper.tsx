@@ -111,57 +111,30 @@ function PageImageRow({
   )
 }
 
-export type VolumeImagePanelProps = {
+export type VolumeImagePanelCoreProps = {
   /** When false, list does not auto-scroll on sync (e.g. tab hidden). */
   panelActive?: boolean
+  /** BDRC volume id (same as document filename in the outliner). */
+  volumeFilename: string | null
+  /**
+   * Document-level character index for BDRC page sync (e.g. caret in outliner,
+   * or segment span_start on admin). Null disables auto mapping until sync is on.
+   */
+  documentCharIndexForImage: number | null
 }
 
-export function VolumeImagePanel({ panelActive = true }: VolumeImagePanelProps) {
+/**
+ * Volume images + sync UI without Outliner context — use from admin or wrap from {@link VolumeImagePanel}.
+ */
+export function VolumeImagePanelCore({
+  panelActive = true,
+  volumeFilename,
+  documentCharIndexForImage,
+}: VolumeImagePanelCoreProps) {
   const { t } = useTranslation()
   const listRef = useListRef(null)
 
-  const { document } = useOutlinerDocument()
-  const volumeId = document?.filename ?? null
-
-  const { segments, activeSegmentId } = useDocument()
-  const { cursorPosition } = useCursor()
-  const { bubbleMenuState } = useSelection()
-
-  const activeSegment = useMemo(
-    () => segments.find((s) => s.id === activeSegmentId) ?? null,
-    [segments, activeSegmentId]
-  )
-
-  /** Document char index from click/caret/selection in the active segment — not segment start alone */
-  const documentCharIndexForImage = useMemo((): number | null => {
-    if (!activeSegmentId || !activeSegment) return null
-    const base = activeSegment.span_start ?? 0
-
-    if (
-      cursorPosition?.segmentId === activeSegmentId &&
-      typeof cursorPosition.offset === 'number'
-    ) {
-      return base + Math.max(0, cursorPosition.offset)
-    }
-
-    if (
-      bubbleMenuState?.segmentId === activeSegmentId &&
-      typeof bubbleMenuState.selectionStartOffset === 'number'
-    ) {
-      return base + Math.max(0, bubbleMenuState.selectionStartOffset)
-    }
-
-    return null
-  }, [
-    activeSegment,
-    activeSegmentId,
-    cursorPosition?.segmentId,
-    cursorPosition?.offset,
-    bubbleMenuState?.segmentId,
-    bubbleMenuState?.selectionStartOffset,
-  ])
-
-  const { volume, isLoading, error } = useBdrcOtVolume(volumeId)
+  const { volume, isLoading, error } = useBdrcOtVolume(volumeFilename)
 
   const pages = (volume as { pages?: BdrcPageLike[] } | null)?.pages
   const volId = (volume as { vol_id?: string } | null)?.vol_id
@@ -185,7 +158,7 @@ export function VolumeImagePanel({ panelActive = true }: VolumeImagePanelProps) 
 
   useEffect(() => {
     setPreviewIndex(0)
-  }, [volumeId])
+  }, [volumeFilename])
 
   useEffect(() => {
     if (pageCount === 0) return
@@ -300,7 +273,7 @@ export function VolumeImagePanel({ panelActive = true }: VolumeImagePanelProps) 
             aria-label={t('outliner.images.pagesScrollAria')}
           >
             <List
-              key={volumeId ?? 'no-volume'}
+              key={volumeFilename ?? 'no-volume'}
               listRef={listRef}
               className="min-h-0 w-full scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 [scrollbar-gutter:stable]"
               style={{ height: '100%' }}
@@ -316,6 +289,62 @@ export function VolumeImagePanel({ panelActive = true }: VolumeImagePanelProps) 
         )}
       </div>
     </div>
+  )
+}
+
+export type VolumeImagePanelProps = {
+  /** When false, list does not auto-scroll on sync (e.g. tab hidden). */
+  panelActive?: boolean
+}
+
+/** Outliner workspace: resolves volume + caret from context and renders {@link VolumeImagePanelCore}. */
+export function VolumeImagePanel({ panelActive = true }: VolumeImagePanelProps) {
+  const { document } = useOutlinerDocument()
+  const volumeFilename = document?.filename ?? null
+
+  const { segments, activeSegmentId } = useDocument()
+  const { cursorPosition } = useCursor()
+  const { bubbleMenuState } = useSelection()
+
+  const activeSegment = useMemo(
+    () => segments.find((s) => s.id === activeSegmentId) ?? null,
+    [segments, activeSegmentId]
+  )
+
+  const documentCharIndexForImage = useMemo((): number | null => {
+    if (!activeSegmentId || !activeSegment) return null
+    const base = activeSegment.span_start ?? 0
+
+    if (
+      cursorPosition?.segmentId === activeSegmentId &&
+      typeof cursorPosition.offset === 'number'
+    ) {
+      return base + Math.max(0, cursorPosition.offset)
+    }
+
+    if (
+      bubbleMenuState?.segmentId === activeSegmentId &&
+      typeof bubbleMenuState.selectionStartOffset === 'number'
+    ) {
+      return base + Math.max(0, bubbleMenuState.selectionStartOffset)
+    }
+
+    return null
+  }, [
+    activeSegment,
+    activeSegmentId,
+    cursorPosition?.segmentId,
+    cursorPosition?.offset,
+    bubbleMenuState?.segmentId,
+    bubbleMenuState?.selectionStartOffset,
+  ])
+
+  return (
+    <VolumeImagePanelCore
+      panelActive={panelActive}
+      volumeFilename={volumeFilename}
+      documentCharIndexForImage={documentCharIndexForImage}
+    />
   )
 }
 
