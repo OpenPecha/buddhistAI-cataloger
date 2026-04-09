@@ -160,7 +160,8 @@ def validate_segment_status_transition(
 
 
 # Tibetan section headings typical of front / paratext (publisher’s note, foreword, etc.).
-# If any appear in segment text, label as FRONT_MATTER (takes precedence over TOC).
+# Matched only against the segment heading (stored title, or first line of body if no title),
+# not the full segment body — avoids false positives when the same phrases appear in prose.
 FRONT_MATTER_PHRASES: Tuple[str, ...] = (
     "དཔེ་སྐྲུན་གསལ་བཤད",
     "སྔོན་གླེང",
@@ -176,10 +177,24 @@ FRONT_MATTER_PHRASES: Tuple[str, ...] = (
 )
 
 
-def infer_segment_label_from_text(segment_text: str) -> SegmentLabels:
-    """Infer segment label from content (front matter phrases, then table of contents, else body)."""
-    if any(phrase in segment_text for phrase in FRONT_MATTER_PHRASES):
+def segment_heading_for_label_inference(title: Optional[str], body_text: str) -> str:
+    """
+    Text used when inferring FRONT_MATTER / TOC for a new segment: stored title if set,
+    otherwise the first line of the segment body (never the full body).
+    """
+    t = (title or "").strip()
+    if t:
+        return t
+    if not body_text:
+        return ""
+    return body_text.split("\n", 1)[0].strip()
+
+
+def infer_segment_label_for_new_segment(title: Optional[str], body_text: str) -> SegmentLabels:
+    """Infer label from heading only (title or first line): front matter phrases, then TOC, else body."""
+    heading = segment_heading_for_label_inference(title, body_text)
+    if any(phrase in heading for phrase in FRONT_MATTER_PHRASES):
         return SegmentLabels.FRONT_MATTER
-    if "དཀར་ཆག" in segment_text:
+    if "དཀར་ཆག" in heading:
         return SegmentLabels.TOC
     return SegmentLabels.TEXT

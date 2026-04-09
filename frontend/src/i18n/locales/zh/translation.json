@@ -524,7 +524,8 @@
       "scrollToBottom": "将片段滚动到底部",
       "nextMatch": "下一处匹配",
       "subsegmentWarning": "请勿在章节、品（bampo）等子层级上再分片段",
-      "analyzingToc": "正在分析目录…"
+      "analyzingToc": "正在分析目录…",
+      "syncingFromServer": "正在与服务器同步…"
     },
     "tocPanel": {
       "sideAria": "图像与目录",
@@ -602,7 +603,9 @@
     },
     "aiDetect": {
       "stop": "停止 AI 建议",
-      "detectTitleAuthor": "检测标题与作者"
+      "detectTitleAuthor": "检测标题与作者",
+      "suggestionLabelTitle": "建议标题",
+      "suggestionLabelAuthor": "建议作者"
     },
     "images": {
       "pageTitle": "第 {{n}} 页",

@@ -524,7 +524,8 @@
       "scrollToBottom": "ཆ་ཤས་འོག་ཏུ་འགུལ།",
       "nextMatch": "འཚོལ་མཐུན་རྗེས་མ།",
       "subsegmentWarning": "ཡི་གེའི་ཆ་ཤས་ཆུང་ཆུང་(ལེའུ། བམ་པོ་སོགས)ལ་ཆ་ཤས་མ་བཟོ།",
-      "analyzingToc": "TOC དབྱེ་ཞིབ་བཞིན་པ..."
+      "analyzingToc": "TOC དབྱེ་ཞིབ་བཞིན་པ...",
+      "syncingFromServer": "ཞབས་ཞུ་ཆས་དང་མཉམ་སྒྲིག་བཞིན་པ..."
     },
     "tocPanel": {
       "sideAria": "པར་དང་མུ་ཤུགས་འགོ་བརྗོད།",
@@ -602,7 +603,9 @@
     },
     "aiDetect": {
       "stop": "AI འོས་སྦྱོར་མཚམས་འཇོག",
-      "detectTitleAuthor": "མཚན་དང་རྩོམ་པ་པོ་ངོས་འཛིན།"
+      "detectTitleAuthor": "མཚན་དང་རྩོམ་པ་པོ་ངོས་འཛིན།",
+      "suggestionLabelTitle": "འོས་སྦྱོར་མཚན།",
+      "suggestionLabelAuthor": "འོས་སྦྱོར་རྩོམ་པ་པོ།"
     },
     "images": {
       "pageTitle": "ཤོག་ངོས་{{n}}",

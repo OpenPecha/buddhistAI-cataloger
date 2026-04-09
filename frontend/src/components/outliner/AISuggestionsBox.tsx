@@ -1,18 +1,14 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
-import { Loader2, Sparkles, Square } from 'lucide-react';
-import type { AISuggestions } from './types';
-
+import { Sparkles } from 'lucide-react';
 interface AISuggestionsBoxProps {
-  suggestions: AISuggestions | null;
   loading: boolean;
   onDetect: () => void;
   onStop: () => void;
 }
 
 export const AISuggestionsBox: React.FC<AISuggestionsBoxProps> = ({
-  suggestions,
   loading,
   onDetect,
   onStop,

@@ -232,16 +232,16 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
         optimisticDocument
       );
 
-      // Set loading state for the segment being split
+      // New segment uses a temp id until refetch; show syncing on that row until server data loads
       setSegmentLoadingStates((prev) => {
         const newMap = new Map(prev);
-        newMap.set(segmentId, true);
+        newMap.set(tempSecondSegmentId, true);
         return newMap;
       });
 
-      return { previousDocument };
+      return { previousDocument, tempSecondSegmentId };
     },
-    onError: (error: Error, variables, context) => {
+    onError: (error: Error, _variables, context) => {
       // Rollback to previous document state
       if (context?.previousDocument) {
         queryClient.setQueryData<OutlinerDocument>(
@@ -250,25 +250,26 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
         );
       }
 
-      // Remove loading state on error
-      setSegmentLoadingStates((prev) => {
-        const newMap = new Map(prev);
-        newMap.delete(variables.segmentId);
-        return newMap;
-      });
+      const tempSecondId = context?.tempSecondSegmentId;
+      if (tempSecondId) {
+        setSegmentLoadingStates((prev) => {
+          const newMap = new Map(prev);
+          newMap.delete(tempSecondId);
+          return newMap;
+        });
+      }
       toast.error(`Failed to split segment: ${error.message}`);
     },
-    onSuccess: (_data, variables) => {
-      // Remove loading state on success
-      setSegmentLoadingStates((prev) => {
-        const newMap = new Map(prev);
-        newMap.delete(variables.segmentId);
-        return newMap;
-      });
-      
-      // Refetch to ensure consistency with server state (in case server made different changes)
-      queryClient.invalidateQueries({ queryKey: ['outliner-document', documentId] });
-      // Also invalidate documents list so Dashboard shows updated segment counts
+    onSuccess: async (_data, _variables, context) => {
+      await queryClient.invalidateQueries({ queryKey: ['outliner-document', documentId] });
+      const tempSecondId = context?.tempSecondSegmentId;
+      if (tempSecondId) {
+        setSegmentLoadingStates((prev) => {
+          const newMap = new Map(prev);
+          newMap.delete(tempSecondId);
+          return newMap;
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ['outliner-documents'] });
       toast.success('Segment split successfully');
     },
@@ -536,7 +537,14 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
         optimisticDocument
       );
 
-      return { previousDocument };
+      const tempSegmentIds = optimisticSegments.map((s) => s.id);
+      setSegmentLoadingStates((prev) => {
+        const newMap = new Map(prev);
+        tempSegmentIds.forEach((id) => newMap.set(id, true));
+        return newMap;
+      });
+
+      return { previousDocument, tempSegmentIds };
     },
     onError: (error: Error, _variables, context) => {
       // Rollback to previous document state
@@ -546,12 +554,26 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
           context.previousDocument
         );
       }
+      const bulkTempIds = context?.tempSegmentIds;
+      if (bulkTempIds?.length) {
+        setSegmentLoadingStates((prev) => {
+          const newMap = new Map(prev);
+          bulkTempIds.forEach((id) => newMap.delete(id));
+          return newMap;
+        });
+      }
       toast.error(`Failed to create segments: ${error.message}`);
     },
-    onSuccess: (data) => {
-      // Refetch to ensure consistency with server state (server IDs will replace temp IDs)
-      queryClient.invalidateQueries({ queryKey: ['outliner-document', documentId] });
-      // Also invalidate documents list so Dashboard shows updated segment counts
+    onSuccess: async (data, _variables, context) => {
+      await queryClient.invalidateQueries({ queryKey: ['outliner-document', documentId] });
+      const bulkTempIds = context?.tempSegmentIds;
+      if (bulkTempIds?.length) {
+        setSegmentLoadingStates((prev) => {
+          const newMap = new Map(prev);
+          bulkTempIds.forEach((id) => newMap.delete(id));
+          return newMap;
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ['outliner-documents'] });
       toast.success(`Created ${data.length} segment${data.length > 1 ? 's' : ''} successfully`);
     },

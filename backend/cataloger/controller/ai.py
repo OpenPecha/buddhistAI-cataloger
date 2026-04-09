@@ -16,11 +16,7 @@ from cataloger.prompts.ai_prompts import (
     get_title_author_prompt,
     get_title_from_start_prompt,
     get_author_from_end_prompt,
-    get_text_boundary_detection_prompt,
-    get_toc_parse_prompt,
 )
-from outliner.controller.outliner import get_segment
-from outliner.utils.outliner_utils import incremental_update_document_progress, get_document_with_cache
 
 load_dotenv(override=True)
 
@@ -96,8 +92,8 @@ def generate_title_author(content: str, response_schema: Any) -> Dict[str, Optio
         )
 
 
-_TITLE_START_MAX_CHARS = 2500
-_AUTHOR_END_MAX_CHARS = 2500
+_TITLE_START_MAX_CHARS = 400
+_AUTHOR_END_MAX_CHARS = 400
 
 
 def generate_title_from_start(content: str, response_schema: Any) -> Any:
@@ -185,116 +181,6 @@ def generate_author_from_end(content: str, response_schema: Any) -> Any:
         raise HTTPException(
             status_code=500,
             detail=f"Error generating author: {str(e)}",
-        )
-
-
-def detect_text_endings_ai(content: str) -> List[int]:
-    """
-    Detect text endings using AI when rule-based detection fails.
-    
-    Args:
-        content: The text content to analyze
-        
-    Returns:
-        List of starting positions
-        
-    Raises:
-        HTTPException: If API key is missing or detection fails
-    """
-    if not GEMINI_API_KEY:
-        raise HTTPException(
-            status_code=500,
-            detail="GEMINI_API_KEY environment variable is not set"
-        )
-    
-    try:
-        # Initialize the client
-        client = genai.Client(api_key=GEMINI_API_KEY)
-        
-        # Get prompt from prompts module
-        prompt = get_text_boundary_detection_prompt(content)
-        
-        # Generate content with structured output
-        response = client.models.generate_content(
-            model=GEMINI_API_MODEL,
-            contents=prompt,
-            config={
-                "response_mime_type": "application/json",
-            }
-        )
-        
-        # Parse the response and calculate starting positions
-        if hasattr(response, 'text') and response.text:
-            try:
-                # Try to parse as JSON object or array
-                response_text = response.text.strip()
-                result = json.loads(response_text)
-                
-                # Handle different response formats
-                if isinstance(result, dict):
-                    # Expected format: {"starting_positions": [0, 456, 1823]}
-                    starting_positions = result.get("starting_positions", [])
-                elif isinstance(result, list):
-                    # Fallback: direct array of positions
-                    starting_positions = result
-                else:
-                    raise ValueError("Unexpected response format")
-                
-                # Validate and process starting positions
-                if not isinstance(starting_positions, list):
-                    raise ValueError("starting_positions is not a list")
-                
-                # Convert to integers and sort
-                starting_positions = sorted([int(pos) for pos in starting_positions if isinstance(pos, (int, str))])
-                
-                # Ensure 0 is included as the first position
-                if not starting_positions or starting_positions[0] != 0:
-                    starting_positions.insert(0, 0)
-                
-                # Remove duplicates and sort
-                starting_positions = sorted(set(starting_positions))
-                
-                # Ensure we don't exceed text length
-                text_length = len(content)
-                starting_positions = [pos for pos in starting_positions if pos <= text_length]
-                
-                return starting_positions
-                
-            except ValueError as e:
-                # Fallback: try to extract positions from text response using regex
-                # Look for array-like patterns in the response
-                array_match = re.search(r'\[[\d\s,]+\]', response.text)
-                if array_match:
-                    starting_positions = json.loads(array_match.group())
-                    starting_positions = sorted([int(pos) for pos in starting_positions])
-                    
-                    # Ensure 0 is included
-                    if not starting_positions or starting_positions[0] != 0:
-                        starting_positions.insert(0, 0)
-                    
-                    # Remove duplicates and validate
-                    starting_positions = sorted(set(starting_positions))
-                    text_length = len(content)
-                    starting_positions = [pos for pos in starting_positions if pos <= text_length]
-                    
-                    return starting_positions
-                else:
-                    raise HTTPException(
-                        status_code=500,
-                        detail=f"Could not parse positions from response: {response.text}. Error: {str(e)}"
-                    )
-        else:
-            raise HTTPException(
-                status_code=500,
-                detail="No response received from the model"
-            )
-            
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error detecting text endings: {str(e)}"
         )
 
 

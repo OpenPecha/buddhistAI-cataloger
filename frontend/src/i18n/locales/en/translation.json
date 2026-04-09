@@ -524,7 +524,8 @@
       "scrollToBottom": "Scroll segment to bottom",
       "nextMatch": "Next search match",
       "subsegmentWarning": "Don't segment on text subsegments (chapters, bampo, etc.)",
-      "analyzingToc": "Analyzing TOC…"
+      "analyzingToc": "Analyzing TOC…",
+      "syncingFromServer": "Syncing with server…"
     },
     "tocPanel": {
       "sideAria": "Images and table of contents",
@@ -602,7 +603,9 @@
     },
     "aiDetect": {
       "stop": "Stop AI suggestion",
-      "detectTitleAuthor": "Detect Title & Author"
+      "detectTitleAuthor": "Detect Title & Author",
+      "suggestionLabelTitle": "Suggested title",
+      "suggestionLabelAuthor": "Suggested author"
     },
     "images": {
       "pageTitle": "Page {{n}}",

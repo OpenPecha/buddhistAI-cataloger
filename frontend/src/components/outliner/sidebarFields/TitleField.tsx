@@ -17,6 +17,7 @@ export const TitleField = forwardRef<TitleFieldRef>(function TitleField(_props, 
     suppliedTitleChecked,
     onSuppliedTitleChange,
     activeSegment,
+    aiSuggestionsControls,
   } = useAnnotationMetadata();
   const disabled = activeSegment.status === 'checked';
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -38,6 +39,15 @@ export const TitleField = forwardRef<TitleFieldRef>(function TitleField(_props, 
   const setTitleSearch = (value: string) => {
     onUpdate('title', { name: value, bdrc_id: formData?.title?.bdrc_id ?? '' });
   };
+
+  const ai = aiSuggestionsControls.aiSuggestions;
+  const titleSuggestion =
+    (ai?.title?.trim() || ai?.suggested_title?.trim() || '').trim();
+  const showTitleSuggestion =
+    !disabled &&
+    !aiSuggestionsControls.aiLoading &&
+    titleSuggestion.length > 0 &&
+    titleSuggestion !== titleSearch.trim();
 
   return (
     <div>
@@ -70,6 +80,18 @@ export const TitleField = forwardRef<TitleFieldRef>(function TitleField(_props, 
         className="w-full"
         disabled={disabled}
       />
+      {showTitleSuggestion ? (
+        <div className="mt-2 flex flex-col gap-1 min-w-0">
+          <span className="text-xs text-gray-500">{t('outliner.aiDetect.suggestionLabelTitle')}</span>
+          <button
+            type="button"
+            className="w-full text-left rounded-lg border border-violet-200 bg-violet-50/90 px-2.5 py-1.5 text-sm font-monlam text-violet-950 shadow-sm transition hover:bg-violet-100 hover:border-violet-300"
+            onClick={() => aiSuggestionsControls.onApplyAISuggestion('title', titleSuggestion)}
+          >
+            {titleSuggestion}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 });

@@ -8,6 +8,8 @@ export interface AISuggestionsControls {
   aiLoading: boolean;
   onAIDetect: () => Promise<void>;
   onAIStop: () => void;
+  /** Apply detected text to the title or author field (sets spans for save). */
+  onApplyAISuggestion: (field: 'title' | 'author', value: string) => void;
 }
 
 export interface AnnotationMetadataContextValue {

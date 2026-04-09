@@ -41,7 +41,12 @@ function getMatchIndicatorClass(pct: number | null): string {
 
 export const AuthorField = () => {
   const { t } = useTranslation();
-  const { activeSegment: segment, formData, onFormFieldUpdate: onUpdate } = useAnnotationMetadata();
+  const {
+    activeSegment: segment,
+    formData,
+    onFormFieldUpdate: onUpdate,
+    aiSuggestionsControls,
+  } = useAnnotationMetadata();
   const disabled = segment.status === 'checked';
   const authorSearch = formData?.author?.name || '';
   const setAuthorSearch = (value: string) => {
@@ -70,6 +75,15 @@ export const AuthorField = () => {
 
   const matchIndicatorClass = getMatchIndicatorClass(matchPercentage);
 
+  const ai = aiSuggestionsControls.aiSuggestions;
+  const authorSuggestion =
+    (ai?.author?.trim() || ai?.suggested_author?.trim() || '').trim();
+  const showAuthorSuggestion =
+    !disabled &&
+    !aiSuggestionsControls.aiLoading &&
+    authorSuggestion.length > 0 &&
+    authorSuggestion !== authorSearch.trim();
+
   return (
     <div>
       <div className="relative flex items-center gap-2">
@@ -92,7 +106,18 @@ export const AuthorField = () => {
         className="w-full"
         disabled={disabled}
       />
-     
+      {showAuthorSuggestion ? (
+        <div className="mt-2 flex flex-col gap-1 min-w-0">
+          <span className="text-xs text-gray-500">{t('outliner.aiDetect.suggestionLabelAuthor')}</span>
+          <button
+            type="button"
+            className="w-full text-left rounded-lg border border-violet-200 bg-violet-50/90 px-2.5 py-1.5 text-sm font-monlam text-violet-950 shadow-sm transition hover:bg-violet-100 hover:border-violet-300"
+            onClick={() => aiSuggestionsControls.onApplyAISuggestion('author', authorSuggestion)}
+          >
+            {authorSuggestion}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 };

@@ -90,7 +90,6 @@ export function AnnotationMetadataTab() {
           </div>
           {activeSegment.status !== 'checked' && isTextSegment && (
             <AISuggestionsBox
-              suggestions={aiSuggestionsControls.aiSuggestions}
               loading={aiSuggestionsControls.aiLoading}
               onDetect={() => void aiSuggestionsControls.onAIDetect()}
               onStop={aiSuggestionsControls.onAIStop}

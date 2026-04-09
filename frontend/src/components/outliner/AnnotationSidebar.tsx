@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import type { TextSegment } from './types';
 import { segmentLabelI18nKey } from './segment-label';
 import { FilterSegments, type LabelFilterValue, type CompletionFilterValue } from './FilterSegments';
-import { useAISuggestions, type PersistAIAnnotationsArgs } from '@/hooks/useAISuggestions';
+import { useAISuggestions } from '@/hooks/useAISuggestions';
+import { findPhraseDocSpan } from '@/utils/findPhraseDocSpan';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
 import type { SegmentUpdateRequest } from '@/api/outliner';
 import { toast } from 'sonner';
@@ -20,8 +21,6 @@ import type { AnnotationSidebarTab } from './annotationSidebarTab';
 
 export type { Title, Author, FormDataType } from './annotationSidebarFormTypes';
 export type { AnnotationSidebarTab } from './annotationSidebarTab';
-
-const noopShowDropdown = () => {};
 
 interface OutlineSegmentRowProps {
   seg: TextSegment;
@@ -200,38 +199,6 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
     onTitleDraftChange?.(initialFormData.title.name);
   }, [activeSegment, title, author, onTitleDraftChange]);
 
-  const persistAIAnnotations = useCallback(
-    async ({
-      titleValue,
-      authorValue,
-      titleSpan,
-      authorSpan,
-    }: PersistAIAnnotationsArgs) => {
-      if (!activeSegmentId) return;
-
-      const patch: SegmentUpdateRequest = {};
-      if (titleValue) {
-        titleSourceSpanRef.current = titleSpan;
-        aiBaselineTitleRef.current = titleValue;
-        patch.title = titleValue;
-        patch.title_span_start = titleSpan?.start ?? null;
-        patch.title_span_end = titleSpan?.end ?? null;
-        patch.updated_title = null;
-      }
-      if (authorValue) {
-        authorSourceSpanRef.current = authorSpan;
-        aiBaselineAuthorRef.current = authorValue;
-        patch.author = authorValue;
-        patch.author_span_start = authorSpan?.start ?? null;
-        patch.author_span_end = authorSpan?.end ?? null;
-        patch.updated_author = null;
-      }
-      if (Object.keys(patch).length === 0) return;
-      await updateSegmentMutation(activeSegmentId, patch);
-    },
-    [activeSegmentId, updateSegmentMutation]
-  );
-
   const handleSuppliedTitleChange = useCallback((checked: boolean) => {
     if (checked) {
       titleSourceSpanRef.current = null;
@@ -283,47 +250,40 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
   }, [activeSegmentId, checkDirtyState]);
 
 
-  // Wrapper for AI suggestions to update formData
-  const handleAIUpdate = useCallback(async (
-    _segmentId: string,
-    field: 'title' | 'author' | 'title_bdrc_id' | 'author_bdrc_id',
-    value: string
-  ) => {
-    if (field === 'title' || field === 'title_bdrc_id') {
-      setFormData(prev => {
-        const updatedTitle: Title = {
-          name: field === 'title' ? value : prev.title?.name || '',
-          bdrc_id: field === 'title_bdrc_id' ? value : prev.title?.bdrc_id || ''
-        };
-        if (field === 'title') {
-          onTitleDraftChange?.(updatedTitle.name);
-        }
-        return { ...prev, title: updatedTitle };
-      });
-    } else if (field === 'author' || field === 'author_bdrc_id') {
-      setFormData(prev => {
-        const updatedAuthor: Author = {
-          id: prev.author?.id ?? '',
-          name: field === 'author' ? value : prev.author?.name || '',
-          bdrc_id: field === 'author_bdrc_id' ? value : prev.author?.bdrc_id || '',
-        };
-        return { ...prev, author: updatedAuthor };
-      });
-    }
-  }, [onTitleDraftChange]);
+  const applyAISuggestion = useCallback(
+    (field: 'title' | 'author', value: string) => {
+      if (!activeSegment?.text || !activeSegmentId) return;
+      const trimmed = value.trim();
+      if (!trimmed) return;
+      const segmentText = activeSegment.text;
+      const segStart = activeSegment.span_start ?? 0;
+      const span = findPhraseDocSpan(segmentText, segStart, trimmed);
+      if (field === 'title') {
+        titleSourceSpanRef.current = span;
+        aiBaselineTitleRef.current = trimmed;
+        handleTitleUpdate(trimmed);
+      } else {
+        authorSourceSpanRef.current = span;
+        aiBaselineAuthorRef.current = trimmed;
+        handleAuthorUpdate(trimmed);
+      }
+    },
+    [activeSegment, activeSegmentId, handleTitleUpdate, handleAuthorUpdate]
+  );
 
-  // AI suggestions hook
+  // AI suggestions hook (detection only; applying suggestions is explicit via onApplyAISuggestion)
   const aiSuggestions = useAISuggestions({
     activeSegment,
     activeSegmentId,
-    documentId,
-    onUpdate: handleAIUpdate,
-    onTitleChange: handleTitleUpdate,
-    onAuthorChange: handleAuthorUpdate,
-    onShowTitleDropdown: noopShowDropdown,
-    onShowAuthorDropdown: noopShowDropdown,
-    persistAIAnnotations,
   });
+
+  const aiSuggestionsControls = useMemo(
+    () => ({
+      ...aiSuggestions,
+      onApplyAISuggestion: applyAISuggestion,
+    }),
+    [aiSuggestions, applyAISuggestion]
+  );
 
   const onSave = useCallback(async () => {
     // Validate that we have an active segment
@@ -631,7 +591,7 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
       activeSegment,
       documentId,
       isMetadataTabSelected: sidebarActiveTab === 'metadata',
-      aiSuggestionsControls: aiSuggestions,
+      aiSuggestionsControls,
       formData,
       suppliedTitleChecked,
       activeSegmentId: activeSegment.id,
@@ -646,7 +606,7 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
     activeSegment,
     documentId,
     sidebarActiveTab,
-    aiSuggestions,
+    aiSuggestionsControls,
     formData,
     suppliedTitleChecked,
     handleMetadataFormUpdate,

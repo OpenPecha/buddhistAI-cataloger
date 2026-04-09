@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState, memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
-import { ChevronDown, ChevronRight, Merge, ChevronUp, AlertCircle } from 'lucide-react'
+import { ChevronDown, ChevronRight, Merge, ChevronUp, AlertCircle, Loader2 } from 'lucide-react'
 import type { TextSegment, SegmentLabel } from './types'
 import { SegmentTextContent } from './SegmentTextContent'
 import { useDocument,useCursor, useActions } from './contexts'
@@ -35,7 +35,8 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
   const { t } = useTranslation()
 
   // Use new contexts
-  const { activeSegmentId, segments } = useDocument()
+  const { activeSegmentId, segments, segmentLoadingStates } = useDocument()
+  const isSegmentSyncing = segmentLoadingStates.get(segment.id) === true
   const { onCursorChange } = useCursor()
   const {
     onSegmentClick,
@@ -75,6 +76,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
 
   return (
     <div className="relative">
+     
       {/* Attach Parent Button and Collapse All Button - only for first segment */}
       {isFirstSegment && (
         <div className="flex items-center justify-between gap-2 my-3">
@@ -133,13 +135,20 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
               : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100'
         }`}
       >
-       
+         {isSegmentSyncing && (
+          <div
+            className="absolute top-0 left-0 z-50 w-full h-full bg-white/50 backdrop-blur-sm flex items-center justify-center"
+            aria-live="polite"
+          >
+            <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" aria-hidden />
+            {t('outliner.segment.syncingFromServer')}
+          </div>
+        )}
     <div className="segment-label-bar flex flex-wrap  items-center gap-2 mb-3 pb-2 border-b border-gray-200">
-        
-        
        <SegmentLabelSelector
           segment={segment}
         />
+       
       
 <div
           className="fixed right-10 flex gap-2 items-center z-10"
