@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
 from pydantic import BaseModel, ConfigDict, Field, model_serializer
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 from datetime import datetime
 from ai_text_outline import extract_toc_indices
@@ -40,6 +40,8 @@ from outliner.controller.outliner import (
     reject_segment as reject_segment_ctrl,
     reject_segments_bulk as reject_segments_bulk_ctrl,
     get_segment_rejection_count as get_segment_rejection_count_ctrl,
+    latest_rejection_reason_for_orm_segment as latest_rejection_reason_for_orm_segment_ctrl,
+    latest_rejection_reviewer_for_orm_segment as latest_rejection_reviewer_for_orm_segment_ctrl,
     get_dashboard_stats as get_dashboard_stats_ctrl,
 )
 from outliner.utils.outliner_utils import get_comments_list
@@ -47,6 +49,40 @@ from outliner.utils.outliner_utils import get_comments_list
 router = APIRouter()
 
 # ==================== Pydantic Schemas ====================
+
+
+class SegmentRejectionReviewer(BaseModel):
+    """Latest reviewer for a rejected segment (document + segment APIs)."""
+
+    user_id: str
+    picture: Optional[str] = None
+    name: Optional[str] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @model_serializer(mode="wrap")
+    def _serialize_omit_nulls(self, serializer):
+        data = serializer(self)
+        if not isinstance(data, dict):
+            return data
+        return {k: v for k, v in data.items() if v is not None}
+
+
+class SegmentRejectionSummary(BaseModel):
+    """Bundled rejection fields for segment payloads (avoid flat rejection_* keys)."""
+
+    count: int = 0
+    reason: Optional[str] = None
+    reviewer: Optional[SegmentRejectionReviewer] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @model_serializer(mode="wrap")
+    def _serialize_omit_nulls(self, serializer):
+        data = serializer(self)
+        if not isinstance(data, dict):
+            return data
+        return {k: v for k, v in data.items() if v is not None}
 
 class SegmentCreate(BaseModel):
     text: Optional[str] = None  # Optional - will be extracted from document if not provided
@@ -118,7 +154,7 @@ class SegmentResponse(BaseModel):
     is_attached: Optional[bool] = None
     status: Optional[str] = None
     label: Optional[str] = None  # FRONT_MATTER, TOC, TEXT, BACK_MATTER
-    rejection_count: int = 0
+    rejection: Optional[SegmentRejectionSummary] = None
     is_supplied_title: Optional[bool] = None
     comments: Optional[List[CommentResponse]] = None
     created_at: datetime
@@ -128,9 +164,14 @@ class SegmentResponse(BaseModel):
         from_attributes = True
 
 
+class RejectSegmentRequest(BaseModel):
+    comment: str = Field(..., min_length=1, description="Required explanation for the annotator")
+
+
 class BulkRejectRequest(BaseModel):
     segment_ids: List[str]
     reviewer_id: Optional[str] = None
+    comment: str = Field(..., min_length=1, description="Required explanation for the annotator (applied to each segment)")
 
 
 class DocumentCreate(BaseModel):
@@ -160,6 +201,8 @@ class SegmentResponseDocument(BaseModel):
     status: Optional[str] = None  # checked, unchecked
     label: Optional[str] = None  # FRONT_MATTER, TOC, TEXT, BACK_MATTER
     is_supplied_title: Optional[bool] = None  # Title supplied by annotator (not from source)
+    # Set in enrich_segment_list_rejection_fields
+    rejection: Optional[SegmentRejectionSummary] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -169,6 +212,11 @@ class SegmentResponseDocument(BaseModel):
         if not isinstance(data, dict):
             return data
         return {k: v for k, v in data.items() if v is not None}
+
+
+def _segment_list_row_to_document_segment(row: dict) -> SegmentResponseDocument:
+    """Build document segment payload; validates nested `rejection` when present."""
+    return SegmentResponseDocument.model_validate(row)
 
 class DocumentResponse(BaseModel):
     id: str
@@ -272,6 +320,27 @@ def _build_segment_response(segment, db: Session = None) -> SegmentResponse:
         rejection_count = get_segment_rejection_count_ctrl(db, segment.id)
     
     label_value = segment.label.name if segment.label is not None else None
+    rejection_reason = latest_rejection_reason_for_orm_segment_ctrl(db, segment)
+    rr = latest_rejection_reviewer_for_orm_segment_ctrl(db, segment)
+    rr_clean: Optional[Dict[str, Any]] = None
+    if rr:
+        rr_clean = dict(rr)
+        if rr_clean.get("picture") is not None:
+            rr_clean["picture"] = str(rr_clean["picture"]).strip() or None
+    rejection: Optional[SegmentRejectionSummary] = None
+    if rejection_count > 0 or segment.status == "rejected":
+        rev = None
+        if segment.status == "rejected" and rr_clean and rr_clean.get("id"):
+            rev = SegmentRejectionReviewer(
+                user_id=rr_clean["id"],
+                picture=rr_clean.get("picture"),
+                name=rr_clean.get("name"),
+            )
+        rejection = SegmentRejectionSummary(
+            count=rejection_count,
+            reason=rejection_reason if segment.status == "rejected" else None,
+            reviewer=rev,
+        )
     return SegmentResponse(
         id=segment.id,
         text=segment.text,
@@ -293,7 +362,7 @@ def _build_segment_response(segment, db: Session = None) -> SegmentResponse:
         is_attached=segment.is_attached,
         status=segment.status,
         label=label_value,
-        rejection_count=rejection_count,
+        rejection=rejection,
         is_supplied_title=segment.is_supplied_title,
         comments=[CommentResponse(**c) for c in comments_list] if comments_list else None,
         created_at=segment.created_at,
@@ -385,8 +454,7 @@ async def get_document(
     # (avoids empty segments in production when session/relationship timing differs)
     if include_segments and hasattr(document, 'segment_list') and document.segment_list:
         segments_resp = [
-            SegmentResponseDocument(**{k: s[k] for k in SegmentResponseDocument.model_fields if k in s})
-            for s in document.segment_list
+            _segment_list_row_to_document_segment(s) for s in document.segment_list
         ]
         return DocumentResponse(
             id=document.id,
@@ -740,11 +808,12 @@ async def assign_volume(user_id: str, db: Session = Depends(get_db)):
 @router.put("/segments/{segment_id}/reject", response_model=SegmentResponse)
 async def reject_segment(
     segment_id: str,
-    reviewer_id: Optional[str] = None,
+    body: RejectSegmentRequest,
+    reviewer_id: Optional[str] = Query(None, description="Optional reviewer user id"),
     db: Session = Depends(get_db)
 ):
     """Reject a checked segment"""
-    segment = reject_segment_ctrl(db, segment_id, reviewer_id)
+    segment = reject_segment_ctrl(db, segment_id, reviewer_id, body.comment)
     return _build_segment_response(segment, db)
 
 
@@ -754,7 +823,9 @@ async def reject_segments_bulk(
     db: Session = Depends(get_db)
 ):
     """Reject multiple checked segments at once"""
-    segments = reject_segments_bulk_ctrl(db, request.segment_ids, request.reviewer_id)
+    segments = reject_segments_bulk_ctrl(
+        db, request.segment_ids, request.reviewer_id, request.comment
+    )
     return [_build_segment_response(seg, db) for seg in segments]
 
 

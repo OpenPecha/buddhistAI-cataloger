@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime
 from fastapi import HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy import func, case, or_, and_, exists
 from sqlalchemy.orm.session import identity
@@ -209,6 +209,181 @@ def list_documents(
     return result
 
 
+def _normalize_rejection_comment(raw: Optional[str]) -> str:
+    if raw is None or not str(raw).strip():
+        raise HTTPException(status_code=422, detail="Rejection comment is required")
+    return str(raw).strip()
+
+
+def _rejection_counts_by_segment_ids(db: Session, segment_ids: List[str]) -> Dict[str, int]:
+    if not segment_ids:
+        return {}
+    rows = (
+        db.query(SegmentRejection.segment_id, func.count(SegmentRejection.id))
+        .filter(SegmentRejection.segment_id.in_(segment_ids))
+        .group_by(SegmentRejection.segment_id)
+        .all()
+    )
+    return {row[0]: row[1] for row in rows}
+
+
+def _latest_rejection_reason_by_segment_ids(db: Session, segment_ids: List[str]) -> Dict[str, Optional[str]]:
+    """Latest rejection_reason per segment (by created_at), for any segment that has rejection rows."""
+    if not segment_ids:
+        return {}
+    rn = (
+        func.row_number()
+        .over(
+            partition_by=SegmentRejection.segment_id,
+            order_by=SegmentRejection.created_at.desc(),
+        )
+        .label("rn")
+    )
+    subq = (
+        db.query(SegmentRejection.segment_id, SegmentRejection.rejection_reason, rn)
+        .filter(SegmentRejection.segment_id.in_(segment_ids))
+        .subquery()
+    )
+    rows = (
+        db.query(subq.c.segment_id, subq.c.rejection_reason).filter(subq.c.rn == 1).all()
+    )
+    return {row[0]: row[1] for row in rows}
+
+
+def _latest_rejection_reviewer_by_segment_ids(
+    db: Session, segment_ids: List[str]
+) -> Dict[str, Optional[Dict[str, Any]]]:
+    """Latest rejection row per segment: join users on segment_rejections.reviewer_id (reviewer's user id)."""
+    if not segment_ids:
+        return {}
+    rn = (
+        func.row_number()
+        .over(
+            partition_by=SegmentRejection.segment_id,
+            order_by=SegmentRejection.created_at.desc(),
+        )
+        .label("rn")
+    )
+    subq = (
+        db.query(SegmentRejection.segment_id, SegmentRejection.reviewer_id, rn)
+        .filter(SegmentRejection.segment_id.in_(segment_ids))
+        .subquery()
+    )
+    latest_sq = (
+        db.query(subq.c.segment_id, subq.c.reviewer_id)
+        .filter(subq.c.rn == 1)
+        .subquery("latest_segment_rejection")
+    )
+    rows = (
+        db.query(
+            latest_sq.c.segment_id,
+            latest_sq.c.reviewer_id,
+            User.name,
+            User.picture,
+        )
+        .outerjoin(User, User.id == latest_sq.c.reviewer_id)
+        .all()
+    )
+    print(rows)
+    out: Dict[str, Optional[Dict[str, Any]]] = {}
+    for segment_id, reviewer_id, name, picture in rows:
+        if not reviewer_id:
+            out[segment_id] = None
+        else:
+            out[segment_id] = {
+                "id": reviewer_id,
+                "name": name,
+                "picture": picture,
+            }
+    return out
+
+
+def enrich_segment_list_rejection_fields(db: Session, segment_list: List[dict]) -> None:
+    """Attach nested `rejection` onto segment_list dicts (annotator document payload)."""
+    if not segment_list:
+        return
+    ids = [s["id"] for s in segment_list]
+    counts = _rejection_counts_by_segment_ids(db, ids)
+    reasons = _latest_rejection_reason_by_segment_ids(db, ids)
+    reviewers = _latest_rejection_reviewer_by_segment_ids(db, ids)
+    for s in segment_list:
+        sid = s["id"]
+        count = counts.get(sid, 0)
+        if count == 0 and s.get("status") != "rejected":
+            s["rejection"] = None
+            continue
+        reason = None
+        reviewer_payload = None
+        if s.get("status") == "rejected":
+            reason = reasons.get(sid)
+        rr = reviewers.get(sid)
+        if rr and rr.get("id"):
+            p = rr.get("picture")
+            if p is not None:
+                p = str(p).strip() or None
+            reviewer_payload = {
+                "user_id": rr["id"],
+                "picture": p,
+                "name": rr.get("name"),
+            }
+        s["rejection"] = {
+            "count": count,
+            "reason": reason,
+            "reviewer": reviewer_payload,
+        }
+
+
+def latest_rejection_reason_for_orm_segment(
+    db: Optional[Session], segment: OutlinerSegment
+) -> Optional[str]:
+    """Reason from the most recent rejection row, only meaningful when status is rejected."""
+    if segment.status != "rejected":
+        return None
+    rel = getattr(segment, "rejections", None)
+    if rel:
+        latest = max(rel, key=lambda r: r.created_at)
+        return latest.rejection_reason
+    if db is None:
+        return None
+    row = (
+        db.query(SegmentRejection)
+        .filter(SegmentRejection.segment_id == segment.id)
+        .order_by(SegmentRejection.created_at.desc())
+        .first()
+    )
+    return row.rejection_reason if row else None
+
+
+def latest_rejection_reviewer_for_orm_segment(
+    db: Optional[Session], segment: OutlinerSegment
+) -> Optional[Dict[str, Any]]:
+    """Reviewer profile from users via latest segment_rejections.reviewer_id → users.id."""
+    if segment.status != "rejected":
+        return None
+    if db is not None:
+        row = (
+            db.query(SegmentRejection.reviewer_id, User.name, User.picture)
+            .outerjoin(User, User.id == SegmentRejection.reviewer_id)
+            .filter(SegmentRejection.segment_id == segment.id)
+            .order_by(SegmentRejection.created_at.desc())
+            .first()
+        )
+        if not row:
+            return None
+        reviewer_id, name, picture = row[0], row[1], row[2]
+        if not reviewer_id:
+            return None
+        return {"id": reviewer_id, "name": name, "picture": picture}
+    rel = getattr(segment, "rejections", None)
+    if not rel:
+        return None
+    latest = max(rel, key=lambda r: r.created_at)
+    rid = latest.reviewer_id
+    if not rid:
+        return None
+    return {"id": rid, "name": None, "picture": None}
+
+
 def get_document(
     db: Session,
     document_id: str,
@@ -252,6 +427,7 @@ def get_document(
             d['label'] = segment.label.name if segment.label else None
             return d
         document.segment_list = [_segment_to_dict(segment) for segment in segments]
+        enrich_segment_list_rejection_fields(db, document.segment_list)
 
     return document
 
@@ -683,15 +859,24 @@ def create_segments_bulk(
 
 def list_segments(db: Session, document_id: str) -> List[OutlinerSegment]:
     """Get all segments for a document"""
-    segments = db.query(OutlinerSegment).filter(
-        OutlinerSegment.document_id == document_id
-    ).order_by(OutlinerSegment.segment_index).all()
+    segments = (
+        db.query(OutlinerSegment)
+        .options(joinedload(OutlinerSegment.rejections))
+        .filter(OutlinerSegment.document_id == document_id)
+        .order_by(OutlinerSegment.segment_index)
+        .all()
+    )
     return segments
 
 
 def get_segment(db: Session, segment_id: str) -> OutlinerSegment:
     """Get a single segment by ID"""
-    segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
+    segment = (
+        db.query(OutlinerSegment)
+        .options(joinedload(OutlinerSegment.rejections))
+        .filter(OutlinerSegment.id == segment_id)
+        .first()
+    )
     if not segment:
         raise HTTPException(status_code=404, detail="Segment not found")
     return segment
@@ -1419,7 +1604,8 @@ def delete_segment_comment(
 def reject_segment(
     db: Session,
     segment_id: str,
-    reviewer_id: Optional[str] = None
+    reviewer_id: Optional[str] = None,
+    rejection_reason: Optional[str] = None,
 ) -> OutlinerSegment:
     """Reject a checked segment and record the rejection event"""
     segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
@@ -1430,6 +1616,7 @@ def reject_segment(
     if not is_valid:
         raise HTTPException(status_code=422, detail=error_msg)
     
+    reason = _normalize_rejection_comment(rejection_reason)
     document = db.query(OutlinerDocument).filter(OutlinerDocument.id == segment.document_id).first()
     annotator_id = document.user_id if document else None
     
@@ -1438,6 +1625,7 @@ def reject_segment(
         segment_id=segment_id,
         user_id=annotator_id,
         reviewer_id=reviewer_id,
+        rejection_reason=reason,
     )
     db.add(rejection)
     
@@ -1452,12 +1640,14 @@ def reject_segment(
 def reject_segments_bulk(
     db: Session,
     segment_ids: List[str],
-    reviewer_id: Optional[str] = None
+    reviewer_id: Optional[str] = None,
+    rejection_reason: Optional[str] = None,
 ) -> List[OutlinerSegment]:
     """Reject multiple checked segments at once"""
     if not segment_ids:
         raise HTTPException(status_code=400, detail="segment_ids is required")
     
+    reason = _normalize_rejection_comment(rejection_reason)
     segments = db.query(OutlinerSegment).filter(
         OutlinerSegment.id.in_(segment_ids)
     ).all()
@@ -1480,6 +1670,7 @@ def reject_segments_bulk(
             segment_id=segment.id,
             user_id=doc_user_map.get(segment.document_id),
             reviewer_id=reviewer_id,
+            rejection_reason=reason,
         )
         db.add(rejection)
         segment.status = "rejected"

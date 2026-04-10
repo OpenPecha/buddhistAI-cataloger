@@ -23,6 +23,18 @@ import { findAllOccurrences } from '@/features/outliner'
 /** Hoisted: avoid recreating array each render (see js-hoist-regexp / stable references). */
 const BONPO_TITLE_PATTERNS = ['་པོབམ', 'ལེའུ', 'བམཔོ', 'བམ་པོ་', 'ལེའུ་', 'བམ པོ'] as const
 
+function rejectionReviewerInitials(name?: string | null): string {
+  const n = name?.trim()
+  if (!n) return '?'
+  const parts = n.split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) {
+    const a = parts[0][0]
+    const b = parts.at(-1)?.[0]
+    if (a && b) return (a + b).toUpperCase()
+  }
+  return n.slice(0, 2).toUpperCase()
+}
+
 interface SegmentItemProps {
   segment: TextSegment
   index: number
@@ -51,6 +63,8 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
 
   const isChecked = segment.status === 'checked' || segment.status === 'approved'
   const isRejected = segment.status === 'rejected'
+  const rejectionReviewerPicture =
+    segment.rejection?.reviewer?.picture?.trim() || ''
   const isFirstSegment = index === 0
   const isAttached = isFirstSegment && (segment.is_attached ?? false)
   const isActive = segment.id === activeSegmentId
@@ -163,6 +177,46 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
         </div>
 
         </div>
+
+        {isRejected && segment.rejection?.reason?.trim() ? (
+          <div
+            className="mb-3 flex gap-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {segment.rejection?.reviewer || rejectionReviewerPicture ? (
+              <div
+                className="shrink-0 pt-0.5"
+                title={
+                  segment.rejection?.reviewer?.name?.trim() ||
+                  t('outliner.segment.reviewerRejectionNote')
+                }
+              >
+                {rejectionReviewerPicture ? (
+                  <img
+                    src={rejectionReviewerPicture}
+                    title={segment.rejection?.reviewer?.name?.trim()}
+                    alt=""
+                    className="h-9 w-9 rounded-full object-cover ring-2 ring-red-200"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-red-200 text-xs font-semibold uppercase text-red-900 ring-2 ring-red-200"
+                    aria-hidden
+                  >
+                    {rejectionReviewerInitials(segment.rejection?.reviewer?.name)}
+                  </div>
+                )}
+              </div>
+            ) : null}
+            <div className="min-w-0 flex-1">
+              <span className="font-semibold text-red-800 animate-pulse">
+                {t('outliner.segment.reviewerRejectionNote')}
+              </span>
+              <p className="mt-1 whitespace-pre-wrap font-medium">{segment.rejection.reason}</p>
+            </div>
+          </div>
+        ) : null}
       
         {activeSegmentId === segment.id && index > 0 && (
           <button
@@ -204,13 +258,13 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
               <span
                 className="text-[10px] font-semibold text-red-600"
                 title={
-                  (segment.rejection_count ?? 0) > 1
-                    ? t('outliner.segment.rejectedMany', { count: segment.rejection_count ?? 0 })
+                  (segment.rejection?.count ?? 0) > 1
+                    ? t('outliner.segment.rejectedMany', { count: segment.rejection?.count ?? 0 })
                     : t('outliner.segment.rejected')
                 }
               >
-                {(segment.rejection_count ?? 0) > 1
-                  ? `${t('outliner.segment.rejected')} (${segment.rejection_count}x)`
+                {(segment.rejection?.count ?? 0) > 1
+                  ? `${t('outliner.segment.rejected')} (${segment.rejection?.count ?? 0}x)`
                   : t('outliner.segment.rejected')}
               </span>
             )}

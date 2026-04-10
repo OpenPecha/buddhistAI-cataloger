@@ -51,6 +51,20 @@ export interface OutlinerDocumentListItem {
 
 export type SegmentLabel = 'FRONT_MATTER' | 'TOC' | 'TEXT' | 'BACK_MATTER';
 
+/** Latest reviewer on a segment rejection (from users table). */
+export interface SegmentRejectionReviewer {
+  user_id: string;
+  name?: string | null;
+  picture?: string | null;
+}
+
+/** Bundled rejection info on segment payloads (document GET + segment CRUD). */
+export interface SegmentRejection {
+  count: number;
+  reason?: string | null;
+  reviewer?: SegmentRejectionReviewer | null;
+}
+
 export interface OutlinerSegment {
   id: string;
   text: string;
@@ -72,7 +86,7 @@ export interface OutlinerSegment {
   is_attached?: boolean | null;
   status?: OutlineSegmentStatus | null;
   label?: SegmentLabel | null;
-  rejection_count?: number;
+  rejection?: SegmentRejection | null;
   is_supplied_title?: boolean | null;
   created_at: string;
   updated_at: string;
@@ -489,6 +503,7 @@ export const submitDocumentToBdrcInReview = async (
 
 export const rejectSegment = async (
   segmentId: string,
+  comment: string,
   reviewerId?: string
 ): Promise<OutlinerSegment> => {
   const params = new URLSearchParams();
@@ -498,18 +513,20 @@ export const rejectSegment = async (
   const response = await fetch(url, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ comment }),
   });
   return handleApiResponse(response);
 };
 
 export const rejectSegmentsBulk = async (
   segmentIds: string[],
+  comment: string,
   reviewerId?: string
 ): Promise<OutlinerSegment[]> => {
   const response = await fetch(`${API_URL}/outliner/segments/bulk-reject`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ segment_ids: segmentIds, reviewer_id: reviewerId }),
+    body: JSON.stringify({ segment_ids: segmentIds, reviewer_id: reviewerId, comment }),
   });
   return handleApiResponse(response);
 };
@@ -691,7 +708,7 @@ export const outlinerSegmentToTextSegment = (segment: OutlinerSegment): TextSegm
     is_attached: segment.is_attached ?? undefined,
     status: segment.status || undefined,
     label: segment.label ?? undefined,
-    rejection_count: segment.rejection_count ?? 0,
+    rejection: segment.rejection ?? undefined,
     is_supplied_title: segment.is_supplied_title ?? undefined,
     comments: segment.comments,
   };

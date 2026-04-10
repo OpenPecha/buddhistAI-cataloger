@@ -1,12 +1,21 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { TableCell, TableRow } from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useUser } from '@/hooks/useUser';
 import { updateSegment, rejectSegment } from '@/api/outliner';
 import { toast } from 'sonner';
-import { FileText, Loader2, MessageCircle, User } from 'lucide-react';
+import { ChevronDown, ChevronRight, FileText, Loader2, MessageCircle, User } from 'lucide-react';
 import type { Segment } from '../shared/types';
 import type { TextSegment } from '@/components/outliner/types';
 import type { FormDataType, Title, Author } from '@/components/outliner/AnnotationSidebar';
@@ -17,6 +26,8 @@ interface SegmentRowProps {
   readonly isExpanded: boolean;
   readonly onToggleExpansion: (segmentId: string) => void;
   readonly documentFilename?: string | null;
+  /** 1-based index in the visible list (matches annotator workspace segment number). */
+  readonly listIndex?: number;
 }
 
 function SegmentRow({
@@ -24,31 +35,40 @@ function SegmentRow({
   isExpanded,
   onToggleExpansion,
   documentFilename,
+  listIndex,
 }: SegmentRowProps) {
   const { documentId } = useParams<{ documentId: string }>();
   const queryClient = useQueryClient();
+  const { user: reviewerAccount, isLoading: reviewerAccountLoading } = useUser();
   const [isSaving, setIsSaving] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectComment, setRejectComment] = useState('');
 
   const statusMutation = useMutation({
-    mutationFn: (newStatus: 'approved' | 'unchecked') =>
+    mutationFn: (newStatus: 'approved' | 'unchecked' | 'checked') =>
       updateSegment(segment.id, { status: newStatus }),
     onSuccess: (_data, newStatus) => {
       queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] });
-      toast.success(newStatus === 'approved' ? 'Segment approved' : 'Segment reset');
+      if (newStatus === 'approved') toast.success('Segment approved');
+      else if (newStatus === 'checked') toast.success('Segment marked done again');
+      else toast.success('Segment reset');
     },
     onError: (error: Error, newStatus) => {
-      toast.error(
-        `Failed to ${newStatus === 'approved' ? 'approve' : 'reset'} segment: ${error.message}`
-      );
+      const action =
+        newStatus === 'approved' ? 'approve' : newStatus === 'checked' ? 'update' : 'reset';
+      toast.error(`Failed to ${action} segment: ${error.message}`);
     },
     onSettled: () => setIsSaving(false),
   });
 
   const rejectMutation = useMutation({
-    mutationFn: () => rejectSegment(segment.id),
+    mutationFn: (comment: string) =>
+      rejectSegment(segment.id, comment, reviewerAccount?.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] });
       toast.success('Segment rejected');
+      setRejectDialogOpen(false);
+      setRejectComment('');
     },
     onError: (error: Error) => {
       toast.error(`Failed to reject segment: ${error.message}`);
@@ -61,14 +81,32 @@ function SegmentRow({
     statusMutation.mutate('approved');
   };
 
-  const handleReject = () => {
+  const handleConfirmReject = () => {
+    const trimmed = rejectComment.trim();
+    if (!trimmed) {
+      toast.error('Please enter a comment explaining the rejection');
+      return;
+    }
+    if (!reviewerAccount?.id) {
+      toast.error(
+        reviewerAccountLoading
+          ? 'Loading your account… try again in a moment.'
+          : 'Your user profile is not loaded; refresh the page and try again.'
+      );
+      return;
+    }
     setIsSaving(true);
-    rejectMutation.mutate();
+    rejectMutation.mutate(trimmed);
   };
 
   const handleReset = () => {
     setIsSaving(true);
     statusMutation.mutate('unchecked');
+  };
+
+  const handleUndoReject = () => {
+    setIsSaving(true);
+    statusMutation.mutate('checked');
   };
 
   // --- Inline title / author (admin list) ---
@@ -180,6 +218,14 @@ function SegmentRow({
     });
   }, [segment.title, segment.author, segment.title_bdrc_id, segment.author_bdrc_id]);
 
+  const toggleCollapse = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onToggleExpansion(segment.id);
+    },
+    [onToggleExpansion, segment.id]
+  );
+
   const segmentAsTextSegment = useMemo<TextSegment>(() => ({
     id: segment.id,
     text: segment.text,
@@ -197,222 +243,289 @@ function SegmentRow({
     author_bdrc_id: segment.author_bdrc_id ?? undefined,
     status: segment.status,
     comments: segment.comments ?? [],
+    rejection: segment.rejection ?? undefined,
   }), [segment]);
 
 
 
 
+  const isRejected = segment.status === 'rejected';
+
   return (
-    <React.Fragment>
-    <TableRow
-      className="hover:bg-gray-50 cursor-pointer max-w-full overflow-auto"
+    <div
+      className={`rounded-lg border-2 p-4 transition-colors ${
+        isRejected
+          ? 'border-red-400 bg-red-50'
+          : segment.status === 'approved'
+            ? 'border-blue-300 bg-blue-50/40'
+            : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100/80'
+      }`}
     >
-      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-        {segment.comments && segment.comments.length > 0 && (
-          <span className="inline-flex rounded-full items-center gap-1 bg-gray-100 text-gray-800 px-2 py-1 text-xs font-semibold">
-            <MessageCircle className="w-4 h-4" /> {segment.comments.length}        </span>
-       )}
-        {segment.status === 'approved' ? (
-          <span
-            className="inline-block rounded-full bg-blue-100 text-blue-800 px-2 py-1 text-xs font-semibold"
-            title="Segment approved"
+      <div className="flex items-start gap-3">
+        <div className="shrink-0 flex flex-col items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleCollapse}
+            className="p-1 rounded hover:bg-gray-200 transition-colors"
+            aria-label={isExpanded ? 'Collapse segment' : 'Expand segment'}
           >
-            Approved
-          </span>
-        ) : segment.status === 'rejected' ? (
-          <span
-            className="inline-block rounded-full bg-red-100 text-red-800 px-2 py-1 text-xs font-semibold"
-            title="Segment rejected"
-          >
-            Rejected{(segment.rejection_count ?? 0) > 1 ? ` (${segment.rejection_count}x)` : ''}
-          </span>
-        ) : (
-          <span
-            className={
-              segment.status === 'checked'
-                ? 'inline-block rounded-full bg-green-100 text-green-800 px-2 py-1 text-xs font-semibold'
-                : 'inline-block rounded-full bg-yellow-100 text-yellow-800 px-2 py-1 text-xs font-semibold'
-            }
-            title={
-              segment.status === 'checked'
-                ? 'Segment done'
-                : 'Segment in progress'
-            }
-          >
-            {segment.status === 'checked' ? 'Done' : 'Under Process'}
-          </span>
-        )}
-      </TableCell>
-      <TableCell className="px-6 py-4 max-w-xs">
-        <div
-          className="text-sm text-gray-900 cursor-pointer hover:text-blue-600"
-          onClick={(e) =>{
-            e.stopPropagation();
-            onToggleExpansion(segment.id)
-          }
-          } 
-        >
-          <span className="truncate block font-monlam">
-            {segment.text.substring(0, 100)}...
-          </span>
-          <span className="text-xs text-blue-500 mt-1">
-            {isExpanded ? 'Click to collapse' : 'Click to expand'}
-          </span>
-        </div>
-      </TableCell>
-      <TableCell
-        className="px-6 py-4 align-top"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className=" relative text-sm flex flex-col gap-2 min-w-48 max-w-xs">
-        {titleAuthorSaving && (
-          <div className="absolute top-0 left-0 z-10 w-full h-full bg-white/50 backdrop-blur-sm flex items-center justify-center">
-            <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" aria-hidden />
-            Saving...
-          </div>
-        )}
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-gray-500 flex gap-1 items-center">
-              <FileText className="w-3.5 h-3.5 shrink-0" aria-hidden />
-              
-            {titleEditOpen ? (
-              <Input
-                autoFocus
-                value={titleInput}
-                onChange={(e) => setTitleInput(e.target.value)}
-                onBlur={() => commitTitle()}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    commitTitle();
-                  }
-                  if (e.key === 'Escape') {
-                    e.preventDefault();
-                    cancelTitleEdit();
-                  }
-                }}
-                disabled={titleAuthorSaving}
-                className="h-8 text-sm font-monlam"
-              />
+            {isExpanded ? (
+              <ChevronDown className="w-4 h-4 text-gray-600" aria-hidden />
             ) : (
-              <button
-                type="button"
-                className="text-left font-medium text-gray-900 font-monlam rounded px-1 py-0.5 -mx-1 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
-                onClick={() => {
-                  setAuthorEditOpen(false);
-                  setTitleInput(segment.title || '');
-                  setTitleEditOpen(true);
-                }}
-                disabled={titleAuthorSaving}
-                title="Click to edit title"
-              >
-                {segment.title?.trim() ? segment.title : '— Click to set —'}
-              </button>
+              <ChevronRight className="w-4 h-4 text-gray-600" aria-hidden />
             )}
-            </span>
-
-          </div>
-          <div className="flex flex-col gap-1">
-            
-            <span className="text-xs font-medium text-gray-500 flex gap-1 items-center">
-              <User className="w-3.5 h-3.5 shrink-0" aria-hidden />
-             
-            {authorEditOpen ? (
-              <Input
-                autoFocus
-                value={authorInput}
-                onChange={(e) => setAuthorInput(e.target.value)}
-                onBlur={() => commitAuthor()}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    commitAuthor();
-                  }
-                  if (e.key === 'Escape') {
-                    e.preventDefault();
-                    cancelAuthorEdit();
-                  }
-                }}
-                disabled={titleAuthorSaving}
-                className="h-8 text-sm font-monlam"
-              />
-            ) : (
-              <button
-                type="button"
-                className="text-left text-gray-700 text-sm font-monlam rounded px-1 py-0.5 -mx-1 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
-                onClick={() => {
-                  setTitleEditOpen(false);
-                  setAuthorInput(segment.author || '');
-                  setAuthorEditOpen(true);
-                }}
-                disabled={titleAuthorSaving}
-                title="Click to edit author"
-              >
-                {segment.author?.trim() ? segment.author : '— Click to set —'}
-              </button>
-            )}
-            </span>
-
-          </div>
+          </button>
+          {listIndex != null && (
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                segment.status === 'rejected'
+                  ? 'bg-red-500 text-white'
+                  : segment.status === 'approved'
+                    ? 'bg-blue-600 text-white'
+                    : segment.status === 'checked'
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-200 text-gray-600'
+              }`}
+            >
+              {listIndex}
+            </div>
+          )}
         </div>
-      </TableCell>
-      <TableCell className="px-6 py-4 min-w-[280px]">
-        <BDRCField
-          segment={segmentAsTextSegment}
-          formData={formData}
-          onUpdate={handleBdrcUpdate}
-          resetForm={resetBdrcForm}
-          disabled={segment.status === 'approved'}
-          volumeId={documentFilename ?? undefined}
-          annotatorAuthorName={formData.author.name}
-        />
-      </TableCell>
-    
-      <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-        {segment.status === 'checked' && (
-          <div className="flex gap-2">
-            <Button
-              size="xs"
-              onClick={handleSave}
-              disabled={isSaving}
-              variant="outline"
-            >
-              {isSaving ? 'Saving...' : 'Approve'}
-            </Button>
-            <Button
-              size="xs"
-              onClick={handleReject}
-              disabled={isSaving}
-              variant="ghost"
-              className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
-            >
-              Reject
-            </Button>
+
+        <div className="flex-1 min-w-0 space-y-3">
+          <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-gray-200">
+            {segment.comments && segment.comments.length > 0 && (
+              <span className="inline-flex rounded-full items-center gap-1 bg-gray-100 text-gray-800 px-2 py-1 text-xs font-semibold">
+                <MessageCircle className="w-4 h-4" aria-hidden />
+                {segment.comments.length}
+              </span>
+            )}
+            {segment.status === 'approved' ? (
+              <span
+                className="inline-block rounded-full bg-blue-100 text-blue-800 px-2 py-1 text-xs font-semibold"
+                title="Segment approved"
+              >
+                Approved
+              </span>
+            ) : segment.status === 'rejected' ? (
+              <span
+                className="inline-block rounded-full bg-red-100 text-red-800 px-2 py-1 text-xs font-semibold"
+                title="Segment rejected"
+              >
+                Rejected
+                {(segment.rejection?.count ?? 0) > 1 ? ` (${segment.rejection?.count ?? 0}x)` : ''}
+              </span>
+            ) : (
+              <span
+                className={
+                  segment.status === 'checked'
+                    ? 'inline-block rounded-full bg-green-100 text-green-800 px-2 py-1 text-xs font-semibold'
+                    : 'inline-block rounded-full bg-yellow-100 text-yellow-800 px-2 py-1 text-xs font-semibold'
+                }
+                title={segment.status === 'checked' ? 'Segment done' : 'Segment in progress'}
+              >
+                {segment.status === 'checked' ? 'Done' : 'Under Process'}
+              </span>
+            )}
           </div>
-        )} 
-        { segment.status === 'approved' && (
-          <Button size="sm" onClick={handleReset} disabled={isSaving} variant="outline">
-            Reset
-          </Button>
-        )} 
-        { segment.status === 'rejected' && (
-          <Button size="sm" onClick={handleReset} disabled={isSaving} variant="outline">
-            Reset
-          </Button>
-        )} 
-      </TableCell>
-    </TableRow>
-    
-    {isExpanded && (
-      <TableRow className="bg-gray-50">
-        <TableCell colSpan={6} className="px-6 py-4">
-              <div className="text-sm text-gray-700 whitespace-pre-wrap max-h-96 overflow-y-auto font-monlam">
+
+          {segment.status === 'rejected' && segment.rejection?.reason?.trim() ? (
+            <div className="rounded-md border border-red-200 bg-red-100/60 px-3 py-2 text-sm text-red-900">
+              <span className="font-semibold text-red-800">Rejection note: </span>
+              <span className="whitespace-pre-wrap">{segment.rejection.reason}</span>
+            </div>
+          ) : null}
+
+          <div>
+            {isExpanded ? (
+              <div className="text-sm text-gray-800 whitespace-pre-wrap max-h-[min(24rem,50vh)] overflow-y-auto font-monlam rounded-md border border-gray-200 bg-white/80 p-3">
                 {segment.text}
               </div>
-        </TableCell>
-      </TableRow>
-    )}
-    </React.Fragment>
+            ) : (
+              <button
+                type="button"
+                className="text-left w-full text-gray-700 font-monlam text-sm py-1 rounded px-2 -mx-2 transition-colors max-h-[100px] overflow-hidden whitespace-pre-wrap break-words [display:-webkit-box] [WebkitBoxOrient:vertical] [WebkitLineClamp:4] hover:bg-white/60"
+                onClick={toggleCollapse}
+              >
+                {segment.text.length > 200 ? `${segment.text.slice(0, 200)}…` : segment.text}
+              </button>
+            )}
+          </div>
+
+          <div className="relative text-sm flex flex-col gap-2 min-w-0" onClick={(e) => e.stopPropagation()}>
+            {titleAuthorSaving && (
+              <div className="absolute inset-0 z-10 bg-white/50 backdrop-blur-sm flex items-center justify-center gap-2 rounded">
+                <Loader2 className="w-3.5 h-3.5 animate-spin shrink-0" aria-hidden />
+                Saving...
+              </div>
+            )}
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-gray-500 flex gap-1 items-center">
+                <FileText className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                {titleEditOpen ? (
+                  <Input
+                    autoFocus
+                    value={titleInput}
+                    onChange={(e) => setTitleInput(e.target.value)}
+                    onBlur={() => commitTitle()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        commitTitle();
+                      }
+                      if (e.key === 'Escape') {
+                        e.preventDefault();
+                        cancelTitleEdit();
+                      }
+                    }}
+                    disabled={titleAuthorSaving}
+                    className="h-8 text-sm font-monlam max-w-full"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="text-left font-medium text-gray-900 font-monlam rounded px-1 py-0.5 -mx-1 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
+                    onClick={() => {
+                      setAuthorEditOpen(false);
+                      setTitleInput(segment.title || '');
+                      setTitleEditOpen(true);
+                    }}
+                    disabled={titleAuthorSaving}
+                    title="Click to edit title"
+                  >
+                    {segment.title?.trim() ? segment.title : '— Click to set —'}
+                  </button>
+                )}
+              </span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-gray-500 flex gap-1 items-center">
+                <User className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                {authorEditOpen ? (
+                  <Input
+                    autoFocus
+                    value={authorInput}
+                    onChange={(e) => setAuthorInput(e.target.value)}
+                    onBlur={() => commitAuthor()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        commitAuthor();
+                      }
+                      if (e.key === 'Escape') {
+                        e.preventDefault();
+                        cancelAuthorEdit();
+                      }
+                    }}
+                    disabled={titleAuthorSaving}
+                    className="h-8 text-sm font-monlam max-w-full"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    className="text-left text-gray-700 text-sm font-monlam rounded px-1 py-0.5 -mx-1 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
+                    onClick={() => {
+                      setTitleEditOpen(false);
+                      setAuthorInput(segment.author || '');
+                      setAuthorEditOpen(true);
+                    }}
+                    disabled={titleAuthorSaving}
+                    title="Click to edit author"
+                  >
+                    {segment.author?.trim() ? segment.author : '— Click to set —'}
+                  </button>
+                )}
+              </span>
+            </div>
+          </div>
+
+          <div className="min-w-0 pt-1 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
+            <BDRCField
+              segment={segmentAsTextSegment}
+              formData={formData}
+              onUpdate={handleBdrcUpdate}
+              resetForm={resetBdrcForm}
+              disabled={segment.status === 'approved'}
+              volumeId={documentFilename ?? undefined}
+              annotatorAuthorName={formData.author.name}
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
+            {segment.status === 'checked' && (
+              <>
+                <Button size="xs" onClick={handleSave} disabled={isSaving} variant="outline">
+                  {isSaving ? 'Saving...' : 'Approve'}
+                </Button>
+                <Button
+                  size="xs"
+                  onClick={() => {
+                    setRejectComment('');
+                    setRejectDialogOpen(true);
+                  }}
+                  disabled={isSaving}
+                  variant="ghost"
+                  className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                >
+                  Reject
+                </Button>
+              </>
+            )}
+            {segment.status === 'approved' && (
+              <Button size="sm" onClick={handleReset} disabled={isSaving} variant="outline">
+                Reset
+              </Button>
+            )}
+            {segment.status === 'rejected' && (
+              <Button size="sm" onClick={handleUndoReject} disabled={isSaving} variant="outline">
+                Undo reject 
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
+          <DialogHeader>
+            <DialogTitle>Reject segment</DialogTitle>
+            <DialogDescription>
+              Explain what needs to change. The annotator will see this on the rejected segment.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={rejectComment}
+            onChange={(e) => setRejectComment(e.target.value)}
+            placeholder="Reason for rejection (required)"
+            className="min-h-[100px] text-sm"
+            disabled={rejectMutation.isPending}
+          />
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRejectDialogOpen(false)}
+              disabled={rejectMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmReject}
+              disabled={
+                rejectMutation.isPending ||
+                !rejectComment.trim() ||
+                reviewerAccountLoading ||
+                !reviewerAccount?.id
+              }
+            >
+              {rejectMutation.isPending ? 'Rejecting…' : 'Reject segment'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
 

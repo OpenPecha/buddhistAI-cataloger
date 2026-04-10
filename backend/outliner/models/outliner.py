@@ -5,6 +5,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime
 import uuid
 from core.database import Base
+from user.models.user import User
 
 
 class SegmentStatus(str, PyEnum):
@@ -148,5 +149,12 @@ class SegmentRejection(Base):
         nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    # Reviewer explanation shown to annotators (required on new rejections)
+    rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     segment: Mapped["OutlinerSegment"] = relationship("OutlinerSegment", back_populates="rejections")
+    # Annotator (document owner) vs reviewer — both FK to users; disambiguate with foreign_keys
+    reviewer: Mapped[User | None] = relationship(
+        User,
+        foreign_keys=[reviewer_id],
+    )

@@ -514,6 +514,8 @@
       "collapseSegment": "ཆ་ཤས་བསྡུ།",
       "rejected": "ཕྱིར་ལན།",
       "rejectedMany": "ཐེངས་{{count}} ཕྱིར་ལན།",
+      "reviewerRejectionNote": "བསྐྱར་ཞིབ་པའི་གསལ་བཤད།",
+      "rejectedByReviewer": "{{name}} གྱིས་ཕྱིར་ལོག",
       "failedUpdateLabel": "ཁ་བྱང་གསར་སྒྱུར་མ་ཐུབ།",
       "labelField": "ཁ་བྱང་།",
       "noLabelPlaceholder": "ཁ་བྱང་མེད།",

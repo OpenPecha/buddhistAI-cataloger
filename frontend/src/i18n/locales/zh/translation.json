@@ -514,6 +514,8 @@
       "collapseSegment": "折叠片段",
       "rejected": "已驳回",
       "rejectedMany": "已驳回 {{count}} 次",
+      "reviewerRejectionNote": "审核说明",
+      "rejectedByReviewer": "审核人：{{name}}",
       "failedUpdateLabel": "更新标签失败",
       "labelField": "标签",
       "noLabelPlaceholder": "无标签",

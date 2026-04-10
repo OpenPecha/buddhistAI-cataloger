@@ -2,7 +2,11 @@ import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SplitPane, Pane } from 'react-split-pane';
 import { PanelRightClose, PanelRightOpen } from 'lucide-react';
-import { TableHeader, TableRow, TableHead, TableBody } from '@/components/ui/table';
+import {
+  List,
+  useDynamicRowHeight,
+  type RowComponentProps,
+} from 'react-window';
 import type { Document, Segment } from '../shared/types';
 import SegmentRow from './SegmentRow';
 import { Button } from '@/components/ui/button';
@@ -14,6 +18,34 @@ import { toast } from 'sonner';
 import { updateDocumentStatus } from '@/api/outliner';
 
 type SegmentStatusFilter = 'all' | 'unchecked' | 'checked' | 'approved' | 'rejected';
+
+function AdminDocumentSegmentRow({
+  index,
+  style,
+  segments,
+  expandedSegments,
+  onToggleExpansion,
+  documentFilename,
+}: RowComponentProps<{
+  segments: Segment[];
+  expandedSegments: Set<string>;
+  onToggleExpansion: (segmentId: string) => void;
+  documentFilename?: string | null;
+}>) {
+  const segment = segments[index];
+  if (!segment) return null;
+  return (
+    <div style={style} className="px-1 pb-3 box-border">
+      <SegmentRow
+        segment={segment}
+        isExpanded={expandedSegments.has(segment.id)}
+        onToggleExpansion={onToggleExpansion}
+        documentFilename={documentFilename}
+        listIndex={index + 1}
+      />
+    </div>
+  );
+}
 
 interface SegmentsTabProps {
   readonly selectedDocument: Document | null;
@@ -42,6 +74,16 @@ function SegmentsTab({
     if (statusFilter === 'all') return segments;
     return segments.filter(s => (s.status ?? 'unchecked') === statusFilter);
   }, [segments, statusFilter]);
+
+  const virtualListKey = useMemo(
+    () => filteredSegments.map((s) => s.id).join('\0'),
+    [filteredSegments]
+  );
+
+  const rowHeight = useDynamicRowHeight({
+    defaultRowHeight: 220,
+    key: virtualListKey,
+  });
 
   const statusCounts = useMemo(() => {
     const counts = { unchecked: 0, checked: 0, approved: 0, rejected: 0 };
@@ -195,39 +237,22 @@ function SegmentsTab({
             </div>
           </div>
         </header>
-        <div className="relative min-h-0 flex-1 overflow-auto [scrollbar-gutter:stable] rounded-md border border-gray-200 bg-white">
-          <table className="min-w-max w-full divide-y divide-gray-200 caption-bottom text-sm">
-            <TableHeader className="sticky top-0 z-1 bg-gray-50/95 shadow-sm backdrop-blur-sm [&_tr]:border-b">
-              <TableRow>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Text Preview
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Title
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  BDRC match
-                </TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="divide-y divide-gray-200">
-              {filteredSegments.map((segment) => (
-                <SegmentRow
-                  key={segment.id}
-                  segment={segment}
-                  isExpanded={expandedSegments.has(segment.id)}
-                  onToggleExpansion={onToggleExpansion}
-                  documentFilename={selectedDocument.filename}
-                />
-              ))}
-            </TableBody>
-          </table>
+        <div className="relative min-h-0 flex-1 flex flex-col overflow-hidden rounded-md border border-gray-200 bg-white">
+          <div className="flex min-h-0 flex-1 flex-col px-2 pt-2">
+            <List
+              className="min-h-0 w-full scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 [scrollbar-gutter:stable]"
+              style={{ height: '100%' }}
+              rowComponent={AdminDocumentSegmentRow}
+              rowCount={filteredSegments.length}
+              rowHeight={rowHeight}
+              rowProps={{
+                segments: filteredSegments,
+                expandedSegments,
+                onToggleExpansion,
+                documentFilename: selectedDocument.filename,
+              }}
+            />
+          </div>
         </div>
       </>
     ) : null;
@@ -258,7 +283,7 @@ function SegmentsTab({
           dividerSize={8}
         >
           <Pane minSize={280}>
-            <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
+            <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden p-4">
               {segmentsPanel}
             </div>
           </Pane>

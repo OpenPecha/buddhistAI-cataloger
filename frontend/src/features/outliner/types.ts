@@ -1,4 +1,4 @@
-import type { Comment } from '@/api/outliner'
+import type { Comment, SegmentRejection } from '@/api/outliner'
 
 /** Segment label enum: FRONT_MATTER, TOC, TEXT, BACK_MATTER */
 export type SegmentLabel = 'FRONT_MATTER' | 'TOC' | 'TEXT' | 'BACK_MATTER'
@@ -24,7 +24,7 @@ export interface TextSegment {
   is_attached?: boolean | null
   status?: string | null
   label?: SegmentLabel | null
-  rejection_count?: number
+  rejection?: SegmentRejection | null
   is_supplied_title?: boolean | null
   comments: Comment[]
 }
@@ -110,7 +110,7 @@ export interface Segment {
   is_annotated: boolean
   is_attached?: boolean | null
   status?: string | null
-  rejection_count?: number
+  rejection?: SegmentRejection | null
   comments?: Comment[]
   created_at: string
   updated_at: string

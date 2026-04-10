@@ -35,7 +35,7 @@ function OutlinerAdminDashboard() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4">
       <div className="mb-4 flex flex-wrap items-center justify-end gap-3 bg-gray-50/80">
         <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Filters</span>
         <select
