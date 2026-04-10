@@ -51,8 +51,15 @@ const OutlineSegmentRow = memo(function OutlineSegmentRow({
       <div className="flex items-start gap-2">
         <span
           className={`shrink-0 text-xs font-medium mt-0.5 w-6 h-6 rounded-full flex items-center justify-center ${
-            seg.status === 'checked' ? 'bg-green-600 text-white' : seg.status === 'rejected' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-600'
+            seg.status === 'approved'
+              ? 'bg-blue-600 text-white'
+              : seg.status === 'checked'
+                ? 'bg-green-600 text-white'
+                : seg.status === 'rejected'
+                  ? 'bg-red-600 text-white'
+                  : 'bg-gray-200 text-gray-600'
           }`}
+     
         >
           {displayIndex + 1}
         </span>
