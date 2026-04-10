@@ -20,6 +20,7 @@ import type { Segment } from '../shared/types';
 import type { TextSegment } from '@/components/outliner/types';
 import type { FormDataType, Title, Author } from '@/components/outliner/AnnotationSidebar';
 import BDRCField from '@/components/outliner/sidebarFields/BDRCField';
+import { useDocument } from '@/hooks';
 
 interface SegmentRowProps {
   readonly segment: Segment;
@@ -43,7 +44,8 @@ function SegmentRow({
   const [isSaving, setIsSaving] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectComment, setRejectComment] = useState('');
-
+  const { document: selectedDocument, isLoading: isLoadingDocument } = useDocument(documentId);
+ 
   const statusMutation = useMutation({
     mutationFn: (newStatus: 'approved' | 'unchecked' | 'checked') =>
       updateSegment(segment.id, { status: newStatus }),
@@ -250,7 +252,7 @@ function SegmentRow({
 
 
   const isRejected = segment.status === 'rejected';
-
+  const showApproveButton= selectedDocument?.status==='completed';
   return (
     <div
       className={`rounded-lg border-2 p-4 transition-colors ${
@@ -452,7 +454,7 @@ function SegmentRow({
           </div>
 
           <div className="flex flex-wrap gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
-            {segment.status === 'checked' && (
+            {segment.status === 'checked' && showApproveButton && (
               <>
                 <Button size="xs" onClick={handleSave} disabled={isSaving} variant="outline">
                   {isSaving ? 'Saving...' : 'Approve'}

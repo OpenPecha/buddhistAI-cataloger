@@ -69,12 +69,10 @@ function SegmentsTab({
   const { documentId } = useParams<{ documentId: string }>();
   const { getAccessTokenSilently } = useAuth0();
   const queryClient = useQueryClient();
-
   const filteredSegments = useMemo(() => {
     if (statusFilter === 'all') return segments;
     return segments.filter(s => (s.status ?? 'unchecked') === statusFilter);
   }, [segments, statusFilter]);
-
   const virtualListKey = useMemo(
     () => filteredSegments.map((s) => s.id).join('\0'),
     [filteredSegments]
@@ -105,8 +103,6 @@ function SegmentsTab({
   }, [filteredSegments, expandedSegments]);
 
   
-
-
 
   const handleApproveAll = async () => {
     if (!documentId) {
