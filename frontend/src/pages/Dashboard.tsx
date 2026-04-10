@@ -187,7 +187,6 @@ const OutlinerUpload: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {console.log(documents)}
                 {documents.map((doc) => {
                   const isDeleted = doc.status === 'deleted';
                   const isActive=doc.status==='active'||doc.status==='completed';
