@@ -10,14 +10,9 @@ from cataloger.controller.openpecha_api.categories import (
 router = APIRouter()
 
 
-class Category(BaseModel):
-    id: str
-    parent: Optional[str] = None
-    title: str
-    has_child: bool
 
 
-@router.get("", response_model=List[Category])
+@router.get("")
 async def get_categories(
     application: Optional[str] = Query(None, description="Application filter (e.g., webuddhist)"),
     language: Optional[str] = Query(None, description="Language filter (e.g., bo, en)"),

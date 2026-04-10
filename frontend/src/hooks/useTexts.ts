@@ -21,8 +21,8 @@ export const useTexts = (params?: {
   offset?: number;
   language?: string;
   author?: string;
-  type?: "root" | "commentary" | "translation" | "translation_source" | "none";
   title?: string;
+  category_id?: string;
 }) => {
   
   return useQuery({

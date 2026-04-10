@@ -1,17 +1,12 @@
 import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import { Book, Globe, Users, Loader2 } from 'lucide-react';
-import type { OpenPechaText } from '@/types/text';
 import type {  PersonName } from '@/types/person';
 import { Badge } from './ui/badge';
 import { TableRow, TableCell } from './ui/table';
 import { useTranslation } from 'react-i18next';
 import { getLanguageColor, getLanguageLabel } from '@/utils/getLanguageLabel';
-
-
-
-
-import { getBdrclink } from '@/lib/bdrclink';
+import type { OpenPechaText } from '@/types/text';
 
 interface TextListCardProps {
   text: OpenPechaText;
@@ -35,29 +30,8 @@ const TextListCard = ({ text }: TextListCardProps) => {
     return text.title?.[text.language] || t('textsPage.untitled');
   }
 
-  const getTypeLabel = (type: string): string => {
-    if (type === "none") return "";
-    const labels: Record<string, string> = {
-      root: t('textsPage.rootText'),
-      translation: t('textsPage.translation'),
-      commentary: t('textsPage.commentary'),
-      translation_source:"Source",
-      none:"-"
-    };
-    return labels[type] || type;
-  };
-
+ 
   
-
-  const getTypeColor = (type: string): string => {
-    const colors: Record<string, string> = {
-      root: 'bg-purple-100 text-purple-800',
-      translation: 'bg-green-100 text-green-800',
-      commentary: 'bg-yellow-100 text-yellow-800',
-      translation_source: 'bg-blue-100 text-blue-800'
-    };
-    return colors[type] || 'bg-gray-100 text-gray-800';
-  };
   
   return (
     <TableRow>
@@ -87,19 +61,6 @@ const TextListCard = ({ text }: TextListCardProps) => {
         )}
       </TableCell>
       
-    
-      
-      {/* Type Column */}
-
-      <TableCell>
-        {getTypeLabel(text.type) && (
-        <Badge className={`${getTypeColor(text.type)} flex items-center gap-2 w-fit`}>
-            <Book className="w-4 h-4" />
-            <span className="font-medium">{getTypeLabel(text.type)}</span>
-          </Badge>
-        )}
-      </TableCell>
-      
       {/* Language Column */}
       <TableCell>
         {text.language && (
@@ -109,7 +70,11 @@ const TextListCard = ({ text }: TextListCardProps) => {
           </Badge>
         )}
       </TableCell>
-      
+      <TableCell>
+        {(text.translations.length>0 || text.commentaries.length>0) && "source"}
+        {text.translation_of && "Translation"}
+        {text.commentary_of && "Commentary"}
+      </TableCell>
       {/* Contributors Column */}
       <TableCell className="text-right relative">
         {text.contributions && text.contributions.length > 0 ? (

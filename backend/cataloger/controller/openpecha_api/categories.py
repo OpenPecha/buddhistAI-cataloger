@@ -57,8 +57,6 @@ def list_categories(
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
         raw = response.json()
-        if isinstance(raw, list):
-            return [_category_v2_to_legacy_row(x) for x in raw if isinstance(x, dict)]
         return raw
     except requests.exceptions.Timeout:
         raise HTTPException(

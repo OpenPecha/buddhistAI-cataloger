@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useTexts } from "@/hooks/useTexts";
 import type { OpenPechaText } from "@/types/text";
 import { Button } from "@/components/ui/button";
@@ -11,15 +11,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const TextsPage = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [offset, setOffset] = useState(0);
   const LIMIT = 30; // Fixed limit of 30
   const OFFSET_STEP = 30; // Offset increment/decrement step
   const [param, setParam] = useState({
     title: "",
-    type: "none",
     language: "",
-    author: ""
+    author: "",
+    categoryId: "",
+    categoryTitle: "",
   });
   // Search state
   const [foundText, setFoundText] = useState<OpenPechaText | null>(null);
@@ -32,10 +32,14 @@ const TextsPage = () => {
     title: param.title.trim() || undefined,
     language: param.language || undefined,
     author: param.author || undefined,
-    type: param.type as "root" | "commentary" | "translation" | "translation_source" | "none" | undefined
-  }), [offset, param.title, param.language, param.author, param.type]);
+    category_id: param.categoryId.trim() || undefined,
+  }), [offset, param.title, param.language, param.author, param.type, param.categoryId]);
 
   const { data: texts = [], isLoading, error, refetch } = useTexts(paginationParams);
+
+  useEffect(() => {
+    setOffset(0);
+  }, [param.categoryId]);
 
 
 
@@ -68,9 +72,10 @@ const TextsPage = () => {
     setFoundText(null);
     setParam({
       title: "",
-      type: "none",
       language: "",
-      author: ""
+      author: "",
+      categoryId: "",
+      categoryTitle: "",
     });
     setOffset(0);
   };

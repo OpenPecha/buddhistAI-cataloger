@@ -1,19 +1,25 @@
 import { useQuery } from '@tanstack/react-query';
 import { API_URL } from '@/config/api';
 import { useTranslation } from 'react-i18next';
+import {
+  normalizeOpenpechaCategoryList,
+  type NormalizedCategory,
+} from '@/utils/normalizeOpenpechaCategories';
 
-export interface Category {
-  id: string;
-  parent: string | null;
-  title: string;
-  has_child: boolean;
-}
+export type Category = NormalizedCategory;
 
 interface UseCategoriesResult {
   categories: Category[];
   isLoading: boolean;
   error: string | null;
   refetch: () => void;
+}
+
+function queryErrorToMessage(err: unknown): string | null {
+  if (!err) return null;
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  return 'An error occurred';
 }
 
 // Fetch function for categories
@@ -32,7 +38,8 @@ const fetchCategories = async (parentId: string | null, language: string = 'bo')
     throw new Error(`Failed to fetch categories: ${response.statusText}`);
   }
 
-  return response.json();
+  const data: unknown = await response.json();
+  return normalizeOpenpechaCategoryList(data, language);
 };
 
 export const useCategories = (parentId: string | null = null): UseCategoriesResult => {
@@ -54,7 +61,7 @@ export const useCategories = (parentId: string | null = null): UseCategoriesResu
   return {
     categories,
     isLoading,
-    error: error ? (error as Error).message : null,
+    error: queryErrorToMessage(error),
     refetch: () => {
       refetch();
     },

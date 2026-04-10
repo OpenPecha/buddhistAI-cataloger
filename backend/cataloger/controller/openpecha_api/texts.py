@@ -26,7 +26,6 @@ def list_texts(
     offset: int = 0,
     language: Optional[str] = None,
     author: Optional[str] = None,
-    text_type: Optional[str] = None,
     title: Optional[str] = None,
     category_id: Optional[str] = None,
     x_application: Optional[str] = None,
@@ -46,11 +45,7 @@ def list_texts(
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
         raw = response.json()
-        wrapped = wrap_text_list(raw, limit=limit, offset=offset)
-        if text_type and isinstance(wrapped.get("results"), list):
-            wrapped["results"] = [r for r in wrapped["results"] if r.get("type") == text_type]
-            wrapped["count"] = len(wrapped["results"])
-        return wrapped
+        return raw
     except requests.exceptions.Timeout:
         raise HTTPException(
             status_code=504,

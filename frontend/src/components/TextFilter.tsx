@@ -11,12 +11,14 @@ import {
 } from "@/components/ui/select";
 import { getLanguageLabel } from "@/utils/getLanguageLabel";
 import { Input } from './ui/input';
+import { MultilevelCategorySelector } from '@/components/MultilevelCategorySelector';
 
 type Param = {
   title: string;
-  type: string;
   language: string;
   author: string;
+  categoryId: string;
+  categoryTitle: string;
 };
 
 type PropTextFilter = {
@@ -25,13 +27,6 @@ type PropTextFilter = {
   readonly clearSearch: () => void;
 };
 
-const TYPE_OPTIONS = [
-  { value: "none", label: "All Types" },
-  { value: "root", label: "Root" },
-  { value: "commentary", label: "Commentary" },
-  { value: "translation", label: "Translation" },
-  { value: "translation_source", label: "Translation Source" },
-];
 
 function TextFilter({ param, setParam, clearSearch }: PropTextFilter) {
   const { t } = useTranslation();
@@ -54,7 +49,10 @@ function TextFilter({ param, setParam, clearSearch }: PropTextFilter) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [textSearch]);
 
-  const hasActiveFilters = textSearch || param.language || (param.type && param.type !== "none");
+  const hasActiveFilters =
+    textSearch ||
+    param.language ||
+    !!param.categoryId;
 
   const handleClearAll = () => {
     setTextSearch("");
@@ -104,26 +102,6 @@ function TextFilter({ param, setParam, clearSearch }: PropTextFilter) {
             </SelectContent>
           </Select>
         </div>
-
-        {/* Type Filter */}
-        <div className="w-full sm:w-48">
-          <Select
-            value={param.type || "none"}
-            onValueChange={(value) => setParam({ ...param, type: value })}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Type" />
-            </SelectTrigger>
-            <SelectContent>
-              {TYPE_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
         {/* Clear All Button */}
         {hasActiveFilters && (
           <button
@@ -136,6 +114,21 @@ function TextFilter({ param, setParam, clearSearch }: PropTextFilter) {
             <span className="hidden sm:inline">Clear</span>
           </button>
         )}
+      </div>
+
+      <div className="rounded-lg border border-gray-200 bg-gray-50/50 p-3">
+        <MultilevelCategorySelector
+          filterMode
+          selectedCategoryId={param.categoryId || undefined}
+          onCategorySelect={(categoryId, path) => {
+            const leaf = path.at(-1);
+            setParam({
+              ...param,
+              categoryId,
+              categoryTitle: leaf?.title ?? categoryId,
+            });
+          }}
+        />
       </div>
 
       {/* Active Filters Display */}
@@ -165,13 +158,14 @@ function TextFilter({ param, setParam, clearSearch }: PropTextFilter) {
               </button>
             </span>
           )}
-          {param.type && param.type !== "none" && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 rounded-md text-sm">
-              Type: {TYPE_OPTIONS.find(opt => opt.value === param.type)?.label || param.type}
+     
+          {param.categoryId && (
+            <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-900 rounded-md text-sm">
+              {t("category.category")}: {param.categoryTitle || param.categoryId}
               <button
                 type="button"
-                onClick={() => setParam({ ...param, type: "none" })}
-                className="hover:text-purple-900"
+                onClick={() => setParam({ ...param, categoryId: "", categoryTitle: "" })}
+                className="hover:text-amber-950"
               >
                 <X className="w-3 h-3" />
               </button>

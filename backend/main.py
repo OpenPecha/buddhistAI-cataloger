@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 import uvicorn
-from cataloger.routers import ai, person, text, translation, annotation, bdrc, category, enum, tokenize, aligner_data, admin, segments
+from cataloger.routers import ai, person, text, translation, annotation, bdrc, category, language, role, tokenize, aligner_data, admin, segments
 from outliner.routers import router as outliner_router
 from settings.routers import (
     tenant_router,
@@ -77,7 +77,8 @@ app.include_router(translation.router, prefix="/instances", tags=["translation"]
 app.include_router(annotation.router, prefix="/v2/annotations", tags=["annotation"])
 app.include_router(segments.router, prefix="/segments", tags=["segments"])
 app.include_router(category.router, prefix="/v2/categories", tags=["category"])
-app.include_router(enum.router, prefix="/v2/enum", tags=["enum"])
+app.include_router(language.router, prefix="/v2/language", tags=["language"])
+app.include_router(role.router, prefix="/v2/role", tags=["role"])
 app.include_router(tokenize.router, prefix="/tokenize", tags=["tokenize"])
 app.include_router(aligner_data.router, prefix="/aligner-data", tags=["aligner-data"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])

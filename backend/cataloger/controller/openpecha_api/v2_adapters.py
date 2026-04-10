@@ -26,12 +26,7 @@ def normalize_license(value: Optional[str]) -> str:
     return LICENSE_ALIASES.get(k, "unknown")
 
 
-def infer_text_type(text_out: Dict[str, Any]) -> str:
-    if text_out.get("translation_of"):
-        return "translation"
-    if text_out.get("commentary_of"):
-        return "commentary"
-    return "root"
+
 
 
 def text_output_to_legacy(text_out: Dict[str, Any]) -> Dict[str, Any]:
@@ -39,7 +34,6 @@ def text_output_to_legacy(text_out: Dict[str, Any]) -> Dict[str, Any]:
     target = text_out.get("translation_of") or text_out.get("commentary_of")
     return {
         "id": text_out["id"],
-        "type": infer_text_type(text_out),
         "title": text_out.get("title") or {},
         "language": text_out.get("language", ""),
         "target": target,

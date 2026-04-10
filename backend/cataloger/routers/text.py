@@ -174,19 +174,16 @@ async def get_texts(
     offset: int = 0,
     language: Optional[str] = None,
     author: Optional[str] = None,
-    type: Optional[Literal["root", "commentary", "translation", "translation_source", "none"]] = Query(
-        None,
-        description="Filter by text type"
-    ),
     title: Optional[str] = None,
+    category_id: Optional[str] = Query(None, description="Filter by category id"),
 ):
     return openpecha_list_texts(
         limit=limit,
         offset=offset,
         language=language,
         author=author,
-        text_type=type,
         title=title,
+        category_id=category_id,
     )
 
 @router.post("", status_code=201)

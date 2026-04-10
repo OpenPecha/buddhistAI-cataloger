@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useCategories } from '@/hooks/useCategories';
 import type { Category } from '@/hooks/useCategories';
 import { ChevronRight, Loader2, Check, Home } from 'lucide-react';
@@ -15,10 +15,14 @@ interface MultilevelCategorySelectorProps {
   onCategorySelect: (categoryId: string, path: CategoryLevel[]) => void;
   selectedCategoryId?: string;
   error?: boolean;
+  /** Omit required marker and create button (e.g. text list filters) */
+  filterMode?: boolean;
 }
 
 export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProps> = ({
   onCategorySelect,
+  selectedCategoryId,
+  filterMode = false,
 }) => {
   const { t } = useTranslation();
   const [navigationPath, setNavigationPath] = useState<CategoryLevel[]>([]);
@@ -28,6 +32,15 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
     path: CategoryLevel[];
   } | null>(null);
   const { categories, isLoading, error } = useCategories(currentParentId);
+
+  useEffect(() => {
+    if (!selectedCategoryId) {
+      setNavigationPath([]);
+      setCurrentParentId(null);
+      setSelectedCategory(null);
+    }
+  }, [selectedCategoryId]);
+
   // Handle category badge click
   const handleCategoryClick = (category: Category) => {
     if (category.has_child) {
@@ -69,15 +82,15 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
   };
 
   // Reset selection
-
   return (
     <div className="space-y-3 ">
       <div className="space-y-2">
         <span className="flex items-center gap-2">
         <label className="block text-sm font-medium text-gray-700">
-          {t('category.category')} <span className="text-red-500">*</span>
+          {t('category.category')}
+          {!filterMode && <span className="text-red-500"> *</span>}
         </label>
-        <CreateCategoryModal/>
+        {!filterMode && <CreateCategoryModal />}
         </span>
         {/* Breadcrumb Navigation */}
         {navigationPath.length > 0 && (
@@ -106,9 +119,9 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
         )}
 
         {/* Category Badges Grid */}
-        <div className={`rounded-md bg-white max-h-[400px] overflow-y-auto p-3 border ${
-          error ? 'border-red-300 bg-red-50' : 'border-gray-200'
-        }`}>
+        <div className={`rounded-md bg-white overflow-y-auto p-3 border ${
+          filterMode ? 'max-h-52' : 'max-h-[400px]'
+        } ${error ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
           {isLoading && (
             <div className="flex items-center justify-center gap-2 py-8 text-sm text-gray-500">
               <Loader2 className="h-5 w-5 animate-spin" />

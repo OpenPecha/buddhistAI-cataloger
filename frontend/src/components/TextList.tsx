@@ -9,6 +9,7 @@ import {
 import TextListCard from './TextListCard';
 
 const TextList = ({texts}: {texts: OpenPechaText[]}) => {
+  console.log(texts)
   return (
     <div className="container mx-auto px-4 py-8">
  
@@ -22,8 +23,8 @@ const TextList = ({texts}: {texts: OpenPechaText[]}) => {
           <TableHeader>
             <TableRow >
               <TableHead className="w-[100px] font-extrabold text-neutral-700">Text</TableHead>
-              <TableHead className="font-extrabold text-neutral-700">Type</TableHead>
               <TableHead className="font-extrabold text-neutral-700">Language</TableHead>
+              <TableHead className="font-extrabold text-neutral-700">Commentaries/Translations</TableHead>
               <TableHead className="text-right font-extrabold text-neutral-700">Contributors</TableHead>
             </TableRow>
           </TableHeader>

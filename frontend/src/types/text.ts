@@ -16,17 +16,24 @@ export interface Title {
   [language: string]: string;
 }
 
+// Revised according to the new sample data interface
 export interface OpenPechaText {
-  alt_titles: AltTitle[];
-  bdrc: string;
-  contributions: Contribution[];
-  date: string | null;
-  id: string;
-  language: string;
-  target: string | null;
-  title: Title;
-  type: string;
+  bdrc: string | null;
   wiki: string | null;
+  date: string | null;
+  title: Title;
+  alt_titles: AltTitle[] | null;
+  language: string;
+  commentary_of: string | null;
+  translation_of: string | null;
+  category_id: string;
+  license: string;
+  id: string;
+  contributions: Contribution[];
+  commentaries: string[];
+  translations: string[];
+  editions: string[];
+  tag_ids: string[];
 }
 
 export interface Span {

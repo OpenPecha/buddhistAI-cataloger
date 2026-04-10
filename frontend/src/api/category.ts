@@ -1,24 +1,28 @@
-interface Category {
-  id: string;
-  parent: string | null;
-  title: string;
-  has_child: boolean;
-}
+import {
+  normalizeOpenpechaCategoryList,
+  type NormalizedCategory,
+} from '@/utils/normalizeOpenpechaCategories';
+
+type Category = NormalizedCategory;
 
 interface FetchCategoriesOptions {
   application?: string;
   language?: string;
+  parent_id?: string | null;
 }
 
 const API_URL = '/api';
 
 export const fetchCategories = async (options: FetchCategoriesOptions = {}): Promise<Category[]> => {
-  const { application = 'webuddhist', language = 'bo' } = options;
-  
+  const { application = 'webuddhist', language = 'bo', parent_id } = options;
+
   const queryParams = new URLSearchParams();
   queryParams.append('application', application);
   queryParams.append('language', language);
-  
+  if (parent_id) {
+    queryParams.append('parent_id', parent_id);
+  }
+
   const response = await fetch(
     `${API_URL}/v2/categories?${queryParams.toString()}`,
     {
@@ -32,7 +36,8 @@ export const fetchCategories = async (options: FetchCategoriesOptions = {}): Pro
     throw new Error(`Failed to fetch categories: ${response.status} ${response.statusText}`);
   }
 
-  return response.json();
+  const data: unknown = await response.json();
+  return normalizeOpenpechaCategoryList(data, language);
 };
 
 
