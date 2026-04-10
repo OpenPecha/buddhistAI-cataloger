@@ -247,8 +247,8 @@ class DocumentListResponse(BaseModel):
     annotated_segments: int
     rejection_count: int = 0  # Segments with status rejected in this document
     progress_percentage: float
-    checked_segments: int  # Number of checked segments
-    unchecked_segments: int  # Number of unchecked segments
+    checked_segments: int  # Segments with status checked or approved
+    unchecked_segments: int  # Segments not yet checked or approved
     status: Optional[str] = None  # active, completed, deleted, approved, rejected
     created_at: datetime
     updated_at: datetime

@@ -111,7 +111,7 @@ const OutlinerUpload: React.FC = () => {
   };
   const assingDisabled= 
   assignWorkMutation.isPending ||
-  !userId || !documents.every(doc=>doc.status==='skipped' || doc.status==='completed')
+  !userId || !documents.every(doc=>doc.status==='skipped' || doc.status==='completed' ||doc.status==='approved')
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
@@ -187,6 +187,7 @@ const OutlinerUpload: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
+                {console.log(documents)}
                 {documents.map((doc) => {
                   const isDeleted = doc.status === 'deleted';
                   const isActive=doc.status==='active'||doc.status==='completed';

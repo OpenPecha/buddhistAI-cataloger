@@ -165,12 +165,21 @@ def list_documents(
     for doc in documents:
         checked = db.query(func.count(OutlinerSegment.id)).filter(
             OutlinerSegment.document_id == doc.id,
-            OutlinerSegment.status == 'checked'
+            or_(
+                OutlinerSegment.status == 'checked',
+                OutlinerSegment.status == 'approved',
+            ),
         ).scalar() or 0
-        
+
         unchecked = db.query(func.count(OutlinerSegment.id)).filter(
             OutlinerSegment.document_id == doc.id,
-            OutlinerSegment.status != 'checked'
+            or_(
+                OutlinerSegment.status.is_(None),
+                and_(
+                    OutlinerSegment.status != 'checked',
+                    OutlinerSegment.status != 'approved',
+                ),
+            ),
         ).scalar() or 0
         
         total = db.query(func.count(OutlinerSegment.id)).filter(
@@ -658,15 +667,24 @@ def get_document_progress(db: Session, document_id: str) -> Dict[str, Any]:
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    # Count checked and unchecked segments
+    # Count checked-or-approved vs still-pending segments (aligned with list_documents)
     checked = db.query(func.count(OutlinerSegment.id)).filter(
         OutlinerSegment.document_id == document_id,
-        OutlinerSegment.status == 'checked'
+        or_(
+            OutlinerSegment.status == 'checked',
+            OutlinerSegment.status == 'approved',
+        ),
     ).scalar()
-    
+
     unchecked = db.query(func.count(OutlinerSegment.id)).filter(
         OutlinerSegment.document_id == document_id,
-        OutlinerSegment.status == 'unchecked'
+        or_(
+            OutlinerSegment.status.is_(None),
+            and_(
+                OutlinerSegment.status != 'checked',
+                OutlinerSegment.status != 'approved',
+            ),
+        ),
     ).scalar()
     
     return {
