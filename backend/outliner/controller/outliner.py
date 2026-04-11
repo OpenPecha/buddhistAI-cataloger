@@ -1985,7 +1985,7 @@ async def assign_volume(db: Session, user_id: str) -> OutlinerDocument:
         )
    
     # update the volume status to "in_progress"
-    # await update_volume_status(volume_id, "in_progress")
+    await update_volume_status(volume_id, "in_progress")
     return document
     
     
