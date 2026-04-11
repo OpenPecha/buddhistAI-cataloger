@@ -111,7 +111,9 @@ const OutlinerUpload: React.FC = () => {
   };
   const assingDisabled= 
   assignWorkMutation.isPending ||
-  !userId || !documents.every(doc=>doc.status==='skipped' || doc.status==='completed' ||doc.status==='approved')
+  !userId ||
+  !documents.every(doc=>doc.status==='skipped' || doc.status==='completed' ||doc.status==='approved' || doc.unchecked_segments===0)
+  
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">

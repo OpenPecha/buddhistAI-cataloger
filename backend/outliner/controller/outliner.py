@@ -1985,7 +1985,7 @@ async def assign_volume(db: Session, user_id: str) -> OutlinerDocument:
         )
    
     # update the volume status to "in_progress"
-    await update_volume_status(volume_id, "in_progress")
+    # await update_volume_status(volume_id, "in_progress")
     return document
     
     
@@ -2029,6 +2029,7 @@ async def _push_document_segments_to_bdrc(
             wa_id=wa_id,
             part_type="text" if wa_id != '' else "editorial"
         ))
+        print(rep_id, vol_id, vol_version, bdrc_status)
     return await update_volume(
         volume_id,
         VolumeInput(
@@ -2050,7 +2051,7 @@ async def submit_document_to_bdrc_in_review(db: Session, document_id: str) -> Di
         document, "in_review", modified_by=modified_by
     )
     update_document_status(db, document_id, "completed")
-    return bdrc_response
+    return {"success":True}
 
 
 def list_completed_document_ids_all_segments_checked(
