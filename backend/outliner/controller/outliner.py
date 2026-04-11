@@ -10,7 +10,7 @@ from datetime import datetime
 from fastapi import HTTPException
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy import func, case, or_, and_, exists
+from sqlalchemy import func, case, or_, and_, exists, update
 from sqlalchemy.orm.session import identity
 from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentRejection, SegmentLabels
 from outliner.utils.segment_title_author_auto import (
@@ -1122,51 +1122,45 @@ def split_segment(
     document_id: Optional[str] = None
 ) -> List[OutlinerSegment]:
     """Split a segment at a given position"""
-    segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
-    
+    segment = db.get(OutlinerSegment, segment_id)
+
     # If segment doesn't exist, check if we need to create initial segment from document
     if not segment:
-        # If document_id is provided, try to create initial segment from document content
-        if document_id:
-            document = get_document_with_cache(db, document_id)
-            if not document:
-                raise HTTPException(status_code=404, detail="Document not found")
-            
-            # Check if document has any segments
-            existing_segments = db.query(OutlinerSegment).filter(
-                OutlinerSegment.document_id == document_id
-            ).count()
-            
-            # If no segments exist, create initial segment from document content
-            if existing_segments == 0:
-                if not document.content or len(document.content.strip()) == 0:
-                    raise HTTPException(status_code=400, detail="Document has no content to split")
-                
-                # Create initial segment from full document content
-                initial_segment = OutlinerSegment(
-                    id=str(uuid.uuid4()),
-                    document_id=document_id,
-                    text=document.content,
-                    segment_index=0,
-                    span_start=0,
-                    span_end=len(document.content),
-                    title=None,
-                    author=None,
-                    parent_segment_id=None,
-                    label=SegmentLabels.FRONT_MATTER,
-                    status='unchecked'  # Default to unchecked
-                )
-                initial_segment.update_annotation_status()
-                db.add(initial_segment)
-                db.commit()
-                db.refresh(initial_segment)
-                
-                # Now use this segment for splitting
-                segment = initial_segment
-            else:
-                raise HTTPException(status_code=404, detail="Segment not found")
-        else:
+        if not document_id:
             raise HTTPException(status_code=404, detail="Segment not found")
+
+        document = get_document_with_cache(db, document_id)
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        has_segments = (
+            db.query(OutlinerSegment.id)
+            .filter(OutlinerSegment.document_id == document_id)
+            .first()
+            is not None
+        )
+        if has_segments:
+            raise HTTPException(status_code=404, detail="Segment not found")
+
+        if not document.content or len(document.content.strip()) == 0:
+            raise HTTPException(status_code=400, detail="Document has no content to split")
+
+        segment = OutlinerSegment(
+            id=str(uuid.uuid4()),
+            document_id=document_id,
+            text=document.content,
+            segment_index=0,
+            span_start=0,
+            span_end=len(document.content),
+            title=None,
+            author=None,
+            parent_segment_id=None,
+            label=SegmentLabels.FRONT_MATTER,
+            status='unchecked',
+        )
+        segment.update_annotation_status()
+        db.add(segment)
+        db.flush()
     
     # IMPORTANT: Do not strip/trim. Document content (and spans) must preserve whitespace/newlines exactly.
     # split_position is a character offset within segment.text.
@@ -1210,16 +1204,16 @@ def split_segment(
         parent_segment_id=segment.parent_segment_id,
         status=segment.status or 'unchecked'
     )
-    
-    # Update segment indices for following segments
-    following_segments = db.query(OutlinerSegment).filter(
-        OutlinerSegment.document_id == segment.document_id,
-        OutlinerSegment.segment_index > segment.segment_index
-    ).all()
-    
-    for seg in following_segments:
-        seg.segment_index += 1
-    
+
+    db.execute(
+        update(OutlinerSegment)
+        .where(
+            OutlinerSegment.document_id == segment.document_id,
+            OutlinerSegment.segment_index > segment.segment_index,
+        )
+        .values(segment_index=OutlinerSegment.segment_index + 1)
+    )
+
     db.add(new_segment)
     # Author on upper segment (TEXT only) once the next segment exists
     if segment.label == SegmentLabels.TEXT:
@@ -1229,8 +1223,6 @@ def split_segment(
     segment.update_annotation_status()
     new_segment.update_annotation_status()
     db.commit()
-    db.refresh(segment)
-    db.refresh(new_segment)
 
     return [segment, new_segment]
 

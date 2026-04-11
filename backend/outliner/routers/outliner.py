@@ -617,24 +617,21 @@ async def update_segments_bulk(
     return segment_responses
 
 
-@router.post("/segments/{segment_id}/split", response_model=List[SegmentResponse])
+@router.post("/segments/{segment_id}/split")
 async def split_segment(
     segment_id: str,
     split_request: SplitSegmentRequest,
     db: Session = Depends(get_db)
 ):
     """Split a segment at a given position"""
-    segments = split_segment_ctrl(
+    split_segment_ctrl(
         db=db,
         segment_id=split_request.segment_id,
         split_position=split_request.split_position,
         document_id=split_request.document_id
     )
     
-    segment_responses = []
-    for seg in segments:
-        segment_responses.append(_build_segment_response(seg, db))
-    return segment_responses
+    return {"message":"segment split","id":segment_id}
 
 
 @router.post("/segments/merge", response_model=SegmentResponse)
