@@ -5,7 +5,7 @@ import re
 from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime
 from fastapi import HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 from sqlalchemy import func
 from core.redis import (
     get_document_content_from_cache,
@@ -45,10 +45,14 @@ def get_document_with_cache(db: Session, document_id: str) -> Optional[OutlinerD
     cached_content = get_document_content_from_cache(document_id)
     
     if cached_content is not None:
-        # Content found in cache, fetch document metadata from DB
-        document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+        # Metadata from DB only — do not load `content` column (use cache).
+        document = (
+            db.query(OutlinerDocument)
+            .options(defer(OutlinerDocument.content))
+            .filter(OutlinerDocument.id == document_id)
+            .first()
+        )
         if document:
-            # Replace content with cached version
             document.content = cached_content
         return document
     else:

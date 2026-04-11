@@ -29,6 +29,7 @@ SEGMENT_STATUS_TRANSITIONS = {
 }
 
 
+
 class OutlinerDocument(Base):
     """Stores the full text content and metadata for an outliner document"""
     __tablename__ = "outliner_documents"
