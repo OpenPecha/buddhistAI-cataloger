@@ -442,7 +442,7 @@ function SegmentRow({
           </div>
 
           <div className="min-w-0 pt-1 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
-            <BDRCField
+            {/* <BDRCField
               segment={segmentAsTextSegment}
               formData={formData}
               onUpdate={handleBdrcUpdate}
@@ -450,7 +450,7 @@ function SegmentRow({
               disabled={segment.status === 'approved'}
               volumeId={documentFilename ?? undefined}
               annotatorAuthorName={formData.author.name}
-            />
+            /> */}
           </div>
 
           <div className="flex flex-wrap gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
