@@ -159,7 +159,9 @@ def list_documents(
         )
     
     documents = query.order_by(OutlinerDocument.updated_at.desc()).offset(skip).limit(limit).all()
-    
+    doc_ids = [d.id for d in documents]
+    latest_rejection_by_doc = _latest_rejection_notice_by_document_ids(db, doc_ids)
+
     # Calculate checked/unchecked segments for each document
     result = []
     for doc in documents:
@@ -213,6 +215,7 @@ def list_documents(
             "status": doc.status,
             "created_at": doc.created_at,
             "updated_at": doc.updated_at,
+            "rejected_segment": latest_rejection_by_doc.get(doc.id),
         })
     
     return result
@@ -259,6 +262,65 @@ def _latest_rejection_reason_by_segment_ids(db: Session, segment_ids: List[str])
     return {row[0]: row[1] for row in rows}
 
 
+def _latest_rejection_notice_by_document_ids(
+    db: Session, document_ids: List[str]
+) -> Dict[str, Optional[Dict[str, Any]]]:
+    """Most recent segment rejection per document (by rejection created_at), for document list API."""
+    if not document_ids:
+        return {}
+    rn = (
+        func.row_number()
+        .over(
+            partition_by=OutlinerSegment.document_id,
+            order_by=SegmentRejection.created_at.desc(),
+        )
+        .label("rn")
+    )
+    subq = (
+        db.query(
+            OutlinerSegment.document_id.label("document_id"),
+            SegmentRejection.segment_id.label("segment_id"),
+            SegmentRejection.rejection_reason.label("rejection_reason"),
+            SegmentRejection.reviewer_id.label("reviewer_id"),
+            User.name.label("reviewer_name"),
+            User.picture.label("reviewer_picture"),
+            rn,
+        )
+        .select_from(SegmentRejection)
+        .join(OutlinerSegment, SegmentRejection.segment_id == OutlinerSegment.id)
+        .outerjoin(User, SegmentRejection.reviewer_id == User.id)
+        .filter(OutlinerSegment.document_id.in_(document_ids))
+        .subquery()
+    )
+    rows = (
+        db.query(
+            subq.c.document_id,
+            subq.c.segment_id,
+            subq.c.rejection_reason,
+            subq.c.reviewer_id,
+            subq.c.reviewer_name,
+            subq.c.reviewer_picture,
+        )
+        .filter(subq.c.rn == 1)
+        .all()
+    )
+    out: Dict[str, Optional[Dict[str, Any]]] = {}
+    for doc_id, seg_id, reason, reviewer_id, rev_name, rev_pic in rows:
+        rev_user = None
+        if reviewer_id:
+            pic = rev_pic
+            if pic is not None:
+                pic = str(pic).strip() or None
+            rev_user = {"name": rev_name, "picture": pic}
+        out[doc_id] = {
+            "message": (reason or "").strip(),
+            "document_id": doc_id,
+            "segment_id": seg_id,
+            "reviewer_user": rev_user,
+        }
+    return out
+
+
 def _latest_rejection_reviewer_by_segment_ids(
     db: Session, segment_ids: List[str]
 ) -> Dict[str, Optional[Dict[str, Any]]]:
@@ -293,7 +355,6 @@ def _latest_rejection_reviewer_by_segment_ids(
         .outerjoin(User, User.id == latest_sq.c.reviewer_id)
         .all()
     )
-    print(rows)
     out: Dict[str, Optional[Dict[str, Any]]] = {}
     for segment_id, reviewer_id, name, picture in rows:
         if not reviewer_id:

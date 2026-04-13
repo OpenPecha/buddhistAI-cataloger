@@ -13,6 +13,12 @@ export const useGetSettingsByDomain = (domain: string) => {
         },
         enabled: !!domain && domain !== '',
         retry: false,
+        staleTime: 90 * 60 * 1000, // 90 minutes
+        refetchInterval: false,
+        refetchOnWindowFocus: false,
+        refetchOnMount: false,
+        refetchOnReconnect: false,
+        refetchIntervalInBackground: false,
     });
 };
 

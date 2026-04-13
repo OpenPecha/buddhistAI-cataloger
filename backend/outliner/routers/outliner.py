@@ -239,6 +239,19 @@ class AiTocEntriesResponse(BaseModel):
     entries: List[AiTocEntryItem] = []
 
 
+class RejectedSegmentReviewerUser(BaseModel):
+    name: Optional[str] = None
+    picture: Optional[str] = None
+
+
+class RejectedSegmentListNotice(BaseModel):
+    """Latest rejection on any segment in the document (for annotator list notices)."""
+    message: str = ""
+    document_id: str
+    segment_id: str
+    reviewer_user: Optional[RejectedSegmentReviewerUser] = None
+
+
 class DocumentListResponse(BaseModel):
     id: str
     filename: Optional[str] = None
@@ -252,6 +265,7 @@ class DocumentListResponse(BaseModel):
     status: Optional[str] = None  # active, completed, deleted, approved, rejected
     created_at: datetime
     updated_at: datetime
+    rejected_segment: Optional[RejectedSegmentListNotice] = None
 
     class Config:
         from_attributes = True
@@ -403,6 +417,9 @@ async def list_documents(
 ):
     """
     List all outliner documents, optionally filtered by user, status, title search, and deletion status.
+
+    Each item may include `rejected_segment`: the most recent segment rejection in that document
+    (message, document_id, segment_id, reviewer_user) for annotator-facing notices.
 
     Args:
         user_id: Filter documents by user ID (annotator)

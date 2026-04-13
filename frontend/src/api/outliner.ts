@@ -35,6 +35,14 @@ export interface OutlinerDocumentAiTocEntries {
   entries: AiTocEntryItem[];
 }
 
+/** Latest rejection on the document (any segment), from GET /outliner/documents. */
+export interface RejectedSegmentListNotice {
+  message: string;
+  document_id: string;
+  segment_id: string;
+  reviewer_user: { name?: string | null; picture?: string | null } | null;
+}
+
 export interface OutlinerDocumentListItem {
   id: string;
   filename?: string | null;
@@ -47,6 +55,8 @@ export interface OutlinerDocumentListItem {
   status?: OutlineDocumentStatus | null;
   created_at: string;
   updated_at: string;
+  /** Most recent reviewer rejection in this document; use for annotator notices. */
+  rejected_segment?: RejectedSegmentListNotice | null;
 }
 
 export type SegmentLabel = 'FRONT_MATTER' | 'TOC' | 'TEXT' | 'BACK_MATTER';

@@ -1,4 +1,4 @@
-import type { Comment, SegmentRejection } from '@/api/outliner'
+import type { Comment, RejectedSegmentListNotice, SegmentRejection } from '@/api/outliner'
 
 /** Segment label enum: FRONT_MATTER, TOC, TEXT, BACK_MATTER */
 export type SegmentLabel = 'FRONT_MATTER' | 'TOC' | 'TEXT' | 'BACK_MATTER'
@@ -82,6 +82,8 @@ export interface Document {
   annotated_segments: number
   /** Segments with status rejected (admin list API) */
   rejection_count?: number
+  /** Latest rejection on any segment (list API; annotator notices) */
+  rejected_segment?: RejectedSegmentListNotice | null
   progress_percentage: number
   status?: string | null
   created_at: string

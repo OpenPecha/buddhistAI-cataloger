@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { listOutlinerDocuments, assignVolume, type OutlinerDocumentListItem } from '@/api/outliner';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { FileText, Calendar, BarChart3, Search } from 'lucide-react';
+import { FileText, Calendar, BarChart3, Search, AlertTriangle } from 'lucide-react';
 import { SimplePagination } from '@/components/ui/simple-pagination';
 import { Input } from '@/components/ui/input';
 import { useUser } from '@/hooks/useUser';
@@ -69,6 +69,8 @@ const OutlinerUpload: React.FC = () => {
       listOutlinerDocuments(userId, skip, LIMIT, false, debouncedTitle || undefined),
     enabled: !!userId,
     refetchOnMount:true,
+    retryOnMount:true,
+    staleTime: 1 * 60 * 1000, // 1 minute
   });
 
   const canGoPrev = page > 1;
@@ -110,12 +112,16 @@ const OutlinerUpload: React.FC = () => {
   const handleDocumentClick = (documentId: string) => {
     navigate(`/outliner/${documentId}`);
   };
+
+  const rejected_document=documents.find(doc=>doc.rejected_segment?.message && doc.checked_segments!==doc.total_segments);
   const assingDisabled= 
   assignWorkMutation.isPending ||
   !userId ||
-  !documents.every(doc=>doc.status==='skipped' || doc.status==='completed' ||doc.status==='approved')
-  
-  return (
+  !documents.every(doc=>doc.status==='skipped' || doc.status==='completed' ||doc.status==='approved')||
+  !!rejected_document
+
+  const rejected_url = "/outliner/"+rejected_document?.rejected_segment?.document_id+"?segmentId="+rejected_document?.rejected_segment?.segment_id;
+   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
@@ -146,8 +152,16 @@ const OutlinerUpload: React.FC = () => {
           </div>
         </div>
 
-    
-
+        
+      {rejected_document && (
+        <div className="mb-6 flex justify-end">
+            <p className="text-sm text-gray-600 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-red-600" />
+              Some documents have rejected segments. Please review them and 
+              <Link to={rejected_url} className="text-sm text-blue-600 underline"> fix them.</Link>
+              </p>
+        </div>
+       )}
         {/* Documents List */}
         {isLoadingDocuments && (
           <div className="flex items-center justify-center py-12">
@@ -209,14 +223,29 @@ const OutlinerUpload: React.FC = () => {
                       !isActive ? 'opacity-60' : 'cursor-pointer hover:bg-gray-50'} transition-colors`}
                   >
                     <TableCell>
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-5 h-5 text-blue-600" />
-                          <div className="font-medium flex flex-col text-gray-900">
-                            {doc.filename?.slice(0, 20)+"..."} 
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-3">
+                          <FileText className="w-5 h-5 shrink-0 text-blue-600" />
+                          <div className="font-medium flex min-w-0 flex-col text-gray-900">
+                            {doc.filename?.slice(0, 20)+"..."}
                             <span className="text-xs text-gray-500">
                               {doc.status==='completed'&&"annotated"}
-                              </span>
+                            </span>
+                            
                           </div>
+                          {doc.rejected_segment && rejected_document && (
+                            <div className="flex items-start gap-2">
+                              <AlertTriangle className="mt-0.5 animate-bounce h-4 w-4 shrink-0 text-red-600" aria-hidden />
+                                {doc.rejected_segment.reviewer_user?.picture && (
+                                     <img src={doc.rejected_segment.reviewer_user.picture} alt="Reviewer" className="w-4 h-4 rounded-full" />
+                                )}
+                                {doc.rejected_segment.message ? (
+                                  <p className="text-xs text-amber-900/90 line-clamp-3">{doc.rejected_segment.message}</p>
+                                ) : null}
+                            </div>
+                        )}
+                        </div>
+                       
                       </div>
                     </TableCell>
                     <TableCell>
