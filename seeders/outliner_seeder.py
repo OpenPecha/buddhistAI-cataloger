@@ -123,12 +123,11 @@ def run_seeder(count: int = 30) -> None:
             doc_id = doc.id
 
             segments_data = []
-            for idx, (span_start, span_end, text) in enumerate(segments_spec):
+            for idx, (span_start, span_end, _text) in enumerate(segments_spec):
                 seg_data = {
                     "segment_index": idx,
                     "span_start": span_start,
                     "span_end": span_end,
-                    "text": text,
                 }
                 # Annotate ~40% of segments with title/author
                 if random.random() < 0.4:

@@ -3,6 +3,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import type { Document, Segment, DocumentStats } from '@/features/outliner/types';
+import { withResolvedSegmentTexts } from '@/lib/outlinerSegmentText';
 
 /**
  * Calculate stats from documents array
@@ -117,9 +118,9 @@ export function useSegments(documentId: string | undefined) {
       const token = await getAccessTokenSilently();
       const response = await fetch(`/api/outliner/documents/${documentId}/segments`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
       });
       if (!response.ok) {
         throw new Error('Failed to fetch segments');
@@ -165,7 +166,8 @@ export function useDocument(documentId: string | undefined) {
       if (!response.ok) {
         throw new Error('Failed to fetch document');
       }
-      return response.json();
+      const doc = await response.json();
+      return withResolvedSegmentTexts(doc);
     },
     enabled: !!documentId,
     staleTime: 5 * 60 * 1000, // 5 minutes

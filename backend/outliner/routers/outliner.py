@@ -10,6 +10,7 @@ from outliner.controller.outliner import (
     upload_document as upload_document_ctrl,
     list_documents as list_documents_ctrl,
     get_document as get_document_ctrl,
+    get_document_for_workspace as get_document_for_workspace_ctrl,
     update_document_content as update_document_content_ctrl,
     update_document_ai_toc_entries as update_document_ai_toc_entries_ctrl,
     get_document_ai_toc_entries as get_document_ai_toc_entries_ctrl,
@@ -44,7 +45,7 @@ from outliner.controller.outliner import (
     latest_rejection_reviewer_for_orm_segment as latest_rejection_reviewer_for_orm_segment_ctrl,
     get_dashboard_stats as get_dashboard_stats_ctrl,
 )
-from outliner.utils.outliner_utils import get_comments_list
+from outliner.utils.outliner_utils import get_comments_list, segment_body_from_document
 
 router = APIRouter()
 
@@ -135,7 +136,7 @@ class SegmentUpdate(BaseModel):
 
 class SegmentResponse(BaseModel):
     id: str
-    text: str
+    text: Optional[str] = None  # Omitted in JSON; derive from document.content + spans
     segment_index: int
     span_start: int
     span_end: int
@@ -160,8 +161,14 @@ class SegmentResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+    @model_serializer(mode="wrap")
+    def _serialize_omit_empty_text(self, serializer):
+        data = serializer(self)
+        if isinstance(data, dict) and data.get("text") is None:
+            data.pop("text", None)
+        return data
 
 
 class RejectSegmentRequest(BaseModel):
@@ -181,7 +188,7 @@ class DocumentCreate(BaseModel):
 
 class SegmentResponseDocument(BaseModel):
     id: str
-    text: str
+    text: Optional[str] = None  # Omitted in JSON; derive from document.content + spans
     segment_index: int
     span_start: int
     span_end: int
@@ -220,14 +227,28 @@ def _segment_list_row_to_document_segment(row: dict) -> SegmentResponseDocument:
 
 class DocumentResponse(BaseModel):
     id: str
+    content: str = ""
     filename: Optional[str] = None
     user_id: Optional[str] = None
     status: Optional[str] = None  # active, completed, deleted, approved, rejected
     is_supplied_title: Optional[bool] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     segments: List[SegmentResponseDocument] = []
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DocumentWorkspaceResponse(BaseModel):
+    """Annotator workspace: id, filename, status, full text, segments only (smaller than DocumentResponse)."""
+
+    id: str
+    content: str = ""
+    filename: Optional[str] = None
+    status: Optional[str] = None
+    segments: List[SegmentResponseDocument] = []
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AiTocEntryItem(BaseModel):
@@ -323,8 +344,17 @@ def _spans_from_toc_indices(content: str, indices: Optional[List]) -> List[Tuple
     return spans if spans else [(0, n)]
 
 
-def _build_segment_response(segment, db: Session = None) -> SegmentResponse:
-    """Helper to build SegmentResponse from segment model"""
+def _build_segment_response(
+    segment,
+    db: Session = None,
+    *,
+    document_content: Optional[str] = None,
+) -> SegmentResponse:
+    """Helper to build SegmentResponse from segment model.
+
+    When ``document_content`` is set (e.g. list segments without full document payload),
+    ``text`` is filled from spans for backward compatibility. Otherwise ``text`` is omitted.
+    """
     comments_list = get_comments_list(segment)
     
     rejection_count = 0
@@ -355,9 +385,15 @@ def _build_segment_response(segment, db: Session = None) -> SegmentResponse:
             reason=rejection_reason if segment.status == "rejected" else None,
             reviewer=rev,
         )
+    resolved_text: Optional[str] = None
+    if document_content is not None:
+        resolved_text = segment_body_from_document(
+            document_content, segment.span_start, segment.span_end
+        )
+
     return SegmentResponse(
         id=segment.id,
-        text=segment.text,
+        text=resolved_text,
         segment_index=segment.segment_index,
         span_start=segment.span_start,
         span_end=segment.span_end,
@@ -382,6 +418,12 @@ def _build_segment_response(segment, db: Session = None) -> SegmentResponse:
         created_at=segment.created_at,
         updated_at=segment.updated_at
     )
+
+
+def _document_plain_content(db: Session, document_id: str) -> str:
+    """Full document text for resolving segment bodies on segment-only responses."""
+    doc = get_document_ctrl(db, document_id, include_segments=False)
+    return doc.content or ""
 
 
 # ==================== Document Endpoints ====================
@@ -445,16 +487,19 @@ async def list_documents(
 async def get_document(
     document_id: str,
     include_segments: bool = True,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    """Get a document by ID with all its segments"""
+    """Get a document by ID with all its segments (full metadata)."""
     document = get_document_ctrl(db, document_id, include_segments)
-    
+
     # If segments are requested but none exist, create a single segment covering the entire document
     if include_segments:
-        segments_exist = hasattr(document, 'segment_list') and document.segment_list and len(document.segment_list) > 0
+        segments_exist = (
+            hasattr(document, "segment_list")
+            and document.segment_list
+            and len(document.segment_list) > 0
+        )
         if not segments_exist:
-            # Create a single segment from 0 to length of text
             text_length = len(document.content)
             create_segment_ctrl(
                 db=db,
@@ -462,14 +507,11 @@ async def get_document(
                 segment_index=0,
                 span_start=0,
                 span_end=text_length,
-                text=None  # Will be auto-extracted from document content
+                text=None,
             )
-            # Re-fetch document with the newly created segment
             document = get_document_ctrl(db, document_id, include_segments)
-    
-    # Build response from segment_list so serialization does not depend on lazy-loaded document.segments
-    # (avoids empty segments in production when session/relationship timing differs)
-    if include_segments and hasattr(document, 'segment_list') and document.segment_list:
+
+    if include_segments and hasattr(document, "segment_list") and document.segment_list:
         segments_resp = [
             _segment_list_row_to_document_segment(s) for s in document.segment_list
         ]
@@ -478,10 +520,10 @@ async def get_document(
             content=document.content,
             filename=document.filename,
             user_id=document.user_id,
-            status=getattr(document, 'status', None),
+            status=getattr(document, "status", None),
             created_at=document.created_at,
             updated_at=document.updated_at,
-            is_supplied_title=getattr(document, 'is_supplied_title', None),
+            is_supplied_title=getattr(document, "is_supplied_title", None),
             segments=segments_resp,
         )
     return DocumentResponse(
@@ -489,10 +531,64 @@ async def get_document(
         content=document.content,
         filename=document.filename,
         user_id=document.user_id,
-        status=getattr(document, 'status', None),
+        status=getattr(document, "status", None),
         created_at=document.created_at,
         updated_at=document.updated_at,
-        is_supplied_title=getattr(document, 'is_supplied_title', None),
+        is_supplied_title=getattr(document, "is_supplied_title", None),
+        segments=[],
+    )
+
+
+@router.get(
+    "/documents/{document_id}/workspace",
+    response_model=DocumentWorkspaceResponse,
+)
+async def get_document_workspace(
+    document_id: str,
+    include_segments: bool = True,
+    db: Session = Depends(get_db),
+):
+    """
+    Annotator workspace: id, filename, status, full text, and segments only.
+    Content is served from Redis when cached; otherwise one read of the content column.
+    Segments are read only from outliner_segments for this document.
+    """
+    document = get_document_for_workspace_ctrl(db, document_id, include_segments)
+
+    if include_segments:
+        segments_exist = (
+            hasattr(document, "segment_list")
+            and document.segment_list
+            and len(document.segment_list) > 0
+        )
+        if not segments_exist:
+            text_length = len(document.content)
+            create_segment_ctrl(
+                db=db,
+                document_id=document_id,
+                segment_index=0,
+                span_start=0,
+                span_end=text_length,
+                text=None,
+            )
+            document = get_document_for_workspace_ctrl(db, document_id, include_segments)
+
+    if include_segments and hasattr(document, "segment_list") and document.segment_list:
+        segments_resp = [
+            _segment_list_row_to_document_segment(s) for s in document.segment_list
+        ]
+        return DocumentWorkspaceResponse(
+            id=document.id,
+            content=document.content,
+            filename=document.filename,
+            status=getattr(document, "status", None),
+            segments=segments_resp,
+        )
+    return DocumentWorkspaceResponse(
+        id=document.id,
+        content=document.content,
+        filename=document.filename,
+        status=getattr(document, "status", None),
         segments=[],
     )
 
@@ -553,7 +649,11 @@ async def create_segment(
         author_bdrc_id=segment.author_bdrc_id,
         parent_segment_id=segment.parent_segment_id
     )
-    return _build_segment_response(db_segment, db)
+    return _build_segment_response(
+        db_segment,
+        db,
+        document_content=_document_plain_content(db, document_id),
+    )
 
 
 @router.post("/documents/{document_id}/segments/bulk", response_model=List[SegmentResponse], status_code=201)
@@ -565,10 +665,11 @@ async def create_segments_bulk(
     """Create multiple segments at once"""
     segments_data = [seg.dict() for seg in segments]
     db_segments = create_segments_bulk_ctrl(db, document_id, segments_data)
-    
+    content = _document_plain_content(db, document_id)
+
     segment_responses = []
     for segment in db_segments:
-        segment_responses.append(_build_segment_response(segment, db))
+        segment_responses.append(_build_segment_response(segment, db, document_content=content))
     return segment_responses
 
 
@@ -578,10 +679,11 @@ async def list_segments(
     db: Session = Depends(get_db)
 ):
     """Get all segments for a document"""
+    content = _document_plain_content(db, document_id)
     segments = list_segments_ctrl(db, document_id)
     segment_responses = []
     for segment in segments:
-        segment_responses.append(_build_segment_response(segment, db))
+        segment_responses.append(_build_segment_response(segment, db, document_content=content))
     return segment_responses
 
 
@@ -592,7 +694,11 @@ async def get_segment(
 ):
     """Get a single segment by ID"""
     segment = get_segment_ctrl(db, segment_id)
-    return _build_segment_response(segment, db)
+    return _build_segment_response(
+        segment,
+        db,
+        document_content=_document_plain_content(db, segment.document_id),
+    )
 
 
 @router.put("/segments/{segment_id}",status_code=201)
@@ -627,10 +733,15 @@ async def update_segments_bulk(
     """Update multiple segments at once"""
     segment_updates = [seg.model_dump(exclude_unset=True) for seg in updates.segments]
     updated_segments = update_segments_bulk_ctrl(db, segment_updates, updates.segment_ids)
-    
+    content = (
+        _document_plain_content(db, updated_segments[0].document_id)
+        if updated_segments
+        else ""
+    )
+
     segment_responses = []
     for segment in updated_segments:
-        segment_responses.append(_build_segment_response(segment, db))
+        segment_responses.append(_build_segment_response(segment, db, document_content=content))
     return segment_responses
 
 
@@ -658,7 +769,11 @@ async def merge_segments(
 ):
     """Merge multiple segments into one"""
     first_segment = merge_segments_ctrl(db, merge_request.segment_ids)
-    return _build_segment_response(first_segment, db)
+    return _build_segment_response(
+        first_segment,
+        db,
+        document_content=_document_plain_content(db, first_segment.document_id),
+    )
 
 
 @router.delete("/segments/{segment_id}", status_code=204)
@@ -749,10 +864,11 @@ async def bulk_segment_operations(
         update=operations.update,
         delete=operations.delete
     )
-    
+    content = _document_plain_content(db, document_id)
+
     segment_responses = []
     for seg in result_segments:
-        segment_responses.append(_build_segment_response(seg, db))
+        segment_responses.append(_build_segment_response(seg, db, document_content=content))
     return segment_responses
 
 
@@ -828,7 +944,11 @@ async def reject_segment(
 ):
     """Reject a checked segment"""
     segment = reject_segment_ctrl(db, segment_id, reviewer_id, body.comment)
-    return _build_segment_response(segment, db)
+    return _build_segment_response(
+        segment,
+        db,
+        document_content=_document_plain_content(db, segment.document_id),
+    )
 
 
 @router.put("/segments/bulk-reject", response_model=List[SegmentResponse])
@@ -840,7 +960,14 @@ async def reject_segments_bulk(
     segments = reject_segments_bulk_ctrl(
         db, request.segment_ids, request.reviewer_id, request.comment
     )
-    return [_build_segment_response(seg, db) for seg in segments]
+    return [
+        _build_segment_response(
+            seg,
+            db,
+            document_content=_document_plain_content(db, seg.document_id),
+        )
+        for seg in segments
+    ]
 
 
 @router.post("/documents/{document_id}/submit-bdrc-in-review")

@@ -16,6 +16,13 @@ REDIS_URL = os.getenv("REDIS_URL", None)
 EXPIRE_TIME = int(os.getenv("EXPIRE_TIME", 172800))
 # Redis key prefix for document content
 DOCUMENT_CONTENT_KEY_PREFIX = "outliner:document:content:"
+USER_BY_EMAIL_KEY_PREFIX = "user:by_email:"
+# 20 days
+USER_BY_EMAIL_TTL_SECONDS = 20 * 24 * 60 * 60
+
+
+def _user_by_email_cache_key(email: str) -> str:
+    return f"{USER_BY_EMAIL_KEY_PREFIX}{email.strip().lower()}"
 
 # Initialize Redis client
 try:
@@ -111,3 +118,39 @@ def is_redis_available() -> bool:
         True if Redis is available, False otherwise
     """
     return redis_client is not None
+
+
+def get_user_by_email_from_cache(email: str) -> Optional[dict]:
+    if not redis_client:
+        return None
+    try:
+        raw = redis_client.get(_user_by_email_cache_key(email))
+        if not raw:
+            return None
+        return json.loads(raw)
+    except Exception as e:
+        print(f"Error reading user-by-email from Redis cache: {e}")
+        return None
+
+
+def set_user_by_email_in_cache(email: str, payload: dict) -> bool:
+    if not redis_client:
+        return False
+    try:
+        key = _user_by_email_cache_key(email)
+        redis_client.setex(key, USER_BY_EMAIL_TTL_SECONDS, json.dumps(payload))
+        return True
+    except Exception as e:
+        print(f"Error writing user-by-email to Redis cache: {e}")
+        return False
+
+
+def invalidate_user_by_email_cache(email: str) -> bool:
+    if not redis_client:
+        return False
+    try:
+        redis_client.delete(_user_by_email_cache_key(email))
+        return True
+    except Exception as e:
+        print(f"Error deleting user-by-email from Redis cache: {e}")
+        return False

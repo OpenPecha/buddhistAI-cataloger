@@ -5,6 +5,7 @@ import json
 import logging
 import uuid
 from pathlib import Path
+from types import SimpleNamespace
 from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime
 from fastapi import HTTPException
@@ -16,6 +17,7 @@ from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentR
 from outliner.utils.segment_title_author_auto import (
     apply_auto_author_to_segment,
     apply_auto_title_to_segment,
+    apply_split_auto_title_author_parallel,
 )
 from user.models.user import User
 from core.redis import invalidate_document_content_cache
@@ -25,6 +27,8 @@ from outliner.utils.outliner_utils import (
     get_annotation_status_delta,
     get_comments_list,
     infer_segment_label_for_new_segment,
+    resolve_document_content,
+    segment_body_from_document,
     remove_escape_chars_except_newline,
     set_document_content_in_cache,
     validate_segment_status_transition,
@@ -454,6 +458,43 @@ def latest_rejection_reviewer_for_orm_segment(
     return {"id": rid, "name": None, "picture": None}
 
 
+def _segment_list_for_document(db: Session, document_id: str) -> List[dict]:
+    """Segment rows for a document (no ORM segment bodies; spans index into full document content)."""
+    segments = db.query(
+        OutlinerSegment.id,
+        OutlinerSegment.segment_index,
+        OutlinerSegment.span_start,
+        OutlinerSegment.span_end,
+        OutlinerSegment.title,
+        OutlinerSegment.title_span_start,
+        OutlinerSegment.title_span_end,
+        OutlinerSegment.updated_title,
+        OutlinerSegment.author,
+        OutlinerSegment.author_span_start,
+        OutlinerSegment.author_span_end,
+        OutlinerSegment.updated_author,
+        OutlinerSegment.title_bdrc_id,
+        OutlinerSegment.author_bdrc_id,
+        OutlinerSegment.parent_segment_id,
+        OutlinerSegment.is_annotated,
+        OutlinerSegment.is_attached,
+        OutlinerSegment.status,
+        OutlinerSegment.is_supplied_title,
+        OutlinerSegment.label,
+    ).filter(
+        OutlinerSegment.document_id == document_id
+    ).order_by(OutlinerSegment.segment_index).all()
+
+    def _segment_to_dict(segment):
+        d = segment._asdict()
+        d["label"] = segment.label.name if segment.label else None
+        return d
+
+    segment_list = [_segment_to_dict(segment) for segment in segments]
+    enrich_segment_list_rejection_fields(db, segment_list)
+    return segment_list
+
+
 def get_document(
     db: Session,
     document_id: str,
@@ -463,43 +504,50 @@ def get_document(
     document = get_document_with_cache(db, document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
-    
+
     if include_segments:
-        # Load only selected fields for each segment (include text so response does not rely on lazy-loaded relationship)
-        segments = db.query(
-            OutlinerSegment.id,
-            OutlinerSegment.text,
-            OutlinerSegment.segment_index,
-            OutlinerSegment.span_start,
-            OutlinerSegment.span_end,
-            OutlinerSegment.title,
-            OutlinerSegment.title_span_start,
-            OutlinerSegment.title_span_end,
-            OutlinerSegment.updated_title,
-            OutlinerSegment.author,
-            OutlinerSegment.author_span_start,
-            OutlinerSegment.author_span_end,
-            OutlinerSegment.updated_author,
-            OutlinerSegment.title_bdrc_id,
-            OutlinerSegment.author_bdrc_id,
-            OutlinerSegment.parent_segment_id,
-            OutlinerSegment.is_annotated,
-            OutlinerSegment.is_attached,
-            OutlinerSegment.status,
-            OutlinerSegment.is_supplied_title,
-            OutlinerSegment.label,
-        ).filter(
-            OutlinerSegment.document_id == document_id
-        ).order_by(OutlinerSegment.segment_index).all()
-        # Store as segment_list so router can serialize without touching document.segments (avoids lazy-load timing issues in production)
-        def _segment_to_dict(segment):
-            d = segment._asdict()
-            d['label'] = segment.label.name if segment.label else None
-            return d
-        document.segment_list = [_segment_to_dict(segment) for segment in segments]
-        enrich_segment_list_rejection_fields(db, document.segment_list)
+        document.segment_list = _segment_list_for_document(db, document_id)
 
     return document
+
+
+def get_document_for_workspace(
+    db: Session,
+    document_id: str,
+    include_segments: bool = True,
+) -> SimpleNamespace:
+    """
+    Annotator workspace: minimal document columns (id, filename, status) plus content from
+    Redis when available, otherwise a single read of the content column (not the full ORM row).
+    Segments are loaded only from outliner_segments for this document_id.
+    """
+    row = (
+        db.query(
+            OutlinerDocument.id,
+            OutlinerDocument.filename,
+            OutlinerDocument.status,
+        )
+        .filter(OutlinerDocument.id == document_id)
+        .first()
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    content = resolve_document_content(db, document_id)
+    if content is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    segment_list: List[dict] = (
+        _segment_list_for_document(db, document_id) if include_segments else []
+    )
+
+    return SimpleNamespace(
+        id=row.id,
+        filename=row.filename,
+        status=row.status,
+        content=content,
+        segment_list=segment_list,
+    )
 
 def get_document_by_filename(db: Session, filename: str) -> OutlinerDocument:
     """Get a document by filename"""
@@ -772,7 +820,6 @@ def segment_orm_to_document_response_dict(seg: OutlinerSegment) -> Dict[str, Any
     """Flat dict for SegmentResponseDocument (stable across commit / session expiry)."""
     return {
         "id": seg.id,
-        "text": seg.text,
         "segment_index": seg.segment_index,
         "span_start": seg.span_start,
         "span_end": seg.span_end,
@@ -819,7 +866,7 @@ def _segment_orms_from_bulk_data(
         db_segment = OutlinerSegment(
             id=str(uuid.uuid4()),
             document_id=document_id,
-            text=segment_text,
+            text="",
             segment_index=segment_data["segment_index"],
             span_start=segment_data["span_start"],
             span_end=segment_data["span_end"],
@@ -889,17 +936,14 @@ def create_segment(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    # Extract text from document content using span addresses if text not provided
-    segment_text = text
-    if not segment_text:
-        if span_start < 0 or span_end > len(document.content):
-            raise HTTPException(status_code=400, detail="Invalid span addresses")
-        segment_text = document.content[span_start:span_end]
-    
+    if span_start < 0 or span_end > len(document.content):
+        raise HTTPException(status_code=400, detail="Invalid span addresses")
+    segment_text = segment_body_from_document(document.content, span_start, span_end)
+
     db_segment = OutlinerSegment(
         id=str(uuid.uuid4()),
         document_id=document_id,
-        text=segment_text,
+        text="",
         segment_index=segment_index,
         span_start=span_start,
         span_end=span_end,
@@ -989,8 +1033,6 @@ def update_segment(
     old_is_annotated = segment.is_annotated
     document_id = segment.document_id  # Store before updates
 
-    if "text" in patch:
-        segment.text = patch["text"]
     if "title" in patch:
         segment.title = patch["title"]
     if "author" in patch:
@@ -1112,8 +1154,6 @@ def update_segments_bulk(
         
         document_ids.add(segment.document_id)
         
-        if 'text' in segment_update:
-            segment.text = segment_update['text']
         if 'title' in segment_update:
             segment.title = segment_update['title']
         if 'author' in segment_update:
@@ -1209,7 +1249,7 @@ def split_segment(
         segment = OutlinerSegment(
             id=str(uuid.uuid4()),
             document_id=document_id,
-            text=document.content,
+            text="",
             segment_index=0,
             span_start=0,
             span_end=len(document.content),
@@ -1222,10 +1262,16 @@ def split_segment(
         segment.update_annotation_status()
         db.add(segment)
         db.flush()
-    
-    # IMPORTANT: Do not strip/trim. Document content (and spans) must preserve whitespace/newlines exactly.
-    # split_position is a character offset within segment.text.
-    if split_position <= 0 or split_position >= len(segment.text):
+
+    doc_for_body = get_document_with_cache(db, segment.document_id)
+    if not doc_for_body:
+        raise HTTPException(status_code=404, detail="Document not found")
+    content = doc_for_body.content or ""
+    body = segment_body_from_document(content, segment.span_start, segment.span_end)
+
+    # IMPORTANT: Do not strip/trim. split_position is a character offset within the segment body
+    # (slice of document.content [span_start, span_end)).
+    if split_position <= 0 or split_position >= len(body):
         raise HTTPException(status_code=400, detail="Invalid split position")
 
     old_span_start = segment.span_start
@@ -1236,11 +1282,11 @@ def split_segment(
     if new_first_span_end < old_span_start or new_first_span_end > old_span_end:
         raise HTTPException(status_code=400, detail="Invalid split position for segment span")
 
-    text_before = segment.text[:split_position]
-    text_after = segment.text[split_position:]
+    text_before = body[:split_position]
+    text_after = body[split_position:]
 
     # Update first segment (preserve whitespace/newlines; update span_end using split_position)
-    segment.text = text_before
+    segment.text = ""
     segment.span_end = new_first_span_end
     upper_label = infer_segment_label_for_new_segment(segment.title, text_before)
     lower_label = infer_segment_label_for_new_segment(None, text_after)
@@ -1248,14 +1294,11 @@ def split_segment(
         segment.label = SegmentLabels.FRONT_MATTER
     label = lower_label
 
-    # Upper segment: title from start only when labeled TEXT
-    if segment.label == SegmentLabels.TEXT:
-        apply_auto_title_to_segment(db, segment, skip_last_segment_check=True)
     # Create second segment
     new_segment = OutlinerSegment(
         id=str(uuid.uuid4()),
         document_id=segment.document_id,
-        text=text_after,
+        text="",
         segment_index=segment.segment_index + 1,
         span_start=new_first_span_end,
         span_end=old_span_end,
@@ -1276,11 +1319,8 @@ def split_segment(
     )
 
     db.add(new_segment)
-    # Author on upper segment (TEXT only) once the next segment exists
-    if segment.label == SegmentLabels.TEXT:
-        apply_auto_author_to_segment(db, segment, skip_last_segment_check=True)
-    if new_segment.label == SegmentLabels.TEXT:
-        apply_auto_title_to_segment(db, new_segment, skip_last_segment_check=True)
+    # Upper title + upper author + lower title: independent Gemini calls, run concurrently
+    apply_split_auto_title_author_parallel(segment, new_segment, text_before, text_after)
     segment.update_annotation_status()
     new_segment.update_annotation_status()
     db.commit()
@@ -1308,8 +1348,7 @@ def merge_segments(
     if not all(seg.document_id == document_id for seg in segments):
         raise HTTPException(status_code=400, detail="All segments must belong to same document")
     
-    # Merge text and metadata
-    merged_text = "".join(seg.text for seg in segments)
+    # Merge spans and metadata (body text lives on OutlinerDocument.content only)
     merged_title = next((seg.title for seg in segments if seg.title), None)
     merged_author = next((seg.author for seg in segments if seg.author), None)
     merged_title_bdrc_id = next((seg.title_bdrc_id for seg in segments if seg.title_bdrc_id), None)
@@ -1318,7 +1357,7 @@ def merge_segments(
     
     # Update first segment with merged data
     first_segment = segments[0]
-    first_segment.text = merged_text
+    first_segment.text = ""
     first_segment.span_end = segments[-1].span_end
     first_segment.title = merged_title
     first_segment.author = merged_author
@@ -1471,8 +1510,6 @@ def bulk_segment_operations(
             update_data = segment_updates[segment.id]
             
             # Update fields if provided
-            if 'text' in update_data and update_data['text'] is not None:
-                segment.text = update_data['text']
             if 'title' in update_data and update_data['title'] is not None:
                 segment.title = update_data['title']
             if 'author' in update_data and update_data['author'] is not None:
@@ -1525,7 +1562,7 @@ def bulk_segment_operations(
             db_segment = OutlinerSegment(
                 id=str(uuid.uuid4()),
                 document_id=document_id,
-                text=segment_text,
+                text="",
                 segment_index=segment_index,
                 span_start=segment_data['span_start'],
                 span_end=segment_data['span_end'],

@@ -18,6 +18,7 @@ import {
   addSegmentComment,
   type CommentCreateRequest,
 } from '@/api/outliner';
+import { segmentBodyFromDocument } from '@/lib/outlinerSegmentText';
 import { toast } from 'sonner';
 
 interface UseOutlinerDocumentOptions {
@@ -48,7 +49,7 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
     refetch,
   } = useQuery<OutlinerDocument>({
     queryKey: ['outliner-document', documentId],
-    queryFn: () => getOutlinerDocument(documentId!, true),
+    queryFn: () => getOutlinerDocument(documentId!, true, { workspace: true }),
     enabled: !!documentId,
     staleTime: 0, // Always refetch to get latest data
     refetchInterval: false,
@@ -169,13 +170,18 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
         return { previousDocument };
       }
 
-      // Calculate split text
+      // Calculate split text from document content + spans (same as server)
       // IMPORTANT: Do not trim/strip. Preserve whitespace/newlines exactly.
-      const textBefore = segmentToSplit.text.substring(0, splitPosition);
-      const textAfter = segmentToSplit.text.substring(splitPosition);
+      const body = segmentBodyFromDocument(
+        previousDocument.content,
+        segmentToSplit.span_start,
+        segmentToSplit.span_end
+      );
+      const textBefore = body.substring(0, splitPosition);
+      const textAfter = body.substring(splitPosition);
 
       // Don't proceed if split would create empty segments
-      if (splitPosition <= 0 || splitPosition >= segmentToSplit.text.length) {
+      if (splitPosition <= 0 || splitPosition >= body.length) {
         return { previousDocument };
       }
 
@@ -508,7 +514,7 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
       const timestamp = Date.now();
       const optimisticSegments = segments.map((seg, index) => ({
         id: `temp-${timestamp}-${index}`,
-        text: seg.text || previousDocument.content.substring(seg.span_start, seg.span_end),
+        text: segmentBodyFromDocument(previousDocument.content, seg.span_start, seg.span_end),
         segment_index: seg.segment_index,
         span_start: seg.span_start,
         span_end: seg.span_end,

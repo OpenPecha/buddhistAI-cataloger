@@ -92,8 +92,8 @@ def generate_title_author(content: str, response_schema: Any) -> Dict[str, Optio
         )
 
 
-_TITLE_START_MAX_CHARS = 400
-_AUTHOR_END_MAX_CHARS = 400
+_TITLE_START_MAX_CHARS = 200
+_AUTHOR_END_MAX_CHARS = 200
 
 
 def generate_title_from_start(content: str, response_schema: Any) -> Any:
@@ -221,12 +221,10 @@ def create_segments_from_positions(
             else text_length
         )
 
-        segment_text = content[start_pos:end_pos]
-
         db_segments.append({
             "id": str(uuid.uuid4()),
             "document_id": document_id,
-            "text": segment_text,
+            "text": "",
             "segment_index": idx,
             "span_start": start_pos,
             "span_end": end_pos,

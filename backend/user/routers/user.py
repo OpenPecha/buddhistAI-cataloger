@@ -8,6 +8,11 @@ import uuid
 import json
 
 from core.database import get_db
+from core.redis import (
+    get_user_by_email_from_cache,
+    invalidate_user_by_email_cache,
+    set_user_by_email_in_cache,
+)
 from user.models.user import User
 
 router = APIRouter()
@@ -106,12 +111,15 @@ async def get_users(
 
 @router.get("/by-email/{email}", response_model=UserResponse)
 async def get_user_by_email(email: str, db: Session = Depends(get_db)):
-    """Get a user by email"""
+    """Get a user by email (cached in Redis for 20 days when Redis is available)."""
+    cached = get_user_by_email_from_cache(email)
+    if cached is not None:
+        return UserResponse(**cached)
+
     user = db.query(User).filter(User.email == email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
-    # Convert permissions from string to list if needed
+
     permissions = None
     if user.permissions:
         try:
@@ -121,16 +129,18 @@ async def get_user_by_email(email: str, db: Session = Depends(get_db)):
                 permissions = [p.strip() for p in user.permissions.split(',') if p.strip()]
             else:
                 permissions = user.permissions
-    
-    return UserResponse(
+
+    response = UserResponse(
         id=user.id,
         email=user.email,
         name=user.name,
         picture=user.picture,
         created_at=user.created_at,
         role=user.role,
-        permissions=permissions
+        permissions=permissions,
     )
+    set_user_by_email_in_cache(user.email, response.model_dump(mode="json"))
+    return response
 
 
 @router.get("/{user_id}", response_model=UserResponse)
@@ -216,7 +226,9 @@ async def update_user(user_id: str, user: UserUpdate, db: Session = Depends(get_
     db_user = db.query(User).filter(User.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
+    previous_email = db_user.email
+
     # Check if email is being updated and if it conflicts
     if user.email and user.email != db_user.email:
         existing = db.query(User).filter(User.email == user.email).first()
@@ -239,7 +251,11 @@ async def update_user(user_id: str, user: UserUpdate, db: Session = Depends(get_
     
     db.commit()
     db.refresh(db_user)
-    
+
+    invalidate_user_by_email_cache(previous_email)
+    if db_user.email != previous_email:
+        invalidate_user_by_email_cache(db_user.email)
+
     # Convert permissions back to list for response
     permissions = None
     if db_user.permissions:
@@ -250,7 +266,7 @@ async def update_user(user_id: str, user: UserUpdate, db: Session = Depends(get_
                 permissions = [p.strip() for p in db_user.permissions.split(',') if p.strip()]
             else:
                 permissions = db_user.permissions
-    
+
     return UserResponse(
         id=db_user.id,
         email=db_user.email,
@@ -258,7 +274,7 @@ async def update_user(user_id: str, user: UserUpdate, db: Session = Depends(get_
         picture=db_user.picture,
         created_at=db_user.created_at,
         role=db_user.role,
-        permissions=permissions
+        permissions=permissions,
     )
 
 
@@ -268,7 +284,9 @@ async def delete_user(user_id: str, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.id == user_id).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
+    invalidate_user_by_email_cache(db_user.email)
+
     db.delete(db_user)
     db.commit()
     return None

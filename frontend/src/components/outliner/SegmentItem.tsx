@@ -118,6 +118,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
         data-segment-id={segment.id}
         data-segment-container-id={segment.id}
         onClick={(e) => {
+           if (isSegmentSyncing) return
           // Only handle click if not clicking on text content or menus or buttons
           if (
             !(e.target as HTMLElement).closest('.segment-text-content') &&

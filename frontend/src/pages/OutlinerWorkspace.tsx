@@ -65,8 +65,8 @@ const OutlinerWorkspace: React.FC = () => {
 
   // Convert OutlinerSegment[] to TextSegment[]
   const currentSegments: TextSegment[] = useMemo(
-    () => backendSegments.map(outlinerSegmentToTextSegment),
-    [backendSegments]
+    () => backendSegments.map((s) => outlinerSegmentToTextSegment(s, currentTextContent)),
+    [backendSegments, currentTextContent]
   )
   
   const [expandedSegmentIds, setExpandedSegmentIds] = useState<string[]>([]);
@@ -566,13 +566,11 @@ const OutlinerWorkspace: React.FC = () => {
             segment_index: 0,
             span_start: 0,
             span_end: offset,
-            text: textBefore,
           },
           {
             segment_index: 1,
             span_start: offset,
             span_end: currentTextContent.length,
-            text: textAfter,
           },
         ]);
         setCursorPosition(null);

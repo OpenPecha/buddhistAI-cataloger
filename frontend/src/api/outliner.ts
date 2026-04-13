@@ -1,5 +1,6 @@
 import { API_URL } from '@/config/api';
 import type { TextSegment } from '@/features/outliner/types';
+import { segmentBodyFromDocument, withResolvedSegmentTexts } from '@/lib/outlinerSegmentText';
 
 // ==================== Types ====================
 
@@ -77,7 +78,8 @@ export interface SegmentRejection {
 
 export interface OutlinerSegment {
   id: string;
-  text: string;
+  /** Resolved client-side from document.content + spans when omitted by API */
+  text?: string;
   segment_index: number;
   span_start: number;
   span_end: number;
@@ -231,11 +233,18 @@ export const createOutlinerDocument = async (
 
 export const getOutlinerDocument = async (
   documentId: string,
-  includeSegments: boolean = true
+  includeSegments: boolean = true,
+  options?: { workspace?: boolean }
 ): Promise<OutlinerDocument> => {
-  const url = `${API_URL}/outliner/documents/${documentId}?include_segments=${includeSegments}`;
+  const params = new URLSearchParams();
+  params.set('include_segments', String(includeSegments));
+  const path = options?.workspace
+    ? `${API_URL}/outliner/documents/${documentId}/workspace`
+    : `${API_URL}/outliner/documents/${documentId}`;
+  const url = `${path}?${params.toString()}`;
   const response = await fetch(url);
-  return handleApiResponse(response);
+  const doc = await handleApiResponse(response);
+  return withResolvedSegmentTexts(doc);
 };
 
 export const getOutlinerDocumentAiTocEntries = async (
@@ -650,7 +659,8 @@ export const runAiOutline = async (
     signal,
   });
 
-  return handleApiResponse(response);
+  const data = await handleApiResponse(response);
+  return withResolvedSegmentTexts(data);
 };
 
 export interface GenerateTitleAuthorRequest {
@@ -698,10 +708,16 @@ export interface ParseTocResponse {
 /**
  * Convert OutlinerSegment to TextSegment format used in frontend
  */
-export const outlinerSegmentToTextSegment = (segment: OutlinerSegment): TextSegment => {
+export const outlinerSegmentToTextSegment = (
+  segment: OutlinerSegment,
+  documentContent: string
+): TextSegment => {
+  const text =
+    segment.text ??
+    segmentBodyFromDocument(documentContent, segment.span_start, segment.span_end);
   return {
     id: segment.id,
-    text: segment.text,
+    text,
     span_start: segment.span_start,
     span_end: segment.span_end,
     title: segment.title || undefined,

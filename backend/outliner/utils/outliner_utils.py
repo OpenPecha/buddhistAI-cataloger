@@ -20,6 +20,19 @@ from outliner.models.outliner import (
 )
 
 
+def segment_body_from_document(content: Optional[str], span_start: int, span_end: int) -> str:
+    """
+    Slice [span_start, span_end) from full document content with safe bounds.
+    Segment body is not stored redundantly in DB; use this with document.content (or cache).
+    """
+    if not content:
+        return ""
+    n = len(content)
+    s = max(0, min(int(span_start), n))
+    e = max(s, min(int(span_end), n))
+    return content[s:e]
+
+
 def remove_escape_chars_except_newline(text: str) -> str:
     """
     Removes all ASCII control characters except newline (\n).
@@ -27,6 +40,24 @@ def remove_escape_chars_except_newline(text: str) -> str:
     # ASCII control chars: 0x00–0x1F and 0x7F
     # Keep \n (0x0A)
     return re.sub(r'[\x00-\x09\x0B-\x1F\x7F]', '', text)
+
+
+def resolve_document_content(db: Session, document_id: str) -> Optional[str]:
+    """
+    Full document text: Redis first, then a single SELECT of the content column only.
+    Populates the cache on DB read. Returns None if the document row does not exist.
+    """
+    cached = get_document_content_from_cache(document_id)
+    if cached is not None:
+        return cached
+    content = (
+        db.query(OutlinerDocument.content)
+        .filter(OutlinerDocument.id == document_id)
+        .scalar()
+    )
+    if content is not None:
+        set_document_content_in_cache(document_id, content)
+    return content
 
 
 def get_document_with_cache(db: Session, document_id: str) -> Optional[OutlinerDocument]:
@@ -43,7 +74,7 @@ def get_document_with_cache(db: Session, document_id: str) -> Optional[OutlinerD
     """
     # Try to get content from cache first
     cached_content = get_document_content_from_cache(document_id)
-    
+
     if cached_content is not None:
         # Metadata from DB only — do not load `content` column (use cache).
         document = (
@@ -55,13 +86,11 @@ def get_document_with_cache(db: Session, document_id: str) -> Optional[OutlinerD
         if document:
             document.content = cached_content
         return document
-    else:
-        # Content not in cache, fetch from DB
-        document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
-        if document:
-            # Cache the content for future requests
-            set_document_content_in_cache(document_id, document.content)
-        return document
+    # Content not in cache: load row once (includes content) and warm cache
+    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    if document:
+        set_document_content_in_cache(document_id, document.content)
+    return document
 
 
 
