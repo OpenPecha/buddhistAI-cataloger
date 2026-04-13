@@ -117,8 +117,7 @@ const OutlinerUpload: React.FC = () => {
   const assingDisabled= 
   assignWorkMutation.isPending ||
   !userId ||
-  !documents.every(doc=>doc.status==='skipped' || doc.status==='completed' ||doc.status==='approved')||
-  !!rejected_document
+  !documents.every(doc=>doc.status==='skipped' || doc.status==='completed' ||doc.status==='approved')
 
   const rejected_url = "/outliner/"+rejected_document?.rejected_segment?.document_id+"?segmentId="+rejected_document?.rejected_segment?.segment_id;
    return (
