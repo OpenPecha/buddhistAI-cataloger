@@ -3,6 +3,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useUser } from '@/hooks/useUser';
 import { useTranslation } from 'react-i18next';
+import { Button } from '@/components/ui/button';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -39,6 +40,9 @@ export default ProtectedRoute;
 
 
 export const ServerMaintenance=()=>{
+
+  const { logout } = useAuth0();
+
   return <div className="min-h-screen font-monlam flex flex-col items-center justify-center bg-gradient-to-tr from-indigo-100 to-slate-100">
   <div className="bg-white rounded-2xl shadow-xl px-10 py-8 flex flex-col items-center max-w-md w-full border border-indigo-50">
     <div className="flex flex-col items-center mb-6">
@@ -74,6 +78,13 @@ export const ServerMaintenance=()=>{
       </span>
       <span className="block text-gray-400">If this issue persists, please contact support.</span>
     </div>
+    <Button onClick={()=>{
+      logout({
+        logoutParams: {
+          returnTo: window.location.origin + '/login',
+        },
+      });
+    }}>Logout</Button>
   </div>
 </div>
 }
