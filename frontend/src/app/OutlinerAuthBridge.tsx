@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
 import { setOutlinerAccessTokenGetter } from '@/api/outliner'
 import { getAuth0AccessToken } from '@/lib/auth0AccessToken'
@@ -9,17 +9,40 @@ import { getAuth0AccessToken } from '@/lib/auth0AccessToken'
  * Must render under `Auth0Provider` with the same API audience as the backend `AUTH0_AUDIENCE`.
  */
 export function OutlinerAuthBridge() {
-  const { getAccessTokenSilently, isAuthenticated } = useAuth0()
+  const { getAccessTokenSilently, isAuthenticated, logout } = useAuth0()
+
+  const resolveToken = useCallback(
+    () => getAuth0AccessToken(getAccessTokenSilently),
+    [getAccessTokenSilently]
+  )
+
+  const refreshToken = useCallback(
+    () =>
+      getAuth0AccessToken(() =>
+        getAccessTokenSilently({ cacheMode: 'off' })
+      ),
+    [getAccessTokenSilently]
+  )
+
+  const handleLogout = useCallback(() => {
+    return logout({
+      logoutParams: {
+        returnTo: globalThis.location.origin + '/login',
+      },
+    })
+  }, [logout])
 
   useEffect(() => {
     if (!isAuthenticated) {
       setOutlinerAccessTokenGetter(null)
       return () => setOutlinerAccessTokenGetter(null)
     }
-    const getter = () => getAuth0AccessToken(getAccessTokenSilently)
-    setOutlinerAccessTokenGetter(getter)
+    setOutlinerAccessTokenGetter(resolveToken, {
+      refreshToken,
+      logout: handleLogout,
+    })
     return () => setOutlinerAccessTokenGetter(null)
-  }, [getAccessTokenSilently, isAuthenticated])
+  }, [isAuthenticated, resolveToken, refreshToken, handleLogout])
 
   return null
 }

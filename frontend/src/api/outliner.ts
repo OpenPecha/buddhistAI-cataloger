@@ -4,8 +4,11 @@ import { segmentBodyFromDocument, withResolvedSegmentTexts } from '@/lib/outline
 import { fetchWithAccessToken, setAccessTokenGetter } from '@/lib/fetchWithAccessToken';
 
 /** Register how to obtain the Auth0 access token for outliner API calls (set from the Auth0 provider tree). */
-export function setOutlinerAccessTokenGetter(fn: (() => Promise<string | null>) | null) {
-  setAccessTokenGetter(fn);
+export function setOutlinerAccessTokenGetter(
+  fn: (() => Promise<string | null>) | null,
+  extras?: { refreshToken?: () => Promise<string | null>; logout?: () => void | Promise<void> }
+) {
+  setAccessTokenGetter(fn, extras);
 }
 
 /** Same as `fetch` but adds `Authorization: Bearer` when a getter is registered. */
