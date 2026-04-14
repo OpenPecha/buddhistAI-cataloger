@@ -76,6 +76,7 @@ function OutlinerAdminDashboard() {
         stats={stats ?? null}
         isLoading={isLoading}
         annotators={outlinerUsers}
+        dashboardUserFilter={selectedUserId || undefined}
       />
     </div>
   );

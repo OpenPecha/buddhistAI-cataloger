@@ -44,6 +44,8 @@ interface OverviewTabProps {
   readonly stats: DashboardStats | null
   readonly isLoading?: boolean
   readonly annotators?: ReadonlyArray<{ id: string; name: string | null }>
+  /** When set, top self-reviewers list is limited to this user (matches scoped dashboard totals). */
+  readonly dashboardUserFilter?: string
 }
 
 /** Aligned with tailwind.css Tibetan-inspired admin tokens (burgundy / gold / teal). */
@@ -271,7 +273,22 @@ function MetricShell({
   )
 }
 
-function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
+function annotatorDisplayName(
+  userId: string | null,
+  annotators: ReadonlyArray<{ id: string; name: string | null }>,
+): string {
+  if (userId == null || userId === '') return 'Unassigned'
+  const u = annotators.find((a) => a.id === userId)
+  const n = u?.name?.trim()
+  return n || userId
+}
+
+function OverviewTab({
+  stats,
+  isLoading,
+  annotators = [],
+  dashboardUserFilter,
+}: OverviewTabProps) {
   const overviewBarData = useMemo(() => {
     if (!stats) return null
     const skippedDocs = stats.document_status_counts.skipped ?? 0
@@ -362,15 +379,8 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
     const perf = stats.annotator_performance ?? []
     if (perf.length === 0) return null
 
-    const nameFor = (userId: string | null) => {
-      if (userId == null || userId === '') return 'Unassigned'
-      const u = annotators.find((a) => a.id === userId)
-      const n = u?.name?.trim()
-      return n || userId
-    }
-
     return {
-      labels: perf.map((r) => nameFor(r.user_id)),
+      labels: perf.map((r) => annotatorDisplayName(r.user_id, annotators)),
       datasets: [
         {
           label: 'Segments',
@@ -442,6 +452,23 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
     }
   }, [stats, annotators])
 
+  const topSelfReviewers = useMemo(() => {
+    if (!stats) return []
+    const perf = stats.annotator_performance ?? []
+    let rows = perf.filter((r) => (r.segments_self_reviewed ?? 0) > 0)
+    if (dashboardUserFilter) {
+      rows = rows.filter((r) => r.user_id === dashboardUserFilter)
+    }
+    rows = [...rows].sort(
+      (a, b) => (b.segments_self_reviewed ?? 0) - (a.segments_self_reviewed ?? 0),
+    )
+    return rows.slice(0, 3).map((r) => ({
+      userId: r.user_id,
+      name: annotatorDisplayName(r.user_id, annotators),
+      count: r.segments_self_reviewed ?? 0,
+    }))
+  }, [stats, annotators, dashboardUserFilter])
+
   if (isLoading && !stats) {
     return (
       <div
@@ -473,6 +500,33 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
   const skippedDocuments = stats.document_status_counts.skipped ?? 0
 
   const statsCardInner = 'border-0 bg-transparent shadow-none hover:shadow-none'
+
+  let selfReviewCardFooter: ReactNode = null
+  if (topSelfReviewers.length > 0) {
+    selfReviewCardFooter = (
+      <div className="space-y-1.5 border-t border-fuchsia-200/80 pt-3 text-xs text-muted-foreground">
+        <p className="font-medium text-foreground/80">
+          {dashboardUserFilter ? 'Self-review count' : 'Top 3 reviewers by self-review count'}
+        </p>
+        {topSelfReviewers.map((row) => (
+          <div key={row.userId ?? 'none'} className="flex justify-between gap-2">
+            <span className="min-w-0 truncate" title={row.name}>
+              {row.name}
+            </span>
+            <span className="shrink-0 font-semibold tabular-nums text-foreground">
+              {row.count.toLocaleString()}
+            </span>
+          </div>
+        ))}
+      </div>
+    )
+  } else if (stats.segments_self_reviewed_total > 0) {
+    selfReviewCardFooter = (
+      <div className="border-t border-fuchsia-200/80 pt-3 text-xs text-muted-foreground">
+        Breakdown unavailable for this filter.
+      </div>
+    )
+  }
 
   return (
     <div className="relative space-y-12">
@@ -561,16 +615,7 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
               }
             />
           </MetricShell>
-          <MetricShell accentClass="from-teal-800 to-cyan-500">
-            <StatsCard
-              className={statsCardInner}
-              icon={<BadgeCheck className="h-6 w-6 text-teal-700" strokeWidth={1.75} />}
-              title="Reviewed (reviewer recorded)"
-              value={stats.segments_checked_approved_with_reviewer}
-              colorClass="text-teal-900"
-              hint="Done or approved with a reviewer user id stored"
-            />
-          </MetricShell>
+         
           <MetricShell accentClass="from-fuchsia-700 to-pink-500">
             <StatsCard
               className={statsCardInner}
@@ -579,6 +624,7 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
               value={stats.segments_self_reviewed_total}
               colorClass="text-fuchsia-900"
               hint="Same user owns the document and is the recorded reviewer"
+              footer={selfReviewCardFooter}
             />
           </MetricShell>
           <MetricShell accentClass="from-red-700 to-red-500">

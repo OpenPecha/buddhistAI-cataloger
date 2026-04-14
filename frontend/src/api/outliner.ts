@@ -623,8 +623,6 @@ export interface DashboardStats {
   /** Unresolved rejected segments: status rejected and latest rejection row is not resolved */
   rejection_count: number;
   /** Checked/approved segments that record who reviewed (reviewed_by_id set) */
-  segments_checked_approved_with_reviewer: number;
-  /** Same as above where document owner is the recorded reviewer (self-check) */
   segments_self_reviewed_total: number;
   document_status_counts: Record<string, number>;
   document_category_counts: Record<string, number>;

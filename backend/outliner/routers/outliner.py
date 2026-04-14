@@ -1088,10 +1088,7 @@ class DashboardStatsResponse(BaseModel):
         ...,
         description="Same as annotator chart: rejected segments whose latest rejection row is not resolved",
     )
-    segments_checked_approved_with_reviewer: int = Field(
-        ...,
-        description="Checked or approved segments with reviewed_by_id set (same document scope as other totals)",
-    )
+ 
     segments_self_reviewed_total: int = Field(
         ...,
         description="Subset where document owner equals reviewed_by_id",

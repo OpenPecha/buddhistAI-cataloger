@@ -1183,15 +1183,7 @@ def get_dashboard_stats(
         or 0
     )
 
-    segments_checked_approved_with_reviewer = (
-        seg_base.filter(
-            segment_reviewed_when,
-            OutlinerSegment.reviewed_by_id.isnot(None),
-        )
-        .with_entities(func.count(OutlinerSegment.id))
-        .scalar()
-        or 0
-    )
+ 
 
     segments_self_reviewed_total = (
         seg_base.join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
@@ -1302,7 +1294,6 @@ def get_dashboard_stats(
         "segments_with_title_or_author_pending_review": segments_with_title_or_author_pending_review,
         "segments_with_title_not_reviewed": segments_with_title_not_reviewed,
         "rejection_count": rejection_count,
-        "segments_checked_approved_with_reviewer": segments_checked_approved_with_reviewer,
         "segments_self_reviewed_total": segments_self_reviewed_total,
         "document_status_counts": document_status_counts,
         "document_category_counts": document_category_counts,
