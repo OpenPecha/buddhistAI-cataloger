@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { useAuth0 } from '@auth0/auth0-react';
 import type { User, PaginatedUserResponse } from '../api/user';
+import { fetchWithAccessToken } from '@/lib/fetchWithAccessToken';
 
 interface UseUsersOptions {
   skip?: number;
@@ -12,7 +12,6 @@ interface UseUsersOptions {
  * Hook for fetching users list with pagination
  */
 export function useUsers(options: UseUsersOptions = {}) {
-  const { getAccessTokenSilently } = useAuth0();
   const { skip = 0, limit = 100, role } = options;
 
   const {
@@ -23,12 +22,10 @@ export function useUsers(options: UseUsersOptions = {}) {
   } = useQuery<PaginatedUserResponse>({
     queryKey: ['users', skip, limit, role],
     queryFn: async () => {
-      const token = await getAccessTokenSilently();
       const params = new URLSearchParams({ skip: String(skip), limit: String(limit) });
       if (role) params.append('role', role);
-      const response = await fetch(`/api/settings/users?${params.toString()}`, {
+      const response = await fetchWithAccessToken(`/api/settings/users?${params.toString()}`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
@@ -53,8 +50,6 @@ export function useUsers(options: UseUsersOptions = {}) {
  * Hook for fetching a single user by ID
  */
 export function useUser(userId: string | undefined) {
-  const { getAccessTokenSilently } = useAuth0();
-
   const {
     data: user,
     isLoading,
@@ -66,10 +61,8 @@ export function useUser(userId: string | undefined) {
       if (!userId) {
         throw new Error('User ID is required');
       }
-      const token = await getAccessTokenSilently();
-      const response = await fetch(`/api/settings/users/${userId}`, {
+      const response = await fetchWithAccessToken(`/api/settings/users/${userId}`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });

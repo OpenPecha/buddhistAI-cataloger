@@ -1,26 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth0 } from '@auth0/auth0-react';
-import { getUserByEmail, getUser, updateUser, type UserUpdate } from '../api/settings';
+import { getCurrentUser, getUser, updateUser, type UserUpdate } from '../api/settings';
 
 export function useUser() {
-  const { user: auth0User } = useAuth0();
+  const { isAuthenticated } = useAuth0();
   const queryClient = useQueryClient();
 
-  // Fetch user by email from Auth0
   const {
     data: user,
     isLoading,
     error,
     refetch
   } = useQuery({
-    queryKey: ['user', auth0User?.email],
-    queryFn: () => {
-      if (!auth0User?.email) {
-        throw new Error('User email is required');
-      }
-      return getUserByEmail(auth0User.email);
-    },
-    enabled: !!auth0User?.email,
+    queryKey: ['user', 'me'],
+    queryFn: () => getCurrentUser(),
+    enabled: isAuthenticated,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 

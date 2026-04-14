@@ -851,13 +851,7 @@ function OverviewTab({
         className={cardPanel}
       >
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Per-user workload</p>
-        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          Title or author counts reflect segments on documents assigned to that user. Reviewed and self-review
-          use the reviewer recorded when a segment is marked done or approved (same date filter as documents).
-          Rejections logged counts rejection events where that user is the reviewer. Reviewer title/author
-          edits counts approved segments on that user&apos;s documents where the reviewer supplied title or
-          author at approval.
-        </p>
+       
         <div className="mt-5 h-80 min-h-64">
           {annotatorCompareData ? (
             <Line data={annotatorCompareData} options={ANNOTATOR_LINE_OPTIONS} />

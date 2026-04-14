@@ -1,4 +1,5 @@
 import { API_URL } from '@/config/api'
+import { fetchWithAccessToken } from '@/lib/fetchWithAccessToken'
 
 export interface CreateBdrcWorkPayload {
   pref_label_bo?: string
@@ -21,7 +22,7 @@ export interface CreateBdrcWorkResponse {
 export async function createBdrcWork(
   payload: CreateBdrcWorkPayload
 ): Promise<CreateBdrcWorkResponse> {
-  const response = await fetch(`${API_URL}/bdrc/works`, {
+  const response = await fetchWithAccessToken(`${API_URL}/bdrc/works`, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -52,7 +53,7 @@ export async function updateBdrcWork(
   workId: string,
   payload: UpdateBdrcWorkPayload
 ): Promise<Record<string, unknown>> {
-  const response = await fetch(`${API_URL}/bdrc/works/${encodeURIComponent(workId)}`, {
+  const response = await fetchWithAccessToken(`${API_URL}/bdrc/works/${encodeURIComponent(workId)}`, {
     method: 'PUT',
     headers: {
       Accept: 'application/json',
@@ -96,7 +97,7 @@ export async function mergeBdrcWorks(
   if (modifiedBy) {
     headers['X-User-Email'] = modifiedBy
   }
-  const response = await fetch(`${API_URL}/bdrc/works/merge`, {
+  const response = await fetchWithAccessToken(`${API_URL}/bdrc/works/merge`, {
     method: 'POST',
     headers,
     body: JSON.stringify(payload),
@@ -137,7 +138,7 @@ export async function mergeBdrcPersons(
   if (modifiedBy) {
     headers['X-User-Email'] = modifiedBy
   }
-  const response = await fetch(`${API_URL}/bdrc/persons/merge`, {
+  const response = await fetchWithAccessToken(`${API_URL}/bdrc/persons/merge`, {
     method: 'POST',
     headers,
     body: JSON.stringify(payload),
@@ -180,7 +181,7 @@ export async function findMatchingBdrcWork(
   payload: FindMatchingBdrcWorkPayload,
   options?: { signal?: AbortSignal }
 ): Promise<BdrcMatchingSuggestion[]> {
-  const response = await fetch(`${API_URL}/bdrc/matching/find-work`, {
+  const response = await fetchWithAccessToken(`${API_URL}/bdrc/matching/find-work`, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
@@ -223,7 +224,7 @@ export interface CreateBdrcPersonResponse {
 export async function createBdrcPerson(
   payload: CreateBdrcPersonPayload
 ): Promise<CreateBdrcPersonResponse> {
-  const response = await fetch(`${API_URL}/bdrc/persons`, {
+  const response = await fetchWithAccessToken(`${API_URL}/bdrc/persons`, {
     method: 'POST',
     headers: {
       Accept: 'application/json',

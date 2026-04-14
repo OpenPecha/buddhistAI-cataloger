@@ -1,3 +1,5 @@
+import { fetchWithAccessToken } from '@/lib/fetchWithAccessToken';
+
 const API_URL = '/api';
 
 interface User {
@@ -6,20 +8,18 @@ interface User {
   role: string;
 }
 
-export const fetchPermission = async (email: string): Promise<User | null> => {
-
-        const response = await fetch(`${API_URL}/admin/permission?email=${email}`, {
-            method: 'POST',
+export const fetchPermission = async (): Promise<User | null> => {
+  const response = await fetchWithAccessToken(`${API_URL}/admin/permission`, {
+    method: 'GET',
     headers: {
-        'Content-Type': 'application/json',
-        'accept': 'application/json',
-    }
-});
+      accept: 'application/json',
+    },
+  });
 
-if (!response.ok) {
+  if (!response.ok) {
     const err = await response.text();
     throw new Error(`Failed to fetch permission: ${response.status} ${response.statusText} - ${err}`);
-}
+  }
 
-return response.json();
+  return response.json();
 };

@@ -1,19 +1,16 @@
 import { useCallback } from 'react';
-import { useAuth0 } from '@auth0/auth0-react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { UserUpdateRequest } from '../api/user';
+import { fetchWithAccessToken } from '@/lib/fetchWithAccessToken';
 
 export function useUserActions() {
-  const { getAccessTokenSilently } = useAuth0();
   const queryClient = useQueryClient();
 
   const updateUser = useCallback(async (userId: string, userData: UserUpdateRequest) => {
     try {
-      const token = await getAccessTokenSilently();
-      const response = await fetch(`/api/settings/users/${userId}`, {
+      const response = await fetchWithAccessToken(`/api/settings/users/${userId}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(userData)
@@ -32,7 +29,7 @@ export function useUserActions() {
       console.error('Error updating user:', error);
       throw error;
     }
-  }, [getAccessTokenSilently, queryClient]);
+  }, [queryClient]);
 
   const deleteUser = useCallback(async (userId: string) => {
     if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
@@ -40,11 +37,9 @@ export function useUserActions() {
     }
 
     try {
-      const token = await getAccessTokenSilently();
-      const response = await fetch(`/api/settings/users/${userId}`, {
+      const response = await fetchWithAccessToken(`/api/settings/users/${userId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
@@ -61,7 +56,7 @@ export function useUserActions() {
       console.error('Error deleting user:', error);
       throw error;
     }
-  }, [getAccessTokenSilently, queryClient]);
+  }, [queryClient]);
 
   return {
     updateUser,

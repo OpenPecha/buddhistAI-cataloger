@@ -7,7 +7,9 @@ from sqlalchemy.orm import Session
 
 from core.database import get_db
 from outliner.controller.outliner import reject_segments_bulk as reject_segments_bulk_ctrl
+from outliner.deps import require_outliner_access
 from outliner.routers import outliner as _legacy
+from user.models.user import User
 
 router = APIRouter(prefix="/reviews", tags=["outliner-v1-reviews"])
 
@@ -16,9 +18,10 @@ router = APIRouter(prefix="/reviews", tags=["outliner-v1-reviews"])
 async def rejections_batch(
     request: _legacy.BulkRejectRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     segments = reject_segments_bulk_ctrl(
-        db, request.segment_ids, request.reviewer_id, request.comment
+        db, request.segment_ids, current_user.id, request.comment
     )
     return [
         _legacy._build_segment_response(
@@ -34,10 +37,11 @@ async def rejections_batch(
 async def rejections_batch_put(
     request: _legacy.BulkRejectRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     """Compatibility: legacy used PUT for bulk reject."""
     segments = reject_segments_bulk_ctrl(
-        db, request.segment_ids, request.reviewer_id, request.comment
+        db, request.segment_ids, current_user.id, request.comment
     )
     return [
         _legacy._build_segment_response(

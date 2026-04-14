@@ -50,9 +50,6 @@ function SegmentRow({
     mutationFn: (newStatus: 'approved' | 'unchecked' | 'checked') =>
       updateSegment(segment.id, {
         status: newStatus,
-        ...((newStatus === 'approved' || newStatus === 'checked') && reviewerAccount?.id
-          ? { reviewer_id: reviewerAccount.id }
-          : {}),
       }),
     onSuccess: (_data, newStatus) => {
       queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] });
@@ -69,8 +66,7 @@ function SegmentRow({
   });
 
   const rejectMutation = useMutation({
-    mutationFn: (comment: string) =>
-      rejectSegment(segment.id, comment, reviewerAccount?.id),
+    mutationFn: (comment: string) => rejectSegment(segment.id, comment),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] });
       toast.success('Segment rejected');
@@ -94,12 +90,8 @@ function SegmentRow({
       toast.error('Please enter a comment explaining the rejection');
       return;
     }
-    if (!reviewerAccount?.id) {
-      toast.error(
-        reviewerAccountLoading
-          ? 'Loading your account… try again in a moment.'
-          : 'Your user profile is not loaded; refresh the page and try again.'
-      );
+    if (reviewerAccountLoading) {
+      toast.error('Loading your account… try again in a moment.');
       return;
     }
     setIsSaving(true);

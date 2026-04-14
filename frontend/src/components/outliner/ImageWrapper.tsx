@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useAuth0 } from '@auth0/auth0-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ImageZoom from 'react-image-zooom'
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument'
@@ -10,6 +11,9 @@ import {
   type RowComponentProps,
 } from 'react-window'
 import { Link2, Loader2 } from 'lucide-react'
+import { getAuth0AccessToken } from '@/lib/auth0AccessToken'
+import { proxiedImageUrl } from '@/lib/imageProxy'
+import { useAbortableBlobUrl } from '@/hooks/useAbortableBlobUrl'
 
 type BdrcPageLike = {
   pname?: string
@@ -44,6 +48,9 @@ function pageIndexForDocumentCharIndex(
 const MAIN_IMAGE_SLOT_CLASS =
   'relative flex min-h-0 flex-1 w-full items-center justify-center overflow-hidden rounded border border-gray-200 bg-gray-100'
 
+/** Time with no scroll events before IIIF image fetches resume. */
+const SCROLL_IMAGE_IDLE_MS = 180
+
 type PageImageRowProps = {
   pages: BdrcPageLike[]
   volId: string | null
@@ -51,6 +58,9 @@ type PageImageRowProps = {
   noImageLabel: string
   rowViewportHeight: number
   activeIndex: number
+  /** When false, image fetch is paused (e.g. while the list is scrolling). */
+  fetchImageEnabled: boolean
+  getProxyImageFetchHeaders?: () => Promise<HeadersInit | undefined>
 }
 
 function PageImageRow({
@@ -62,12 +72,21 @@ function PageImageRow({
   volumePageAlt,
   noImageLabel,
   activeIndex,
+  fetchImageEnabled,
+  getProxyImageFetchHeaders,
 }: RowComponentProps<PageImageRowProps>) {
   const pname = pages[index]?.pname
-  const imageUrl =
+  const fetchUrl =
     volId && pname
-      ? `https://iiif.bdrc.io/bdr:${volId}::${pname}/full/max/0/default.jpg`
+      ? proxiedImageUrl(
+          `https://iiif.bdrc.io/bdr:${volId}::${pname}/full/max/0/default.jpg`
+        )
       : null
+
+  const blobUrl = useAbortableBlobUrl(fetchUrl, {
+    fetchEnabled: fetchImageEnabled,
+    getFetchHeaders: getProxyImageFetchHeaders,
+  })
 
   const isActive = index === activeIndex
 
@@ -81,22 +100,29 @@ function PageImageRow({
             : '',
         ].join(' ')}
       >
-        {imageUrl ? (
+        {fetchUrl ? (
           <div className={MAIN_IMAGE_SLOT_CLASS}>
-            <ImageZoom
-              src={imageUrl}
-              alt={volumePageAlt(index + 1)}
-              zoom={250}
-              fullWidth
-              theme={{
-                root: [
-                  '!m-0 !flex h-full w-full min-h-0 max-h-full max-w-full items-center justify-center',
-                  'overflow-hidden rounded bg-transparent',
-                ].join(' '),
-                image:
-                  'relative z-1 mx-auto max-h-full max-w-full object-contain',
-              }}
-            />
+            {blobUrl ? (
+              <ImageZoom
+                src={blobUrl}
+                alt={volumePageAlt(index + 1)}
+                zoom={250}
+                fullWidth
+                theme={{
+                  root: [
+                    '!m-0 !flex h-full w-full min-h-0 max-h-full max-w-full items-center justify-center',
+                    'overflow-hidden rounded bg-transparent',
+                  ].join(' '),
+                  image:
+                    'relative z-1 mx-auto max-h-full max-w-full object-contain',
+                }}
+              />
+            ) : fetchImageEnabled ? (
+              <Loader2
+                className="h-8 w-8 shrink-0 animate-spin text-gray-400"
+                aria-hidden
+              />
+            ) : null}
           </div>
         ) : (
           <div className={MAIN_IMAGE_SLOT_CLASS}>
@@ -132,7 +158,15 @@ export function VolumeImagePanelCore({
   documentCharIndexForImage,
 }: VolumeImagePanelCoreProps) {
   const { t } = useTranslation()
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0()
   const listRef = useListRef(null)
+
+  const getProxyImageFetchHeaders = useCallback(async () => {
+    if (!isAuthenticated) return undefined
+    const token = await getAuth0AccessToken(getAccessTokenSilently)
+    if (!token) return undefined
+    return { Authorization: `Bearer ${token}` }
+  }, [getAccessTokenSilently, isAuthenticated])
 
   const { volume, isLoading, error } = useBdrcOtVolume(volumeFilename)
 
@@ -155,10 +189,26 @@ export function VolumeImagePanelCore({
   /** When true, the list scrolls to the page that matches the caret / selection in the active segment. */
   const [syncWithEditor, setSyncWithEditor] = useState(false)
   const [listViewportHeight, setListViewportHeight] = useState(480)
+  /** After scroll settles, rows may fetch IIIF blobs; while scrolling, fetch URL is null to avoid churn. */
+  const [fetchImageEnabled, setFetchImageEnabled] = useState(true)
+  const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     setPreviewIndex(0)
   }, [volumeFilename])
+
+  useEffect(() => {
+    setFetchImageEnabled(true)
+  }, [volumeFilename])
+
+  useEffect(() => {
+    return () => {
+      if (scrollIdleTimerRef.current != null) {
+        clearTimeout(scrollIdleTimerRef.current)
+        scrollIdleTimerRef.current = null
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (pageCount === 0) return
@@ -188,6 +238,17 @@ export function VolumeImagePanelCore({
     []
   )
 
+  const onListScroll = useCallback(() => {
+    setFetchImageEnabled(false)
+    if (scrollIdleTimerRef.current != null) {
+      clearTimeout(scrollIdleTimerRef.current)
+    }
+    scrollIdleTimerRef.current = setTimeout(() => {
+      scrollIdleTimerRef.current = null
+      setFetchImageEnabled(true)
+    }, SCROLL_IMAGE_IDLE_MS)
+  }, [])
+
   const onListResize = useCallback(
     (size: { height: number; width: number }) => {
       setListViewportHeight((h) =>
@@ -214,8 +275,18 @@ export function VolumeImagePanelCore({
       noImageLabel: t('outliner.images.noImage'),
       rowViewportHeight: listViewportHeight,
       activeIndex: previewIndex,
+      fetchImageEnabled,
+      getProxyImageFetchHeaders,
     }
-  }, [pages, volId, listViewportHeight, previewIndex, t])
+  }, [
+    pages,
+    volId,
+    listViewportHeight,
+    previewIndex,
+    fetchImageEnabled,
+    getProxyImageFetchHeaders,
+    t,
+  ])
 
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-col bg-white">
@@ -284,6 +355,7 @@ export function VolumeImagePanelCore({
               overscanCount={1}
               onRowsRendered={onRowsRendered}
               onResize={onListResize}
+              onScroll={onListScroll}
             />
           </div>
         )}

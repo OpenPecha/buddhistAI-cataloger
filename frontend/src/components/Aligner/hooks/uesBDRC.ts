@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 
+import { fetchWithAccessToken } from '@/lib/fetchWithAccessToken';
+
 const API_URL = '/api';
 
 export interface BdrcSearchResult {
@@ -45,7 +47,7 @@ export function useBdrcSearch(searchQuery: string, type: "Work" | "Person" = "Wo
   const { data, isLoading, error } = useQuery<BdrcSearchResult[]>({
     queryKey: ['bdrcSearch', trimmedQuery, type],
     queryFn: async ({ signal }) => {
-      const response = await fetch(`${API_URL}/bdrc/search`, {
+      const response = await fetchWithAccessToken(`${API_URL}/bdrc/search`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

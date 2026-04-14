@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Person, CreatePersonData, UpdatePersonData } from '../types/person';
 import { API_URL } from '@/config/api';
+import { fetchWithAccessToken } from '@/lib/fetchWithAccessToken';
 
 // Helper function to handle API responses with better error messages
 const handleApiResponse = async (response: Response, customMessages?: { 400?: string; 404?: string; 500?: string }) => {
@@ -56,7 +57,7 @@ const fetchPersons = async (params?: { limit?: number; offset?: number }): Promi
   const url = queryParams.toString() ? `${API_URL}/person?${queryParams.toString()}` : `${API_URL}/person`;
   
   try {
-    const response = await fetch(url);
+    const response = await fetchWithAccessToken(url);
     const data = await handleApiResponse(response);
     return data.results || data || [];
   } catch (error) {
@@ -69,7 +70,7 @@ const fetchPersons = async (params?: { limit?: number; offset?: number }): Promi
 
 const fetchPerson = async (id: string): Promise<Person> => {
   try {
-    const response = await fetch(`${API_URL}/person/${id}`);
+    const response = await fetchWithAccessToken(`${API_URL}/person/${id}`);
     return await handleApiResponse(response, {
       404: 'Person not found. It may have been deleted or the link is incorrect.'
     });
@@ -83,7 +84,7 @@ const fetchPerson = async (id: string): Promise<Person> => {
 
 const createPerson = async (data: CreatePersonData): Promise<Person> => {
   try {
-    const response = await fetch(`${API_URL}/person`, {
+    const response = await fetchWithAccessToken(`${API_URL}/person`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

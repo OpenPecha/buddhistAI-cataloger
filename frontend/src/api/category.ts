@@ -10,6 +10,8 @@ interface FetchCategoriesOptions {
   language?: string;
 }
 
+import { fetchWithAccessToken } from '@/lib/fetchWithAccessToken';
+
 const API_URL = '/api';
 
 export const fetchCategories = async (options: FetchCategoriesOptions = {}): Promise<Category[]> => {
@@ -19,7 +21,7 @@ export const fetchCategories = async (options: FetchCategoriesOptions = {}): Pro
   queryParams.append('application', application);
   queryParams.append('language', language);
   
-  const response = await fetch(
+  const response = await fetchWithAccessToken(
     `${API_URL}/v2/categories?${queryParams.toString()}`,
     {
       headers: {
@@ -46,7 +48,7 @@ interface CreateCategoryPayload {
 export const createCategory = async (
   payload: CreateCategoryPayload
 ): Promise<Category> => {
-  const response = await fetch(`${API_URL}/v2/categories`, {
+  const response = await fetchWithAccessToken(`${API_URL}/v2/categories`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

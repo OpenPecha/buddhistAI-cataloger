@@ -6,12 +6,19 @@ These endpoints remain for backward compatibility during migration.
 """
 
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
+
+from outliner.deps import (
+    apply_authenticated_segment_reviewer,
+    apply_authenticated_segment_reviewer_bulk,
+    require_outliner_access,
+)
 from pydantic import BaseModel, ConfigDict, Field, model_serializer
 from typing import Any, Dict, List, Optional, Tuple
 from sqlalchemy.orm import Session
 from datetime import datetime
 from ai_text_outline import extract_toc_indices
 from core.database import get_db
+from user.models.user import User
 from outliner.controller.outliner import (
     create_document as create_document_ctrl,
     list_documents as list_documents_ctrl,
@@ -53,7 +60,7 @@ from outliner.controller.outliner import (
 )
 from outliner.utils.outliner_utils import get_comments_list, segment_body_from_document
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_outliner_access)])
 
 # ==================== Pydantic Schemas ====================
 
@@ -128,7 +135,6 @@ class SegmentUpdate(BaseModel):
     parent_segment_id: Optional[str] = None
     is_attached: Optional[bool] = None
     status: Optional[str] = None  # checked, unchecked
-    reviewer_id: Optional[str] = None  # user who set checked/approved (dashboard stats)
     label: Optional[str] = None  # FRONT_MATTER, TOC, TEXT, BACK_MATTER
     comment: Optional[str] = None  # Deprecated: kept for backward compatibility
     comment_content: Optional[str] = None  # New comment content to append
@@ -189,14 +195,12 @@ class RejectSegmentRequest(BaseModel):
 
 class BulkRejectRequest(BaseModel):
     segment_ids: List[str]
-    reviewer_id: Optional[str] = None
     comment: str = Field(..., min_length=1, description="Required explanation for the annotator (applied to each segment)")
 
 
 class DocumentCreate(BaseModel):
     content: str
     filename: Optional[str] = None
-    user_id: Optional[str] = None
 
 class SegmentResponseDocument(BaseModel):
     id: str
@@ -334,7 +338,6 @@ class DocumentStatusUpdate(BaseModel):
 
 class SegmentStatusUpdate(BaseModel):
     status: str
-    reviewer_id: Optional[str] = None
 
 
 # ==================== Helper Functions ====================
@@ -454,14 +457,15 @@ def _document_plain_content(db: Session, document_id: str) -> str:
 @router.post("/documents", response_model=DocumentResponse, status_code=201)
 async def create_document(
     document: DocumentCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     """Create a new outliner document with full text content"""
     db_document = create_document_ctrl(
         db=db,
         content=document.content,
         filename=document.filename,
-        user_id=document.user_id
+        user_id=current_user.id,
     )
     return db_document
 
@@ -728,7 +732,8 @@ async def get_segment(
 async def update_segment(
     segment_id: str,
     segment_update: SegmentUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     """
     PERFORMANCE OPTIMIZED: Update a segment's content or annotations.
@@ -744,6 +749,7 @@ async def update_segment(
     - After: 1 SELECT (segment) + 1 UPDATE (segment) + 1 UPDATE (doc, if annotation changed)
     """
     patch = segment_update.model_dump(exclude_unset=True)
+    apply_authenticated_segment_reviewer(patch, current_user)
     segment = update_segment_ctrl(db, segment_id, patch)
     return {"message":"segment updated","id":segment.id}
 
@@ -751,10 +757,12 @@ async def update_segment(
 @router.put("/segments/bulk", response_model=List[SegmentResponse])
 async def update_segments_bulk(
     updates: BulkSegmentUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     """Update multiple segments at once"""
     segment_updates = [seg.model_dump(exclude_unset=True) for seg in updates.segments]
+    apply_authenticated_segment_reviewer_bulk(segment_updates, current_user)
     updated_segments = update_segments_bulk_ctrl(db, segment_updates, updates.segment_ids)
     content = (
         _document_plain_content(db, updated_segments[0].document_id)
@@ -873,13 +881,15 @@ async def delete_segment_comment(
 async def bulk_segment_operations(
     document_id: str,
     operations: BulkSegmentOperationsRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     """
     Perform bulk operations on segments: create, update, and delete in a single transaction.
     This is optimized for performance by batching all operations together.
     """
     create_data = [seg.dict() for seg in operations.create] if operations.create else None
+    apply_authenticated_segment_reviewer_bulk(operations.update, current_user)
     result_segments = bulk_segment_operations_ctrl(
         db=db,
         document_id=document_id,
@@ -909,21 +919,20 @@ async def reset_segments(
 async def update_document_status(
     document_id: str,
     status_update: DocumentStatusUpdate,
-    user_id: Optional[str] = None,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     """
     Update document status.
     
     When restoring a deleted document (changing status from 'deleted' to 'active'),
-    the user_id parameter must be provided and must match the document's user_id
-    to ensure only the document owner can restore it.
+    ownership is verified against the authenticated user.
     """
     return update_document_status_ctrl(
         db=db,
         document_id=document_id,
         status=status_update.status,
-        user_id=user_id
+        user_id=current_user.id,
     )
 
 
@@ -931,14 +940,15 @@ async def update_document_status(
 async def update_segment_status(
     segment_id: str,
     status_update: SegmentStatusUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     """Update segment status (checked/unchecked)"""
     return update_segment_status_ctrl(
         db=db,
         segment_id=segment_id,
         status=status_update.status,
-        reviewer_id=status_update.reviewer_id,
+        reviewer_id=current_user.id,
     )
 
 
@@ -952,10 +962,12 @@ async def get_document_progress(
 
 
 @router.post("/assign_volume")
-async def assign_volume(user_id: str, db: Session = Depends(get_db)):
+async def assign_volume(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
+):
     """Assign a volume to a document"""
-    # get a "new" status  volume
-    document = await assign_volume_ctrl(db, user_id)
+    document = await assign_volume_ctrl(db, current_user.id)
     return document
     
     
@@ -963,11 +975,11 @@ async def assign_volume(user_id: str, db: Session = Depends(get_db)):
 async def reject_segment(
     segment_id: str,
     body: RejectSegmentRequest,
-    reviewer_id: Optional[str] = Query(None, description="Optional reviewer user id"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     """Reject a checked segment"""
-    segment = reject_segment_ctrl(db, segment_id, reviewer_id, body.comment)
+    segment = reject_segment_ctrl(db, segment_id, current_user.id, body.comment)
     return _build_segment_response(
         segment,
         db,
@@ -978,11 +990,12 @@ async def reject_segment(
 @router.put("/segments/bulk-reject", response_model=List[SegmentResponse])
 async def reject_segments_bulk(
     request: BulkRejectRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     """Reject multiple checked segments at once"""
     segments = reject_segments_bulk_ctrl(
-        db, request.segment_ids, request.reviewer_id, request.comment
+        db, request.segment_ids, current_user.id, request.comment
     )
     return [
         _build_segment_response(

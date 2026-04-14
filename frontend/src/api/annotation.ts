@@ -1,3 +1,5 @@
+import { fetchWithAccessToken } from '@/lib/fetchWithAccessToken';
+
 const API_URL = '/api';
 
 // Helper function to handle API responses with better error messages
@@ -127,7 +129,7 @@ export const fetchPreparedAlignmentData = async (
   source_instance_id: string,
   target_instance_id: string
 ): Promise<PreparedDataResponse> => {
-  const response = await fetch(
+  const response = await fetchWithAccessToken(
     `${API_URL}/aligner-data/prepare-alignment-data/${source_instance_id}/${target_instance_id}`,
     {
       headers: {

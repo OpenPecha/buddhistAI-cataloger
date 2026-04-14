@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useDebouncedState } from "@tanstack/react-pacer";
 import { API_URL } from "@/config/api";
+import { fetchWithAccessToken } from "@/lib/fetchWithAccessToken";
 import { fetchTextByBdrcId } from "@/api/texts";
 import type { OpenPechaText } from "@/types/text";
 
@@ -51,7 +52,7 @@ export function useBdrcSearch(searchQuery: string, type: string = "Work", deboun
   const { data, isLoading, error } = useQuery<BdrcSearchResult[]>({
     queryKey: [...bdrcSearchQueryKeyRoot, trimmedQuery, type],
     queryFn: async ({ signal }) => {
-      const response = await fetch(`${API_URL}/bdrc/search`, {
+      const response = await fetchWithAccessToken(`${API_URL}/bdrc/search`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -110,7 +111,7 @@ export interface BdrcWorkInfo {
  * Fetch BDRC work by ID (title + authors). Use in async handlers.
  */
 export async function fetchBdrcWork(workId: string): Promise<BdrcWorkInfo> {
-  const res = await fetch(`${API_URL}/bdrc/works/${workId}`);
+  const res = await fetchWithAccessToken(`${API_URL}/bdrc/works/${workId}`);
   if (!res.ok) throw new Error("Failed to fetch BDRC work");
   const data = await res.json();
   return {

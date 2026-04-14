@@ -1,5 +1,5 @@
-
 import { API_URL } from '@/config/api';
+import { fetchWithAccessToken } from '@/lib/fetchWithAccessToken';
 import type { OpenPechaText, OpenPechaTextInstance, OpenPechaTextInstanceListItem, CreateInstanceResponse } from '@/types/text';
 
 // Helper function to handle API responses with better error messages
@@ -90,7 +90,7 @@ export const fetchTexts = async (params?: { limit?: number; offset?: number; lan
   const url = queryString ? `${API_URL}/text?${queryString}` : `${API_URL}/text`;
   
   try {
-    const response = await fetch(url,{
+    const response = await fetchWithAccessToken(url,{
       signal,
     });
     const data = await handleApiResponse(response);
@@ -105,7 +105,7 @@ export const fetchTexts = async (params?: { limit?: number; offset?: number; lan
 
 export const fetchText = async (id: string): Promise<OpenPechaText> => {
   try {
-    const response = await fetch(`${API_URL}/text/${id}`);
+    const response = await fetchWithAccessToken(`${API_URL}/text/${id}`);
     return await handleApiResponse(response, {
       404: 'Text not found. It may have been deleted or the link is incorrect.'
     });
@@ -119,7 +119,7 @@ export const fetchText = async (id: string): Promise<OpenPechaText> => {
 
 export const fetchTextsByTitle = async (title: string, signal?: AbortSignal): Promise<OpenPechaText[]> => {
   try {
-    const response = await fetch(`${API_URL}/text/title-search?title=${title}`, {
+    const response = await fetchWithAccessToken(`${API_URL}/text/title-search?title=${title}`, {
       signal,
     });
     return await handleApiResponse(response);
@@ -141,7 +141,7 @@ export const fetchTextsByTitle = async (title: string, signal?: AbortSignal): Pr
 // Real API function for creating texts
 export const createText = async (textData: any): Promise<OpenPechaText> => {
   try {
-    const response = await fetch(`${API_URL}/text`, {
+    const response = await fetchWithAccessToken(`${API_URL}/text`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -162,7 +162,7 @@ export const createText = async (textData: any): Promise<OpenPechaText> => {
 
 export const fetchTextInstances = async (id: string): Promise<OpenPechaTextInstanceListItem[]> => {
   try {
-    const response = await fetch(`${API_URL}/text/${id}/instances`);
+    const response = await fetchWithAccessToken(`${API_URL}/text/${id}/instances`);
     return await handleApiResponse(response, {
       404: 'Text instances not found. The text may not exist or has no instances yet.'
     });
@@ -176,7 +176,7 @@ export const fetchTextInstances = async (id: string): Promise<OpenPechaTextInsta
 
 export const fetchInstance = async (id: string): Promise<OpenPechaTextInstance> => {
   try {
-    const response = await fetch(`${API_URL}/text/instances/${id}`);
+    const response = await fetchWithAccessToken(`${API_URL}/text/instances/${id}`);
     return await handleApiResponse(response, {
       404: 'Instance not found. It may have been deleted or the link is incorrect.'
     });
@@ -191,7 +191,7 @@ export const fetchInstance = async (id: string): Promise<OpenPechaTextInstance> 
 // Real API function for creating text instances
 export const createTextInstance = async (textId: string, instanceData: any, user: string): Promise<CreateInstanceResponse> => {
   try {
-    const response = await fetch(`${API_URL}/text/${textId}/instances`, {
+    const response = await fetchWithAccessToken(`${API_URL}/text/${textId}/instances`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -213,7 +213,7 @@ export const createTextInstance = async (textId: string, instanceData: any, user
 
 export const fetchAnnotation = async (id: string): Promise<OpenPechaTextInstance> => {
   try {
-    const response = await fetch(`${API_URL}/v2/annotations/${id}`);
+    const response = await fetchWithAccessToken(`${API_URL}/v2/annotations/${id}`);
     return await response.json();
   } catch (error) {
     if (error instanceof Error) {
@@ -225,7 +225,7 @@ export const fetchAnnotation = async (id: string): Promise<OpenPechaTextInstance
 
 export const fetchTextByBdrcId = async (bdrcId: string): Promise<OpenPechaText | null> => {
   try {
-    const response = await fetch(`${API_URL}/text/${bdrcId}`);
+    const response = await fetchWithAccessToken(`${API_URL}/text/${bdrcId}`);
     return await handleApiResponse(response);
   } catch {
     // Return null if not found (404) or any other error
@@ -237,7 +237,7 @@ export const fetchTextByBdrcId = async (bdrcId: string): Promise<OpenPechaText |
 
 export const createTranslation = async (instanceId: string, translationData: any, user: string): Promise<any> => {
   try {
-    const response = await fetch(`${API_URL}/instances/${instanceId}/translation`, {
+    const response = await fetchWithAccessToken(`${API_URL}/instances/${instanceId}/translation`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -257,7 +257,7 @@ export const createTranslation = async (instanceId: string, translationData: any
 
 export const createCommentary = async (instanceId: string, commentaryData: any, user: string): Promise<any> => {
   try {
-    const response = await fetch(`${API_URL}/instances/${instanceId}/commentary`, {
+    const response = await fetchWithAccessToken(`${API_URL}/instances/${instanceId}/commentary`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -277,7 +277,7 @@ export const createCommentary = async (instanceId: string, commentaryData: any, 
 
 export const updateAnnotation = async (annotationId: string, annotationData: any): Promise<any> => {
   try {
-    const response = await fetch(`${API_URL}/v2/annotations/${annotationId}/annotation`, {
+    const response = await fetchWithAccessToken(`${API_URL}/v2/annotations/${annotationId}/annotation`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -304,7 +304,7 @@ export const updateInstance = async (textId: string, instanceId: string, instanc
       delete instanceData.biblography_annotation;
     }
     
-    const response = await fetch(`${API_URL}/text/instances/${instanceId}`, {
+    const response = await fetchWithAccessToken(`${API_URL}/text/instances/${instanceId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -326,7 +326,7 @@ export const updateInstance = async (textId: string, instanceId: string, instanc
 
 export const updateText = async (textId: string, textData: any): Promise<any> => {
   try {
-    const response = await fetch(`${API_URL}/text/${textId}`, {
+    const response = await fetchWithAccessToken(`${API_URL}/text/${textId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -349,7 +349,7 @@ export const updateText = async (textId: string, textData: any): Promise<any> =>
 
 export const fetchEnums = async (type: string): Promise<any> => {
   try {
-    const response = await fetch(`${API_URL}/v2/enum?type=${type}`);
+    const response = await fetchWithAccessToken(`${API_URL}/v2/enum?type=${type}`);
     return await response.json();
   } catch (error) {
     if (error instanceof Error) {
@@ -360,7 +360,7 @@ export const fetchEnums = async (type: string): Promise<any> => {
 
 export const fetchRelatedInstances = async (instanceId: string): Promise<any[]> => {
   try {
-    const response = await fetch(`${API_URL}/instances/${instanceId}/related`);
+    const response = await fetchWithAccessToken(`${API_URL}/instances/${instanceId}/related`);
     return await handleApiResponse(response, {
       404: 'Related instances not found. The instance may not exist or has no related instances.'
     });

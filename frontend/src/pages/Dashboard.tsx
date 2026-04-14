@@ -83,7 +83,7 @@ const OutlinerUpload: React.FC = () => {
 
 
   const assignWorkMutation = useMutation({
-    mutationFn: () => assignVolume(userId!),
+    mutationFn: () => assignVolume(),
     onSuccess: (document) => {
       queryClient.invalidateQueries({ queryKey: ['outliner-documents', userId] });
       toast.success(`Work assigned successfully! Document: ${document.filename || document.id}`);
@@ -96,10 +96,6 @@ const OutlinerUpload: React.FC = () => {
   });
 
   const assignWork = () => {
-    if (!userId) {
-      toast.error('User ID is required');
-      return;
-    }
     assignWorkMutation.mutate();
   };
 

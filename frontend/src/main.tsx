@@ -7,6 +7,7 @@ import './tailwind.css'
 import 'react-split-pane/styles.css'
 import './i18n/config' // Initialize i18n
 import App from './App.tsx'
+import { OutlinerAuthBridge } from './app/OutlinerAuthBridge.tsx'
 import { UserbackProvider } from './context/UserbackProvider.tsx'
 import { BibliographyProvider } from './context/BibliographyContext.tsx'
 import { UIProvider } from './context/UIContext.tsx'
@@ -26,12 +27,15 @@ createRoot(document.getElementById('root')!).render(
       domain={import.meta.env.VITE_AUTH0_DOMAIN}
       clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
       authorizationParams={{
-        redirect_uri: window.location.origin
+        redirect_uri: window.location.origin,
+        scope: 'openid profile email',
+        audience: import.meta.env.VITE_AUTH0_AUDIENCE,
       }}
       cacheLocation='localstorage'
       useRefreshTokens={true}
       useRefreshTokensFallback={true}
     >  
+    <OutlinerAuthBridge />
     <QueryClientProvider client={queryClient}>
       <UIProvider>
         <BibliographyProvider>

@@ -1,12 +1,13 @@
 """Top-level segment routes under /api/v1/outliner/segments."""
 
-from typing import List, Optional
+from typing import List
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from core.database import get_db
+from outliner.deps import apply_authenticated_segment_reviewer, apply_authenticated_segment_reviewer_bulk, require_outliner_access
 from outliner.controller.outliner import (
     delete_segment as delete_segment_ctrl,
     get_segment as get_segment_ctrl,
@@ -18,18 +19,17 @@ from outliner.controller.outliner import (
     update_segments_bulk as update_segments_bulk_ctrl,
 )
 from outliner.routers import outliner as _legacy
+from user.models.user import User
 
 router = APIRouter(prefix="/segments", tags=["outliner-v1-segments"])
 
 
 class RejectSegmentV1Body(BaseModel):
     comment: str = Field(..., min_length=1)
-    reviewer_id: Optional[str] = None
 
 
 class SegmentStatusPatch(BaseModel):
     status: str
-    reviewer_id: Optional[str] = None
 
 
 @router.post("/merge", response_model=_legacy.SegmentResponse)
@@ -49,8 +49,10 @@ async def merge_segments(
 async def update_segments_bulk(
     updates: _legacy.BulkSegmentUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     segment_updates = [seg.model_dump(exclude_unset=True) for seg in updates.segments]
+    apply_authenticated_segment_reviewer_bulk(segment_updates, current_user)
     updated_segments = update_segments_bulk_ctrl(db, segment_updates, updates.segment_ids)
     content = (
         _legacy._document_plain_content(db, updated_segments[0].document_id)
@@ -78,8 +80,10 @@ async def patch_segment(
     segment_id: str,
     segment_update: _legacy.SegmentUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     patch = segment_update.model_dump(exclude_unset=True)
+    apply_authenticated_segment_reviewer(patch, current_user)
     segment = update_segment_ctrl(db, segment_id, patch)
     return {"message": "segment updated", "id": segment.id}
 
@@ -89,9 +93,11 @@ async def put_segment(
     segment_id: str,
     segment_update: _legacy.SegmentUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     """Compatibility: same behavior as PATCH (legacy clients used PUT)."""
     patch = segment_update.model_dump(exclude_unset=True)
+    apply_authenticated_segment_reviewer(patch, current_user)
     segment = update_segment_ctrl(db, segment_id, patch)
     return {"message": "segment updated", "id": segment.id}
 
@@ -122,12 +128,13 @@ async def patch_segment_status(
     segment_id: str,
     status_update: SegmentStatusPatch,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     return update_segment_status_ctrl(
         db=db,
         segment_id=segment_id,
         status=status_update.status,
-        reviewer_id=status_update.reviewer_id,
+        reviewer_id=current_user.id,
     )
 
 
@@ -136,13 +143,14 @@ async def put_segment_status(
     segment_id: str,
     status_update: _legacy.SegmentStatusUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     """Compatibility: legacy PUT /status."""
     return update_segment_status_ctrl(
         db=db,
         segment_id=segment_id,
         status=status_update.status,
-        reviewer_id=status_update.reviewer_id,
+        reviewer_id=current_user.id,
     )
 
 
@@ -151,8 +159,9 @@ async def reject_segment(
     segment_id: str,
     body: RejectSegmentV1Body,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
-    segment = reject_segment_ctrl(db, segment_id, body.reviewer_id, body.comment)
+    segment = reject_segment_ctrl(db, segment_id, current_user.id, body.comment)
     return _legacy._build_segment_response(
         segment,
         db,
@@ -164,13 +173,11 @@ async def reject_segment(
 async def reject_segment_legacy_shape(
     segment_id: str,
     body: _legacy.RejectSegmentRequest,
-    reviewer_id: Optional[str] = Query(
-        None, description="Optional reviewer user id (prefer JSON body on POST .../reviews/reject)"
-    ),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
-    """Same as legacy PUT /outliner/segments/{id}/reject (query reviewer_id)."""
-    segment = reject_segment_ctrl(db, segment_id, reviewer_id, body.comment)
+    """Same as legacy PUT /outliner/segments/{id}/reject (reviewer from token)."""
+    segment = reject_segment_ctrl(db, segment_id, current_user.id, body.comment)
     return _legacy._build_segment_response(
         segment,
         db,

@@ -1,3 +1,5 @@
+import { fetchWithAccessToken } from '@/lib/fetchWithAccessToken';
+
 const API_URL = '/api';
 
 export interface Tenant {
@@ -43,9 +45,8 @@ export interface User {
   permissions: string[];
 }
 
-export interface UserCreate {
-  id: string;
-  email: string;
+/** Bootstrap current user in DB; id and email come from the access token on the server. */
+export interface UserSelfCreate {
   name?: string | null;
   picture?: string | null;
 }
@@ -56,12 +57,13 @@ export interface UserUpdate {
   picture?: string | null;
 }
 
-export const getUserByEmail = async (email: string): Promise<User | null> => {
-  const response = await fetch(`${API_URL}/settings/users/by-email/${encodeURIComponent(email)}`, {
+/** Current user from DB; email comes from the access token (`GET /settings/users/me`). */
+export const getCurrentUser = async (): Promise<User | null> => {
+  const response = await fetchWithAccessToken(`${API_URL}/settings/users/me`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      'accept': 'application/json',
+      accept: 'application/json',
     },
   });
 
@@ -76,7 +78,7 @@ export const getUserByEmail = async (email: string): Promise<User | null> => {
 };
 
 export const getUser = async (userId: string): Promise<User | null> => {
-  const response = await fetch(`${API_URL}/settings/users/${encodeURIComponent(userId)}`, {
+  const response = await fetchWithAccessToken(`${API_URL}/settings/users/${encodeURIComponent(userId)}`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -94,8 +96,8 @@ export const getUser = async (userId: string): Promise<User | null> => {
   return response.json();
 };
 
-export const createUser = async (user: UserCreate): Promise<User> => {
-  const response = await fetch(`${API_URL}/settings/users`, {
+export const createUser = async (user: UserSelfCreate): Promise<User> => {
+  const response = await fetchWithAccessToken(`${API_URL}/settings/users`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -113,7 +115,7 @@ export const createUser = async (user: UserCreate): Promise<User> => {
 };
 
 export const updateUser = async (userId: string, user: UserUpdate): Promise<User> => {
-  const response = await fetch(`${API_URL}/settings/users/${encodeURIComponent(userId)}`, {
+  const response = await fetchWithAccessToken(`${API_URL}/settings/users/${encodeURIComponent(userId)}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -131,7 +133,7 @@ export const updateUser = async (userId: string, user: UserUpdate): Promise<User
 };
 
 export const getTenantByDomain = async (domain: string): Promise<Tenant | null> => {
-    const response = await fetch(`${API_URL}/settings/tenants/by-domain/${domain}`, {
+    const response = await fetchWithAccessToken(`${API_URL}/settings/tenants/by-domain/${domain}`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
@@ -150,7 +152,7 @@ export const getTenantByDomain = async (domain: string): Promise<Tenant | null> 
 };
 
 export const createTenant = async (tenant: TenantCreate): Promise<Tenant | null> => {
-    const response = await fetch(`${API_URL}/settings/tenants`, {
+    const response = await fetchWithAccessToken(`${API_URL}/settings/tenants`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -168,7 +170,7 @@ export const createTenant = async (tenant: TenantCreate): Promise<Tenant | null>
 };
 
 export const updateTenant = async (tenantId: string, tenant: TenantUpdate): Promise<Tenant | null> => {
-    const response = await fetch(`${API_URL}/settings/tenants/${tenantId}`, {
+    const response = await fetchWithAccessToken(`${API_URL}/settings/tenants/${tenantId}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
@@ -186,7 +188,7 @@ export const updateTenant = async (tenantId: string, tenant: TenantUpdate): Prom
 };
 
 export const getTenantSettings = async (tenantId: string): Promise<TenantSettings | null> => {
-    const response = await fetch(`${API_URL}/settings/tenant-settings/tenant/${tenantId}`, {
+    const response = await fetchWithAccessToken(`${API_URL}/settings/tenant-settings/tenant/${tenantId}`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
@@ -209,7 +211,7 @@ export const createTenantSettings = async (
     tenantId: string, 
     settings: TenantSettingsUpdate
 ): Promise<TenantSettings | null> => {
-    const response = await fetch(`${API_URL}/settings/tenant-settings`, {
+    const response = await fetchWithAccessToken(`${API_URL}/settings/tenant-settings`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -231,7 +233,7 @@ export const createTenantSettings = async (
 
 export const updateTenantSettings = async (tenantId: string, settings: TenantSettingsUpdate): Promise<TenantSettings | null> => {
     // First, get the settings by tenant_id to obtain the settings_id
-    const getResponse = await fetch(`${API_URL}/settings/tenant-settings/tenant/${tenantId}`, {
+    const getResponse = await fetchWithAccessToken(`${API_URL}/settings/tenant-settings/tenant/${tenantId}`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
@@ -246,7 +248,7 @@ export const updateTenantSettings = async (tenantId: string, settings: TenantSet
     const existingSettings: TenantSettings = await getResponse.json();
 
     // Then update using the settings_id
-    const updateResponse = await fetch(`${API_URL}/settings/tenant-settings/${existingSettings.id}`, {
+    const updateResponse = await fetchWithAccessToken(`${API_URL}/settings/tenant-settings/${existingSettings.id}`, {
         method: 'PUT',
         headers: {
             'Content-Type': 'application/json',

@@ -1,4 +1,5 @@
 import { API_URL } from '@/config/api';
+import { fetchWithAccessToken } from '@/lib/fetchWithAccessToken';
 
 // Helper function to handle API responses with better error messages
 const handleApiResponse = async (response: Response, customMessages?: { 400?: string; 404?: string; 500?: string }) => {
@@ -93,7 +94,7 @@ export const updateSegmentContent = async (
   content: string
 ): Promise<UpdateSegmentContentResponse> => {
   try {
-    const response = await fetch(`${API_URL}/segments/${segmentId}/content`, {
+    const response = await fetchWithAccessToken(`${API_URL}/segments/${segmentId}/content`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',

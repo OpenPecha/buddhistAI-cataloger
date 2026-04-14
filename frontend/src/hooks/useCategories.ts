@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { API_URL } from '@/config/api';
+import { fetchWithAccessToken } from '@/lib/fetchWithAccessToken';
 import { useTranslation } from 'react-i18next';
 
 export interface Category {
@@ -26,7 +27,7 @@ const fetchCategories = async (parentId: string | null, language: string = 'bo')
   }
 
   const url = `${API_URL}/v2/categories?${params.toString()}`;
-  const response = await fetch(url);
+  const response = await fetchWithAccessToken(url);
 
   if (!response.ok) {
     throw new Error(`Failed to fetch categories: ${response.statusText}`);

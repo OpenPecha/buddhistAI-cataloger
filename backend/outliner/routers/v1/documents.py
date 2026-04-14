@@ -4,10 +4,11 @@ from typing import Any, Dict, List, Optional
 
 from ai_text_outline import extract_toc_indices
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from core.database import get_db
+from outliner.deps import apply_authenticated_segment_reviewer_bulk, require_outliner_access
 from outliner.controller.outliner import (
     approve_document as approve_document_ctrl,
     bulk_segment_operations as bulk_segment_operations_ctrl,
@@ -29,6 +30,7 @@ from outliner.controller.outliner import (
     update_document_status as update_document_status_ctrl,
 )
 from outliner.routers import outliner as _legacy
+from user.models.user import User
 
 router = APIRouter(prefix="/documents", tags=["outliner-v1-documents"])
 
@@ -38,19 +40,19 @@ class DocumentPatch(BaseModel):
 
     content: Optional[str] = None
     status: Optional[str] = None
-    user_id: Optional[str] = Field(
-        None,
-        description="Required when restoring a deleted document to active (must match document owner).",
-    )
 
 
 @router.post("", response_model=_legacy.DocumentResponse, status_code=201)
-async def create_document(document: _legacy.DocumentCreate, db: Session = Depends(get_db)):
+async def create_document(
+    document: _legacy.DocumentCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
+):
     return create_document_ctrl(
         db=db,
         content=document.content,
         filename=document.filename,
-        user_id=document.user_id,
+        user_id=current_user.id,
     )
 
 
@@ -137,6 +139,7 @@ async def patch_document(
     document_id: str,
     body: DocumentPatch,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     merged: Dict[str, Any] = {}
     if body.content is not None:
@@ -144,7 +147,7 @@ async def patch_document(
     if body.status is not None:
         merged.update(
             update_document_status_ctrl(
-                db, document_id, body.status, user_id=body.user_id
+                db, document_id, body.status, user_id=current_user.id
             )
         )
     if not merged:
@@ -291,10 +294,12 @@ async def segments_batch(
     document_id: str,
     operations: _legacy.BulkSegmentOperationsRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     create_data = (
         [seg.model_dump() for seg in operations.create] if operations.create else None
     )
+    apply_authenticated_segment_reviewer_bulk(operations.update, current_user)
     result_segments = bulk_segment_operations_ctrl(
         db=db,
         document_id=document_id,

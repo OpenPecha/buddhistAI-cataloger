@@ -2,9 +2,8 @@ import { Routes, Route, useLocation,Link } from 'react-router-dom';
 import { useEffect, lazy, Suspense } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { Navigation, ProtectedRoute } from '@app';
-import { getUserByEmail, createUser } from './api/settings';
+import { getCurrentUser, createUser } from './api/settings';
 import OutlinerAdminLayout from './features/outliner/components/OutlinerAdminLayout';
-import { useUser } from './hooks/useUser';
 
 // Lazy load page components
 const TextsPage = lazy(() => import('./pages/Text'));
@@ -45,13 +44,11 @@ function App() {
       if (isAuthenticated && user?.email && !isLoading) {
         try {
           // Check if user exists in database
-          const existingUser = await getUserByEmail(user.email);
+          const existingUser = await getCurrentUser();
           
           // If user doesn't exist, create them
           if (!existingUser && user.sub) {
             await createUser({
-              id: user.sub,
-              email: user.email,
               name: user.name || null,
               picture: user.picture || null,
             });

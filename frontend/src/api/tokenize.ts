@@ -1,4 +1,5 @@
 import { API_URL } from '@/config/api';
+import { fetchWithAccessToken } from '@/lib/fetchWithAccessToken';
 
 export interface TokenizeRequest {
   text: string;
@@ -9,7 +10,7 @@ export type TokenizeResponse = string[];
 
 export const tokenize = async (request: TokenizeRequest): Promise<TokenizeResponse> => {
   try {
-    const response = await fetch(`${API_URL}/tokenize`, {
+    const response = await fetchWithAccessToken(`${API_URL}/tokenize`, {
       method: 'POST',
       headers: {
         'accept': 'application/json',

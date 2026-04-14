@@ -1,8 +1,15 @@
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+
+from core.auth0_access_token import (
+    email_from_access_token_claims,
+    subject_from_access_token_claims,
+    verify_auth0_access_token,
+)
 from datetime import datetime
 import uuid
 import json
@@ -17,10 +24,24 @@ from user.models.user import User
 
 router = APIRouter()
 
+_settings_users_bearer = HTTPBearer(auto_error=False)
 
-class UserCreate(BaseModel):
-    id: str
-    email: EmailStr
+
+def require_access_token_payload(
+    creds: HTTPAuthorizationCredentials | None = Depends(_settings_users_bearer),
+) -> dict:
+    if (
+        not creds
+        or creds.scheme.lower() != "bearer"
+        or not (creds.credentials or "").strip()
+    ):
+        raise HTTPException(status_code=401, detail="Missing Authorization bearer token")
+    return verify_auth0_access_token(creds.credentials.strip())
+
+
+class UserSelfCreate(BaseModel):
+    """First-time profile from the client; id and email come from the access token."""
+
     name: Optional[str] = None
     picture: Optional[str] = None
     role: Optional[str] = None
@@ -109,6 +130,50 @@ async def get_users(
     )
 
 
+@router.get("/me", response_model=UserResponse)
+async def get_current_user(
+    payload: dict = Depends(require_access_token_payload),
+    db: Session = Depends(get_db),
+):
+    """Current user from DB; email is taken from the Auth0 access token (must include an email claim)."""
+    email = email_from_access_token_claims(payload)
+    if not email:
+        raise HTTPException(
+            status_code=401,
+            detail="Token is missing an email claim (add email to the access token via an Auth0 Action if needed)",
+        )
+
+    cached = get_user_by_email_from_cache(email)
+    if cached is not None:
+        return UserResponse(**cached)
+
+    user = db.query(User).filter(func.lower(User.email) == email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    permissions = None
+    if user.permissions:
+        try:
+            permissions = json.loads(user.permissions) if isinstance(user.permissions, str) else user.permissions
+        except (json.JSONDecodeError, TypeError):
+            if isinstance(user.permissions, str):
+                permissions = [p.strip() for p in user.permissions.split(",") if p.strip()]
+            else:
+                permissions = user.permissions
+
+    response = UserResponse(
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        picture=user.picture,
+        created_at=user.created_at,
+        role=user.role,
+        permissions=permissions,
+    )
+    set_user_by_email_in_cache(user.email, response.model_dump(mode="json"))
+    return response
+
+
 @router.get("/by-email/{email}", response_model=UserResponse)
 async def get_user_by_email(email: str, db: Session = Depends(get_db)):
     """Get a user by email (cached in Redis for 20 days when Redis is available)."""
@@ -173,26 +238,42 @@ async def get_user(user_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=UserResponse, status_code=201)
-async def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    """Create a new user"""
-    # Check if email already exists
-    existing = db.query(User).filter(User.email == user.email).first()
+async def create_user(
+    user: UserSelfCreate,
+    payload: dict = Depends(require_access_token_payload),
+    db: Session = Depends(get_db),
+):
+    """Create a new user; email and id are taken from the access token."""
+    email = email_from_access_token_claims(payload)
+    if not email:
+        raise HTTPException(
+            status_code=401,
+            detail="Token is missing an email claim (add email to the access token via an Auth0 Action if needed)",
+        )
+    sub = subject_from_access_token_claims(payload)
+    if not sub:
+        raise HTTPException(status_code=401, detail="Token is missing sub claim")
+
+    existing = db.query(User).filter(User.email == email).first()
     if existing:
         raise HTTPException(status_code=400, detail="User with this email already exists")
-    
-    # Store permissions as JSON string if provided
+
+    existing_id = db.query(User).filter(User.id == sub).first()
+    if existing_id:
+        raise HTTPException(status_code=400, detail="User already exists")
+
     permissions_str = None
     if user.permissions:
         permissions_str = json.dumps(user.permissions)
-    
+
     db_user = User(
-        id=user.id,
-        email=user.email,
+        id=sub,
+        email=email,
         name=user.name,
         picture=user.picture,
-        role=user.role or 'user',
+        role=user.role or "user",
         permissions=permissions_str,
-        created_at=datetime.utcnow()
+        created_at=datetime.utcnow(),
     )
     db.add(db_user)
     db.commit()

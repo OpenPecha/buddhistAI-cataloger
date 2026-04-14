@@ -3,24 +3,24 @@
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from core.database import get_db
 from outliner.controller.outliner import assign_volume as assign_volume_ctrl
 from outliner.controller.outliner import list_documents as list_documents_ctrl
+from outliner.deps import require_outliner_access
 from outliner.routers import outliner as _legacy
+from user.models.user import User
 
 router = APIRouter(prefix="/assignments", tags=["outliner-v1-assignments"])
 
 
-class ClaimNextBody(BaseModel):
-    user_id: str
-
-
 @router.post("/claim-next")
-async def claim_next(body: ClaimNextBody, db: Session = Depends(get_db)):
-    return await assign_volume_ctrl(db, body.user_id)
+async def claim_next(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
+):
+    return await assign_volume_ctrl(db, current_user.id)
 
 
 @router.get("", response_model=List[_legacy.DocumentListResponse])

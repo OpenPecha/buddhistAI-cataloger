@@ -21,6 +21,7 @@ botok
 pyewts
 
 # --- Utilities ---
+PyJWT[crypto]
 python-dotenv
 python-multipart
 PyYAML

@@ -1,6 +1,7 @@
+import { fetchWithAccessToken } from '@/lib/fetchWithAccessToken';
+import type { OpenPechaText, OpenPechaTextInstance, Annotations } from '../types/text';
 
 const API_URL = '/api';
-import type { OpenPechaText, OpenPechaTextInstance, Annotations } from '../types/text';
 
 
 // Helper function to handle API responses with better error messages
@@ -87,7 +88,7 @@ export const fetchTexts = async (params?: { limit?: number; offset?: number; lan
   
   const queryString = queryParams.toString();
   const url = queryString ? `${API_URL}/text?${queryString}` : `${API_URL}/text?limit=20`;
-  const response = await fetch(url);
+  const response = await fetchWithAccessToken(url);
   
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
@@ -97,7 +98,7 @@ export const fetchTexts = async (params?: { limit?: number; offset?: number; lan
   return data.results || data || [];
 };
 export const fetchText = async (id: string): Promise<OpenPechaText> => {
-  const response = await fetch(`${API_URL}/text/${id}`);
+  const response = await fetchWithAccessToken(`${API_URL}/text/${id}`);
   return response.json();
 };
 
@@ -111,7 +112,7 @@ export const createText = async (textData: {
   bdrc?: string;
   alt_titles?: Array<{ [key: string]: string }>;
 }): Promise<OpenPechaText> => {
-  const response = await fetch(`${API_URL}/text`, {
+  const response = await fetchWithAccessToken(`${API_URL}/text`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -128,18 +129,18 @@ export const createText = async (textData: {
 };
 
 export const fetchTextInstances = async (id: string): Promise<OpenPechaTextInstance[]> => {
-  const response = await fetch(`${API_URL}/text/${id}/instances`);
+  const response = await fetchWithAccessToken(`${API_URL}/text/${id}/instances`);
   const data = await response.json();
   return Array.isArray(data) ? data : [data];
 };
 
 export const fetchInstance = async (id: string): Promise<OpenPechaTextInstance> => {
-  const response = await fetch(`${API_URL}/text/instances/${id}?annotations=true`);
+  const response = await fetchWithAccessToken(`${API_URL}/text/instances/${id}?annotations=true`);
   return response.json();
 };
 
 export const fetchAnnotation = async (id: string): Promise<Annotations> => {
-  const response = await fetch(`${API_URL}/v2/annotations/${id}`);
+  const response = await fetchWithAccessToken(`${API_URL}/v2/annotations/${id}`);
   return response.json();
 };
 
@@ -165,7 +166,7 @@ export const createAnnotation = async (
     }>;
   }
 ): Promise<Annotations> => {
-  const response = await fetch(`${API_URL}/v2/annotations/${inferenceId}/annotation`, {
+  const response = await fetchWithAccessToken(`${API_URL}/v2/annotations/${inferenceId}/annotation`, {
     method: 'POST',
     headers: {
       'accept': 'application/json',
@@ -194,7 +195,7 @@ export const createTableOfContentsAnnotation = async (
     }>;
   }
 ): Promise<Annotations> => {
-  const response = await fetch(`${API_URL}/v2/annotations/${instanceId}/annotation`, {
+  const response = await fetchWithAccessToken(`${API_URL}/v2/annotations/${instanceId}/annotation`, {
     method: 'POST',
     headers: {
       'accept': 'application/json',
@@ -220,7 +221,7 @@ export interface TextTitleSearchResult {
 
 export const fetchTextsByTitle = async (title: string): Promise<TextTitleSearchResult[]> => {
   try {
-    const response = await fetch(`${API_URL}/text/title-search?title=${title}`);
+    const response = await fetchWithAccessToken(`${API_URL}/text/title-search?title=${title}`);
     return await handleApiResponse(response);
   } catch (error) {
     if (error instanceof Error) {
@@ -247,7 +248,7 @@ export const createTextInstance = async (textId: string, instanceData: {
   }>;
   content: string;
 }): Promise<OpenPechaTextInstance> => {
-  const response = await fetch(`${API_URL}/text/${textId}/instances`, {
+  const response = await fetchWithAccessToken(`${API_URL}/text/${textId}/instances`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -304,7 +305,7 @@ export const createCommentary = async (instanceId: string, commentaryData: {
   target_annotation_id?: string;
   alignment_annotation_id?: string;
 }> => {
-  const response = await fetch(`${API_URL}/instances/${instanceId}/commentary`, {
+  const response = await fetchWithAccessToken(`${API_URL}/instances/${instanceId}/commentary`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -358,7 +359,7 @@ export const createTranslation = async (instanceId: string, translationData: {
   target_annotation_id?: string;
   alignment_annotation_id?: string;
 }> => {
-  const response = await fetch(`${API_URL}/instances/${instanceId}/translation`, {
+  const response = await fetchWithAccessToken(`${API_URL}/instances/${instanceId}/translation`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -396,7 +397,7 @@ export const fetchAlignmentInference = async (textId: string): Promise<{
     average_confidence: number;
   };
 }> => {
-  const response = await fetch(`${API_URL}/inference/alignment/${textId}`);
+  const response = await fetchWithAccessToken(`${API_URL}/inference/alignment/${textId}`);
   
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
@@ -411,7 +412,7 @@ export const cleanAnnotation = async (data: {
   text: string;
   sample_text: string;
 }): Promise<any> => {
-  const response = await fetch(`${API_URL}/v2/annotations/clean-annotation`, {
+  const response = await fetchWithAccessToken(`${API_URL}/v2/annotations/clean-annotation`, {
     method: 'POST',
     headers: {
       'accept': 'application/json',
@@ -457,7 +458,7 @@ export const updateAnnotation = async (annotationId: string, annotationData: {
     }
   };
 
-  const response = await fetch(`${API_URL}/v2/annotations/${annotationId}/annotation`, {
+  const response = await fetchWithAccessToken(`${API_URL}/v2/annotations/${annotationId}/annotation`, {
     method: 'PUT',
     headers: {
       'accept': 'application/json',

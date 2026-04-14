@@ -62,7 +62,7 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
 
   // Mutation for creating document from content
   const createMutation = useMutation({
-    mutationFn: (data: { content: string; filename?: string; user_id?: string }) =>
+    mutationFn: (data: { content: string; filename?: string }) =>
       createOutlinerDocument(data),
     onSuccess: (data) => {
       toast.success('Document created successfully');
@@ -349,10 +349,10 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
 
   // Create document from content handler
   const handleCreateDocument = useCallback(
-    async (content: string, filename?: string, user_id?: string) => {
+    async (content: string, filename?: string) => {
       setIsLoadingDocument(true);
       try {
-        await createMutation.mutateAsync({ content, filename, user_id });
+        await createMutation.mutateAsync({ content, filename });
       } finally {
         setIsLoadingDocument(false);
       }

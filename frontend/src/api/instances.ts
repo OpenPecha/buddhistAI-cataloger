@@ -28,11 +28,13 @@ interface RelatedInstance {
   relationship?: string;
 }
 
+import { fetchWithAccessToken } from '@/lib/fetchWithAccessToken';
+
 const API_URL = '/api';
 
 
 export const fetchRelatedInstances = async (instanceId: string): Promise<RelatedInstance[]> => {
-  const response = await fetch(
+  const response = await fetchWithAccessToken(
     `${API_URL}/instances/${instanceId}/related`,
     {
       headers: {

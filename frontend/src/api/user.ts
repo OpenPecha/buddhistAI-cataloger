@@ -1,4 +1,5 @@
 import { API_URL } from '@/config/api';
+import { fetchWithAccessToken } from '@/lib/fetchWithAccessToken';
 
 // ==================== Types ====================
 
@@ -47,17 +48,12 @@ export const listUsers = async (
   params.append('limit', limit.toString());
   if (role) params.append('role', role);
 
-  const response = await fetch(`${API_URL}/settings/users?${params.toString()}`);
+  const response = await fetchWithAccessToken(`${API_URL}/settings/users?${params.toString()}`);
   return handleApiResponse(response);
 };
 
 export const getUser = async (userId: string): Promise<User> => {
-  const response = await fetch(`${API_URL}/settings/users/${userId}`);
-  return handleApiResponse(response);
-};
-
-export const getUserByEmail = async (email: string): Promise<User> => {
-  const response = await fetch(`${API_URL}/settings/users/by-email/${email}`);
+  const response = await fetchWithAccessToken(`${API_URL}/settings/users/${userId}`);
   return handleApiResponse(response);
 };
 
@@ -65,7 +61,7 @@ export const updateUser = async (
   userId: string,
   userData: UserUpdateRequest
 ): Promise<User> => {
-  const response = await fetch(`${API_URL}/settings/users/${userId}`, {
+  const response = await fetchWithAccessToken(`${API_URL}/settings/users/${userId}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -77,7 +73,7 @@ export const updateUser = async (
 };
 
 export const deleteUser = async (userId: string): Promise<void> => {
-  const response = await fetch(`${API_URL}/settings/users/${userId}`, {
+  const response = await fetchWithAccessToken(`${API_URL}/settings/users/${userId}`, {
     method: 'DELETE',
   });
 

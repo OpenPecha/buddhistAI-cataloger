@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { useAuth0 } from '@auth0/auth0-react';
 import type { PaginatedUserResponse } from '../api/user';
+import { fetchWithAccessToken } from '@/lib/fetchWithAccessToken';
 
 export interface OutlinerUser {
   id: string;
@@ -12,8 +12,6 @@ export interface OutlinerUser {
  * Hook for fetching all users with the outliner permission (any role).
  */
 export function useOutlinerUsers() {
-  const { getAccessTokenSilently } = useAuth0();
-
   const {
     data,
     isLoading,
@@ -22,14 +20,12 @@ export function useOutlinerUsers() {
   } = useQuery<PaginatedUserResponse>({
     queryKey: ['outliner-users'],
     queryFn: async () => {
-      const token = await getAccessTokenSilently();
       const params = new URLSearchParams({
         permission: 'outliner',
         limit: '200'
       });
-      const response = await fetch(`/api/settings/users?${params.toString()}`, {
+      const response = await fetchWithAccessToken(`/api/settings/users?${params.toString()}`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
