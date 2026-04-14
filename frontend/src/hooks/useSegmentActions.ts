@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { OUTLINER_V1_URL } from '@/config/api';
 import type { Segment } from '@/features/outliner/types';
 
 interface UseSegmentActionsProps {
@@ -16,8 +17,8 @@ export function useSegmentActions({
   const updateSegment = useCallback(async (segmentId: string, updates: Partial<Segment>) => {
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch(`/api/outliner/segments/${segmentId}`, {
-        method: 'PUT',
+      const response = await fetch(`${OUTLINER_V1_URL}/segments/${segmentId}`, {
+        method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -47,7 +48,7 @@ export function useSegmentActions({
 
     try {
       const token = await getAccessTokenSilently();
-      const response = await fetch(`/api/outliner/segments/${segmentId}`, {
+      const response = await fetch(`${OUTLINER_V1_URL}/segments/${segmentId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

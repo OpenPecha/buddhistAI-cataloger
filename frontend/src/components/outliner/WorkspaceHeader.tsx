@@ -79,6 +79,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
   }, [skipMutation, t]);
 
   const notSavedCount = segmentsCount - checkedSegmentsCount;
+  const submitDisabled = checked_percentage < 100 || rejectedSegmentsCount > 0;
   const disableAIButton = isLoadingOrSaving || aiTextEndingLoading || !documentId ;
   return (
     <div className="bg-white border-b py-2 border-gray-200 px-6  flex items-center justify-between">
@@ -146,7 +147,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
         )}
          {segmentsCount > 0 && (
           <SubmitToReview
-            disabled={checked_percentage < 100 || rejectedSegmentsCount > 0}
+            disabled={submitDisabled}
             disabledReason={
               rejectedSegmentsCount > 0
                 ? t('outliner.workspace.revisionBadge', { count: rejectedSegmentsCount })
@@ -159,7 +160,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
           <Button
           variant="outline"
           onClick={handleSkip}
-          disabled={isLoadingOrSaving || skipMutation.isPending || !documentId || documentStatus==='skipped'}
+          disabled={!submitDisabled|| isLoadingOrSaving || skipMutation.isPending || !documentId || documentStatus==='skipped'}
         >
           {documentStatus==='skipped' ? t('outliner.workspace.skipped') : skipMutation.isPending ? t('outliner.workspace.skipping') : t('outliner.workspace.skip')}
         </Button>

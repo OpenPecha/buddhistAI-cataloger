@@ -6,6 +6,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 import uvicorn
 from cataloger.routers import ai, person, text, translation, annotation, bdrc, category, enum, tokenize, aligner_data, admin, segments
 from outliner.routers import router as outliner_router
+from outliner.routers.v1 import router as outliner_v1_router
 from settings.routers import (
     tenant_router,
     role_router,
@@ -82,6 +83,11 @@ app.include_router(tokenize.router, prefix="/tokenize", tags=["tokenize"])
 app.include_router(aligner_data.router, prefix="/aligner-data", tags=["aligner-data"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
 app.include_router(outliner_router, prefix="/outliner", tags=["outliner"])
+app.include_router(
+    outliner_v1_router,
+    prefix="/api/v1/outliner",
+    tags=["outliner-v1"],
+)
 
 app.include_router(ai.router, prefix="/ai", tags=["ai"])
 

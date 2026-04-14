@@ -11,7 +11,7 @@ interface UseAITextEndingsOptions {
 }
 
 /**
- * Hook for AI document outline (TOC-based segmentation via /outliner/ai-outline).
+ * Hook for AI document outline (TOC-based segmentation via …/documents/:id/ai/outline).
  */
 export const useAITextEndings = (options?: UseAITextEndingsOptions) => {
   const queryClient = useQueryClient();

@@ -1,4 +1,4 @@
-import { API_URL } from '@/config/api';
+import { API_URL, OUTLINER_V1_URL } from '@/config/api';
 import type { TextSegment } from '@/features/outliner/types';
 import { segmentBodyFromDocument, withResolvedSegmentTexts } from '@/lib/outlinerSegmentText';
 
@@ -26,7 +26,7 @@ export interface OutlinerDocument {
   segments?: OutlinerSegment[];
 }
 
-/** GET /outliner/documents/:id/ai-toc-entries */
+/** GET …/documents/:id/toc (AI / stored TOC entries) */
 export interface AiTocEntryItem {
   page_no: number;
   title: string;
@@ -36,7 +36,7 @@ export interface OutlinerDocumentAiTocEntries {
   entries: AiTocEntryItem[];
 }
 
-/** Latest rejection on the document (any segment), from GET /outliner/documents. */
+/** Latest rejection on the document (any segment), from GET …/documents. */
 export interface RejectedSegmentListNotice {
   message: string;
   document_id: string;
@@ -218,7 +218,7 @@ const handleApiResponse = async (response: Response): Promise<any> => {
 export const createOutlinerDocument = async (
   data: DocumentCreateRequest
 ): Promise<OutlinerDocument> => {
-  const response = await fetch(`${API_URL}/outliner/documents`, {
+  const response = await fetch(`${OUTLINER_V1_URL}/documents`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -241,8 +241,8 @@ export const getOutlinerDocument = async (
   const params = new URLSearchParams();
   params.set('include_segments', String(includeSegments));
   const path = options?.workspace
-    ? `${API_URL}/outliner/documents/${documentId}/workspace`
-    : `${API_URL}/outliner/documents/${documentId}`;
+    ? `${OUTLINER_V1_URL}/documents/${documentId}/workspace`
+    : `${OUTLINER_V1_URL}/documents/${documentId}`;
   const url = `${path}?${params.toString()}`;
   const response = await fetch(url);
   const doc = await handleApiResponse(response);
@@ -252,7 +252,7 @@ export const getOutlinerDocument = async (
 export const getOutlinerDocumentAiTocEntries = async (
   documentId: string
 ): Promise<OutlinerDocumentAiTocEntries> => {
-  const response = await fetch(`${API_URL}/outliner/documents/${documentId}/ai-toc-entries`);
+  const response = await fetch(`${OUTLINER_V1_URL}/documents/${documentId}/toc`);
   return handleApiResponse(response);
 };
 
@@ -270,7 +270,7 @@ export const listOutlinerDocuments = async (
   params.append('include_deleted', include_deleted.toString());
   if (title?.trim()) params.append('title', title.trim());
 
-  const response = await fetch(`${API_URL}/outliner/documents?${params.toString()}`);
+  const response = await fetch(`${OUTLINER_V1_URL}/documents?${params.toString()}`);
   return handleApiResponse(response);
 };
 
@@ -278,8 +278,8 @@ export const updateOutlinerDocumentContent = async (
   documentId: string,
   content: string
 ): Promise<{ message: string; document_id: string }> => {
-  const response = await fetch(`${API_URL}/outliner/documents/${documentId}/content`, {
-    method: 'PUT',
+  const response = await fetch(`${OUTLINER_V1_URL}/documents/${documentId}`, {
+    method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
     },
@@ -290,7 +290,7 @@ export const updateOutlinerDocumentContent = async (
 };
 
 export const deleteOutlinerDocument = async (documentId: string): Promise<void> => {
-  const response = await fetch(`${API_URL}/outliner/documents/${documentId}`, {
+  const response = await fetch(`${OUTLINER_V1_URL}/documents/${documentId}`, {
     method: 'DELETE',
   });
 
@@ -302,7 +302,7 @@ export const deleteOutlinerDocument = async (documentId: string): Promise<void> 
 export const getDocumentProgress = async (
   documentId: string
 ): Promise<DocumentProgress> => {
-  const response = await fetch(`${API_URL}/outliner/documents/${documentId}/progress`);
+  const response = await fetch(`${OUTLINER_V1_URL}/documents/${documentId}/stats`);
   return handleApiResponse(response);
 };
 
@@ -312,7 +312,7 @@ export const createSegment = async (
   documentId: string,
   segment: SegmentCreateRequest
 ): Promise<OutlinerSegment> => {
-  const response = await fetch(`${API_URL}/outliner/documents/${documentId}/segments`, {
+  const response = await fetch(`${OUTLINER_V1_URL}/documents/${documentId}/segments`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -327,7 +327,7 @@ export const createSegmentsBulk = async (
   documentId: string,
   segments: SegmentCreateRequest[]
 ): Promise<OutlinerSegment[]> => {
-  const response = await fetch(`${API_URL}/outliner/documents/${documentId}/segments/bulk`, {
+  const response = await fetch(`${OUTLINER_V1_URL}/documents/${documentId}/segments/bulk`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -339,12 +339,12 @@ export const createSegmentsBulk = async (
 };
 
 export const getSegments = async (documentId: string): Promise<OutlinerSegment[]> => {
-  const response = await fetch(`${API_URL}/outliner/documents/${documentId}/segments`);
+  const response = await fetch(`${OUTLINER_V1_URL}/documents/${documentId}/segments`);
   return handleApiResponse(response);
 };
 
 export const getSegment = async (segmentId: string): Promise<OutlinerSegment> => {
-  const response = await fetch(`${API_URL}/outliner/segments/${segmentId}`);
+  const response = await fetch(`${OUTLINER_V1_URL}/segments/${segmentId}`);
   return handleApiResponse(response);
 };
 
@@ -352,8 +352,8 @@ export const updateSegment = async (
   segmentId: string,
   updates: SegmentUpdateRequest
 ): Promise<OutlinerSegment> => {
-  const response = await fetch(`${API_URL}/outliner/segments/${segmentId}`, {
-    method: 'PUT',
+  const response = await fetch(`${OUTLINER_V1_URL}/segments/${segmentId}`, {
+    method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
     },
@@ -366,7 +366,7 @@ export const updateSegment = async (
 export const updateSegmentsBulk = async (
   updates: BulkSegmentUpdateRequest
 ): Promise<OutlinerSegment[]> => {
-  const response = await fetch(`${API_URL}/outliner/segments/bulk`, {
+  const response = await fetch(`${OUTLINER_V1_URL}/segments/bulk`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -382,7 +382,7 @@ export const splitSegment = async (
   splitPosition: number,
   documentId?: string
 ): Promise<OutlinerSegment[]> => {
-  const response = await fetch(`${API_URL}/outliner/segments/${segmentId}/split`, {
+  const response = await fetch(`${OUTLINER_V1_URL}/segments/${segmentId}/split`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -400,7 +400,7 @@ export const splitSegment = async (
 export const mergeSegments = async (
   segmentIds: string[]
 ): Promise<OutlinerSegment> => {
-  const response = await fetch(`${API_URL}/outliner/segments/merge`, {
+  const response = await fetch(`${OUTLINER_V1_URL}/segments/merge`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -412,7 +412,7 @@ export const mergeSegments = async (
 };
 
 export const deleteSegment = async (segmentId: string): Promise<void> => {
-  const response = await fetch(`${API_URL}/outliner/segments/${segmentId}`, {
+  const response = await fetch(`${OUTLINER_V1_URL}/segments/${segmentId}`, {
     method: 'DELETE',
   });
 
@@ -433,7 +433,7 @@ export interface CommentUpdateRequest {
 }
 
 export const getSegmentComments = async (segmentId: string): Promise<Comment[]> => {
-  const response = await fetch(`${API_URL}/outliner/segments/${segmentId}/comment`);
+  const response = await fetch(`${OUTLINER_V1_URL}/segments/${segmentId}/comments`);
   return handleApiResponse(response);
 };
 
@@ -441,7 +441,7 @@ export const addSegmentComment = async (
   segmentId: string,
   comment: CommentCreateRequest
 ): Promise<Comment[]> => {
-  const response = await fetch(`${API_URL}/outliner/segments/${segmentId}/comment`, {
+  const response = await fetch(`${OUTLINER_V1_URL}/segments/${segmentId}/comments`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -457,8 +457,8 @@ export const updateSegmentComment = async (
   commentIndex: number,
   comment: CommentUpdateRequest
 ): Promise<Comment[]> => {
-  const response = await fetch(`${API_URL}/outliner/segments/${segmentId}/comment/${commentIndex}`, {
-    method: 'PUT',
+  const response = await fetch(`${OUTLINER_V1_URL}/segments/${segmentId}/comments/${commentIndex}`, {
+    method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
     },
@@ -472,7 +472,7 @@ export const deleteSegmentComment = async (
   segmentId: string,
   commentIndex: number
 ): Promise<Comment[]> => {
-  const response = await fetch(`${API_URL}/outliner/segments/${segmentId}/comment/${commentIndex}`, {
+  const response = await fetch(`${OUTLINER_V1_URL}/segments/${segmentId}/comments/${commentIndex}`, {
     method: 'DELETE',
   });
 
@@ -480,11 +480,10 @@ export const deleteSegmentComment = async (
 };
 
 export const assignVolume = async (user_id: string): Promise<OutlinerDocument> => {
-  const params = new URLSearchParams();
-  params.append('user_id', user_id);
-  
-  const response = await fetch(`${API_URL}/outliner/assign_volume?${params.toString()}`, {
+  const response = await fetch(`${OUTLINER_V1_URL}/assignments/claim-next`, {
     method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id }),
   });
 
   return handleApiResponse(response);
@@ -496,16 +495,14 @@ export const updateDocumentStatus = async (
   status: string,
   user_id?: string
 ): Promise<{ message: string; document_id: string; status: string }> => {
-  const params = new URLSearchParams();
-  if (user_id) params.append('user_id', user_id);
-  
-  const url = `${API_URL}/outliner/documents/${documentId}/status${params.toString() ? `?${params.toString()}` : ''}`;
-  const response = await fetch(url, {
-    method: 'PUT',
+  const body: { status: string; user_id?: string } = { status };
+  if (user_id) body.user_id = user_id;
+  const response = await fetch(`${OUTLINER_V1_URL}/documents/${documentId}`, {
+    method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify(body),
   });
 
   return handleApiResponse(response);
@@ -516,7 +513,7 @@ export const submitDocumentToBdrcInReview = async (
   documentId: string
 ): Promise<Record<string, unknown>> => {
   const response = await fetch(
-    `${API_URL}/outliner/documents/${documentId}/submit-bdrc-in-review`,
+    `${OUTLINER_V1_URL}/documents/${documentId}/submissions/bdrc`,
     { method: 'POST' }
   );
   return handleApiResponse(response);
@@ -527,15 +524,14 @@ export const rejectSegment = async (
   comment: string,
   reviewerId?: string
 ): Promise<OutlinerSegment> => {
-  const params = new URLSearchParams();
-  if (reviewerId) params.append('reviewer_id', reviewerId);
-  const qs = params.toString();
-  const url = `${API_URL}/outliner/segments/${segmentId}/reject${qs ? `?${qs}` : ''}`;
-  const response = await fetch(url, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ comment }),
-  });
+  const response = await fetch(
+    `${OUTLINER_V1_URL}/segments/${segmentId}/reviews/reject`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comment, reviewer_id: reviewerId }),
+    }
+  );
   return handleApiResponse(response);
 };
 
@@ -544,8 +540,8 @@ export const rejectSegmentsBulk = async (
   comment: string,
   reviewerId?: string
 ): Promise<OutlinerSegment[]> => {
-  const response = await fetch(`${API_URL}/outliner/segments/bulk-reject`, {
-    method: 'PUT',
+  const response = await fetch(`${OUTLINER_V1_URL}/reviews/rejections/batch`, {
+    method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ segment_ids: segmentIds, reviewer_id: reviewerId, comment }),
   });
@@ -556,8 +552,8 @@ export const updateSegmentStatus = async (
   segmentId: string,
   status: 'checked' | 'unchecked' | 'approved' | 'rejected'
 ): Promise<{ message: string; segment_id: string; status: string }> => {
-  const response = await fetch(`${API_URL}/outliner/segments/${segmentId}/status`, {
-    method: 'PUT',
+  const response = await fetch(`${OUTLINER_V1_URL}/segments/${segmentId}/status`, {
+    method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
     },
@@ -571,7 +567,7 @@ export const bulkSegmentOperations = async (
   documentId: string,
   operations: BulkSegmentOperationsRequest
 ): Promise<OutlinerSegment[]> => {
-  const response = await fetch(`${API_URL}/outliner/documents/${documentId}/segments/bulk-operations`, {
+  const response = await fetch(`${OUTLINER_V1_URL}/documents/${documentId}/segments/batch`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -583,7 +579,7 @@ export const bulkSegmentOperations = async (
 };
 
 export const resetSegments = async (documentId: string): Promise<void> => {
-  const response = await fetch(`${API_URL}/outliner/documents/${documentId}/segments/reset`, {
+  const response = await fetch(`${OUTLINER_V1_URL}/documents/${documentId}/segments`, {
     method: 'DELETE',
   });
 
@@ -632,13 +628,13 @@ export const getDashboardStats = async (
   if (start_date) params.append('start_date', start_date);
   if (end_date) params.append('end_date', end_date);
   const qs = params.toString();
-  const response = await fetch(`${API_URL}/outliner/dashboard/stats${qs ? `?${qs}` : ''}`);
+  const response = await fetch(`${OUTLINER_V1_URL}/admin/stats${qs ? `?${qs}` : ''}`);
   return handleApiResponse(response);
 };
 
 // ==================== AI Endpoints ====================
 
-/** Result of POST /outliner/ai-outline — same shape as a full document with segments. */
+/** Result of POST …/documents/:id/ai/outline — same shape as a full document with segments. */
 export type AiOutlineResponse = Pick<
   OutlinerDocument,
   'id' | 'content' | 'filename' | 'user_id' | 'status' | 'created_at' | 'updated_at'
@@ -655,8 +651,7 @@ export const runAiOutline = async (
   documentId: string,
   signal?: AbortSignal
 ): Promise<AiOutlineResponse> => {
-  const params = new URLSearchParams({ document_id: documentId });
-  const response = await fetch(`${API_URL}/outliner/ai-outline?${params.toString()}`, {
+  const response = await fetch(`${OUTLINER_V1_URL}/documents/${documentId}/ai/outline`, {
     method: 'POST',
     headers: { accept: 'application/json' },
     signal,

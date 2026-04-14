@@ -721,7 +721,7 @@ const OutlinerWorkspace: React.FC = () => {
 
   const [sidebarTitleDraft, setSidebarTitleDraft] = useState('');
 
-  // AI outline: full-document TOC indices → replace segments (/outliner/ai-outline)
+  // AI outline: full-document TOC indices → replace segments (POST …/documents/:id/ai/outline)
   const handleAIDetectTextEndings = async () => {
     if (!documentId) return;
 

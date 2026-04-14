@@ -1,3 +1,10 @@
+"""
+Legacy Outliner routes under ``/outliner/*``.
+
+Prefer :mod:`outliner.routers.v1` at ``/api/v1/outliner/*`` (resource-first API).
+These endpoints remain for backward compatibility during migration.
+"""
+
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
 from pydantic import BaseModel, ConfigDict, Field, model_serializer
 from typing import Any, Dict, List, Optional, Tuple
