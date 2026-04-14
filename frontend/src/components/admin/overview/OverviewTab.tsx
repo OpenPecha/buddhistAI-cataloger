@@ -485,46 +485,7 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
         aria-hidden
       />
 
-      <motion.header
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-        className={`relative overflow-hidden ${cardPanel} px-6 py-8 sm:px-10 sm:py-10`}
-      >
-        <div
-          className="absolute inset-0 bg-gradient-to-br from-primary/[0.06] via-transparent to-secondary/[0.08]"
-          aria-hidden
-        />
-        <div
-          className="absolute -right-24 -top-28 h-72 w-72 rounded-full bg-secondary/15 blur-3xl"
-          aria-hidden
-        />
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0 max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-muted/40 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
-              <Sparkles className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
-              Outliner admin
-            </div>
-            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-              Workspace overview
-            </h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground sm:text-base">
-              Live counts and workflow health for the filtered date range. Use filters above to focus
-              on an annotator or period.
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-col items-start gap-2 rounded-2xl border border-border/60 bg-muted/25 px-5 py-4 sm:items-end">
-            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-              Annotation coverage
-            </span>
-            <span className="text-4xl font-semibold tabular-nums tracking-tight text-primary">
-              {coverage}%
-            </span>
-            <span className="text-xs text-muted-foreground">Of segments in scope</span>
-          </div>
-        </div>
-      </motion.header>
-
+    
       <motion.section
         variants={motionContainer}
         initial="hidden"
@@ -534,7 +495,6 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
         <SectionHeading
           eyebrow="Volume"
           title="Key metrics"
-          description="Headline counts for documents and segments under the current filters."
         />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
           <MetricShell accentClass="from-teal-600 to-teal-400">
@@ -642,7 +602,6 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
         <SectionHeading
           eyebrow="Quality"
           title="Annotation & linkage"
-          description="How complete metadata is, and how segments tie to BDRC and discussion threads."
         />
         <div className="grid gap-5 lg:grid-cols-12">
           <motion.div
@@ -687,16 +646,7 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
                 hint="Title or author BDRC ID"
               />
             </MetricShell>
-            <MetricShell accentClass="from-amber-800 to-amber-500">
-              <StatsCard
-                className={statsCardInner}
-                icon={<MessageSquare className="h-6 w-6 text-amber-800" strokeWidth={1.75} />}
-                title="With comments"
-                value={stats.segments_with_comments}
-                colorClass="text-amber-950"
-                hint="Rejected segments that have comments"
-              />
-            </MetricShell>
+          
           </div>
         </div>
       </motion.section>
