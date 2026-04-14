@@ -68,6 +68,7 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
       toast.success('Document created successfully');
       navigate(`/outliner/${data.id}`);
       queryClient.invalidateQueries({ queryKey: ['outliner-document'] });
+      queryClient.invalidateQueries({ queryKey: ['outliner-documents'] });
     },
     onError: (error: Error) => {
       toast.error(`Failed to create document: ${error.message}`);
@@ -106,6 +107,7 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
       });
       // Only update UI on success by invalidating and refetching
       queryClient.invalidateQueries({ queryKey: ['outliner-document', documentId] });
+      queryClient.invalidateQueries({ queryKey: ['outliner-documents'] });
     },
   });
   // Mutation for bulk segment updates - track loading for all affected segments
@@ -134,6 +136,7 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
       });
       // Only update UI on success
       queryClient.invalidateQueries({ queryKey: ['outliner-document', documentId] });
+      queryClient.invalidateQueries({ queryKey: ['outliner-documents'] });
     },
     onError: (error: Error, variables) => {
       // Remove loading state on error - don't update UI
@@ -607,8 +610,9 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
       const createdCount = variables.create?.length || 0;
       const updatedCount = variables.update?.length || 0;
       const deletedCount = variables.delete?.length || 0;
-      
+
       if (createdCount > 0 || updatedCount > 0 || deletedCount > 0) {
+        queryClient.invalidateQueries({ queryKey: ['outliner-documents'] });
         const actions = [];
         if (createdCount > 0) actions.push(`${createdCount} created`);
         if (updatedCount > 0) actions.push(`${updatedCount} updated`);

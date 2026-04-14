@@ -33,13 +33,7 @@ def segment_body_from_document(content: Optional[str], span_start: int, span_end
     return content[s:e]
 
 
-def remove_escape_chars_except_newline(text: str) -> str:
-    """
-    Removes all ASCII control characters except newline (\n).
-    """
-    # ASCII control chars: 0x00–0x1F and 0x7F
-    # Keep \n (0x0A)
-    return re.sub(r'[\x00-\x09\x0B-\x1F\x7F]', '', text)
+
 
 
 def resolve_document_content(db: Session, document_id: str) -> Optional[str]:

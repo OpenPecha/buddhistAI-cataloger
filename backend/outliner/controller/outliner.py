@@ -9,17 +9,13 @@ from types import SimpleNamespace
 from typing import List, Optional, Dict, Any, Tuple
 from datetime import datetime
 from fastapi import HTTPException
-from sqlalchemy.orm import Session, joinedload
-from sqlalchemy.orm.attributes import flag_modified
-from sqlalchemy import func, case, or_, and_, exists, update
-from sqlalchemy.orm.session import identity
-from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentRejection, SegmentLabels
+from sqlalchemy.orm import Session
+from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentLabels
+from outliner.repository import outliner_repository as outliner_repo
 from outliner.utils.segment_title_author_auto import (
-    apply_auto_author_to_segment,
     apply_auto_title_to_segment,
     apply_split_auto_title_author_parallel,
 )
-from user.models.user import User
 from core.redis import invalidate_document_content_cache
 from outliner.utils.outliner_utils import (
     get_document_with_cache,
@@ -29,7 +25,6 @@ from outliner.utils.outliner_utils import (
     infer_segment_label_for_new_segment,
     resolve_document_content,
     segment_body_from_document,
-    remove_escape_chars_except_newline,
     set_document_content_in_cache,
     validate_segment_status_transition,
 )
@@ -63,60 +58,10 @@ def create_document(
     user_id: Optional[str] = None
 ) -> OutlinerDocument:
     """Create a new outliner document with full text content"""
-    db_document = OutlinerDocument(
-        id=str(uuid.uuid4()),
-        content=content,
-        filename=filename,
-        user_id=user_id,
-        status='active',
-    )
-    db.add(db_document)
-    db.commit()
-    db.refresh(db_document)
-    
-    # Cache the new document content
+    db_document = outliner_repo.insert_document(db, content, filename, user_id)
     set_document_content_in_cache(db_document.id, db_document.content)
-    
     return db_document
 
-
-def upload_document(
-    db: Session,
-    file_content: Optional[str] = None,
-    content: Optional[str] = None,
-    filename: Optional[str] = None,
-    user_id: Optional[str] = None
-) -> OutlinerDocument:
-    """Upload a text file or text content to create a new outliner document"""
-    text_content = None
-    document_filename = None
-    
-    # Try to get file content first
-    if file_content:
-        text_content_temp = file_content
-        text_content = remove_escape_chars_except_newline(text_content_temp)
-        document_filename = filename
-    
-    # If no file content, check for direct text content
-    if not text_content and content:
-        text_content = content
-        document_filename = filename or "text_document.txt"
-    
-    # Validate that we have content from either source
-    if not text_content:
-        raise HTTPException(
-            status_code=400,
-            detail="Either 'file' or 'content' field is required"
-        )
-    
-    # Validate that we have non-empty content
-    if len(text_content.strip()) == 0:
-        raise HTTPException(
-            status_code=400,
-            detail="Content cannot be empty"
-        )
-    
-    return create_document(db, text_content, document_filename, user_id)
 
 
 def list_documents(
@@ -140,359 +85,47 @@ def list_documents(
         include_deleted: If False (default), exclude deleted documents. If True, include all documents.
         title: If set, case-insensitive substring match on document filename (list UI title).
     """
-    query = db.query(OutlinerDocument)
-    if user_id:
-        query = query.filter(OutlinerDocument.user_id == user_id)
-
-    if status:
-        query = query.filter(OutlinerDocument.status == status)
-
-    if title and title.strip():
-        escaped = (
-            title.strip()
-            .replace("\\", "\\\\")
-            .replace("%", "\\%")
-            .replace("_", "\\_")
-        )
-        query = query.filter(OutlinerDocument.filename.ilike(f"%{escaped}%", escape="\\"))
-
-    # Filter out deleted documents by default
-    if not include_deleted:
-        query = query.filter(
-            (OutlinerDocument.status != 'deleted') | (OutlinerDocument.status.is_(None))
-        )
-    
-    documents = query.order_by(OutlinerDocument.updated_at.desc()).offset(skip).limit(limit).all()
-    doc_ids = [d.id for d in documents]
-    latest_rejection_by_doc = _latest_rejection_notice_by_document_ids(db, doc_ids)
-
-    # Calculate checked/unchecked segments for each document
-    result = []
-    for doc in documents:
-        checked = db.query(func.count(OutlinerSegment.id)).filter(
-            OutlinerSegment.document_id == doc.id,
-            or_(
-                OutlinerSegment.status == 'checked',
-                OutlinerSegment.status == 'approved',
-            ),
-        ).scalar() or 0
-
-        unchecked = db.query(func.count(OutlinerSegment.id)).filter(
-            OutlinerSegment.document_id == doc.id,
-            or_(
-                OutlinerSegment.status.is_(None),
-                and_(
-                    OutlinerSegment.status != 'checked',
-                    OutlinerSegment.status != 'approved',
-                ),
-            ),
-        ).scalar() or 0
-        
-        total = db.query(func.count(OutlinerSegment.id)).filter(
-            OutlinerSegment.document_id == doc.id
-        ).scalar() or 0
-        
-        annotated = db.query(func.count(OutlinerSegment.id)).filter(
-            OutlinerSegment.document_id == doc.id,
-            OutlinerSegment.is_annotated == True
-        ).scalar() or 0
-
-        rejection_count = (
-            db.query(func.count(OutlinerSegment.id))
-            .filter(
-                OutlinerSegment.document_id == doc.id,
-                OutlinerSegment.status == "rejected",
-            )
-            .scalar()
-        ) or 0
-
-        result.append({
-            "id": doc.id,
-            "filename": doc.filename,
-            "user_id": doc.user_id,
-            "checked_segments": checked,
-            "unchecked_segments": unchecked,
-            "total_segments": total,
-            "annotated_segments": annotated,
-            "rejection_count": rejection_count,
-            "progress_percentage": (annotated / total) * 100 if total > 0 else 0,
-            "status": doc.status,
-            "created_at": doc.created_at,
-            "updated_at": doc.updated_at,
-            "rejected_segment": latest_rejection_by_doc.get(doc.id),
-        })
-    
-    return result
+    return outliner_repo.list_documents(
+        db,
+        user_id=user_id,
+        status=status,
+        skip=skip,
+        limit=limit,
+        include_deleted=include_deleted,
+        title=title,
+    )
 
 
-def _normalize_rejection_comment(raw: Optional[str]) -> str:
+def none_check(raw: Optional[str],error_message:str) -> str:
     if raw is None or not str(raw).strip():
-        raise HTTPException(status_code=422, detail="Rejection comment is required")
+        raise HTTPException(status_code=422, detail=error_message)
     return str(raw).strip()
 
 
-def _rejection_counts_by_segment_ids(db: Session, segment_ids: List[str]) -> Dict[str, int]:
-    if not segment_ids:
-        return {}
-    rows = (
-        db.query(SegmentRejection.segment_id, func.count(SegmentRejection.id))
-        .filter(SegmentRejection.segment_id.in_(segment_ids))
-        .group_by(SegmentRejection.segment_id)
-        .all()
-    )
-    return {row[0]: row[1] for row in rows}
-
-
-def _latest_rejection_reason_by_segment_ids(db: Session, segment_ids: List[str]) -> Dict[str, Optional[str]]:
-    """Latest rejection_reason per segment (by created_at), for any segment that has rejection rows."""
-    if not segment_ids:
-        return {}
-    rn = (
-        func.row_number()
-        .over(
-            partition_by=SegmentRejection.segment_id,
-            order_by=SegmentRejection.created_at.desc(),
-        )
-        .label("rn")
-    )
-    subq = (
-        db.query(SegmentRejection.segment_id, SegmentRejection.rejection_reason, rn)
-        .filter(SegmentRejection.segment_id.in_(segment_ids))
-        .subquery()
-    )
-    rows = (
-        db.query(subq.c.segment_id, subq.c.rejection_reason).filter(subq.c.rn == 1).all()
-    )
-    return {row[0]: row[1] for row in rows}
-
-
-def _latest_rejection_notice_by_document_ids(
-    db: Session, document_ids: List[str]
-) -> Dict[str, Optional[Dict[str, Any]]]:
-    """Most recent segment rejection per document (by rejection created_at), for document list API."""
-    if not document_ids:
-        return {}
-    rn = (
-        func.row_number()
-        .over(
-            partition_by=OutlinerSegment.document_id,
-            order_by=SegmentRejection.created_at.desc(),
-        )
-        .label("rn")
-    )
-    subq = (
-        db.query(
-            OutlinerSegment.document_id.label("document_id"),
-            SegmentRejection.segment_id.label("segment_id"),
-            SegmentRejection.rejection_reason.label("rejection_reason"),
-            SegmentRejection.reviewer_id.label("reviewer_id"),
-            User.name.label("reviewer_name"),
-            User.picture.label("reviewer_picture"),
-            rn,
-        )
-        .select_from(SegmentRejection)
-        .join(OutlinerSegment, SegmentRejection.segment_id == OutlinerSegment.id)
-        .outerjoin(User, SegmentRejection.reviewer_id == User.id)
-        .filter(OutlinerSegment.document_id.in_(document_ids))
-        .subquery()
-    )
-    rows = (
-        db.query(
-            subq.c.document_id,
-            subq.c.segment_id,
-            subq.c.rejection_reason,
-            subq.c.reviewer_id,
-            subq.c.reviewer_name,
-            subq.c.reviewer_picture,
-        )
-        .filter(subq.c.rn == 1)
-        .all()
-    )
-    out: Dict[str, Optional[Dict[str, Any]]] = {}
-    for doc_id, seg_id, reason, reviewer_id, rev_name, rev_pic in rows:
-        rev_user = None
-        if reviewer_id:
-            pic = rev_pic
-            if pic is not None:
-                pic = str(pic).strip() or None
-            rev_user = {"name": rev_name, "picture": pic}
-        out[doc_id] = {
-            "message": (reason or "").strip(),
-            "document_id": doc_id,
-            "segment_id": seg_id,
-            "reviewer_user": rev_user,
-        }
-    return out
-
-
-def _latest_rejection_reviewer_by_segment_ids(
-    db: Session, segment_ids: List[str]
-) -> Dict[str, Optional[Dict[str, Any]]]:
-    """Latest rejection row per segment: join users on segment_rejections.reviewer_id (reviewer's user id)."""
-    if not segment_ids:
-        return {}
-    rn = (
-        func.row_number()
-        .over(
-            partition_by=SegmentRejection.segment_id,
-            order_by=SegmentRejection.created_at.desc(),
-        )
-        .label("rn")
-    )
-    subq = (
-        db.query(SegmentRejection.segment_id, SegmentRejection.reviewer_id, rn)
-        .filter(SegmentRejection.segment_id.in_(segment_ids))
-        .subquery()
-    )
-    latest_sq = (
-        db.query(subq.c.segment_id, subq.c.reviewer_id)
-        .filter(subq.c.rn == 1)
-        .subquery("latest_segment_rejection")
-    )
-    rows = (
-        db.query(
-            latest_sq.c.segment_id,
-            latest_sq.c.reviewer_id,
-            User.name,
-            User.picture,
-        )
-        .outerjoin(User, User.id == latest_sq.c.reviewer_id)
-        .all()
-    )
-    out: Dict[str, Optional[Dict[str, Any]]] = {}
-    for segment_id, reviewer_id, name, picture in rows:
-        if not reviewer_id:
-            out[segment_id] = None
-        else:
-            out[segment_id] = {
-                "id": reviewer_id,
-                "name": name,
-                "picture": picture,
-            }
-    return out
-
-
-def enrich_segment_list_rejection_fields(db: Session, segment_list: List[dict]) -> None:
+def update_segment_with_rejection_fields(db: Session, segment_list: List[dict]) -> None:
     """Attach nested `rejection` onto segment_list dicts (annotator document payload)."""
-    if not segment_list:
-        return
-    ids = [s["id"] for s in segment_list]
-    counts = _rejection_counts_by_segment_ids(db, ids)
-    reasons = _latest_rejection_reason_by_segment_ids(db, ids)
-    reviewers = _latest_rejection_reviewer_by_segment_ids(db, ids)
-    for s in segment_list:
-        sid = s["id"]
-        count = counts.get(sid, 0)
-        if count == 0 and s.get("status") != "rejected":
-            s["rejection"] = None
-            continue
-        reason = None
-        reviewer_payload = None
-        if s.get("status") == "rejected":
-            reason = reasons.get(sid)
-        rr = reviewers.get(sid)
-        if rr and rr.get("id"):
-            p = rr.get("picture")
-            if p is not None:
-                p = str(p).strip() or None
-            reviewer_payload = {
-                "user_id": rr["id"],
-                "picture": p,
-                "name": rr.get("name"),
-            }
-        s["rejection"] = {
-            "count": count,
-            "reason": reason,
-            "reviewer": reviewer_payload,
-        }
+    outliner_repo.update_segment_with_rejection_fields(db, segment_list)
 
 
 def latest_rejection_reason_for_orm_segment(
     db: Optional[Session], segment: OutlinerSegment
 ) -> Optional[str]:
     """Reason from the most recent rejection row, only meaningful when status is rejected."""
-    if segment.status != "rejected":
-        return None
-    rel = getattr(segment, "rejections", None)
-    if rel:
-        latest = max(rel, key=lambda r: r.created_at)
-        return latest.rejection_reason
-    if db is None:
-        return None
-    row = (
-        db.query(SegmentRejection)
-        .filter(SegmentRejection.segment_id == segment.id)
-        .order_by(SegmentRejection.created_at.desc())
-        .first()
-    )
-    return row.rejection_reason if row else None
+    return outliner_repo.latest_rejection_reason_for_orm_segment(db, segment)
 
 
 def latest_rejection_reviewer_for_orm_segment(
     db: Optional[Session], segment: OutlinerSegment
 ) -> Optional[Dict[str, Any]]:
     """Reviewer profile from users via latest segment_rejections.reviewer_id → users.id."""
-    if segment.status != "rejected":
-        return None
-    if db is not None:
-        row = (
-            db.query(SegmentRejection.reviewer_id, User.name, User.picture)
-            .outerjoin(User, User.id == SegmentRejection.reviewer_id)
-            .filter(SegmentRejection.segment_id == segment.id)
-            .order_by(SegmentRejection.created_at.desc())
-            .first()
-        )
-        if not row:
-            return None
-        reviewer_id, name, picture = row[0], row[1], row[2]
-        if not reviewer_id:
-            return None
-        return {"id": reviewer_id, "name": name, "picture": picture}
-    rel = getattr(segment, "rejections", None)
-    if not rel:
-        return None
-    latest = max(rel, key=lambda r: r.created_at)
-    rid = latest.reviewer_id
-    if not rid:
-        return None
-    return {"id": rid, "name": None, "picture": None}
+    return outliner_repo.latest_rejection_reviewer_for_orm_segment(db, segment)
 
 
-def _segment_list_for_document(db: Session, document_id: str) -> List[dict]:
-    """Segment rows for a document (no ORM segment bodies; spans index into full document content)."""
-    segments = db.query(
-        OutlinerSegment.id,
-        OutlinerSegment.segment_index,
-        OutlinerSegment.span_start,
-        OutlinerSegment.span_end,
-        OutlinerSegment.title,
-        OutlinerSegment.title_span_start,
-        OutlinerSegment.title_span_end,
-        OutlinerSegment.updated_title,
-        OutlinerSegment.author,
-        OutlinerSegment.author_span_start,
-        OutlinerSegment.author_span_end,
-        OutlinerSegment.updated_author,
-        OutlinerSegment.title_bdrc_id,
-        OutlinerSegment.author_bdrc_id,
-        OutlinerSegment.parent_segment_id,
-        OutlinerSegment.is_annotated,
-        OutlinerSegment.is_attached,
-        OutlinerSegment.status,
-        OutlinerSegment.is_supplied_title,
-        OutlinerSegment.label,
-    ).filter(
-        OutlinerSegment.document_id == document_id
-    ).order_by(OutlinerSegment.segment_index).all()
-
-    def _segment_to_dict(segment):
-        d = segment._asdict()
-        d["label"] = segment.label.name if segment.label else None
-        return d
-
-    segment_list = [_segment_to_dict(segment) for segment in segments]
-    enrich_segment_list_rejection_fields(db, segment_list)
-    return segment_list
+def latest_rejection_resolved_for_orm_segment(
+    db: Optional[Session], segment: OutlinerSegment
+) -> Optional[bool]:
+    """`resolved` on the latest segment_rejections row (annotator addressed reviewer feedback)."""
+    return outliner_repo.latest_rejection_resolved_for_orm_segment(db, segment)
 
 
 def get_document(
@@ -506,7 +139,7 @@ def get_document(
         raise HTTPException(status_code=404, detail="Document not found")
 
     if include_segments:
-        document.segment_list = _segment_list_for_document(db, document_id)
+        document.segment_list = outliner_repo.segment_list_for_document(db, document_id)
 
     return document
 
@@ -521,15 +154,7 @@ def get_document_for_workspace(
     Redis when available, otherwise a single read of the content column (not the full ORM row).
     Segments are loaded only from outliner_segments for this document_id.
     """
-    row = (
-        db.query(
-            OutlinerDocument.id,
-            OutlinerDocument.filename,
-            OutlinerDocument.status,
-        )
-        .filter(OutlinerDocument.id == document_id)
-        .first()
-    )
+    row = outliner_repo.fetch_document_workspace_row(db, document_id)
     if not row:
         raise HTTPException(status_code=404, detail="Document not found")
 
@@ -538,7 +163,7 @@ def get_document_for_workspace(
         raise HTTPException(status_code=404, detail="Document not found")
 
     segment_list: List[dict] = (
-        _segment_list_for_document(db, document_id) if include_segments else []
+        outliner_repo.segment_list_for_document(db, document_id) if include_segments else []
     )
 
     return SimpleNamespace(
@@ -551,7 +176,7 @@ def get_document_for_workspace(
 
 def get_document_by_filename(db: Session, filename: str) -> OutlinerDocument:
     """Get a document by filename"""
-    document = db.query(OutlinerDocument).filter(OutlinerDocument.filename == filename).first()
+    document = outliner_repo.fetch_document_by_filename(db, filename)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     return document
@@ -562,15 +187,9 @@ def update_document_content(
     content: str
 ) -> Dict[str, str]:
     """Update the full text content of a document"""
-    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
-    if not document:
+    if not outliner_repo.update_document_content(db, document_id, content):
         raise HTTPException(status_code=404, detail="Document not found")
-    
-    document.content = content
-    document.updated_at = datetime.utcnow()
-    db.commit()
-    
-    # Invalidate cache and update with new content
+
     invalidate_document_content_cache(document_id)
     set_document_content_in_cache(document_id, content)
     
@@ -681,23 +300,6 @@ def ai_toc_db_value_to_api_items(raw: Any) -> List[Dict[str, Any]]:
     return []
 
 
-def update_document_ai_toc_entries(
-    db: Session,
-    document_id: str,
-    entries: Any,
-) -> None:
-    """Store AI / parsed TOC on the document (title→page map as JSON text, or legacy list of titles)."""
-    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
-    if not document:
-        raise HTTPException(status_code=404, detail="Document not found")
-    normalized = normalize_ai_toc_for_storage(entries)
-    if isinstance(normalized, dict):
-        document.ai_toc_entries = json.dumps(normalized, ensure_ascii=False)
-    else:
-        document.ai_toc_entries = normalized
-    document.updated_at = datetime.utcnow()
-    db.commit()
-    db.refresh(document)
 
 
 def get_document_ai_toc_entries(
@@ -705,7 +307,7 @@ def get_document_ai_toc_entries(
     document_id: str,
 ) -> Any:
     """Return raw stored ``ai_toc_entries`` (dict, list, or JSON string)."""
-    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    document = outliner_repo.fetch_document_by_id(db, document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     return document.ai_toc_entries
@@ -713,14 +315,8 @@ def get_document_ai_toc_entries(
 
 def delete_document(db: Session, document_id: str) -> None:
     """Delete a document and all its segments"""
-    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
-    if not document:
+    if not outliner_repo.delete_document(db, document_id):
         raise HTTPException(status_code=404, detail="Document not found")
-    
-    db.delete(document)
-    db.commit()
-    
-    # Invalidate cache when document is deleted
     invalidate_document_content_cache(document_id)
 
 
@@ -745,10 +341,10 @@ def update_document_status(
             detail=f"Status must be one of: {', '.join(valid_statuses)}"
         )
     
-    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    document = outliner_repo.fetch_document_by_id(db, document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
-    
+
     # If restoring a deleted document (changing to 'active'), verify ownership
     if document.status == 'deleted' and status == 'active':
         if not user_id:
@@ -762,58 +358,23 @@ def update_document_status(
                 detail="You can only restore documents that belong to you"
             )
     
-    document.status = status
-    document.updated_at = datetime.utcnow()
-    db.commit()
-    db.refresh(document)
-    
+    outliner_repo.set_document_status_and_refresh(db, document, status)
+
     return {"message": "Document status updated", "document_id": document_id, "status": status}
 
 
 def get_document_progress(db: Session, document_id: str) -> Dict[str, Any]:
     """Get progress statistics for a document"""
-    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
-    if not document:
+    data = outliner_repo.get_document_progress(db, document_id)
+    if data is None:
         raise HTTPException(status_code=404, detail="Document not found")
-    
-    # Count checked-or-approved vs still-pending segments (aligned with list_documents)
-    checked = db.query(func.count(OutlinerSegment.id)).filter(
-        OutlinerSegment.document_id == document_id,
-        or_(
-            OutlinerSegment.status == 'checked',
-            OutlinerSegment.status == 'approved',
-        ),
-    ).scalar()
-
-    unchecked = db.query(func.count(OutlinerSegment.id)).filter(
-        OutlinerSegment.document_id == document_id,
-        or_(
-            OutlinerSegment.status.is_(None),
-            and_(
-                OutlinerSegment.status != 'checked',
-                OutlinerSegment.status != 'approved',
-            ),
-        ),
-    ).scalar()
-    
-    return {
-        "document_id": document_id,
-        "checked_segments": checked or 0,
-        "unchecked_segments": unchecked or 0,
-        "updated_at": document.updated_at
-    }
+    return data
 
 
 def reset_segments(db: Session, document_id: str) -> None:
     """Delete all segments for a document"""
-    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
-    if not document:
+    if not outliner_repo.reset_segments(db, document_id):
         raise HTTPException(status_code=404, detail="Document not found")
-    
-    # Delete all segments for this document
-    db.query(OutlinerSegment).filter(OutlinerSegment.document_id == document_id).delete()
-    
-    db.commit()
 
 
 def segment_orm_to_document_response_dict(seg: OutlinerSegment) -> Dict[str, Any]:
@@ -897,21 +458,10 @@ def replace_document_segments_and_ai_toc(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    db.query(OutlinerSegment).filter(OutlinerSegment.document_id == document_id).delete(
-        synchronize_session=False
-    )
-
     normalized = normalize_ai_toc_for_storage(toc_entries)
-    if isinstance(normalized, dict):
-        document.ai_toc_entries = json.dumps(normalized, ensure_ascii=False)
-    else:
-        document.ai_toc_entries = normalized
-    document.updated_at = datetime.utcnow()
-
     db_segments = _segment_orms_from_bulk_data(document_id, document.content, segments_data)
-    db.add_all(db_segments)
     segment_payload = [segment_orm_to_document_response_dict(s) for s in db_segments]
-    db.commit()
+    outliner_repo.replace_segments_and_ai_toc(db, document, db_segments, normalized)
     return document, segment_payload
 
 
@@ -956,12 +506,8 @@ def create_segment(
         status='unchecked'  # Default to unchecked
     )
     db_segment.update_annotation_status()
-    
-    db.add(db_segment)
-    db.commit()
-    db.refresh(db_segment)
-    
-    return db_segment
+
+    return outliner_repo.insert_segment(db, db_segment)
 
 
 def create_segments_bulk(
@@ -975,31 +521,18 @@ def create_segments_bulk(
         raise HTTPException(status_code=404, detail="Document not found")
 
     db_segments = _segment_orms_from_bulk_data(document_id, document.content, segments_data)
-    db.add_all(db_segments)
-    db.commit()
+    outliner_repo.insert_segments_bulk(db, db_segments)
     return db_segments
 
 
 def list_segments(db: Session, document_id: str) -> List[OutlinerSegment]:
     """Get all segments for a document"""
-    segments = (
-        db.query(OutlinerSegment)
-        .options(joinedload(OutlinerSegment.rejections))
-        .filter(OutlinerSegment.document_id == document_id)
-        .order_by(OutlinerSegment.segment_index)
-        .all()
-    )
-    return segments
+    return outliner_repo.list_segments(db, document_id)
 
 
 def get_segment(db: Session, segment_id: str) -> OutlinerSegment:
     """Get a single segment by ID"""
-    segment = (
-        db.query(OutlinerSegment)
-        .options(joinedload(OutlinerSegment.rejections))
-        .filter(OutlinerSegment.id == segment_id)
-        .first()
-    )
+    segment = outliner_repo.get_segment_with_rejections(db, segment_id)
     if not segment:
         raise HTTPException(status_code=404, detail="Segment not found")
     return segment
@@ -1022,11 +555,11 @@ def update_segment(
     3. Avoid db.refresh() by using already-updated ORM object
     4. Single transaction commit
     """
-    # PERFORMANCE FIX #1: Single SELECT to get segment with current state
-    segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
+    segment = outliner_repo.get_segment_plain(db, segment_id)
     if not segment:
         raise HTTPException(status_code=404, detail="Segment not found")
 
+    old_status = segment.status
     old_label = segment.label
 
     # Track old annotation status for incremental update
@@ -1126,7 +659,10 @@ def update_segment(
             total_delta=0,  # No change in total count for updates
             annotated_delta=annotated_delta
         )
-    
+
+    if old_status == "rejected":
+        outliner_repo.mark_latest_rejection_resolved(db, segment_id)
+
     return segment
 
 
@@ -1146,10 +682,11 @@ def update_segments_bulk(
     document_ids = set()
     
     for segment_id, segment_update in zip(segment_ids, segment_updates):
-        segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
+        segment = outliner_repo.get_segment_plain(db, segment_id)
         if not segment:
             continue
 
+        old_status = segment.status
         old_label = segment.label
         
         document_ids.add(segment.document_id)
@@ -1204,14 +741,11 @@ def update_segments_bulk(
 
         segment.update_annotation_status()
         segment.updated_at = datetime.utcnow()
+        if old_status == "rejected":
+            outliner_repo.mark_latest_rejection_resolved(db, segment.id)
         updated_segments.append(segment)
-    
-  
-    
-    db.commit()
 
-    for seg in updated_segments:
-        db.refresh(seg)
+    outliner_repo.commit_and_refresh_segments(db, updated_segments)
 
     return updated_segments
 
@@ -1223,7 +757,7 @@ def split_segment(
     document_id: Optional[str] = None
 ) -> List[OutlinerSegment]:
     """Split a segment at a given position"""
-    segment = db.get(OutlinerSegment, segment_id)
+    segment = outliner_repo.get_segment_by_pk(db, segment_id)
 
     # If segment doesn't exist, check if we need to create initial segment from document
     if not segment:
@@ -1234,13 +768,7 @@ def split_segment(
         if not document:
             raise HTTPException(status_code=404, detail="Document not found")
 
-        has_segments = (
-            db.query(OutlinerSegment.id)
-            .filter(OutlinerSegment.document_id == document_id)
-            .first()
-            is not None
-        )
-        if has_segments:
+        if outliner_repo.document_has_any_segment(db, document_id):
             raise HTTPException(status_code=404, detail="Segment not found")
 
         if not document.content or len(document.content.strip()) == 0:
@@ -1260,8 +788,7 @@ def split_segment(
             status='unchecked',
         )
         segment.update_annotation_status()
-        db.add(segment)
-        db.flush()
+        outliner_repo.add_segment_flush(db, segment)
 
     doc_for_body = get_document_with_cache(db, segment.document_id)
     if not doc_for_body:
@@ -1309,21 +836,16 @@ def split_segment(
         status=segment.status or 'unchecked'
     )
 
-    db.execute(
-        update(OutlinerSegment)
-        .where(
-            OutlinerSegment.document_id == segment.document_id,
-            OutlinerSegment.segment_index > segment.segment_index,
-        )
-        .values(segment_index=OutlinerSegment.segment_index + 1)
+    outliner_repo.execute_bump_segment_indices_after(
+        db, segment.document_id, segment.segment_index
     )
 
-    db.add(new_segment)
+    outliner_repo.add_segment(db, new_segment)
     # Upper title + upper author + lower title: independent Gemini calls, run concurrently
     apply_split_auto_title_author_parallel(segment, new_segment, text_before, text_after)
     segment.update_annotation_status()
     new_segment.update_annotation_status()
-    db.commit()
+    outliner_repo.commit_session(db)
 
     return [segment, new_segment]
 
@@ -1336,9 +858,7 @@ def merge_segments(
     if len(segment_ids) < 2:
         raise HTTPException(status_code=400, detail="At least 2 segments required for merge")
     
-    segments = db.query(OutlinerSegment).filter(
-        OutlinerSegment.id.in_(segment_ids)
-    ).order_by(OutlinerSegment.segment_index).all()
+    segments = outliner_repo.fetch_segments_ordered_by_ids(db, segment_ids)
     
     if len(segments) != len(segment_ids):
         raise HTTPException(status_code=404, detail="One or more segments not found")
@@ -1369,48 +889,28 @@ def merge_segments(
     # Get IDs of segments to be deleted (all except the first)
     segments_to_delete_ids = [seg.id for seg in segments[1:]]
     
-    # Delete other segments and update indices
     for seg in segments[1:]:
-        db.delete(seg)
-    
-    # Update indices of following segments (exclude segments being deleted)
-    following_segments = db.query(OutlinerSegment).filter(
-        OutlinerSegment.document_id == document_id,
-        OutlinerSegment.segment_index > first_segment.segment_index,
-        ~OutlinerSegment.id.in_(segments_to_delete_ids)  # Exclude segments being deleted
-    ).all()
-    
+        outliner_repo.delete_orm_entity(db, seg)
+
+    following_segments = outliner_repo.fetch_following_segments_excluding_ids(
+        db, document_id, first_segment.segment_index, segments_to_delete_ids
+    )
+
     shift_amount = len(segments) - 1
     for seg in following_segments:
         seg.segment_index -= shift_amount
-    
-    db.commit()
-    db.refresh(first_segment)
+
+    outliner_repo.merge_segments_persist(db, first_segment)
 
     return first_segment
 
 
 def delete_segment(db: Session, segment_id: str) -> None:
     """Delete a segment"""
-    segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
+    segment = outliner_repo.get_segment_plain(db, segment_id)
     if not segment:
         raise HTTPException(status_code=404, detail="Segment not found")
-    
-    document_id = segment.document_id
-    segment_index = segment.segment_index
-    
-    db.delete(segment)
-    
-    # Update indices of following segments
-    following_segments = db.query(OutlinerSegment).filter(
-        OutlinerSegment.document_id == document_id,
-        OutlinerSegment.segment_index > segment_index
-    ).all()
-    
-    for seg in following_segments:
-        seg.segment_index -= 1
-    
-    db.commit()
+    outliner_repo.delete_segment_and_reindex(db, segment)
 
 
 def update_segment_status(
@@ -1419,20 +919,20 @@ def update_segment_status(
     status: str
 ) -> Dict[str, str]:
     """Update segment status with transition validation"""
-    segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
+    segment = outliner_repo.get_segment_plain(db, segment_id)
     if not segment:
         raise HTTPException(status_code=404, detail="Segment not found")
-    
+
+    old_status = segment.status
     is_valid, error_msg = validate_segment_status_transition(segment.status, status)
     if not is_valid:
         raise HTTPException(status_code=422, detail=error_msg)
-    
-    segment.status = status
-    segment.updated_at = datetime.utcnow()
-    
-    db.commit()
-    db.refresh(segment)
-    
+
+    outliner_repo.update_segment_status_persist(db, segment, status)
+
+    if old_status == "rejected":
+        outliner_repo.mark_latest_rejection_resolved(db, segment_id)
+
     return {"message": "Segment status updated", "segment_id": segment_id, "status": status}
 
 
@@ -1452,156 +952,26 @@ def bulk_segment_operations(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    result_segments = []
-    
-    # Process deletions first
-    if delete:
-        segments_to_delete = db.query(OutlinerSegment).filter(
-            OutlinerSegment.id.in_(delete),
-            OutlinerSegment.document_id == document_id
-        ).all()
-        
-        if len(segments_to_delete) != len(delete):
-            found_ids = {seg.id for seg in segments_to_delete}
-            missing_ids = set(delete) - found_ids
-            raise HTTPException(
-                status_code=404,
-                detail=f"Some segments not found: {list(missing_ids)}"
-            )
-        
-        # Get segment indices to update after deletion
-        deleted_indices = {seg.segment_index for seg in segments_to_delete}
-        max_deleted_index = max(deleted_indices) if deleted_indices else -1
-        
-        # Delete segments
-        for seg in segments_to_delete:
-            db.delete(seg)
-        
-        # Update indices of following segments
-        if max_deleted_index >= 0:
-            following_segments = db.query(OutlinerSegment).filter(
-                OutlinerSegment.document_id == document_id,
-                OutlinerSegment.segment_index > max_deleted_index
-            ).all()
-            
-            shift_amount = len(segments_to_delete)
-            for seg in following_segments:
-                seg.segment_index -= shift_amount
-    
-    # Process updates
-    if update:
-        segment_updates = {update_item.get('id'): update_item for update_item in update if 'id' in update_item}
-        segment_ids_to_update = list(segment_updates.keys())
-        
-        segments_to_update = db.query(OutlinerSegment).filter(
-            OutlinerSegment.id.in_(segment_ids_to_update),
-            OutlinerSegment.document_id == document_id
-        ).all()
-        
-        if len(segments_to_update) != len(segment_ids_to_update):
-            found_ids = {seg.id for seg in segments_to_update}
-            missing_ids = set(segment_ids_to_update) - found_ids
-            raise HTTPException(
-                status_code=404,
-                detail=f"Some segments not found for update: {list(missing_ids)}"
-            )
-        
-        for segment in segments_to_update:
-            update_data = segment_updates[segment.id]
-            
-            # Update fields if provided
-            if 'title' in update_data and update_data['title'] is not None:
-                segment.title = update_data['title']
-            if 'author' in update_data and update_data['author'] is not None:
-                segment.author = update_data['author']
-            if 'title_bdrc_id' in update_data and update_data['title_bdrc_id'] is not None:
-                segment.title_bdrc_id = update_data['title_bdrc_id']
-            if 'author_bdrc_id' in update_data and update_data['author_bdrc_id'] is not None:
-                segment.author_bdrc_id = update_data['author_bdrc_id']
-            if 'parent_segment_id' in update_data and update_data['parent_segment_id'] is not None:
-                segment.parent_segment_id = update_data['parent_segment_id']
-            if 'is_attached' in update_data and update_data['is_attached'] is not None:
-                segment.is_attached = update_data['is_attached']
-            if 'status' in update_data and update_data['status'] is not None:
-                is_valid, error_msg = validate_segment_status_transition(segment.status, update_data['status'])
-                if not is_valid:
-                    raise HTTPException(status_code=422, detail=error_msg)
-                segment.status = update_data['status']
-            if 'span_start' in update_data and update_data['span_start'] is not None:
-                segment.span_start = update_data['span_start']
-            if 'span_end' in update_data and update_data['span_end'] is not None:
-                segment.span_end = update_data['span_end']
-            if 'segment_index' in update_data and update_data['segment_index'] is not None:
-                segment.segment_index = update_data['segment_index']
-            
-            segment.update_annotation_status()
-            segment.updated_at = datetime.utcnow()
-            result_segments.append(segment)
-    
-    # Process creates
-    if create:
-        # Get current max segment_index to ensure proper ordering
-        max_index = db.query(func.max(OutlinerSegment.segment_index)).filter(
-            OutlinerSegment.document_id == document_id
-        ).scalar() or -1
-        
-        new_segments = []
-        for idx, segment_data in enumerate(create):
-            # If segment_index is not provided or needs adjustment, calculate it
-            segment_index = segment_data.get('segment_index') if segment_data.get('segment_index') is not None else max_index + idx + 1
-            
-            # Extract text from document content using span addresses if text not provided
-            segment_text = segment_data.get('text')
-            if not segment_text:
-                span_start = segment_data['span_start']
-                span_end = segment_data['span_end']
-                if span_start < 0 or span_end > len(document.content):
-                    raise HTTPException(status_code=400, detail=f"Invalid span addresses for segment at index {segment_index}")
-                segment_text = document.content[span_start:span_end]
-            
-            db_segment = OutlinerSegment(
-                id=str(uuid.uuid4()),
-                document_id=document_id,
-                text="",
-                segment_index=segment_index,
-                span_start=segment_data['span_start'],
-                span_end=segment_data['span_end'],
-                title=segment_data.get('title'),
-                author=segment_data.get('author'),
-                title_bdrc_id=segment_data.get('title_bdrc_id'),
-                author_bdrc_id=segment_data.get('author_bdrc_id'),
-                parent_segment_id=segment_data.get('parent_segment_id'),
-                label=infer_segment_label_for_new_segment(
-                    segment_data.get("title"), segment_text
-                ),
-                status='unchecked'  # Default to unchecked
-            )
-            db_segment.update_annotation_status()
-            new_segments.append(db_segment)
-            db.add(db_segment)
-        
-        result_segments.extend(new_segments)
-    
-    
-    # Commit all changes in a single transaction
-    db.commit()
-    
-    # Refresh all segments
-    for seg in result_segments:
-        db.refresh(seg)
-    
-    return result_segments
+    try:
+        return outliner_repo.bulk_segment_operations_execute(
+            db, document, create=create, update=update, delete=delete
+        )
+    except ValueError as e:
+        msg = str(e)
+        if "Invalid span addresses" in msg:
+            raise HTTPException(status_code=400, detail=msg) from e
+        if "not found" in msg.lower():
+            raise HTTPException(status_code=404, detail=msg) from e
+        raise HTTPException(status_code=422, detail=msg) from e
 
 
 # ==================== Comment Operations ====================
 
 def get_segment_comments(db: Session, segment_id: str) -> List[Dict[str, Any]]:
     """Get all comments for a segment"""
-    segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
-    if not segment:
+    comments_list = outliner_repo.get_segment_comments_list(db, segment_id)
+    if comments_list is None:
         raise HTTPException(status_code=404, detail="Segment not found")
-    
-    comments_list = get_comments_list(segment)
     return comments_list
 
 
@@ -1612,31 +982,11 @@ def add_segment_comment(
     username: str
 ) -> List[Dict[str, Any]]:
     """Add a comment to a segment"""
-    segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
-    
-    if not segment:
+    existing_comments = outliner_repo.add_segment_comment_persist(
+        db, segment_id, content, username
+    )
+    if existing_comments is None:
         raise HTTPException(status_code=404, detail="Segment not found")
-    
-    # Get existing comments (returns a copy of the list)
-    existing_comments = get_comments_list(segment)
-    
-    # Add new comment
-    new_comment = {
-        "content": content,
-        "username": username,
-        "timestamp": datetime.utcnow().isoformat()
-    }
-    existing_comments.append(new_comment)
-    
-    # Update segment comment field - store as array directly
-    segment.comment = existing_comments
-    # Explicitly mark the JSON field as modified so SQLAlchemy detects the change
-    flag_modified(segment, "comment")
-    segment.updated_at = datetime.utcnow()
-    
-    db.commit()
-    db.refresh(segment)
-    
     return existing_comments
 
 
@@ -1647,29 +997,14 @@ def update_segment_comment(
     content: str
 ) -> List[Dict[str, Any]]:
     """Update a specific comment by index"""
-    segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
-    if not segment:
+    comments_list, err = outliner_repo.update_segment_comment_persist(
+        db, segment_id, comment_index, content
+    )
+    if err == "segment_not_found":
         raise HTTPException(status_code=404, detail="Segment not found")
-    
-    comments_list = get_comments_list(segment)
-    
-    if comment_index < 0 or comment_index >= len(comments_list):
+    if err == "comment_not_found":
         raise HTTPException(status_code=404, detail="Comment not found")
-    
-    # Update the comment
-    comments_list[comment_index]["content"] = content
-    comments_list[comment_index]["timestamp"] = datetime.utcnow().isoformat()
-    
-    # Update segment comment field - store as array directly
-    segment.comment = comments_list
-    # Explicitly mark the JSON field as modified so SQLAlchemy detects the change
-    flag_modified(segment, "comment")
-    segment.updated_at = datetime.utcnow()
-    
-    db.commit()
-    db.refresh(segment)
-    
-    return comments_list
+    return comments_list or []
 
 
 def delete_segment_comment(
@@ -1678,32 +1013,14 @@ def delete_segment_comment(
     comment_index: int
 ) -> List[Dict[str, Any]]:
     """Delete a specific comment by index"""
-    segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
-    if not segment:
+    comments_list, err = outliner_repo.delete_segment_comment_persist(
+        db, segment_id, comment_index
+    )
+    if err == "segment_not_found":
         raise HTTPException(status_code=404, detail="Segment not found")
-    
-    comments_list = get_comments_list(segment)
-    
-    if comment_index < 0 or comment_index >= len(comments_list):
+    if err == "comment_not_found":
         raise HTTPException(status_code=404, detail="Comment not found")
-    
-    # Remove the comment
-    comments_list.pop(comment_index)
-    
-    # Update segment comment field (or set to None if no comments left) - store as array directly
-    if len(comments_list) == 0:
-        segment.comment = None
-    else:
-        segment.comment = comments_list
-        # Explicitly mark the JSON field as modified so SQLAlchemy detects the change
-        flag_modified(segment, "comment")
-    
-    segment.updated_at = datetime.utcnow()
-    
-    db.commit()
-    db.refresh(segment)
-    
-    return comments_list
+    return comments_list or []
 
 
 
@@ -1716,32 +1033,21 @@ def reject_segment(
     rejection_reason: Optional[str] = None,
 ) -> OutlinerSegment:
     """Reject a checked segment and record the rejection event"""
-    segment = db.query(OutlinerSegment).filter(OutlinerSegment.id == segment_id).first()
+    segment = outliner_repo.get_segment_plain(db, segment_id)
     if not segment:
         raise HTTPException(status_code=404, detail="Segment not found")
-    
+
     is_valid, error_msg = validate_segment_status_transition(segment.status, "rejected")
     if not is_valid:
         raise HTTPException(status_code=422, detail=error_msg)
-    
-    reason = _normalize_rejection_comment(rejection_reason)
-    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == segment.document_id).first()
+
+    reason = none_check(rejection_reason, "Rejection comment is required")
+    document = outliner_repo.fetch_document_by_id(db, segment.document_id)
     annotator_id = document.user_id if document else None
-    
-    rejection = SegmentRejection(
-        id=str(uuid.uuid4()),
-        segment_id=segment_id,
-        user_id=annotator_id,
-        reviewer_id=reviewer_id,
-        rejection_reason=reason,
+
+    outliner_repo.apply_rejection_to_segment(
+        db, segment, annotator_id, reviewer_id, reason
     )
-    db.add(rejection)
-    
-    segment.status = "rejected"
-    segment.updated_at = datetime.utcnow()
-    
-    db.commit()
-    db.refresh(segment)
     return segment
 
 
@@ -1755,48 +1061,18 @@ def reject_segments_bulk(
     if not segment_ids:
         raise HTTPException(status_code=400, detail="segment_ids is required")
     
-    reason = _normalize_rejection_comment(rejection_reason)
-    segments = db.query(OutlinerSegment).filter(
-        OutlinerSegment.id.in_(segment_ids)
-    ).all()
-    
-    if not segments:
-        raise HTTPException(status_code=404, detail="No segments found")
-    
-    doc_ids = {seg.document_id for seg in segments}
-    documents = db.query(OutlinerDocument).filter(OutlinerDocument.id.in_(doc_ids)).all()
-    doc_user_map = {doc.id: doc.user_id for doc in documents}
-    
-    rejected_segments = []
-    for segment in segments:
-        is_valid, _ = validate_segment_status_transition(segment.status, "rejected")
-        if not is_valid:
-            continue
-        
-        rejection = SegmentRejection(
-            id=str(uuid.uuid4()),
-            segment_id=segment.id,
-            user_id=doc_user_map.get(segment.document_id),
-            reviewer_id=reviewer_id,
-            rejection_reason=reason,
-        )
-        db.add(rejection)
-        segment.status = "rejected"
-        segment.updated_at = datetime.utcnow()
-        rejected_segments.append(segment)
-    
-    db.commit()
-    for seg in rejected_segments:
-        db.refresh(seg)
-    
-    return rejected_segments
+    reason = none_check(rejection_reason, "Rejection comment is required")
+    try:
+        return outliner_repo.reject_segments_bulk(db, segment_ids, reviewer_id, reason)
+    except ValueError as e:
+        if str(e) == "No segments found":
+            raise HTTPException(status_code=404, detail=str(e)) from e
+        raise
 
 
 def get_segment_rejection_count(db: Session, segment_id: str) -> int:
     """Get the number of times a segment has been rejected"""
-    return db.query(func.count(SegmentRejection.id)).filter(
-        SegmentRejection.segment_id == segment_id
-    ).scalar() or 0
+    return outliner_repo.get_segment_rejection_count(db, segment_id)
 
 
 def get_annotator_performance_breakdown(
@@ -1808,77 +1084,9 @@ def get_annotator_performance_breakdown(
     Per-annotator metrics for documents in the date range (ignores user_id filter).
     Scoped by document.created_at. user_id None = unassigned documents.
     """
-    doc_filters = [
-        (OutlinerDocument.status != "deleted") | (OutlinerDocument.status.is_(None))
-    ]
-    if start_date:
-        doc_filters.append(OutlinerDocument.created_at >= start_date)
-    if end_date:
-        doc_filters.append(OutlinerDocument.created_at <= end_date)
-    doc_scope = and_(*doc_filters)
-
-    title_or_author = case(
-        (
-            or_(
-                and_(OutlinerSegment.title.isnot(None), OutlinerSegment.title != ""),
-                and_(OutlinerSegment.author.isnot(None), OutlinerSegment.author != ""),
-            ),
-            1,
-        ),
-        else_=0,
+    return outliner_repo.get_annotator_performance_breakdown(
+        db, start_date=start_date, end_date=end_date
     )
-
-    doc_rows = (
-        db.query(OutlinerDocument.user_id, func.count(OutlinerDocument.id))
-        .filter(doc_scope)
-        .group_by(OutlinerDocument.user_id)
-        .all()
-    )
-    seg_rows = (
-        db.query(
-            OutlinerDocument.user_id,
-            func.count(OutlinerSegment.id),
-            func.sum(title_or_author),
-        )
-        .join(OutlinerSegment, OutlinerSegment.document_id == OutlinerDocument.id)
-        .filter(doc_scope)
-        .group_by(OutlinerDocument.user_id)
-        .all()
-    )
-    rej_rows = (
-        db.query(OutlinerDocument.user_id, func.count(OutlinerSegment.id))
-        .join(OutlinerSegment, OutlinerSegment.document_id == OutlinerDocument.id)
-        .filter(doc_scope)
-        .filter(OutlinerSegment.status == "rejected")
-        .group_by(OutlinerDocument.user_id)
-        .all()
-    )
-
-    by_user: Dict[Any, Dict[str, int]] = {}
-    for uid, cnt in doc_rows:
-        by_user.setdefault(uid, {"document_count": 0, "segment_count": 0, "segments_with_title_or_author": 0, "rejection_count": 0})
-        by_user[uid]["document_count"] = int(cnt)
-    for uid, seg_cnt, titled in seg_rows:
-        by_user.setdefault(uid, {"document_count": 0, "segment_count": 0, "segments_with_title_or_author": 0, "rejection_count": 0})
-        by_user[uid]["segment_count"] = int(seg_cnt)
-        by_user[uid]["segments_with_title_or_author"] = int(titled or 0)
-    for uid, rej_cnt in rej_rows:
-        by_user.setdefault(uid, {"document_count": 0, "segment_count": 0, "segments_with_title_or_author": 0, "rejection_count": 0})
-        by_user[uid]["rejection_count"] = int(rej_cnt)
-
-    rows: List[Dict[str, Any]] = []
-    for uid, m in by_user.items():
-        rows.append(
-            {
-                "user_id": uid,
-                "document_count": m["document_count"],
-                "segment_count": m["segment_count"],
-                "segments_with_title_or_author": m["segments_with_title_or_author"],
-                "rejection_count": m["rejection_count"],
-            }
-        )
-    rows.sort(key=lambda r: r["segment_count"], reverse=True)
-    return rows
 
 
 def get_dashboard_stats(
@@ -1888,139 +1096,9 @@ def get_dashboard_stats(
     end_date: Optional[datetime] = None,
 ) -> Dict[str, Any]:
     """Aggregate dashboard statistics, optionally scoped by user and date range."""
-    doc_query = db.query(OutlinerDocument.id).filter(
-        (OutlinerDocument.status != "deleted") | (OutlinerDocument.status.is_(None))
+    return outliner_repo.get_dashboard_stats(
+        db, user_id=user_id, start_date=start_date, end_date=end_date
     )
-    if user_id:
-        doc_query = doc_query.filter(OutlinerDocument.user_id == user_id)
-    if start_date:
-        doc_query = doc_query.filter(OutlinerDocument.created_at >= start_date)
-    if end_date:
-        doc_query = doc_query.filter(OutlinerDocument.created_at <= end_date)
-
-    doc_ids_subq = doc_query.subquery()
-
-    document_count = db.query(func.count()).select_from(doc_ids_subq).scalar() or 0
-
-    seg_base = db.query(OutlinerSegment).filter(
-        OutlinerSegment.document_id.in_(db.query(doc_ids_subq.c.id))
-    )
-
-    total_segments = seg_base.with_entities(func.count(OutlinerSegment.id)).scalar() or 0
-
-    segments_with_title_or_author = seg_base.filter(
-        (OutlinerSegment.title.isnot(None) & (OutlinerSegment.title != ""))
-        | (OutlinerSegment.author.isnot(None) & (OutlinerSegment.author != ""))
-    ).with_entities(func.count(OutlinerSegment.id)).scalar() or 0
-
-    rejection_count = (
-        seg_base.filter(OutlinerSegment.status == "rejected")
-        .with_entities(func.count(OutlinerSegment.id))
-        .scalar()
-        or 0
-    )
-
-    doc_id_filter = OutlinerDocument.id.in_(db.query(doc_ids_subq.c.id))
-
-    doc_status_rows = (
-        db.query(OutlinerDocument.status, func.count(OutlinerDocument.id))
-        .filter(doc_id_filter)
-        .group_by(OutlinerDocument.status)
-        .all()
-    )
-    document_status_counts: Dict[str, int] = {}
-    for status_val, cnt in doc_status_rows:
-        key = status_val if status_val else "unknown"
-        document_status_counts[key] = int(cnt)
-
-    doc_category_rows = (
-        db.query(OutlinerDocument.category, func.count(OutlinerDocument.id))
-        .filter(doc_id_filter)
-        .group_by(OutlinerDocument.category)
-        .all()
-    )
-    document_category_counts: Dict[str, int] = {}
-    for cat_val, cnt in doc_category_rows:
-        key = cat_val if cat_val else "uncategorized"
-        document_category_counts[key] = int(cnt)
-
-    seg_status_rows = (
-        db.query(OutlinerSegment.status, func.count(OutlinerSegment.id))
-        .filter(OutlinerSegment.document_id.in_(db.query(doc_ids_subq.c.id)))
-        .group_by(OutlinerSegment.status)
-        .all()
-    )
-    segment_status_counts: Dict[str, int] = {}
-    for status_val, cnt in seg_status_rows:
-        key = status_val if status_val else "unchecked"
-        segment_status_counts[key] = int(cnt)
-
-    label_rows = (
-        db.query(OutlinerSegment.label, func.count(OutlinerSegment.id))
-        .filter(OutlinerSegment.document_id.in_(db.query(doc_ids_subq.c.id)))
-        .group_by(OutlinerSegment.label)
-        .all()
-    )
-    segment_label_counts: Dict[str, int] = {}
-    for label_val, cnt in label_rows:
-        if label_val is not None:
-            key = label_val.value if hasattr(label_val, "value") else str(label_val)
-        else:
-            key = "unset"
-        segment_label_counts[key] = int(cnt)
-
-    segments_with_bdrc_id = (
-        seg_base.filter(
-            (OutlinerSegment.title_bdrc_id.isnot(None) & (OutlinerSegment.title_bdrc_id != ""))
-            | (
-                OutlinerSegment.author_bdrc_id.isnot(None)
-                & (OutlinerSegment.author_bdrc_id != "")
-            )
-        )
-        .with_entities(func.count(OutlinerSegment.id))
-        .scalar()
-        or 0
-    )
-
-    segments_with_parent = (
-        seg_base.filter(OutlinerSegment.parent_segment_id.isnot(None))
-        .with_entities(func.count(OutlinerSegment.id))
-        .scalar()
-        or 0
-    )
-
-    segments_with_comments = (
-        seg_base.filter(OutlinerSegment.comment.isnot(None))
-        .with_entities(func.count(OutlinerSegment.id))
-        .scalar()
-        or 0
-    )
-
-    annotation_coverage_pct = (
-        round((segments_with_title_or_author / total_segments) * 100, 1)
-        if total_segments
-        else 0.0
-    )
-
-    annotator_performance = get_annotator_performance_breakdown(
-        db, start_date=start_date, end_date=end_date
-    )
-
-    return {
-        "document_count": document_count,
-        "total_segments": total_segments,
-        "segments_with_title_or_author": segments_with_title_or_author,
-        "rejection_count": rejection_count,
-        "document_status_counts": document_status_counts,
-        "document_category_counts": document_category_counts,
-        "segment_status_counts": segment_status_counts,
-        "segment_label_counts": segment_label_counts,
-        "segments_with_bdrc_id": segments_with_bdrc_id,
-        "segments_with_parent": segments_with_parent,
-        "segments_with_comments": segments_with_comments,
-        "annotation_coverage_pct": annotation_coverage_pct,
-        "annotator_performance": annotator_performance,
-    }
 
 
 # ==================== BDRC Operations ====================
@@ -2031,15 +1109,7 @@ from bdrc.volume import SegmentInput, VolumeInput, get_volume, update_volume, up
 
 def _bdrc_modified_by_from_document(db: Session, document: OutlinerDocument) -> Optional[str]:
     """BDRC OTAPI `modified_by`: prefer catalog user email, else user id (same pattern as frontend BDRC modals)."""
-    if not document.user_id:
-        return None
-    user = db.query(User).filter(User.id == document.user_id).first()
-    if not user:
-        return None
-    email = (user.email or "").strip()
-    if email:
-        return email
-    return (user.id or "").strip() or None
+    return outliner_repo.bdrc_modified_by_from_document(db, document)
 
 
 async def assign_volume(db: Session, user_id: str) -> OutlinerDocument:
@@ -2059,13 +1129,11 @@ async def assign_volume(db: Session, user_id: str) -> OutlinerDocument:
     # check if the document already exists
     volume_id = volume_data["id"]
     
-    document = None
-    try: 
-        document =get_document_by_filename(db, volume_id)
-    except Exception as e:
-        print(f"document already exists: {e}")
-    if document:
-        raise HTTPException(status_code=400, detail="Document already exists with id: {document.id}")
+    if outliner_repo.fetch_document_by_filename(db, volume_id):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Document already exists for volume {volume_id}",
+        )
     
     document = create_document(
             db=db,
@@ -2155,29 +1223,9 @@ def list_completed_document_ids_all_segments_checked(
     If `only_document_ids` is not None, restrict to that set (after normalization in the caller).
     Empty `only_document_ids` yields no candidates.
     """
-    segment_not_checked = exists().where(
-        OutlinerSegment.document_id == OutlinerDocument.id,
-        or_(
-            OutlinerSegment.status.is_(None),
-            OutlinerSegment.status != "checked",
-        ),
+    return outliner_repo.list_completed_document_ids_all_segments_checked(
+        db, only_document_ids=only_document_ids
     )
-    has_segments = exists().where(
-        OutlinerSegment.document_id == OutlinerDocument.id,
-    )
-    q = db.query(OutlinerDocument.id).filter(
-        OutlinerDocument.status == "completed",
-        OutlinerDocument.filename.isnot(None),
-        OutlinerDocument.filename != "",
-        ~segment_not_checked,
-        has_segments,
-    )
-    if only_document_ids is not None:
-        if not only_document_ids:
-            return []
-        q = q.filter(OutlinerDocument.id.in_(only_document_ids))
-    rows = q.all()
-    return [r[0] for r in rows]
 
 
 async def sync_outliner_document_to_bdrc_in_review(db: Session, document_id: str) -> Dict[str, Any]:
@@ -2203,14 +1251,7 @@ async def sync_completed_documents_to_bdrc_in_review(
     sync_log = _bdrc_bulk_sync_file_logger()
     document_ids = list_completed_document_ids_all_segments_checked(db, only_document_ids=only_document_ids)
     total = len(document_ids)
-    id_to_filename: Dict[str, str] = {}
-    if document_ids:
-        for row in (
-            db.query(OutlinerDocument.id, OutlinerDocument.filename)
-            .filter(OutlinerDocument.id.in_(document_ids))
-            .all()
-        ):
-            id_to_filename[row[0]] = (row[1] or "").strip()
+    id_to_filename = outliner_repo.map_document_id_to_filename(db, document_ids)
 
     sync_log.info(
         "BDRC bulk sync start candidate_count=%s filter_document_ids=%s document_ids=%s",
@@ -2301,10 +1342,7 @@ async def approve_document(db: Session, document_id: str) -> OutlinerDocument:
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    non_approved = db.query(func.count(OutlinerSegment.id)).filter(
-        OutlinerSegment.document_id == document_id,
-        OutlinerSegment.status != 'approved'
-    ).scalar() or 0
+    non_approved = outliner_repo.count_non_approved_segments(db, document_id)
     if non_approved > 0:
         raise HTTPException(
             status_code=400,

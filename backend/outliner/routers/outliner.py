@@ -7,12 +7,10 @@ from ai_text_outline import extract_toc_indices
 from core.database import get_db
 from outliner.controller.outliner import (
     create_document as create_document_ctrl,
-    upload_document as upload_document_ctrl,
     list_documents as list_documents_ctrl,
     get_document as get_document_ctrl,
     get_document_for_workspace as get_document_for_workspace_ctrl,
     update_document_content as update_document_content_ctrl,
-    update_document_ai_toc_entries as update_document_ai_toc_entries_ctrl,
     get_document_ai_toc_entries as get_document_ai_toc_entries_ctrl,
     ai_toc_db_value_to_api_items,
     delete_document as delete_document_ctrl,
@@ -43,6 +41,7 @@ from outliner.controller.outliner import (
     get_segment_rejection_count as get_segment_rejection_count_ctrl,
     latest_rejection_reason_for_orm_segment as latest_rejection_reason_for_orm_segment_ctrl,
     latest_rejection_reviewer_for_orm_segment as latest_rejection_reviewer_for_orm_segment_ctrl,
+    latest_rejection_resolved_for_orm_segment as latest_rejection_resolved_for_orm_segment_ctrl,
     get_dashboard_stats as get_dashboard_stats_ctrl,
 )
 from outliner.utils.outliner_utils import get_comments_list, segment_body_from_document
@@ -75,6 +74,7 @@ class SegmentRejectionSummary(BaseModel):
     count: int = 0
     reason: Optional[str] = None
     reviewer: Optional[SegmentRejectionReviewer] = None
+    resolved: Optional[bool] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -380,10 +380,16 @@ def _build_segment_response(
                 picture=rr_clean.get("picture"),
                 name=rr_clean.get("name"),
             )
+        resolved_flag = (
+            latest_rejection_resolved_for_orm_segment_ctrl(db, segment)
+            if db is not None
+            else None
+        )
         rejection = SegmentRejectionSummary(
             count=rejection_count,
             reason=rejection_reason if segment.status == "rejected" else None,
             reviewer=rev,
+            resolved=resolved_flag,
         )
     resolved_text: Optional[str] = None
     if document_content is not None:
@@ -1034,21 +1040,30 @@ class AnnotatorPerformanceRow(BaseModel):
     document_count: int
     segment_count: int
     segments_with_title_or_author: int
-    rejection_count: int
+    rejection_count: int = Field(
+        ...,
+        description="Segments still rejected with latest rejection unresolved (annotator has not addressed)",
+    )
 
 
 class DashboardStatsResponse(BaseModel):
     document_count: int
     total_segments: int
     segments_with_title_or_author: int
-    rejection_count: int
+    rejection_count: int = Field(
+        ...,
+        description="Same as annotator chart: rejected segments whose latest rejection row is not resolved",
+    )
     document_status_counts: Dict[str, int]
     document_category_counts: Dict[str, int]
     segment_status_counts: Dict[str, int]
     segment_label_counts: Dict[str, int]
     segments_with_bdrc_id: int
     segments_with_parent: int
-    segments_with_comments: int
+    segments_with_comments: int = Field(
+        ...,
+        description="Rejected segments that have comment data stored",
+    )
     annotation_coverage_pct: float
     annotator_performance: List[AnnotatorPerformanceRow]
 

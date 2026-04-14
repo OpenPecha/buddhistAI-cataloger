@@ -74,6 +74,8 @@ export interface SegmentRejection {
   count: number;
   reason?: string | null;
   reviewer?: SegmentRejectionReviewer | null;
+  /** True after annotator saves the segment while it was rejected (latest rejection row). */
+  resolved?: boolean | null;
 }
 
 export interface OutlinerSegment {
@@ -597,7 +599,7 @@ export interface AnnotatorPerformanceRow {
   document_count: number;
   segment_count: number;
   segments_with_title_or_author: number;
-  /** Segments with status rejected on that annotator's documents in range */
+  /** Unresolved rejected segments on that annotator's documents in range (latest rejection not resolved) */
   rejection_count: number;
 }
 
@@ -605,7 +607,7 @@ export interface DashboardStats {
   document_count: number;
   total_segments: number;
   segments_with_title_or_author: number;
-  /** Segments with status rejected (same scope as other segment totals) */
+  /** Unresolved rejected segments: status rejected and latest rejection row is not resolved */
   rejection_count: number;
   document_status_counts: Record<string, number>;
   document_category_counts: Record<string, number>;
@@ -613,6 +615,7 @@ export interface DashboardStats {
   segment_label_counts: Record<string, number>;
   segments_with_bdrc_id: number;
   segments_with_parent: number;
+  /** Segments with status rejected that have stored comments */
   segments_with_comments: number;
   annotation_coverage_pct: number;
   /** Per-annotator breakdown (same date range as dashboard; not scoped by user filter). */

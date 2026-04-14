@@ -68,9 +68,7 @@ const OutlinerUpload: React.FC = () => {
     queryFn: () =>
       listOutlinerDocuments(userId, skip, LIMIT, false, debouncedTitle || undefined),
     enabled: !!userId,
-    refetchOnMount:true,
-    retryOnMount:true,
-    staleTime: 1 * 60 * 1000, // 1 minute
+    staleTime: 0,
   });
 
   const canGoPrev = page > 1;

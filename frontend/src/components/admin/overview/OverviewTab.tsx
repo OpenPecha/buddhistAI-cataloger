@@ -205,7 +205,13 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
     if (!stats) return null
     const skippedDocs = stats.document_status_counts.skipped ?? 0
     return {
-      labels: ['Documents', 'Total segments', 'With title/author', 'Skipped docs', 'Rejected segments'],
+      labels: [
+        'Documents',
+        'Total segments',
+        'With title/author',
+        'Skipped docs',
+        'Unresolved rejected',
+      ],
       datasets: [
         {
           data: [
@@ -318,7 +324,7 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
           pointBackgroundColor: '#7c3aed',
         },
         {
-          label: 'Rejected segments',
+          label: 'Unresolved rejected',
           data: perf.map((r) => r.rejection_count),
           borderColor: '#dc2626',
           backgroundColor: 'rgba(220, 38, 38, 0.12)',
@@ -402,7 +408,6 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
             title="Rejected segments"
             value={stats.rejection_count}
             colorClass="text-red-600"
-            hint="Segments with rejected status"
           />
         </div>
       </section>
@@ -446,6 +451,7 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
               title="With comments"
               value={stats.segments_with_comments}
               colorClass="text-amber-600"
+              hint="Rejected segments that have comments"
             />
             <StatsCard
               icon={<GitBranch className="h-6 w-6 text-indigo-500" strokeWidth={1.75} />}

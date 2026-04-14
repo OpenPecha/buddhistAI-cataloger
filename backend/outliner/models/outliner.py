@@ -152,7 +152,7 @@ class SegmentRejection(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     # Reviewer explanation shown to annotators (required on new rejections)
     rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
-
+    resolved: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
     segment: Mapped["OutlinerSegment"] = relationship("OutlinerSegment", back_populates="rejections")
     # Annotator (document owner) vs reviewer — both FK to users; disambiguate with foreign_keys
     reviewer: Mapped[User | None] = relationship(

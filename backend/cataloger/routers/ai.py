@@ -2,13 +2,9 @@
 AI router for text analysis and detection endpoints.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 from typing import Optional, List
-from sqlalchemy.orm import Session
-from core.database import get_db
-from outliner.models.outliner import OutlinerDocument
-from outliner.controller.outliner import update_document_ai_toc_entries
 from cataloger.controller.ai import (
     generate_title_author,
 )

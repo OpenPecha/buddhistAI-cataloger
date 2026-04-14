@@ -117,8 +117,7 @@ Helper functions for:
 - **Progress Tracking**:
   - `incremental_update_document_progress()`: Optimized incremental updates
   - `get_annotation_status_delta()`: Calculate annotation change delta
-- **Text Processing**:
-  - `remove_escape_chars_except_newline()`: Clean text content
+
 - **Comments**:
   - `get_comments_list()`: Extract comments from JSON field
 

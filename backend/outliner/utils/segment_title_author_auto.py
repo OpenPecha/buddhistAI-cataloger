@@ -156,66 +156,6 @@ def apply_auto_title_to_segment(
     return True
 
 
-def apply_auto_author_to_segment(
-    db: Session,
-    segment: OutlinerSegment,
-    *,
-    skip_last_segment_check: bool = False,
-) -> bool:
-    """
-    Author from the **end** of the segment. Skips if author already set.
-
-    Intended when a following segment is created (split), so the end boundary is known.
-    Only runs when the segment is labeled TEXT.
-
-    Returns True if author fields were written.
-    """
-    if not skip_last_segment_check and is_last_segment_in_document(db, segment):
-        return False
-    if segment.label != SegmentLabels.TEXT:
-        return False
-    if (segment.status or "") == "checked":
-        return False
-    doc = get_document_with_cache(db, segment.document_id)
-    content = (doc.content or "") if doc else ""
-    text = segment_body_from_document(content, segment.span_start, segment.span_end)
-    if not text.strip():
-        return False
-    if (segment.author or "").strip():
-        return False
-
-    try:
-        from cataloger.controller.ai import generate_author_from_end
-        from cataloger.routers.ai import AuthorOnlyResponse
-    except Exception as e:  # pragma: no cover
-        logger.warning("segment_title_author_auto: import failed: %s", e)
-        return False
-
-    try:
-        raw = generate_author_from_end(text, AuthorOnlyResponse)
-    except Exception as e:
-        logger.warning(
-            "segment_title_author_auto: author AI failed for segment %s: %s",
-            segment.id,
-            e,
-        )
-        return False
-
-    author_val = _resolved_author(raw)
-    if not author_val:
-        return False
-
-    seg_start = segment.span_start or 0
-    segment.author = author_val
-    span = find_last_phrase_doc_span(text, seg_start, author_val)
-    if span:
-        segment.author_span_start, segment.author_span_end = span
-    else:
-        segment.author_span_start = None
-        segment.author_span_end = None
-    segment.updated_author = None
-    return True
-
 
 def _gemini_title_safe(text: str) -> Any:
     try:
