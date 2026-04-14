@@ -6,6 +6,7 @@ import { FilterSegments, type LabelFilterValue, type CompletionFilterValue } fro
 import { useAISuggestions } from '@/hooks/useAISuggestions';
 import { findPhraseDocSpan } from '@/utils/findPhraseDocSpan';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
+import { useUser } from '@/hooks/useUser';
 import type { SegmentUpdateRequest } from '@/api/outliner';
 import { toast } from 'sonner';
 import { User } from 'lucide-react';
@@ -140,6 +141,7 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
 }, ref) => {
   const { t } = useTranslation();
   const { updateSegment: updateSegmentMutation, document } = useOutlinerDocument();
+  const { user: appUser } = useUser();
   const activeSegmentId = activeSegment?.id || null;
   const fullDocumentContent = document?.content ?? '';
   const titleSourceSpanRef = useRef<DocTextSpan | null>(null);
@@ -308,7 +310,10 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
       return;
     }
 
-    const updatePayload: SegmentUpdateRequest = { status: 'checked' };
+    const updatePayload: SegmentUpdateRequest = {
+      status: 'checked',
+      ...(appUser?.id ? { reviewer_id: appUser.id } : {}),
+    };
 
     if (titleName || titleName==='') {
       updatePayload.title = titleName;
@@ -391,6 +396,7 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
     fullDocumentContent,
     t,
     onSidebarActiveTabChange,
+    appUser?.id,
   ]);
 
   const resetMetadataForm = useCallback(() => {
@@ -470,13 +476,14 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
         author_span_end: null,
         updated_author: null,
         status: 'checked',
+        ...(appUser?.id ? { reviewer_id: appUser.id } : {}),
       });
       onSidebarActiveTabChange('outlines');
     } catch (error) {
       console.error('Failed to mark segment as not applicable:', error);
       toast.error(error instanceof Error ? error.message : t('outliner.annotation.toastSaveFailed'));
     }
-  }, [activeSegmentId, updateSegmentMutation, onSidebarActiveTabChange, t]);
+  }, [activeSegmentId, updateSegmentMutation, onSidebarActiveTabChange, t, appUser?.id]);
 
   // Expose methods via ref
   useImperativeHandle(ref, () => ({

@@ -150,6 +150,8 @@ export interface SegmentUpdateRequest {
   parent_segment_id?: string;
   is_attached?: boolean;
   status?: OutlineSegmentStatus; // checked, unchecked
+  /** Internal app user id (settings user) when setting checked/approved — used for dashboard reviewer stats */
+  reviewer_id?: string;
   label?: SegmentLabel; // FRONT_MATTER, TOC, TEXT, BACK_MATTER
   comment?: string | CommentsData | Comment[]; // Can be old string format, CommentsData format, or array format
   comment_content?: string; // New comment content to append
@@ -550,14 +552,17 @@ export const rejectSegmentsBulk = async (
 
 export const updateSegmentStatus = async (
   segmentId: string,
-  status: 'checked' | 'unchecked' | 'approved' | 'rejected'
+  status: 'checked' | 'unchecked' | 'approved' | 'rejected',
+  reviewerId?: string
 ): Promise<{ message: string; segment_id: string; status: string }> => {
+  const body: { status: string; reviewer_id?: string } = { status };
+  if (reviewerId) body.reviewer_id = reviewerId;
   const response = await fetch(`${OUTLINER_V1_URL}/segments/${segmentId}/status`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify(body),
   });
 
   return handleApiResponse(response);
@@ -597,6 +602,12 @@ export interface AnnotatorPerformanceRow {
   segments_with_title_or_author: number;
   /** Unresolved rejected segments on that annotator's documents in range (latest rejection not resolved) */
   rejection_count: number;
+  /** Segments in checked/approved state with this user as recorded reviewer */
+  segments_reviewed?: number;
+  /** Same as segments_reviewed but document owner is also this user (self-check) */
+  segments_self_reviewed?: number;
+  /** Count of rejection rows where this user is reviewer_id */
+  reviewer_rejection_count?: number;
 }
 
 export interface DashboardStats {
@@ -611,6 +622,10 @@ export interface DashboardStats {
   segments_with_title_not_reviewed: number;
   /** Unresolved rejected segments: status rejected and latest rejection row is not resolved */
   rejection_count: number;
+  /** Checked/approved segments that record who reviewed (reviewed_by_id set) */
+  segments_checked_approved_with_reviewer: number;
+  /** Same as above where document owner is the recorded reviewer (self-check) */
+  segments_self_reviewed_total: number;
   document_status_counts: Record<string, number>;
   document_category_counts: Record<string, number>;
   segment_status_counts: Record<string, number>;

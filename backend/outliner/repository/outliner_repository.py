@@ -23,6 +23,23 @@ from outliner.utils.outliner_utils import (
 )
 
 
+def apply_segment_review_metadata(
+    segment: OutlinerSegment,
+    old_status: Optional[str],
+    new_status: str,
+    reviewer_id: Optional[str],
+) -> None:
+    """Track who set checked/approved; clear when segment is unchecked or rejected."""
+    ns = (new_status or "").strip().lower()
+    if ns in ("checked", "approved"):
+        if reviewer_id:
+            segment.reviewed_by_id = reviewer_id
+            segment.reviewed_at = datetime.utcnow()
+    elif ns in ("unchecked", "rejected"):
+        segment.reviewed_by_id = None
+        segment.reviewed_at = None
+
+
 # ----- Document list & rejections (document list / segment payloads) -----
 
 
@@ -727,6 +744,7 @@ def apply_rejection_to_segment(
         resolved=False,
     )
     db.add(rejection)
+    apply_segment_review_metadata(segment, segment.status, "rejected", None)
     segment.status = "rejected"
     segment.updated_at = datetime.utcnow()
     db.commit()
@@ -771,6 +789,7 @@ def reject_segments_bulk(
             resolved=False,
         )
         db.add(rejection)
+        apply_segment_review_metadata(segment, segment.status, "rejected", None)
         segment.status = "rejected"
         segment.updated_at = datetime.utcnow()
         rejected_segments.append(segment)
@@ -804,8 +823,13 @@ def delete_segment_and_reindex(db: Session, segment: OutlinerSegment) -> None:
 
 
 def update_segment_status_persist(
-    db: Session, segment: OutlinerSegment, status: str
+    db: Session,
+    segment: OutlinerSegment,
+    status: str,
+    reviewer_id: Optional[str] = None,
 ) -> None:
+    old_status = segment.status
+    apply_segment_review_metadata(segment, old_status, status, reviewer_id)
     segment.status = status
     segment.updated_at = datetime.utcnow()
     db.commit()
@@ -968,41 +992,77 @@ def get_annotator_performance_breakdown(
         .all()
     )
 
+    reviewed_when = or_(
+        OutlinerSegment.status == "checked",
+        OutlinerSegment.status == "approved",
+    )
+
+    review_rows = (
+        db.query(OutlinerSegment.reviewed_by_id, func.count(OutlinerSegment.id))
+        .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
+        .filter(
+            doc_scope,
+            OutlinerSegment.reviewed_by_id.isnot(None),
+            reviewed_when,
+        )
+        .group_by(OutlinerSegment.reviewed_by_id)
+        .all()
+    )
+
+    self_review_rows = (
+        db.query(OutlinerSegment.reviewed_by_id, func.count(OutlinerSegment.id))
+        .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
+        .filter(
+            doc_scope,
+            OutlinerSegment.reviewed_by_id.isnot(None),
+            OutlinerDocument.user_id == OutlinerSegment.reviewed_by_id,
+            reviewed_when,
+        )
+        .group_by(OutlinerSegment.reviewed_by_id)
+        .all()
+    )
+
+    reviewer_rej_rows = (
+        db.query(SegmentRejection.reviewer_id, func.count(SegmentRejection.id))
+        .join(OutlinerSegment, SegmentRejection.segment_id == OutlinerSegment.id)
+        .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
+        .filter(doc_scope, SegmentRejection.reviewer_id.isnot(None))
+        .group_by(SegmentRejection.reviewer_id)
+        .all()
+    )
+
+    def _default_row() -> Dict[str, int]:
+        return {
+            "document_count": 0,
+            "segment_count": 0,
+            "segments_with_title_or_author": 0,
+            "rejection_count": 0,
+            "segments_reviewed": 0,
+            "segments_self_reviewed": 0,
+            "reviewer_rejection_count": 0,
+        }
+
     by_user: Dict[Any, Dict[str, int]] = {}
     for uid, cnt in doc_rows:
-        by_user.setdefault(
-            uid,
-            {
-                "document_count": 0,
-                "segment_count": 0,
-                "segments_with_title_or_author": 0,
-                "rejection_count": 0,
-            },
-        )
+        by_user.setdefault(uid, _default_row())
         by_user[uid]["document_count"] = int(cnt)
     for uid, seg_cnt, titled in seg_rows:
-        by_user.setdefault(
-            uid,
-            {
-                "document_count": 0,
-                "segment_count": 0,
-                "segments_with_title_or_author": 0,
-                "rejection_count": 0,
-            },
-        )
+        by_user.setdefault(uid, _default_row())
         by_user[uid]["segment_count"] = int(seg_cnt)
         by_user[uid]["segments_with_title_or_author"] = int(titled or 0)
     for uid, rej_cnt in rej_rows:
-        by_user.setdefault(
-            uid,
-            {
-                "document_count": 0,
-                "segment_count": 0,
-                "segments_with_title_or_author": 0,
-                "rejection_count": 0,
-            },
-        )
+        by_user.setdefault(uid, _default_row())
         by_user[uid]["rejection_count"] = int(rej_cnt)
+
+    for rid, cnt in review_rows:
+        by_user.setdefault(rid, _default_row())
+        by_user[rid]["segments_reviewed"] = int(cnt)
+    for rid, cnt in self_review_rows:
+        by_user.setdefault(rid, _default_row())
+        by_user[rid]["segments_self_reviewed"] = int(cnt)
+    for rid, cnt in reviewer_rej_rows:
+        by_user.setdefault(rid, _default_row())
+        by_user[rid]["reviewer_rejection_count"] = int(cnt)
 
     rows: List[Dict[str, Any]] = []
     for uid, m in by_user.items():
@@ -1013,9 +1073,20 @@ def get_annotator_performance_breakdown(
                 "segment_count": m["segment_count"],
                 "segments_with_title_or_author": m["segments_with_title_or_author"],
                 "rejection_count": m["rejection_count"],
+                "segments_reviewed": m["segments_reviewed"],
+                "segments_self_reviewed": m["segments_self_reviewed"],
+                "reviewer_rejection_count": m["reviewer_rejection_count"],
             }
         )
-    rows.sort(key=lambda r: r["segment_count"], reverse=True)
+    rows.sort(
+        key=lambda r: (
+            r["segments_with_title_or_author"]
+            + r["segments_reviewed"]
+            + r["reviewer_rejection_count"],
+            r["segment_count"],
+        ),
+        reverse=True,
+    )
     return rows
 
 
@@ -1106,6 +1177,28 @@ def get_dashboard_stats(
                     latest_rej_sq.c.resolved.is_(None),
                 ),
             ),
+        )
+        .with_entities(func.count(OutlinerSegment.id))
+        .scalar()
+        or 0
+    )
+
+    segments_checked_approved_with_reviewer = (
+        seg_base.filter(
+            segment_reviewed_when,
+            OutlinerSegment.reviewed_by_id.isnot(None),
+        )
+        .with_entities(func.count(OutlinerSegment.id))
+        .scalar()
+        or 0
+    )
+
+    segments_self_reviewed_total = (
+        seg_base.join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
+        .filter(
+            segment_reviewed_when,
+            OutlinerSegment.reviewed_by_id.isnot(None),
+            OutlinerDocument.user_id == OutlinerSegment.reviewed_by_id,
         )
         .with_entities(func.count(OutlinerSegment.id))
         .scalar()
@@ -1209,6 +1302,8 @@ def get_dashboard_stats(
         "segments_with_title_or_author_pending_review": segments_with_title_or_author_pending_review,
         "segments_with_title_not_reviewed": segments_with_title_not_reviewed,
         "rejection_count": rejection_count,
+        "segments_checked_approved_with_reviewer": segments_checked_approved_with_reviewer,
+        "segments_self_reviewed_total": segments_self_reviewed_total,
         "document_status_counts": document_status_counts,
         "document_category_counts": document_category_counts,
         "segment_status_counts": segment_status_counts,
@@ -1358,12 +1453,20 @@ def bulk_segment_operations_execute(
             if "is_attached" in update_data and update_data["is_attached"] is not None:
                 segment.is_attached = update_data["is_attached"]
             if "status" in update_data and update_data["status"] is not None:
+                new_st = update_data["status"]
+                prev_st = segment.status
                 is_valid, error_msg = validate_segment_status_transition(
-                    segment.status, update_data["status"]
+                    segment.status, new_st
                 )
                 if not is_valid:
                     raise ValueError(error_msg)
-                segment.status = update_data["status"]
+                apply_segment_review_metadata(
+                    segment,
+                    prev_st,
+                    new_st,
+                    update_data.get("reviewer_id"),
+                )
+                segment.status = new_st
             if "span_start" in update_data and update_data["span_start"] is not None:
                 segment.span_start = update_data["span_start"]
             if "span_end" in update_data and update_data["span_end"] is not None:

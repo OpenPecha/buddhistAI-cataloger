@@ -29,6 +29,7 @@ class RejectSegmentV1Body(BaseModel):
 
 class SegmentStatusPatch(BaseModel):
     status: str
+    reviewer_id: Optional[str] = None
 
 
 @router.post("/merge", response_model=_legacy.SegmentResponse)
@@ -126,6 +127,7 @@ async def patch_segment_status(
         db=db,
         segment_id=segment_id,
         status=status_update.status,
+        reviewer_id=status_update.reviewer_id,
     )
 
 
@@ -140,6 +142,7 @@ async def put_segment_status(
         db=db,
         segment_id=segment_id,
         status=status_update.status,
+        reviewer_id=status_update.reviewer_id,
     )
 
 

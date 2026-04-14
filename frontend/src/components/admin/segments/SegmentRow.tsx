@@ -48,7 +48,12 @@ function SegmentRow({
  
   const statusMutation = useMutation({
     mutationFn: (newStatus: 'approved' | 'unchecked' | 'checked') =>
-      updateSegment(segment.id, { status: newStatus }),
+      updateSegment(segment.id, {
+        status: newStatus,
+        ...((newStatus === 'approved' || newStatus === 'checked') && reviewerAccount?.id
+          ? { reviewer_id: reviewerAccount.id }
+          : {}),
+      }),
     onSuccess: (_data, newStatus) => {
       queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] });
       if (newStatus === 'approved') toast.success('Segment approved');

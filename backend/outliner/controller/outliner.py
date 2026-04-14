@@ -598,9 +598,16 @@ def update_segment(
         segment.comment = existing_comments
     if "status" in patch:
         status = patch["status"]
+        prev_status = segment.status
         is_valid, error_msg = validate_segment_status_transition(segment.status, status)
         if not is_valid:
             raise HTTPException(status_code=422, detail=error_msg)
+        outliner_repo.apply_segment_review_metadata(
+            segment,
+            prev_status,
+            status,
+            patch.get("reviewer_id"),
+        )
         segment.status = status
     if "label" in patch:
         label = patch["label"]
@@ -704,10 +711,18 @@ def update_segments_bulk(
         if 'is_attached' in segment_update:
             segment.is_attached = segment_update['is_attached']
         if 'status' in segment_update:
-            is_valid, _ = validate_segment_status_transition(segment.status, segment_update['status'])
+            new_st = segment_update['status']
+            prev_st = segment.status
+            is_valid, _ = validate_segment_status_transition(segment.status, new_st)
             if not is_valid:
                 continue
-            segment.status = segment_update['status']
+            outliner_repo.apply_segment_review_metadata(
+                segment,
+                prev_st,
+                new_st,
+                segment_update.get('reviewer_id'),
+            )
+            segment.status = new_st
         if 'label' in segment_update:
             lbl = segment_update['label']
             if lbl is not None:
@@ -916,7 +931,8 @@ def delete_segment(db: Session, segment_id: str) -> None:
 def update_segment_status(
     db: Session,
     segment_id: str,
-    status: str
+    status: str,
+    reviewer_id: Optional[str] = None,
 ) -> Dict[str, str]:
     """Update segment status with transition validation"""
     segment = outliner_repo.get_segment_plain(db, segment_id)
@@ -928,7 +944,7 @@ def update_segment_status(
     if not is_valid:
         raise HTTPException(status_code=422, detail=error_msg)
 
-    outliner_repo.update_segment_status_persist(db, segment, status)
+    outliner_repo.update_segment_status_persist(db, segment, status, reviewer_id)
 
     if old_status == "rejected":
         outliner_repo.mark_latest_rejection_resolved(db, segment_id)

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { cn } from '@/lib/utils'
 
 interface StatsCardProps {
   readonly icon: ReactNode
@@ -7,11 +8,17 @@ interface StatsCardProps {
   readonly colorClass: string
   readonly hint?: string
   readonly footer?: ReactNode
+  readonly className?: string
 }
 
-function StatsCard({ icon, title, value, colorClass, hint, footer }: StatsCardProps) {
+function StatsCard({ icon, title, value, colorClass, hint, footer, className }: StatsCardProps) {
   return (
-    <div className="rounded-xl border border-slate-200/90 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+    <div
+      className={cn(
+        'rounded-xl border border-slate-200/90 bg-white p-5 shadow-sm transition-shadow hover:shadow-md',
+        className,
+      )}
+    >
       <div className="flex items-start gap-3">
         <span className="flex shrink-0 opacity-90" aria-hidden>
           {icon}

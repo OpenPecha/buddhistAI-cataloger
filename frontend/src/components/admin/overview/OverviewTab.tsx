@@ -1,14 +1,17 @@
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import {
   Ban,
+  BadgeCheck,
   FileText,
-  GitBranch,
   Layers,
   Link2,
   MessageSquare,
   PenLine,
   SkipForward,
+  Sparkles,
+  UserRoundCheck,
 } from 'lucide-react'
+import { motion } from 'framer-motion'
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -43,6 +46,17 @@ interface OverviewTabProps {
   readonly annotators?: ReadonlyArray<{ id: string; name: string | null }>
 }
 
+/** Aligned with tailwind.css Tibetan-inspired admin tokens (burgundy / gold / teal). */
+const INK = '#1c1917'
+const MUTED = '#57534e'
+const GRID = '#e7e5e4'
+const PRIMARY = '#af2630'
+const TEAL = '#14a5b2'
+const GOLD = '#b45309'
+const EMERALD = '#0f766e'
+const VIOLET = '#6b21a8'
+const RED = '#b91c1c'
+
 const CHART_OPTIONS = {
   responsive: true,
   maintainAspectRatio: false,
@@ -53,12 +67,12 @@ const CHART_OPTIONS = {
   scales: {
     x: {
       grid: { display: false },
-      ticks: { font: { size: 11 }, color: '#64748b' },
+      ticks: { font: { size: 11 }, color: MUTED },
     },
     y: {
       beginAtZero: true,
-      grid: { color: '#f1f5f9' },
-      ticks: { font: { size: 11 }, color: '#64748b' },
+      grid: { color: GRID },
+      ticks: { font: { size: 11 }, color: MUTED },
     },
   },
 } as const
@@ -76,7 +90,7 @@ const DOUGHNUT_OPTIONS = {
         boxHeight: 10,
         padding: 12,
         font: { size: 11 },
-        color: '#475569',
+        color: MUTED,
       },
     },
   },
@@ -92,12 +106,12 @@ const HBAR_OPTIONS = {
   scales: {
     x: {
       beginAtZero: true,
-      grid: { color: '#f1f5f9' },
-      ticks: { font: { size: 11 }, color: '#64748b' },
+      grid: { color: GRID },
+      ticks: { font: { size: 11 }, color: MUTED },
     },
     y: {
       grid: { display: false },
-      ticks: { font: { size: 11 }, color: '#475569' },
+      ticks: { font: { size: 11 }, color: INK },
     },
   },
 } as const
@@ -118,7 +132,7 @@ const ANNOTATOR_LINE_OPTIONS = {
         boxHeight: 12,
         padding: 16,
         font: { size: 11 },
-        color: '#475569',
+        color: MUTED,
       },
     },
     tooltip: {
@@ -132,15 +146,15 @@ const ANNOTATOR_LINE_OPTIONS = {
       grid: { display: false },
       ticks: {
         font: { size: 11 },
-        color: '#334155',
+        color: INK,
         maxRotation: 45,
         minRotation: 0,
       },
     },
     y: {
       beginAtZero: true,
-      grid: { color: '#f1f5f9' },
-      ticks: { font: { size: 11 }, color: '#64748b' },
+      grid: { color: GRID },
+      ticks: { font: { size: 11 }, color: MUTED },
     },
   },
 } as const
@@ -157,32 +171,43 @@ const DOC_STATUS_ORDER = [
 const SEG_STATUS_ORDER = ['unchecked', 'checked', 'approved', 'rejected'] as const
 
 const DOC_STATUS_COLORS: Record<string, string> = {
-  active: '#2563eb',
-  completed: '#059669',
-  approved: '#7c3aed',
-  rejected: '#dc2626',
-  skipped: '#ea580c',
-  deleted: '#64748b',
-  unknown: '#94a3b8',
+  active: TEAL,
+  completed: EMERALD,
+  approved: VIOLET,
+  rejected: RED,
+  skipped: GOLD,
+  deleted: '#78716c',
+  unknown: '#a8a29e',
 }
 
 const SEG_STATUS_COLORS: Record<string, string> = {
-  unchecked: '#94a3b8',
-  checked: '#d97706',
-  approved: '#059669',
-  rejected: '#dc2626',
+  unchecked: '#a8a29e',
+  checked: GOLD,
+  approved: EMERALD,
+  rejected: RED,
 }
 
-const CHART_PALETTE = [
-  '#2563eb',
-  '#059669',
-  '#7c3aed',
-  '#d97706',
-  '#0ea5e9',
-  '#db2777',
-  '#4f46e5',
-  '#65a30d',
-]
+const CHART_PALETTE = [PRIMARY, TEAL, VIOLET, GOLD, '#0369a1', '#86198f', '#3f6212', EMERALD]
+
+const motionContainer = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.055, delayChildren: 0.04 },
+  },
+}
+
+const motionItem = {
+  hidden: { opacity: 0, y: 16 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.42, ease: [0.22, 1, 0.36, 1] as const },
+  },
+}
+
+const cardPanel =
+  'rounded-2xl border border-border/70 bg-card/95 p-6 shadow-elegant backdrop-blur-[2px]'
 
 function sortKeys(keys: string[], preferred: readonly string[]): string[] {
   const pref = preferred.filter((k) => keys.includes(k))
@@ -198,6 +223,52 @@ function formatChartLabel(key: string): string {
   if (key === 'TOC') return 'TOC'
   if (key === 'unset' || key === 'unknown') return key === 'unset' ? 'Unset' : 'Unknown'
   return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
+function SectionHeading({
+  eyebrow,
+  title,
+  description,
+}: {
+  readonly eyebrow: string
+  readonly title: string
+  readonly description?: string
+}) {
+  return (
+    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="min-w-0 border-l-[3px] border-primary pl-4">
+        <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">{eyebrow}</p>
+        <h3 className="mt-1.5 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+          {title}
+        </h3>
+      </div>
+      {description ? (
+        <p className="max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-right">
+          {description}
+        </p>
+      ) : null}
+    </div>
+  )
+}
+
+function MetricShell({
+  accentClass,
+  children,
+}: {
+  readonly accentClass: string
+  readonly children: ReactNode
+}) {
+  return (
+    <motion.div variants={motionItem} className="group relative h-full">
+      <div
+        className={`pointer-events-none absolute left-0 top-5 z-10 h-[calc(100%-2.5rem)] w-1 rounded-full bg-gradient-to-b ${accentClass} opacity-[0.92]`}
+        aria-hidden
+      />
+      <div className="shadow-elegant h-full overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-card via-card to-muted/20 pl-2.5 transition-smooth group-hover:border-primary/20 group-hover:shadow-lg">
+        {children}
+      </div>
+    </motion.div>
+  )
 }
 
 function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
@@ -221,10 +292,10 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
             skippedDocs,
             stats.rejection_count,
           ],
-          backgroundColor: ['#2563eb', '#059669', '#7c3aed', '#ea580c', '#dc2626'],
-          borderColor: ['#1d4ed8', '#047857', '#6d28d9', '#c2410c', '#b91c1c'],
+          backgroundColor: [TEAL, EMERALD, VIOLET, GOLD, RED],
+          borderColor: [TEAL, EMERALD, VIOLET, GOLD, RED].map((c) => c),
           borderWidth: 1,
-          borderRadius: 6,
+          borderRadius: 8,
         },
       ],
     }
@@ -279,8 +350,8 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
         {
           label: 'Segments',
           data,
-          backgroundColor: CHART_PALETTE[0],
-          borderRadius: 6,
+          backgroundColor: PRIMARY,
+          borderRadius: 8,
         },
       ],
     }
@@ -304,35 +375,68 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
         {
           label: 'Segments',
           data: perf.map((r) => r.segment_count),
-          borderColor: '#2563eb',
-          backgroundColor: 'rgba(37, 99, 235, 0.12)',
+          borderColor: TEAL,
+          backgroundColor: 'rgba(20, 165, 178, 0.12)',
           borderWidth: 2,
           tension: 0.25,
           pointRadius: 4,
           pointHoverRadius: 6,
-          pointBackgroundColor: '#2563eb',
+          pointBackgroundColor: TEAL,
         },
         {
           label: 'Title / author',
           data: perf.map((r) => r.segments_with_title_or_author),
-          borderColor: '#7c3aed',
-          backgroundColor: 'rgba(124, 58, 237, 0.12)',
+          borderColor: VIOLET,
+          backgroundColor: 'rgba(107, 33, 168, 0.12)',
           borderWidth: 2,
           tension: 0.25,
           pointRadius: 4,
           pointHoverRadius: 6,
-          pointBackgroundColor: '#7c3aed',
+          pointBackgroundColor: VIOLET,
         },
         {
           label: 'Unresolved rejected',
           data: perf.map((r) => r.rejection_count),
-          borderColor: '#dc2626',
-          backgroundColor: 'rgba(220, 38, 38, 0.12)',
+          borderColor: RED,
+          backgroundColor: 'rgba(185, 28, 28, 0.12)',
           borderWidth: 2,
           tension: 0.25,
           pointRadius: 4,
           pointHoverRadius: 6,
-          pointBackgroundColor: '#dc2626',
+          pointBackgroundColor: RED,
+        },
+        {
+          label: 'Reviewed (as reviewer)',
+          data: perf.map((r) => r.segments_reviewed ?? 0),
+          borderColor: EMERALD,
+          backgroundColor: 'rgba(15, 118, 110, 0.12)',
+          borderWidth: 2,
+          tension: 0.25,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: EMERALD,
+        },
+        {
+          label: 'Self-review (same user)',
+          data: perf.map((r) => r.segments_self_reviewed ?? 0),
+          borderColor: '#86198f',
+          backgroundColor: 'rgba(134, 25, 143, 0.12)',
+          borderWidth: 2,
+          tension: 0.25,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#86198f',
+        },
+        {
+          label: 'Rejections logged',
+          data: perf.map((r) => r.reviewer_rejection_count ?? 0),
+          borderColor: GOLD,
+          backgroundColor: 'rgba(180, 83, 9, 0.12)',
+          borderWidth: 2,
+          tension: 0.25,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: GOLD,
         },
       ],
     }
@@ -340,19 +444,26 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
 
   if (isLoading && !stats) {
     return (
-      <div className="flex items-center justify-center rounded-2xl border border-slate-200/80 bg-white py-16 shadow-sm">
+      <div
+        className={`flex items-center justify-center ${cardPanel} py-20`}
+        role="status"
+        aria-live="polite"
+      >
         <div
-          className="h-9 w-9 animate-spin rounded-full border-2 border-slate-200 border-t-slate-600"
+          className="h-10 w-10 animate-spin rounded-full border-2 border-muted border-t-primary"
           aria-hidden
         />
-        <span className="ml-3 text-sm text-slate-600">Loading stats…</span>
+        <span className="ml-3 text-sm font-medium text-muted-foreground">Loading stats…</span>
       </div>
     )
   }
 
   if (!stats) {
     return (
-      <p className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/80 py-14 text-center text-sm text-slate-500">
+      <p
+        className={`${cardPanel} border-dashed py-16 text-center text-sm text-muted-foreground`}
+        role="status"
+      >
         No data available.
       </p>
     )
@@ -361,199 +472,328 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
   const coverage = stats.annotation_coverage_pct
   const skippedDocuments = stats.document_status_counts.skipped ?? 0
 
-  return (
-    <div className="space-y-8">
-      <section>
-        <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">
-          Key metrics
-        </h3>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          <StatsCard
-            icon={<FileText className="h-6 w-6 text-blue-500" strokeWidth={1.75} />}
-            title="Documents"
-            value={stats.document_count}
-            colorClass="text-blue-600"
-            hint="In current filters"
-          />
-          <StatsCard
-            icon={<Layers className="h-6 w-6 text-emerald-500" strokeWidth={1.75} />}
-            title="Total segments"
-            value={stats.total_segments}
-            colorClass="text-emerald-600"
-          />
-          <StatsCard
-            icon={<PenLine className="h-6 w-6 text-violet-500" strokeWidth={1.75} />}
-            title="With title or author"
-            value={stats.segments_with_title_or_author}
-            colorClass="text-violet-600"
-            hint={
-              stats.total_segments
-                ? `${coverage}% of segments`
-                : undefined
-            }
-            footer={
-              <div className="space-y-1.5 border-t border-violet-100 pt-3 text-xs text-slate-600">
-                <div className="flex justify-between gap-2">
-                  <span className="text-slate-500">Reviewed (done or approved)</span>
-                  <span className="font-semibold tabular-nums text-slate-900">
-                    {stats.segments_with_title_or_author_reviewed.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span className="text-slate-500">Not yet reviewed</span>
-                  <span className="font-semibold tabular-nums text-slate-900">
-                    {stats.segments_with_title_or_author_pending_review.toLocaleString()}
-                  </span>
-                </div>
-                <div className="flex justify-between gap-2 border-t border-slate-100 pt-1.5">
-                  <span className="text-slate-500">Title set, not reviewed</span>
-                  <span className="font-semibold tabular-nums text-slate-900">
-                    {stats.segments_with_title_not_reviewed.toLocaleString()}
-                  </span>
-                </div>
-              </div>
-            }
-          />
-          <StatsCard
-            icon={<SkipForward className="h-6 w-6 text-orange-500" strokeWidth={1.75} />}
-            title="Skipped documents"
-            value={skippedDocuments}
-            colorClass="text-orange-600"
-            hint={
-              stats.document_count && skippedDocuments > 0
-                ? `${Math.round((skippedDocuments / stats.document_count) * 100)}% of documents`
-                : undefined
-            }
-          />
-          <StatsCard
-            icon={<Ban className="h-6 w-6 text-red-500" strokeWidth={1.75} />}
-            title="Rejected segments"
-            value={stats.rejection_count}
-            colorClass="text-red-600"
-          />
-        </div>
-      </section>
+  const statsCardInner = 'border-0 bg-transparent shadow-none hover:shadow-none'
 
-      <section>
-        <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">
-          Annotation & linkage
-        </h3>
-        <div className="grid gap-4 lg:grid-cols-12">
-          <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm lg:col-span-5">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+  return (
+    <div className="relative space-y-12">
+      <div
+        className="pointer-events-none absolute inset-0 -z-10 rounded-[2rem] opacity-[0.45]"
+        style={{
+          backgroundImage: `radial-gradient(ellipse 80% 50% at 10% -10%, hsl(var(--primary) / 0.12), transparent 55%),
+            radial-gradient(ellipse 60% 40% at 100% 0%, hsl(var(--secondary) / 0.14), transparent 50%)`,
+        }}
+        aria-hidden
+      />
+
+      <motion.header
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className={`relative overflow-hidden ${cardPanel} px-6 py-8 sm:px-10 sm:py-10`}
+      >
+        <div
+          className="absolute inset-0 bg-gradient-to-br from-primary/[0.06] via-transparent to-secondary/[0.08]"
+          aria-hidden
+        />
+        <div
+          className="absolute -right-24 -top-28 h-72 w-72 rounded-full bg-secondary/15 blur-3xl"
+          aria-hidden
+        />
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0 max-w-2xl">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-muted/40 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+              <Sparkles className="h-3.5 w-3.5" strokeWidth={2} aria-hidden />
+              Outliner admin
+            </div>
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+              Workspace overview
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground sm:text-base">
+              Live counts and workflow health for the filtered date range. Use filters above to focus
+              on an annotator or period.
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-col items-start gap-2 rounded-2xl border border-border/60 bg-muted/25 px-5 py-4 sm:items-end">
+            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              Annotation coverage
+            </span>
+            <span className="text-4xl font-semibold tabular-nums tracking-tight text-primary">
+              {coverage}%
+            </span>
+            <span className="text-xs text-muted-foreground">Of segments in scope</span>
+          </div>
+        </div>
+      </motion.header>
+
+      <motion.section
+        variants={motionContainer}
+        initial="hidden"
+        animate="show"
+        viewport={{ once: true, margin: '-40px' }}
+      >
+        <SectionHeading
+          eyebrow="Volume"
+          title="Key metrics"
+          description="Headline counts for documents and segments under the current filters."
+        />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
+          <MetricShell accentClass="from-teal-600 to-teal-400">
+            <StatsCard
+              className={statsCardInner}
+              icon={<FileText className="h-6 w-6 text-teal-600" strokeWidth={1.75} />}
+              title="Documents"
+              value={stats.document_count}
+              colorClass="text-teal-700"
+              hint="In current filters"
+            />
+          </MetricShell>
+          <MetricShell accentClass="from-emerald-700 to-emerald-500">
+            <StatsCard
+              className={statsCardInner}
+              icon={<Layers className="h-6 w-6 text-emerald-600" strokeWidth={1.75} />}
+              title="Total segments"
+              value={stats.total_segments}
+              colorClass="text-emerald-800"
+            />
+          </MetricShell>
+          <MetricShell accentClass="from-violet-700 to-violet-500">
+            <StatsCard
+              className={statsCardInner}
+              icon={<PenLine className="h-6 w-6 text-violet-600" strokeWidth={1.75} />}
+              title="With title or author"
+              value={stats.segments_with_title_or_author}
+              colorClass="text-violet-800"
+              footer={
+                <div className="space-y-1.5 border-t border-violet-200/80 pt-3 text-xs text-muted-foreground">
+                  <div className="flex justify-between gap-2">
+                    <span>Reviewed (done or approved)</span>
+                    <span className="font-semibold tabular-nums text-foreground">
+                      {stats.segments_with_title_or_author_reviewed.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span>Not yet reviewed</span>
+                    <span className="font-semibold tabular-nums text-foreground">
+                      {stats.segments_with_title_or_author_pending_review.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span>Title set, not reviewed</span>
+                    <span className="font-semibold tabular-nums text-foreground">
+                      {stats.segments_with_title_not_reviewed.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              }
+            />
+          </MetricShell>
+          <MetricShell accentClass="from-amber-700 to-amber-500">
+            <StatsCard
+              className={statsCardInner}
+              icon={<SkipForward className="h-6 w-6 text-amber-700" strokeWidth={1.75} />}
+              title="Skipped documents"
+              value={skippedDocuments}
+              colorClass="text-amber-800"
+              hint={
+                stats.document_count && skippedDocuments > 0
+                  ? `${Math.round((skippedDocuments / stats.document_count) * 100)}% of documents`
+                  : undefined
+              }
+            />
+          </MetricShell>
+          <MetricShell accentClass="from-teal-800 to-cyan-500">
+            <StatsCard
+              className={statsCardInner}
+              icon={<BadgeCheck className="h-6 w-6 text-teal-700" strokeWidth={1.75} />}
+              title="Reviewed (reviewer recorded)"
+              value={stats.segments_checked_approved_with_reviewer}
+              colorClass="text-teal-900"
+              hint="Done or approved with a reviewer user id stored"
+            />
+          </MetricShell>
+          <MetricShell accentClass="from-fuchsia-700 to-pink-500">
+            <StatsCard
+              className={statsCardInner}
+              icon={<UserRoundCheck className="h-6 w-6 text-fuchsia-700" strokeWidth={1.75} />}
+              title="Self-reviewed segments"
+              value={stats.segments_self_reviewed_total}
+              colorClass="text-fuchsia-900"
+              hint="Same user owns the document and is the recorded reviewer"
+            />
+          </MetricShell>
+          <MetricShell accentClass="from-red-700 to-red-500">
+            <StatsCard
+              className={statsCardInner}
+              icon={<Ban className="h-6 w-6 text-red-600" strokeWidth={1.75} />}
+              title="Rejected segments"
+              value={stats.rejection_count}
+              colorClass="text-red-800"
+            />
+          </MetricShell>
+        </div>
+      </motion.section>
+
+      <motion.section
+        initial={{ opacity: 0, y: 14 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-24px' }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <SectionHeading
+          eyebrow="Quality"
+          title="Annotation & linkage"
+          description="How complete metadata is, and how segments tie to BDRC and discussion threads."
+        />
+        <div className="grid gap-5 lg:grid-cols-12">
+          <motion.div
+            className={`relative overflow-hidden lg:col-span-5 ${cardPanel}`}
+            whileHover={{ scale: 1.005 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+          >
+            <div
+              className="gradient-gold absolute -right-16 top-0 h-48 w-48 rounded-full opacity-[0.12] blur-2xl"
+              aria-hidden
+            />
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
               Annotation coverage
             </p>
-            <p className="mt-2 text-3xl font-bold tabular-nums text-slate-900">{coverage}%</p>
-            <p className="mt-1 text-sm text-slate-500">
-              Segments with a title or author out of {stats.total_segments.toLocaleString()} total.
-              Of those, {stats.segments_with_title_or_author_reviewed.toLocaleString()} are reviewed
-              (segment done or approved) and{' '}
-              {stats.segments_with_title_or_author_pending_review.toLocaleString()} are not yet reviewed.
+            <p className="mt-3 text-4xl font-semibold tabular-nums tracking-tight text-foreground">
+              {coverage}%
             </p>
-            <p className="mt-2 text-sm text-slate-500">
-              Segments with a title filled in but not yet reviewed:{' '}
-              {stats.segments_with_title_not_reviewed.toLocaleString()}.
-            </p>
+            <p className="mt-1 text-sm text-muted-foreground">Share of segments meeting coverage rules.</p>
             <div
-              className="mt-5 h-2.5 w-full overflow-hidden rounded-full bg-violet-100"
+              className="mt-6 h-3 w-full overflow-hidden rounded-full bg-muted"
               role="progressbar"
               aria-valuenow={coverage}
               aria-valuemin={0}
               aria-valuemax={100}
             >
-              <div
-                className="h-full rounded-full bg-violet-600 transition-[width] duration-500 ease-out"
-                style={{ width: `${Math.min(100, Math.max(0, coverage))}%` }}
+              <motion.div
+                className="h-full rounded-full bg-gradient-to-r from-primary to-secondary"
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(100, Math.max(0, coverage))}%` }}
+                transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
               />
             </div>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-3 lg:col-span-7">
-            <StatsCard
-              icon={<Link2 className="h-6 w-6 text-sky-500" strokeWidth={1.75} />}
-              title="BDRC-linked"
-              value={stats.segments_with_bdrc_id}
-              colorClass="text-sky-600"
-              hint="Title or author BDRC ID"
-            />
-            <StatsCard
-              icon={<MessageSquare className="h-6 w-6 text-amber-500" strokeWidth={1.75} />}
-              title="With comments"
-              value={stats.segments_with_comments}
-              colorClass="text-amber-600"
-              hint="Rejected segments that have comments"
-            />
-            <StatsCard
-              icon={<GitBranch className="h-6 w-6 text-indigo-500" strokeWidth={1.75} />}
-              title="Child segments"
-              value={stats.segments_with_parent}
-              colorClass="text-indigo-600"
-              hint="Has parent segment"
-            />
+          </motion.div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:col-span-7">
+            <MetricShell accentClass="from-sky-700 to-sky-500">
+              <StatsCard
+                className={statsCardInner}
+                icon={<Link2 className="h-6 w-6 text-sky-700" strokeWidth={1.75} />}
+                title="BDRC-linked"
+                value={stats.segments_with_bdrc_id}
+                colorClass="text-sky-900"
+                hint="Title or author BDRC ID"
+              />
+            </MetricShell>
+            <MetricShell accentClass="from-amber-800 to-amber-500">
+              <StatsCard
+                className={statsCardInner}
+                icon={<MessageSquare className="h-6 w-6 text-amber-800" strokeWidth={1.75} />}
+                title="With comments"
+                value={stats.segments_with_comments}
+                colorClass="text-amber-950"
+                hint="Rejected segments that have comments"
+              />
+            </MetricShell>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {overviewBarData && (
-        <section className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Volume overview</p>
-          <p className="mt-1 text-sm text-slate-600">
-            Same core counts as key metrics, shown as a bar chart for quick comparison.
+        <motion.section
+          initial={{ opacity: 0, y: 14 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          className={`${cardPanel} relative overflow-hidden`}
+        >
+          <div
+            className="absolute left-0 top-0 h-1 w-full bg-gradient-to-r from-primary via-secondary to-teal-600"
+            aria-hidden
+          />
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Volume overview</p>
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            Same core counts as key metrics, shown as bars for at-a-glance comparison.
           </p>
-          <div className="mt-4 h-64">
+          <div className="mt-5 h-64">
             <Bar data={overviewBarData} options={CHART_OPTIONS} />
           </div>
-        </section>
+        </motion.section>
       )}
 
-      <section className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+      <motion.section
+        initial={{ opacity: 0, y: 14 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        className="grid gap-6 lg:grid-cols-3"
+      >
+        <div className={cardPanel}>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
             Documents by status
           </p>
-          <p className="mt-1 text-sm text-slate-600">Workflow state from outliner documents.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Workflow state from outliner documents.</p>
           <div className="mt-4 flex h-72 items-center justify-center">
             {documentStatusChart ? (
               <Doughnut data={documentStatusChart} options={DOUGHNUT_OPTIONS} />
             ) : (
-              <p className="text-sm text-slate-400">No documents in range.</p>
+              <p className="text-sm text-muted-foreground">No documents in range.</p>
             )}
           </div>
         </div>
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Segment labels
+        <div className={cardPanel}>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+            Segments by status
           </p>
-          <p className="mt-1 text-sm text-slate-600">Front matter, TOC, text, back matter, etc.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Checked, approved, rejected, and unchecked.</p>
+          <div className="mt-4 flex h-72 items-center justify-center">
+            {segmentStatusChart ? (
+              <Doughnut data={segmentStatusChart} options={DOUGHNUT_OPTIONS} />
+            ) : (
+              <p className="text-sm text-muted-foreground">No segment status data.</p>
+            )}
+          </div>
+        </div>
+        <div className={cardPanel}>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Segment labels</p>
+          <p className="mt-2 text-sm text-muted-foreground">Front matter, TOC, text, back matter, etc.</p>
           <div className="mt-4 h-64">
             {labelBarData ? (
               <Bar data={labelBarData} options={HBAR_OPTIONS} />
             ) : (
-              <div className="flex h-full items-center justify-center text-sm text-slate-400">
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                 No label data.
               </div>
             )}
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      <section className="grid gap-6 lg:grid-cols-2">
-       
-        <div className="rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Annotator performance
-          </p>
-       
-          <div className="mt-4 h-80 min-h-64">
-            {annotatorCompareData ? (
-              <Line data={annotatorCompareData} options={ANNOTATOR_LINE_OPTIONS} />
-            ) : (
-              <div className="flex h-full min-h-48 items-center justify-center text-sm text-slate-400">
-                No annotator activity in this date range.
-              </div>
-            )}
-          </div>
+      <motion.section
+        initial={{ opacity: 0, y: 14 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        className={cardPanel}
+      >
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Per-user workload</p>
+        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+          Title or author counts reflect segments on documents assigned to that user. Reviewed and self-review
+          use the reviewer recorded when a segment is marked done or approved (same date filter as documents).
+          Rejections logged counts rejection events where that user is the reviewer.
+        </p>
+        <div className="mt-5 h-80 min-h-64">
+          {annotatorCompareData ? (
+            <Line data={annotatorCompareData} options={ANNOTATOR_LINE_OPTIONS} />
+          ) : (
+            <div className="flex h-full min-h-48 items-center justify-center text-sm text-muted-foreground">
+              No annotator activity in this date range.
+            </div>
+          )}
         </div>
-      </section>
+      </motion.section>
     </div>
   )
 }

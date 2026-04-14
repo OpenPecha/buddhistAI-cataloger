@@ -93,6 +93,13 @@ class OutlinerSegment(Base):
         nullable=True
     )
     status: Mapped[str | None] = mapped_column(String, nullable=True) # checked, unchecked, approved, rejected
+    reviewed_by_id: Mapped[str | None] = mapped_column(
+        String,
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     # Status tracking
     is_annotated: Mapped[bool] = mapped_column(default=False)  # Has title or author
     comment: Mapped[dict | list | None] = mapped_column(JSON, nullable=True)  # Can be array of comments or dict (for backward compatibility)
@@ -120,6 +127,10 @@ class OutlinerSegment(Base):
         back_populates="segment",
         cascade="all, delete-orphan",
         order_by="SegmentRejection.created_at"
+    )
+    reviewed_by_user: Mapped[User | None] = relationship(
+        User,
+        foreign_keys=[reviewed_by_id],
     )
 
     def update_annotation_status(self):

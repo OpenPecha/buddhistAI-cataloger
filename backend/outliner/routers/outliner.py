@@ -128,6 +128,7 @@ class SegmentUpdate(BaseModel):
     parent_segment_id: Optional[str] = None
     is_attached: Optional[bool] = None
     status: Optional[str] = None  # checked, unchecked
+    reviewer_id: Optional[str] = None  # user who set checked/approved (dashboard stats)
     label: Optional[str] = None  # FRONT_MATTER, TOC, TEXT, BACK_MATTER
     comment: Optional[str] = None  # Deprecated: kept for backward compatibility
     comment_content: Optional[str] = None  # New comment content to append
@@ -327,6 +328,7 @@ class DocumentStatusUpdate(BaseModel):
 
 class SegmentStatusUpdate(BaseModel):
     status: str
+    reviewer_id: Optional[str] = None
 
 
 # ==================== Helper Functions ====================
@@ -927,7 +929,8 @@ async def update_segment_status(
     return update_segment_status_ctrl(
         db=db,
         segment_id=segment_id,
-        status=status_update.status
+        status=status_update.status,
+        reviewer_id=status_update.reviewer_id,
     )
 
 
@@ -1051,6 +1054,18 @@ class AnnotatorPerformanceRow(BaseModel):
         ...,
         description="Segments still rejected with latest rejection unresolved (annotator has not addressed)",
     )
+    segments_reviewed: int = Field(
+        0,
+        description="Segments currently checked/approved where this user is recorded as reviewer",
+    )
+    segments_self_reviewed: int = Field(
+        0,
+        description="Subset of segments_reviewed on documents owned by the same user (annotator checked own work)",
+    )
+    reviewer_rejection_count: int = Field(
+        0,
+        description="Rejection events logged with this user as reviewer",
+    )
 
 
 class DashboardStatsResponse(BaseModel):
@@ -1072,6 +1087,14 @@ class DashboardStatsResponse(BaseModel):
     rejection_count: int = Field(
         ...,
         description="Same as annotator chart: rejected segments whose latest rejection row is not resolved",
+    )
+    segments_checked_approved_with_reviewer: int = Field(
+        ...,
+        description="Checked or approved segments with reviewed_by_id set (same document scope as other totals)",
+    )
+    segments_self_reviewed_total: int = Field(
+        ...,
+        description="Subset where document owner equals reviewed_by_id",
     )
     document_status_counts: Dict[str, int]
     document_category_counts: Dict[str, int]

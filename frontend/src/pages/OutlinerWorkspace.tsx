@@ -25,6 +25,7 @@ import {
 } from '@/components/outliner/contexts'
 import { useListRef } from 'react-window';
 import { SplitPane, Pane } from 'react-split-pane';
+import { useUser } from '@/hooks/useUser';
 
 function getSelectionOffsetsInRoot(
   root: HTMLElement,
@@ -62,6 +63,7 @@ const OutlinerWorkspace: React.FC = () => {
     resetSegments: resetSegmentsBackend,
     createSegmentsBulk: createSegmentsBulkBackend,
   } = useOutlinerDocument()
+  const { user: appUser } = useUser()
 
   // Convert OutlinerSegment[] to TextSegment[]
   const currentSegments: TextSegment[] = useMemo(
@@ -534,12 +536,15 @@ const OutlinerWorkspace: React.FC = () => {
     async (segmentId: string, status: 'checked' | 'unchecked') => {
       if (!documentId) return;
       try {
-        await updateSegmentBackend(segmentId, { status });
+        await updateSegmentBackend(segmentId, {
+          status,
+          ...(status === 'checked' && appUser?.id ? { reviewer_id: appUser.id } : {}),
+        });
       } catch (error) {
         console.error('Failed to update segment status:', error);
       }
     },
-    [documentId, updateSegmentBackend]
+    [documentId, updateSegmentBackend, appUser?.id]
   );
 
 
