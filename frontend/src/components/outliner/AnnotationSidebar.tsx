@@ -1,4 +1,13 @@
-import { forwardRef, memo, useImperativeHandle, useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import {
+  forwardRef,
+  memo,
+  useImperativeHandle,
+  useRef,
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import type { TextSegment } from './types';
 import { segmentLabelI18nKey } from './segment-label';
@@ -294,6 +303,113 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
     [aiSuggestions, applyAISuggestion]
   );
 
+  const [reviewerApplyField, setReviewerApplyField] = useState<'title' | 'author' | null>(null);
+
+  const applyReviewerTitle = useCallback(async () => {
+    if (!activeSegment?.text || !activeSegmentId) return;
+    const trimmed = activeSegment.reviewer_title?.trim();
+    if (!trimmed) return;
+    setReviewerApplyField('title');
+    try {
+      const segmentText = activeSegment.text;
+      const segStart = activeSegment.span_start ?? 0;
+      const span = findPhraseDocSpan(segmentText, segStart, trimmed);
+      const payload: SegmentUpdateRequest = {
+        title: trimmed,
+        reviewer_title: null,
+      };
+      if (span) {
+        payload.title_span_start = span.start;
+        payload.title_span_end = span.end;
+        const sourceSlice = fullDocumentContent.slice(span.start, span.end);
+        payload.updated_title = trimmed !== sourceSlice ? trimmed : null;
+      } else {
+        payload.title_span_start = null;
+        payload.title_span_end = null;
+        const inSegment = activeSegment.text.includes(trimmed);
+        payload.updated_title = !inSegment ? trimmed : null;
+      }
+      await updateSegmentMutation(activeSegmentId, payload);
+      handleTitleUpdate(trimmed);
+      titleSourceSpanRef.current = span ?? null;
+      aiBaselineTitleRef.current = null;
+      toast.success(t('outliner.reviewerSuggestion.appliedTitle'));
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : t('outliner.annotation.toastSaveFailed'));
+    } finally {
+      setReviewerApplyField(null);
+    }
+  }, [
+    activeSegment,
+    activeSegmentId,
+    fullDocumentContent,
+    handleTitleUpdate,
+    t,
+    updateSegmentMutation,
+  ]);
+
+  const applyReviewerAuthor = useCallback(async () => {
+    if (!activeSegment?.text || !activeSegmentId) return;
+    const trimmed = activeSegment.reviewer_author?.trim();
+    if (!trimmed) return;
+    setReviewerApplyField('author');
+    try {
+      const segmentText = activeSegment.text;
+      const segStart = activeSegment.span_start ?? 0;
+      const span = findPhraseDocSpan(segmentText, segStart, trimmed);
+      const payload: SegmentUpdateRequest = {
+        author: trimmed,
+        reviewer_author: null,
+      };
+      if (span) {
+        payload.author_span_start = span.start;
+        payload.author_span_end = span.end;
+        const sourceSlice = fullDocumentContent.slice(span.start, span.end);
+        payload.updated_author = trimmed !== sourceSlice ? trimmed : null;
+      } else {
+        payload.author_span_start = null;
+        payload.author_span_end = null;
+        const inSegment = activeSegment.text.includes(trimmed);
+        payload.updated_author = !inSegment ? trimmed : null;
+      }
+      await updateSegmentMutation(activeSegmentId, payload);
+      handleAuthorUpdate(trimmed);
+      authorSourceSpanRef.current = span ?? null;
+      aiBaselineAuthorRef.current = null;
+      toast.success(t('outliner.reviewerSuggestion.appliedAuthor'));
+    } catch (error) {
+      console.error(error);
+      toast.error(error instanceof Error ? error.message : t('outliner.annotation.toastSaveFailed'));
+    } finally {
+      setReviewerApplyField(null);
+    }
+  }, [
+    activeSegment,
+    activeSegmentId,
+    fullDocumentContent,
+    handleAuthorUpdate,
+    t,
+    updateSegmentMutation,
+  ]);
+
+  const reviewerSuggestionControls = useMemo(
+    () => ({
+      reviewerTitle: activeSegment?.reviewer_title,
+      reviewerAuthor: activeSegment?.reviewer_author,
+      applyingField: reviewerApplyField,
+      onApplyReviewerTitle: applyReviewerTitle,
+      onApplyReviewerAuthor: applyReviewerAuthor,
+    }),
+    [
+      activeSegment?.reviewer_title,
+      activeSegment?.reviewer_author,
+      reviewerApplyField,
+      applyReviewerTitle,
+      applyReviewerAuthor,
+    ]
+  );
+
   const onSave = useCallback(async () => {
     // Validate that we have an active segment
     if (!activeSegment || !activeSegmentId) {
@@ -455,6 +571,8 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
       author_span_start: null,
       author_span_end: null,
       updated_author: null,
+      reviewer_title: null,
+      reviewer_author: null,
       status: 'unchecked',
     });
   }, [activeSegmentId, resetMetadataForm, updateSegmentMutation]);
@@ -475,6 +593,8 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
         author_span_start: null,
         author_span_end: null,
         updated_author: null,
+        reviewer_title: null,
+        reviewer_author: null,
         status: 'checked',
         ...(appUser?.id ? { reviewer_id: appUser.id } : {}),
       });
@@ -606,6 +726,7 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
       documentId,
       isMetadataTabSelected: sidebarActiveTab === 'metadata',
       aiSuggestionsControls,
+      reviewerSuggestionControls,
       formData,
       suppliedTitleChecked,
       activeSegmentId: activeSegment.id,
@@ -621,6 +742,7 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
     documentId,
     sidebarActiveTab,
     aiSuggestionsControls,
+    reviewerSuggestionControls,
     formData,
     suppliedTitleChecked,
     handleMetadataFormUpdate,

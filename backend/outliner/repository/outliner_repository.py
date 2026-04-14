@@ -40,6 +40,41 @@ def apply_segment_review_metadata(
         segment.reviewed_at = None
 
 
+def _norm_segment_text(val: Optional[str]) -> str:
+    return (val or "").strip()
+
+
+def apply_segment_review_title_author_tracking(
+    segment: OutlinerSegment,
+    old_status: Optional[str],
+    new_status: str,
+) -> None:
+    """
+    When entering `checked`, snapshot title/author as the annotator submission.
+    When moving `checked` -> `approved`, clear pre_review snapshots only; reviewer_title/author
+    are set only via explicit PATCH (reviewer suggestions), not by overwriting annotator title/author.
+    Clear snapshots and reviewer fields on unchecked/rejected (and when leaving approved to unchecked).
+    """
+    os = (old_status or "").strip().lower()
+    ns = (new_status or "").strip().lower()
+
+    if ns == "checked" and os in ("unchecked", "rejected", ""):
+        segment.pre_review_title = segment.title
+        segment.pre_review_author = segment.author
+        return
+
+    if ns == "approved" and os == "checked":
+        segment.pre_review_title = None
+        segment.pre_review_author = None
+        return
+
+    if ns in ("unchecked", "rejected"):
+        segment.pre_review_title = None
+        segment.pre_review_author = None
+        segment.reviewer_title = None
+        segment.reviewer_author = None
+
+
 # ----- Document list & rejections (document list / segment payloads) -----
 
 
@@ -416,6 +451,8 @@ def segment_list_for_document(db: Session, document_id: str) -> List[dict]:
             OutlinerSegment.author_span_start,
             OutlinerSegment.author_span_end,
             OutlinerSegment.updated_author,
+            OutlinerSegment.reviewer_title,
+            OutlinerSegment.reviewer_author,
             OutlinerSegment.title_bdrc_id,
             OutlinerSegment.author_bdrc_id,
             OutlinerSegment.parent_segment_id,
@@ -744,7 +781,9 @@ def apply_rejection_to_segment(
         resolved=False,
     )
     db.add(rejection)
-    apply_segment_review_metadata(segment, segment.status, "rejected", None)
+    old_st = segment.status
+    apply_segment_review_metadata(segment, old_st, "rejected", None)
+    apply_segment_review_title_author_tracking(segment, old_st, "rejected")
     segment.status = "rejected"
     segment.updated_at = datetime.utcnow()
     db.commit()
@@ -789,7 +828,9 @@ def reject_segments_bulk(
             resolved=False,
         )
         db.add(rejection)
-        apply_segment_review_metadata(segment, segment.status, "rejected", None)
+        old_st = segment.status
+        apply_segment_review_metadata(segment, old_st, "rejected", None)
+        apply_segment_review_title_author_tracking(segment, old_st, "rejected")
         segment.status = "rejected"
         segment.updated_at = datetime.utcnow()
         rejected_segments.append(segment)
@@ -830,6 +871,7 @@ def update_segment_status_persist(
 ) -> None:
     old_status = segment.status
     apply_segment_review_metadata(segment, old_status, status, reviewer_id)
+    apply_segment_review_title_author_tracking(segment, old_status, status)
     segment.status = status
     segment.updated_at = datetime.utcnow()
     db.commit()
@@ -1031,6 +1073,21 @@ def get_annotator_performance_breakdown(
         .all()
     )
 
+    reviewer_title_author_edit_rows = (
+        db.query(OutlinerDocument.user_id, func.count(OutlinerSegment.id))
+        .join(OutlinerSegment, OutlinerSegment.document_id == OutlinerDocument.id)
+        .filter(
+            doc_scope,
+            OutlinerSegment.status == "approved",
+            or_(
+                OutlinerSegment.reviewer_title.isnot(None),
+                OutlinerSegment.reviewer_author.isnot(None),
+            ),
+        )
+        .group_by(OutlinerDocument.user_id)
+        .all()
+    )
+
     def _default_row() -> Dict[str, int]:
         return {
             "document_count": 0,
@@ -1040,6 +1097,7 @@ def get_annotator_performance_breakdown(
             "segments_reviewed": 0,
             "segments_self_reviewed": 0,
             "reviewer_rejection_count": 0,
+            "segments_reviewer_corrected_title_or_author": 0,
         }
 
     by_user: Dict[Any, Dict[str, int]] = {}
@@ -1064,6 +1122,10 @@ def get_annotator_performance_breakdown(
         by_user.setdefault(rid, _default_row())
         by_user[rid]["reviewer_rejection_count"] = int(cnt)
 
+    for uid, edit_cnt in reviewer_title_author_edit_rows:
+        by_user.setdefault(uid, _default_row())
+        by_user[uid]["segments_reviewer_corrected_title_or_author"] = int(edit_cnt)
+
     rows: List[Dict[str, Any]] = []
     for uid, m in by_user.items():
         rows.append(
@@ -1076,6 +1138,9 @@ def get_annotator_performance_breakdown(
                 "segments_reviewed": m["segments_reviewed"],
                 "segments_self_reviewed": m["segments_self_reviewed"],
                 "reviewer_rejection_count": m["reviewer_rejection_count"],
+                "segments_reviewer_corrected_title_or_author": m[
+                    "segments_reviewer_corrected_title_or_author"
+                ],
             }
         )
     rows.sort(
@@ -1276,6 +1341,19 @@ def get_dashboard_stats(
         or 0
     )
 
+    segments_reviewer_corrected_title_or_author = (
+        seg_base.filter(
+            OutlinerSegment.status == "approved",
+            or_(
+                OutlinerSegment.reviewer_title.isnot(None),
+                OutlinerSegment.reviewer_author.isnot(None),
+            ),
+        )
+        .with_entities(func.count(OutlinerSegment.id))
+        .scalar()
+        or 0
+    )
+
     annotation_coverage_pct = (
         round((segments_with_title_or_author / total_segments) * 100, 1)
         if total_segments
@@ -1302,6 +1380,7 @@ def get_dashboard_stats(
         "segments_with_bdrc_id": segments_with_bdrc_id,
         "segments_with_parent": segments_with_parent,
         "segments_with_comments": segments_with_comments,
+        "segments_reviewer_corrected_title_or_author": segments_reviewer_corrected_title_or_author,
         "annotation_coverage_pct": annotation_coverage_pct,
         "annotator_performance": annotator_performance,
     }
@@ -1457,6 +1536,7 @@ def bulk_segment_operations_execute(
                     new_st,
                     update_data.get("reviewer_id"),
                 )
+                apply_segment_review_title_author_tracking(segment, prev_st, new_st)
                 segment.status = new_st
             if "span_start" in update_data and update_data["span_start"] is not None:
                 segment.span_start = update_data["span_start"]

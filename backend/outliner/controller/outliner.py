@@ -392,6 +392,8 @@ def segment_orm_to_document_response_dict(seg: OutlinerSegment) -> Dict[str, Any
         "author_span_start": seg.author_span_start,
         "author_span_end": seg.author_span_end,
         "updated_author": seg.updated_author,
+        "reviewer_title": seg.reviewer_title,
+        "reviewer_author": seg.reviewer_author,
         "title_bdrc_id": seg.title_bdrc_id,
         "author_bdrc_id": seg.author_bdrc_id,
         "parent_segment_id": seg.parent_segment_id,
@@ -608,6 +610,9 @@ def update_segment(
             status,
             patch.get("reviewer_id"),
         )
+        outliner_repo.apply_segment_review_title_author_tracking(
+            segment, prev_status, status
+        )
         segment.status = status
     if "label" in patch:
         label = patch["label"]
@@ -635,6 +640,10 @@ def update_segment(
         segment.author_span_end = patch["author_span_end"]
     if "updated_author" in patch:
         segment.updated_author = patch["updated_author"]
+    if "reviewer_title" in patch:
+        segment.reviewer_title = patch["reviewer_title"]
+    if "reviewer_author" in patch:
+        segment.reviewer_author = patch["reviewer_author"]
 
     # Server-side title/author when label becomes TEXT (no extra client PUT)
     label_became_text = (
@@ -722,6 +731,9 @@ def update_segments_bulk(
                 new_st,
                 segment_update.get('reviewer_id'),
             )
+            outliner_repo.apply_segment_review_title_author_tracking(
+                segment, prev_st, new_st
+            )
             segment.status = new_st
         if 'label' in segment_update:
             lbl = segment_update['label']
@@ -740,6 +752,10 @@ def update_segments_bulk(
         ):
             if span_key in segment_update:
                 setattr(segment, span_key, segment_update[span_key])
+        if 'reviewer_title' in segment_update:
+            segment.reviewer_title = segment_update['reviewer_title']
+        if 'reviewer_author' in segment_update:
+            segment.reviewer_author = segment_update['reviewer_author']
 
         label_became_text = (
             'label' in segment_update

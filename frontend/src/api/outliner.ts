@@ -93,6 +93,8 @@ export interface OutlinerSegment {
   author_span_start?: number | null;
   author_span_end?: number | null;
   updated_author?: string | null;
+  reviewer_title?: string | null;
+  reviewer_author?: string | null;
   title_bdrc_id?: string | null;
   author_bdrc_id?: string | null;
   parent_segment_id?: string | null;
@@ -157,6 +159,8 @@ export interface SegmentUpdateRequest {
   comment_content?: string; // New comment content to append
   comment_username?: string; // Username for new comment
   is_supplied_title?: boolean; // Title supplied by annotator (not from source)
+  reviewer_title?: string | null;
+  reviewer_author?: string | null;
 }
 
 export interface BulkSegmentUpdateRequest {
@@ -608,6 +612,8 @@ export interface AnnotatorPerformanceRow {
   segments_self_reviewed?: number;
   /** Count of rejection rows where this user is reviewer_id */
   reviewer_rejection_count?: number;
+  /** Approved segments on this user's documents where reviewer set title or author at approval */
+  segments_reviewer_corrected_title_or_author?: number;
 }
 
 export interface DashboardStats {
@@ -632,6 +638,8 @@ export interface DashboardStats {
   segments_with_parent: number;
   /** Segments with status rejected that have stored comments */
   segments_with_comments: number;
+  /** Approved segments where the reviewer changed title or author after annotator check */
+  segments_reviewer_corrected_title_or_author: number;
   annotation_coverage_pct: number;
   /** Per-annotator breakdown (same date range as dashboard; not scoped by user filter). */
   annotator_performance?: AnnotatorPerformanceRow[];
@@ -753,6 +761,8 @@ export const outlinerSegmentToTextSegment = (
     label: segment.label ?? undefined,
     rejection: segment.rejection ?? undefined,
     is_supplied_title: segment.is_supplied_title ?? undefined,
+    reviewer_title: segment.reviewer_title ?? undefined,
+    reviewer_author: segment.reviewer_author ?? undefined,
     comments: segment.comments,
   };
 };

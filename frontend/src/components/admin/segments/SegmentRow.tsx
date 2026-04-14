@@ -119,22 +119,23 @@ function SegmentRow({
   // --- Inline title / author (admin list) ---
   const [titleEditOpen, setTitleEditOpen] = useState(false);
   const [authorEditOpen, setAuthorEditOpen] = useState(false);
-  const [titleInput, setTitleInput] = useState(() => segment.title || '');
-  const [authorInput, setAuthorInput] = useState(() => segment.author || '');
+  const [titleInput, setTitleInput] = useState(() => segment.reviewer_title || '');
+  const [authorInput, setAuthorInput] = useState(() => segment.reviewer_author || '');
 
   useEffect(() => {
-    if (!titleEditOpen) setTitleInput(segment.title || '');
-  }, [segment.title, segment.id, titleEditOpen]);
+    if (!titleEditOpen) setTitleInput(segment.reviewer_title || '');
+  }, [segment.reviewer_title, segment.id, titleEditOpen]);
 
   useEffect(() => {
-    if (!authorEditOpen) setAuthorInput(segment.author || '');
-  }, [segment.author, segment.id, authorEditOpen]);
+    if (!authorEditOpen) setAuthorInput(segment.reviewer_author || '');
+  }, [segment.reviewer_author, segment.id, authorEditOpen]);
 
   const { mutate: patchTitleOrAuthor, isPending: titleAuthorSaving } = useMutation({
-    mutationFn: (payload: { title?: string; author?: string }) => updateSegment(segment.id, payload),
+    mutationFn: (payload: { reviewer_title?: string | null; reviewer_author?: string | null }) =>
+      updateSegment(segment.id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] });
-      toast.success('Title / author updated');
+      toast.success('Reviewer suggestion saved');
     },
     onError: (error: Error) => {
       toast.error(`Failed to update: ${error.message}`);
@@ -143,29 +144,29 @@ function SegmentRow({
 
   const commitTitle = useCallback(() => {
     const next = titleInput.trim();
-    const prev = (segment.title || '').trim();
+    const prev = (segment.reviewer_title || '').trim();
     setTitleEditOpen(false);
     if (next === prev) return;
-    patchTitleOrAuthor({ title: next });
-  }, [titleInput, segment.title, patchTitleOrAuthor]);
+    patchTitleOrAuthor({ reviewer_title: next || null });
+  }, [titleInput, segment.reviewer_title, patchTitleOrAuthor]);
 
   const commitAuthor = useCallback(() => {
     const next = authorInput.trim();
-    const prev = (segment.author || '').trim();
+    const prev = (segment.reviewer_author || '').trim();
     setAuthorEditOpen(false);
     if (next === prev) return;
-    patchTitleOrAuthor({ author: next });
-  }, [authorInput, segment.author, patchTitleOrAuthor]);
+    patchTitleOrAuthor({ reviewer_author: next || null });
+  }, [authorInput, segment.reviewer_author, patchTitleOrAuthor]);
 
   const cancelTitleEdit = useCallback(() => {
-    setTitleInput(segment.title || '');
+    setTitleInput(segment.reviewer_title || '');
     setTitleEditOpen(false);
-  }, [segment.title]);
+  }, [segment.reviewer_title]);
 
   const cancelAuthorEdit = useCallback(() => {
-    setAuthorInput(segment.author || '');
+    setAuthorInput(segment.reviewer_author || '');
     setAuthorEditOpen(false);
-  }, [segment.author]);
+  }, [segment.reviewer_author]);
 
   // --- BDRC field state ---
   const [formData, setFormData] = useState<FormDataType>({
@@ -246,6 +247,8 @@ function SegmentRow({
     author_span_start: segment.author_span_start ?? undefined,
     author_span_end: segment.author_span_end ?? undefined,
     updated_author: segment.updated_author ?? undefined,
+    reviewer_title: segment.reviewer_title ?? undefined,
+    reviewer_author: segment.reviewer_author ?? undefined,
     title_bdrc_id: segment.title_bdrc_id ?? undefined,
     author_bdrc_id: segment.author_bdrc_id ?? undefined,
     status: segment.status,
@@ -406,6 +409,7 @@ function SegmentRow({
                     }}
                     disabled={titleAuthorSaving}
                     className="h-8 text-sm font-monlam max-w-full"
+                    placeholder="Reviewer suggestion (annotator title unchanged until they apply)"
                   />
                 ) : (
                   <button
@@ -413,13 +417,24 @@ function SegmentRow({
                     className="text-left font-medium text-gray-900 font-monlam rounded px-1 py-0.5 -mx-1 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
                     onClick={() => {
                       setAuthorEditOpen(false);
-                      setTitleInput(segment.title || '');
+                      setTitleInput(segment.reviewer_title || '');
                       setTitleEditOpen(true);
                     }}
                     disabled={titleAuthorSaving}
-                    title="Click to edit title"
+                    title="Annotator title; click to edit reviewer suggestion only"
                   >
-                    {segment.title?.trim() ? segment.title : '— Click to set —'}
+                    <span className="block">
+                      {segment.title?.trim() ? segment.title : '— No annotator title —'}
+                    </span>
+                    {segment.reviewer_title?.trim() ? (
+                      <span className="block text-xs font-normal text-sky-800 mt-0.5">
+                        Suggestion: {segment.reviewer_title}
+                      </span>
+                    ) : (
+                      <span className="block text-xs font-normal text-gray-500 mt-0.5">
+                        Click to add reviewer suggestion
+                      </span>
+                    )}
                   </button>
                 )}
               </span>
@@ -445,6 +460,7 @@ function SegmentRow({
                     }}
                     disabled={titleAuthorSaving}
                     className="h-8 text-sm font-monlam max-w-full"
+                    placeholder="Reviewer suggestion (annotator author unchanged until they apply)"
                   />
                 ) : (
                   <button
@@ -452,13 +468,24 @@ function SegmentRow({
                     className="text-left text-gray-700 text-sm font-monlam rounded px-1 py-0.5 -mx-1 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
                     onClick={() => {
                       setTitleEditOpen(false);
-                      setAuthorInput(segment.author || '');
+                      setAuthorInput(segment.reviewer_author || '');
                       setAuthorEditOpen(true);
                     }}
                     disabled={titleAuthorSaving}
-                    title="Click to edit author"
+                    title="Annotator author; click to edit reviewer suggestion only"
                   >
-                    {segment.author?.trim() ? segment.author : '— Click to set —'}
+                    <span className="block">
+                      {segment.author?.trim() ? segment.author : '— No annotator author —'}
+                    </span>
+                    {segment.reviewer_author?.trim() ? (
+                      <span className="block text-xs font-normal text-sky-800 mt-0.5">
+                        Suggestion: {segment.reviewer_author}
+                      </span>
+                    ) : (
+                      <span className="block text-xs font-normal text-gray-500 mt-0.5">
+                        Click to add reviewer suggestion
+                      </span>
+                    )}
                   </button>
                 )}
               </span>

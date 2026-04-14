@@ -609,6 +609,12 @@
       "suggestionLabelTitle": "འོས་སྦྱོར་མཚན།",
       "suggestionLabelAuthor": "འོས་སྦྱོར་རྩོམ་པ་པོ།"
     },
+    "reviewerSuggestion": {
+      "labelTitle": "བསྐྱར་ཞིབ་པའི་འོས་སྦྱོར།（མཚན）",
+      "labelAuthor": "བསྐྱར་ཞིབ་པའི་འོས་སྦྱོར།（རྩོམ་པ་པོ）",
+      "appliedTitle": "བསྐྱར་ཞིབ་པའི་མཚན་བཀོལ་ཟིན།",
+      "appliedAuthor": "བསྐྱར་ཞིབ་པའི་རྩོམ་པ་པོ་བཀོལ་ཟིན།"
+    },
     "images": {
       "pageTitle": "ཤོག་ངོས་{{n}}",
       "volumePageAlt": "དེབ་ཤོག་{{n}}",

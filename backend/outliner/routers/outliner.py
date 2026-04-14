@@ -140,6 +140,8 @@ class SegmentUpdate(BaseModel):
     author_span_start: Optional[int] = None
     author_span_end: Optional[int] = None
     updated_author: Optional[str] = None
+    reviewer_title: Optional[str] = None
+    reviewer_author: Optional[str] = None
 
 
 class SegmentResponse(BaseModel):
@@ -156,6 +158,8 @@ class SegmentResponse(BaseModel):
     author_span_start: Optional[int] = None
     author_span_end: Optional[int] = None
     updated_author: Optional[str] = None
+    reviewer_title: Optional[str] = None
+    reviewer_author: Optional[str] = None
     title_bdrc_id: Optional[str] = None
     author_bdrc_id: Optional[str] = None
     parent_segment_id: Optional[str] = None
@@ -208,6 +212,8 @@ class SegmentResponseDocument(BaseModel):
     author_span_start: Optional[int] = None
     author_span_end: Optional[int] = None
     updated_author: Optional[str] = None
+    reviewer_title: Optional[str] = None
+    reviewer_author: Optional[str] = None
     title_bdrc_id: Optional[str] = None
     author_bdrc_id: Optional[str] = None
     parent_segment_id: Optional[str] = None
@@ -420,6 +426,8 @@ def _build_segment_response(
         author_span_start=segment.author_span_start,
         author_span_end=segment.author_span_end,
         updated_author=segment.updated_author,
+        reviewer_title=segment.reviewer_title,
+        reviewer_author=segment.reviewer_author,
         title_bdrc_id=segment.title_bdrc_id,
         author_bdrc_id=segment.author_bdrc_id,
         parent_segment_id=segment.parent_segment_id,
@@ -1066,6 +1074,12 @@ class AnnotatorPerformanceRow(BaseModel):
         0,
         description="Rejection events logged with this user as reviewer",
     )
+    segments_reviewer_corrected_title_or_author: int = Field(
+        0,
+        description=(
+            "Approved segments on this user's documents where reviewer set title or author at approval"
+        ),
+    )
 
 
 class DashboardStatsResponse(BaseModel):
@@ -1102,6 +1116,10 @@ class DashboardStatsResponse(BaseModel):
     segments_with_comments: int = Field(
         ...,
         description="Rejected segments that have comment data stored",
+    )
+    segments_reviewer_corrected_title_or_author: int = Field(
+        ...,
+        description="Approved segments where reviewer changed title or author vs snapshot at check time",
     )
     annotation_coverage_pct: float
     annotator_performance: List[AnnotatorPerformanceRow]

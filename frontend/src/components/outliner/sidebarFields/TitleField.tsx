@@ -25,6 +25,7 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(function Ti
     onSuppliedTitleChange,
     activeSegment,
     aiSuggestionsControls,
+    reviewerSuggestionControls,
   } = useAnnotationMetadata();
   const disabled = activeSegment.status === 'checked' || Boolean(disabledFromParent);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -55,6 +56,10 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(function Ti
     !aiSuggestionsControls.aiLoading &&
     titleSuggestion.length > 0 &&
     titleSuggestion !== titleSearch.trim();
+
+  const reviewerTitle = (reviewerSuggestionControls.reviewerTitle ?? '').trim();
+  const showReviewerTitleSuggestion =
+    reviewerTitle.length > 0 && reviewerTitle !== titleSearch.trim();
 
   return (
     <div>
@@ -96,6 +101,19 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(function Ti
             onClick={() => aiSuggestionsControls.onApplyAISuggestion('title', titleSuggestion)}
           >
             {titleSuggestion}
+          </button>
+        </div>
+      ) : null}
+      {showReviewerTitleSuggestion ? (
+        <div className="mt-2 flex flex-col gap-1 min-w-0">
+          <span className="text-xs text-gray-500">{t('outliner.reviewerSuggestion.labelTitle')}</span>
+          <button
+            type="button"
+            disabled={reviewerSuggestionControls.applyingField === 'title'}
+            className="w-full text-left rounded-lg border border-sky-200 bg-sky-50/90 px-2.5 py-1.5 text-sm font-monlam text-sky-950 shadow-sm transition hover:bg-sky-100 hover:border-sky-300 disabled:opacity-60"
+            onClick={() => void reviewerSuggestionControls.onApplyReviewerTitle()}
+          >
+            {reviewerTitle}
           </button>
         </div>
       ) : null}

@@ -85,6 +85,12 @@ class OutlinerSegment(Base):
     author_span_start: Mapped[int] = mapped_column(Integer, nullable=True)
     author_span_end: Mapped[int] = mapped_column(Integer, nullable=True)
     updated_author: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Snapshot when segment becomes `checked` (annotator submission for review)
+    pre_review_title: Mapped[str | None] = mapped_column(String, nullable=True)
+    pre_review_author: Mapped[str | None] = mapped_column(String, nullable=True)
+    # Set on approve when title/author differ from pre_review_* (reviewer corrections)
+    reviewer_title: Mapped[str | None] = mapped_column(String, nullable=True)
+    reviewer_author: Mapped[str | None] = mapped_column(String, nullable=True)
     title_bdrc_id: Mapped[str | None] = mapped_column(String, nullable=True)
     author_bdrc_id: Mapped[str | None] = mapped_column(String, nullable=True)
     parent_segment_id: Mapped[str | None] = mapped_column(

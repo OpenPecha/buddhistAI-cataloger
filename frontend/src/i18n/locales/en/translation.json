@@ -609,6 +609,12 @@
       "suggestionLabelTitle": "Suggested title",
       "suggestionLabelAuthor": "Suggested author"
     },
+    "reviewerSuggestion": {
+      "labelTitle": "Reviewer suggestion (title)",
+      "labelAuthor": "Reviewer suggestion (author)",
+      "appliedTitle": "Title updated from reviewer suggestion",
+      "appliedAuthor": "Author updated from reviewer suggestion"
+    },
     "images": {
       "pageTitle": "Page {{n}}",
       "volumePageAlt": "Volume page {{n}}",

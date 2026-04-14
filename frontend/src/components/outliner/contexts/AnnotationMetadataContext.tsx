@@ -12,12 +12,22 @@ export interface AISuggestionsControls {
   onApplyAISuggestion: (field: 'title' | 'author', value: string) => void;
 }
 
+/** Reviewer-proposed title/author; applying persists to annotator fields and clears the suggestion. */
+export interface ReviewerSuggestionControls {
+  reviewerTitle?: string | null;
+  reviewerAuthor?: string | null;
+  applyingField: 'title' | 'author' | null;
+  onApplyReviewerTitle: () => Promise<void>;
+  onApplyReviewerAuthor: () => Promise<void>;
+}
+
 export interface AnnotationMetadataContextValue {
   activeSegment: TextSegment;
   documentId?: string;
   /** True only when the annotation sidebar "Metadata" tab is selected (not when Outlines is active). */
   isMetadataTabSelected: boolean;
   aiSuggestionsControls: AISuggestionsControls;
+  reviewerSuggestionControls: ReviewerSuggestionControls;
   formData: FormDataType;
   suppliedTitleChecked: boolean;
   activeSegmentId: string;

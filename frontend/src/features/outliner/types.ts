@@ -18,6 +18,9 @@ export interface TextSegment {
   author_span_start?: number
   author_span_end?: number
   updated_author?: string
+  /** Reviewer-proposed title; does not replace annotator title until applied in workspace */
+  reviewer_title?: string | null
+  reviewer_author?: string | null
   title_bdrc_id?: string
   author_bdrc_id?: string
   parentSegmentId?: string
@@ -106,6 +109,8 @@ export interface Segment {
   author_span_start?: number | null
   author_span_end?: number | null
   updated_author?: string | null
+  reviewer_title?: string | null
+  reviewer_author?: string | null
   title_bdrc_id?: string | null
   author_bdrc_id?: string | null
   parent_segment_id?: string | null

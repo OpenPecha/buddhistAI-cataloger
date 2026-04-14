@@ -7,6 +7,7 @@ import {
   Link2,
   MessageSquare,
   PenLine,
+  PencilLine,
   SkipForward,
   Sparkles,
   UserRoundCheck,
@@ -58,6 +59,7 @@ const GOLD = '#b45309'
 const EMERALD = '#0f766e'
 const VIOLET = '#6b21a8'
 const RED = '#b91c1c'
+const ORANGE = '#c2410c'
 
 const CHART_OPTIONS = {
   responsive: true,
@@ -292,6 +294,8 @@ function OverviewTab({
   const overviewBarData = useMemo(() => {
     if (!stats) return null
     const skippedDocs = stats.document_status_counts.skipped ?? 0
+    const reviewerCorrections =
+      stats.segments_reviewer_corrected_title_or_author ?? 0
     return {
       labels: [
         'Documents',
@@ -299,6 +303,7 @@ function OverviewTab({
         'With title/author',
         'Skipped docs',
         'Unresolved rejected',
+        'Reviewer title/author edits',
       ],
       datasets: [
         {
@@ -308,9 +313,10 @@ function OverviewTab({
             stats.segments_with_title_or_author,
             skippedDocs,
             stats.rejection_count,
+            reviewerCorrections,
           ],
-          backgroundColor: [TEAL, EMERALD, VIOLET, GOLD, RED],
-          borderColor: [TEAL, EMERALD, VIOLET, GOLD, RED].map((c) => c),
+          backgroundColor: [TEAL, EMERALD, VIOLET, GOLD, RED, ORANGE],
+          borderColor: [TEAL, EMERALD, VIOLET, GOLD, RED, ORANGE].map((c) => c),
           borderWidth: 1,
           borderRadius: 8,
         },
@@ -448,6 +454,17 @@ function OverviewTab({
           pointHoverRadius: 6,
           pointBackgroundColor: GOLD,
         },
+        {
+          label: 'Reviewer title/author edits',
+          data: perf.map((r) => r.segments_reviewer_corrected_title_or_author ?? 0),
+          borderColor: ORANGE,
+          backgroundColor: 'rgba(194, 65, 12, 0.12)',
+          borderWidth: 2,
+          tension: 0.25,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          pointBackgroundColor: ORANGE,
+        },
       ],
     }
   }, [stats, annotators])
@@ -466,6 +483,25 @@ function OverviewTab({
       userId: r.user_id,
       name: annotatorDisplayName(r.user_id, annotators),
       count: r.segments_self_reviewed ?? 0,
+    }))
+  }, [stats, annotators, dashboardUserFilter])
+
+  const topReviewerTitleAuthorEdits = useMemo(() => {
+    if (!stats) return []
+    const perf = stats.annotator_performance ?? []
+    let rows = perf.filter((r) => (r.segments_reviewer_corrected_title_or_author ?? 0) > 0)
+    if (dashboardUserFilter) {
+      rows = rows.filter((r) => r.user_id === dashboardUserFilter)
+    }
+    rows = [...rows].sort(
+      (a, b) =>
+        (b.segments_reviewer_corrected_title_or_author ?? 0) -
+        (a.segments_reviewer_corrected_title_or_author ?? 0),
+    )
+    return rows.slice(0, 3).map((r) => ({
+      userId: r.user_id,
+      name: annotatorDisplayName(r.user_id, annotators),
+      count: r.segments_reviewer_corrected_title_or_author ?? 0,
     }))
   }, [stats, annotators, dashboardUserFilter])
 
@@ -524,6 +560,35 @@ function OverviewTab({
     selfReviewCardFooter = (
       <div className="border-t border-fuchsia-200/80 pt-3 text-xs text-muted-foreground">
         Breakdown unavailable for this filter.
+      </div>
+    )
+  }
+
+  let reviewerEditsCardFooter: ReactNode = null
+  if (topReviewerTitleAuthorEdits.length > 0) {
+    reviewerEditsCardFooter = (
+      <div className="space-y-1.5 border-t border-orange-200/80 pt-3 text-xs text-muted-foreground">
+        <p className="font-medium text-foreground/80">
+          {dashboardUserFilter
+            ? 'Segments corrected at review'
+            : 'Top 3 annotators by segments corrected at review'}
+        </p>
+        {topReviewerTitleAuthorEdits.map((row) => (
+          <div key={row.userId ?? 'none'} className="flex justify-between gap-2">
+            <span className="min-w-0 truncate" title={row.name}>
+              {row.name}
+            </span>
+            <span className="shrink-0 font-semibold tabular-nums text-foreground">
+              {row.count.toLocaleString()}
+            </span>
+          </div>
+        ))}
+      </div>
+    )
+  } else if ((stats.segments_reviewer_corrected_title_or_author ?? 0) > 0) {
+    reviewerEditsCardFooter = (
+      <div className="border-t border-orange-200/80 pt-3 text-xs text-muted-foreground">
+        Per-annotator breakdown unavailable for this filter.
       </div>
     )
   }
@@ -634,6 +699,17 @@ function OverviewTab({
               title="Rejected segments"
               value={stats.rejection_count}
               colorClass="text-red-800"
+            />
+          </MetricShell>
+          <MetricShell accentClass="from-orange-800 to-orange-500">
+            <StatsCard
+              className={statsCardInner}
+              icon={<PencilLine className="h-6 w-6 text-orange-700" strokeWidth={1.75} />}
+              title="Reviewer title/author edits"
+              value={stats.segments_reviewer_corrected_title_or_author ?? 0}
+              colorClass="text-orange-950"
+              hint="Approved segments where reviewer set title or author"
+              footer={reviewerEditsCardFooter}
             />
           </MetricShell>
         </div>
@@ -778,7 +854,9 @@ function OverviewTab({
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
           Title or author counts reflect segments on documents assigned to that user. Reviewed and self-review
           use the reviewer recorded when a segment is marked done or approved (same date filter as documents).
-          Rejections logged counts rejection events where that user is the reviewer.
+          Rejections logged counts rejection events where that user is the reviewer. Reviewer title/author
+          edits counts approved segments on that user&apos;s documents where the reviewer supplied title or
+          author at approval.
         </p>
         <div className="mt-5 h-80 min-h-64">
           {annotatorCompareData ? (
