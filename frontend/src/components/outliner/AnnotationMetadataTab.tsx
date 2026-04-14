@@ -1,11 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { TitleField } from './sidebarFields/TitleField';
 import { AuthorField } from './sidebarFields/AuthorField';
 import { AISuggestionsBox } from './AISuggestionsBox';
+import { SegmentSearchBar } from './SegmentSearchBar';
 import { RotateCcw, Save, X } from 'lucide-react';
 import { useAnnotationMetadata } from './contexts/AnnotationMetadataContext';
+import { useDocument } from './contexts';
+import { findAllOccurrences } from '@/features/outliner';
 
 export type { AISuggestionsControls } from './contexts/AnnotationMetadataContext';
 
@@ -26,6 +29,13 @@ export function AnnotationMetadataTab() {
     onNotApplicable,
     onResetAnnotations,
   } = useAnnotationMetadata();
+
+  const { activeSegmentSearchQuery, setActiveSegmentSearchQuery } = useDocument();
+
+  const segmentSearchMatchCount = useMemo(
+    () => findAllOccurrences(activeSegment.text, activeSegmentSearchQuery).length,
+    [activeSegment.text, activeSegmentSearchQuery]
+  );
 
   const isTextSegment = activeSegment.label === 'TEXT';
 
@@ -81,21 +91,26 @@ export function AnnotationMetadataTab() {
   }, [isMetadataTabSelected, documentId]);
 
   return (
-    <div className="px-2 py-3 flex flex-col flex-1 min-h-0 h-full">
-      <div className="overflow-y-auto h-min space-y-6">
-        <div className="relative">
-          <div className="text-sm text-gray-600 mb-4 p-3 bg-gray-50 rounded-md ">
-            <div className="font-medium mb-1">{t('outliner.annotation.textPrefix')}</div>
-            <div className="text-gray-800">{activeSegment.text.slice(0, 100)}...</div>
-          </div>
-          {activeSegment.status !== 'checked' && isTextSegment && (
+    <div className="flex flex-col flex-1 min-h-0 h-full border-l-[3px] border-r-blue-500/85 pl-4 pr-2 py-3 shadow-[inset_4px_0_12px_-4px_rgba(59,130,246,0.12)]">
+      <div className="overflow-y-auto flex-1 min-h-0 space-y-6">
+        <div className="shrink-0 flex pl-0.5">
+        
+        <SegmentSearchBar
+          segmentId={activeSegment.id}
+          query={activeSegmentSearchQuery}
+          onQueryChange={setActiveSegmentSearchQuery}
+          matchCount={segmentSearchMatchCount}
+        />
+         {activeSegment.status !== 'checked' && isTextSegment && (
             <AISuggestionsBox
               loading={aiSuggestionsControls.aiLoading}
               onDetect={() => void aiSuggestionsControls.onAIDetect()}
               onStop={aiSuggestionsControls.onAIStop}
             />
           )}
-        </div>
+       
+      </div>
+          
 
         {isTextSegment ? (
           <div className="relative flex flex-col gap-4">
@@ -103,50 +118,49 @@ export function AnnotationMetadataTab() {
             <AuthorField />
           </div>
         ) : null}
-      </div>
-
-      <div className="shrink-0 flex gap-2 bg-white pt-3 mt-2 border-t border-gray-100">
-        {activeSegment.status !== 'checked' ? (
-          <>
-            {isTextSegment ? (
+        <div className="shrink-0 flex gap-2 bg-white pt-3 mt-2 border-t border-gray-100">
+          {activeSegment.status !== 'checked' ? (
+            <>
+              {isTextSegment ? (
+                <Button
+                  type="button"
+                  className="flex-1"
+                  onClick={() => void onSave()}
+                  variant="default"
+                  disabled={
+                    !activeSegmentId ||
+                    (formData.title.name.trim() === '' && formData.author.name.trim() === '')
+                  }
+                >
+                  <Save />
+                  {t('outliner.annotation.save')}
+                </Button>
+              ) : null}
               <Button
                 type="button"
+                onClick={() => void onNotApplicable()}
+                variant="outline"
                 className="flex-1"
-                onClick={() => void onSave()}
-                variant="default"
-                disabled={
-                  !activeSegmentId ||
-                  (formData.title.name.trim() === '' && formData.author.name.trim() === '')
-                }
+                disabled={!activeSegmentId}
               >
-                <Save />
-                {t('outliner.annotation.save')}
+                <X /> {t('outliner.annotation.notApplicable')}
               </Button>
-            ) : null}
+            </>
+          ) : (
             <Button
               type="button"
-              onClick={() => void onNotApplicable()}
+              onClick={() => void onResetAnnotations()}
               variant="outline"
-              className="flex-1"
               disabled={!activeSegmentId}
+              className="w-full"
             >
-              <X /> {t('outliner.annotation.notApplicable')}
+              <RotateCcw /> {t('outliner.annotation.reset')}
             </Button>
-          </>
-        ) : (
-          <Button
-            type="button"
-            onClick={() => void onResetAnnotations()}
-            variant="outline"
-            disabled={!activeSegmentId}
-            className="w-full"
-          >
-            <RotateCcw /> {t('outliner.annotation.reset')}
-          </Button>
-        )}
+          )}
+        </div>
       </div>
 
-      <hr className="shrink-0 mt-3 border-gray-200" />
+     
     </div>
   );
 }

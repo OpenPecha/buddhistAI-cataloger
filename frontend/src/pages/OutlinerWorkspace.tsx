@@ -720,6 +720,11 @@ const OutlinerWorkspace: React.FC = () => {
   );
 
   const [sidebarTitleDraft, setSidebarTitleDraft] = useState('');
+  const [activeSegmentSearchQuery, setActiveSegmentSearchQuery] = useState('');
+
+  useEffect(() => {
+    setActiveSegmentSearchQuery('');
+  }, [activeSegmentId]);
 
   // AI outline: full-document TOC indices → replace segments (POST …/documents/:id/ai/outline)
   const handleAIDetectTextEndings = async () => {
@@ -804,6 +809,8 @@ const OutlinerWorkspace: React.FC = () => {
         segments: currentSegments,
         activeSegmentId,
         sidebarTitleDraft,
+        activeSegmentSearchQuery,
+        setActiveSegmentSearchQuery,
         aiTextEndingLoading: aiTextEndings.isLoading,
         segmentLoadingStates: segmentLoadingStates || new Map(),
         isUploading: isLoadingDocument || isSaving,

@@ -15,7 +15,7 @@ export const AISuggestionsBox: React.FC<AISuggestionsBoxProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  const button_classname: string = "h-auto m-2 p-0 hover:bg-transparent hover:text-primary float-right absolute right-0 top-2 cursor-pointer";
+  const button_classname: string = "h-auto m-2 p-0 hover:bg-transparent hover:text-primary float-right  right-0 top-2 cursor-pointer";
 
   return (
     <>

@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState, memo } from 'react'
+import React, { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
-import { ChevronDown, ChevronRight, Merge, ChevronUp, AlertCircle, Loader2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, Merge, AlertCircle, Loader2 } from 'lucide-react'
 import type { TextSegment, SegmentLabel } from './types'
 import { SegmentTextContent } from './SegmentTextContent'
 import { useDocument,useCursor, useActions } from './contexts'
@@ -17,8 +17,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Input } from '../ui/input'
-import { findAllOccurrences } from '@/features/outliner'
 
 /** Hoisted: avoid recreating array each render (see js-hoist-regexp / stable references). */
 const BONPO_TITLE_PATTERNS = ['་པོབམ', 'ལེའུ', 'བམཔོ', 'བམ་པོ་', 'ལེའུ་', 'བམ པོ'] as const
@@ -47,7 +45,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
   const { t } = useTranslation()
 
   // Use new contexts
-  const { activeSegmentId, segments, segmentLoadingStates } = useDocument()
+  const { activeSegmentId, segments, segmentLoadingStates, activeSegmentSearchQuery } = useDocument()
   const isSegmentSyncing = segmentLoadingStates.get(segment.id) === true
   const { onCursorChange } = useCursor()
   const {
@@ -70,13 +68,8 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
   const isActive = segment.id === activeSegmentId
 
 
-  const [segmentSearchQuery, setSegmentSearchQuery] = useState('')
-
-  const segmentSearchMatchCount = useMemo(
-    () => findAllOccurrences(segment.text, segmentSearchQuery).length,
-    [segment.text, segmentSearchQuery]
-  )
-
+  const segmentSearchQuery =
+    segment.id === activeSegmentId ? activeSegmentSearchQuery : ''
 
   const isExpanded =
     segments.length === 1 || expandedSegmentIds.includes(segment.id)
@@ -159,24 +152,10 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
             {t('outliner.segment.syncingFromServer')}
           </div>
         )}
-    <div className="segment-label-bar flex flex-wrap  items-center gap-2 mb-3 pb-2 border-b border-gray-200">
+    <div className="segment-label-bar flex flex-wrap items-center gap-2 mb-3 pb-2 border-b border-gray-200">
        <SegmentLabelSelector
           segment={segment}
         />
-       
-      
-<div
-          className="fixed right-10 flex gap-2 items-center z-10"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <SegmentSearch
-            segmentId={segment.id}
-            query={segmentSearchQuery}
-            onQueryChange={setSegmentSearchQuery}
-            matchCount={segmentSearchMatchCount}
-          />
-        </div>
-
         </div>
 
         {isRejected && segment.rejection?.reason?.trim() ? (
@@ -312,14 +291,14 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
                 />
                
             )}
-            {segment.label==='TEXT' &&
-                <TitleAndAuthor
+            {segment.label === 'TEXT' && (
+              <TitleAndAuthor
                 title={segment.title}
                 author={segment.author}
                 title_bdrc_id={segment.title_bdrc_id}
                 author_bdrc_id={segment.author_bdrc_id}
-                />
-              }
+              />
+            )}
           </div>
         </div>
       </div>
@@ -422,130 +401,6 @@ const SegmentLabelSelector = ({
   </>
   )
 }
-
-const SegmentSearch = memo(function SegmentSearch({
-  segmentId,
-  query,
-  onQueryChange,
-  matchCount,
-}: {
-  segmentId: string
-  query: string
-  onQueryChange: (q: string) => void
-  matchCount: number
-}) {
-  const { t } = useTranslation()
-  const [activeMatchIndex, setActiveMatchIndex] = useState(0)
-
-  const scrollSegmentToTop = useCallback(() => {
-    document.getElementById(segmentId)?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    })
-  }, [segmentId])
-
-  const scrollSegmentToBottom = useCallback(() => {
-    document.getElementById(segmentId)?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'end',
-    })
-  }, [segmentId])
-
-  const scrollToMatchIndex = useCallback(
-    (index: number) => {
-      const root = document.getElementById(segmentId)
-      const hits = root?.querySelectorAll('.highlighter')
-      hits?.[index]?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      })
-    },
-    [segmentId]
-  )
-
-  useEffect(() => {
-    setActiveMatchIndex(0)
-  }, [query, matchCount])
-
-  /** When there is no active search hit list, arrows scroll the segment in the page. */
-  const useScrollForArrows = !query.trim() || matchCount === 0
-
-  const goUp = useCallback(() => {
-    if (useScrollForArrows) {
-      scrollSegmentToTop()
-      return
-    }
-    setActiveMatchIndex((prev) => {
-      const next = (prev - 1 + matchCount) % matchCount
-      requestAnimationFrame(() => scrollToMatchIndex(next))
-      return next
-    })
-  }, [useScrollForArrows, scrollSegmentToTop, matchCount, scrollToMatchIndex])
-
-  const goDown = useCallback(() => {
-    if (useScrollForArrows) {
-      scrollSegmentToBottom()
-      return
-    }
-    setActiveMatchIndex((prev) => {
-      const next = (prev + 1) % matchCount
-      requestAnimationFrame(() => scrollToMatchIndex(next))
-      return next
-    })
-  }, [useScrollForArrows, scrollSegmentToBottom, matchCount, scrollToMatchIndex])
-
-  return (
-    <div className="segment-search-bar flex items-center gap-1   rounded-md px-1 py-0.5 ">
-      <Input
-        className="h-8 w-42 text-xs"
-        placeholder={t('outliner.segment.searchPlaceholder')}
-        value={query}
-        onChange={(e) => onQueryChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'ArrowUp') {
-            e.preventDefault()
-            e.stopPropagation()
-            goUp()
-          } else if (e.key === 'ArrowDown') {
-            e.preventDefault()
-            e.stopPropagation()
-            goDown()
-          }
-        }}
-        aria-label={t('outliner.segment.searchInSegment')}
-      />
-      {query.trim().length > 0 && (
-        <span className="text-[10px] text-muted-foreground tabular-nums whitespace-nowrap px-0.5">
-          {matchCount === 0 ? '0/0' : `${activeMatchIndex + 1}/${matchCount}`}
-        </span>
-      )}
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className="h-8 w-8 shrink-0"
-        onClick={goUp}
-        aria-label={
-          useScrollForArrows ? t('outliner.segment.scrollToTop') : t('outliner.segment.prevMatch')
-        }
-      >
-        <ChevronUp className="h-4 w-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className="h-8 w-8 shrink-0"
-        onClick={goDown}
-        aria-label={
-          useScrollForArrows ? t('outliner.segment.scrollToBottom') : t('outliner.segment.nextMatch')
-        }
-      >
-        <ChevronDown className="h-4 w-4" />
-      </Button>
-    </div>
-  )
-})
 
 const AlertMessage = ({ segment }: { segment: TextSegment }) => {
   const { t } = useTranslation()

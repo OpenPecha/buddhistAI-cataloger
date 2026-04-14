@@ -7,6 +7,9 @@ interface DocumentContextValue {
   activeSegmentId: string | null
   /** Current Title field value in the sidebar for the active segment (may differ from saved segment.title until Save). */
   sidebarTitleDraft: string
+  /** In-segment text search query for the active segment (sidebar Metadata tab + workspace highlights). */
+  activeSegmentSearchQuery: string
+  setActiveSegmentSearchQuery: (query: string) => void
   aiTextEndingLoading: boolean
   segmentLoadingStates: Map<string, boolean>
   isUploading?: boolean
