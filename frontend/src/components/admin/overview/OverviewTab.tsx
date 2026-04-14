@@ -391,6 +391,28 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
                 ? `${coverage}% of segments`
                 : undefined
             }
+            footer={
+              <div className="space-y-1.5 border-t border-violet-100 pt-3 text-xs text-slate-600">
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500">Reviewed (done or approved)</span>
+                  <span className="font-semibold tabular-nums text-slate-900">
+                    {stats.segments_with_title_or_author_reviewed.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-slate-500">Not yet reviewed</span>
+                  <span className="font-semibold tabular-nums text-slate-900">
+                    {stats.segments_with_title_or_author_pending_review.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-2 border-t border-slate-100 pt-1.5">
+                  <span className="text-slate-500">Title set, not reviewed</span>
+                  <span className="font-semibold tabular-nums text-slate-900">
+                    {stats.segments_with_title_not_reviewed.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            }
           />
           <StatsCard
             icon={<SkipForward className="h-6 w-6 text-orange-500" strokeWidth={1.75} />}
@@ -423,7 +445,14 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
             </p>
             <p className="mt-2 text-3xl font-bold tabular-nums text-slate-900">{coverage}%</p>
             <p className="mt-1 text-sm text-slate-500">
-              Segments with a title or author out of {stats.total_segments.toLocaleString()} total
+              Segments with a title or author out of {stats.total_segments.toLocaleString()} total.
+              Of those, {stats.segments_with_title_or_author_reviewed.toLocaleString()} are reviewed
+              (segment done or approved) and{' '}
+              {stats.segments_with_title_or_author_pending_review.toLocaleString()} are not yet reviewed.
+            </p>
+            <p className="mt-2 text-sm text-slate-500">
+              Segments with a title filled in but not yet reviewed:{' '}
+              {stats.segments_with_title_not_reviewed.toLocaleString()}.
             </p>
             <div
               className="mt-5 h-2.5 w-full overflow-hidden rounded-full bg-violet-100"

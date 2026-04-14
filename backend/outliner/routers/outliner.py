@@ -1057,6 +1057,18 @@ class DashboardStatsResponse(BaseModel):
     document_count: int
     total_segments: int
     segments_with_title_or_author: int
+    segments_with_title_or_author_reviewed: int = Field(
+        ...,
+        description="Among segments with non-empty title or author: status checked or approved",
+    )
+    segments_with_title_or_author_pending_review: int = Field(
+        ...,
+        description="Among segments with non-empty title or author: not checked/approved (e.g. unchecked or rejected)",
+    )
+    segments_with_title_not_reviewed: int = Field(
+        ...,
+        description="Non-empty title and segment not checked/approved",
+    )
     rejection_count: int = Field(
         ...,
         description="Same as annotator chart: rejected segments whose latest rejection row is not resolved",

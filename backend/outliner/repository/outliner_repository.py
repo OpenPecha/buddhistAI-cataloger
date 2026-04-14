@@ -1045,11 +1045,49 @@ def get_dashboard_stats(
 
     total_segments = seg_base.with_entities(func.count(OutlinerSegment.id)).scalar() or 0
 
+    has_title_or_author = or_(
+        and_(OutlinerSegment.title.isnot(None), OutlinerSegment.title != ""),
+        and_(OutlinerSegment.author.isnot(None), OutlinerSegment.author != ""),
+    )
+    segment_reviewed_when = or_(
+        OutlinerSegment.status == "checked",
+        OutlinerSegment.status == "approved",
+    )
+    segment_pending_review_when = or_(
+        OutlinerSegment.status.is_(None),
+        and_(
+            OutlinerSegment.status != "checked",
+            OutlinerSegment.status != "approved",
+        ),
+    )
+    has_title_text = and_(
+        OutlinerSegment.title.isnot(None),
+        OutlinerSegment.title != "",
+    )
+
     segments_with_title_or_author = (
-        seg_base.filter(
-            (OutlinerSegment.title.isnot(None) & (OutlinerSegment.title != ""))
-            | (OutlinerSegment.author.isnot(None) & (OutlinerSegment.author != ""))
-        )
+        seg_base.filter(has_title_or_author)
+        .with_entities(func.count(OutlinerSegment.id))
+        .scalar()
+        or 0
+    )
+
+    segments_with_title_or_author_reviewed = (
+        seg_base.filter(has_title_or_author, segment_reviewed_when)
+        .with_entities(func.count(OutlinerSegment.id))
+        .scalar()
+        or 0
+    )
+
+    segments_with_title_or_author_pending_review = (
+        seg_base.filter(has_title_or_author, segment_pending_review_when)
+        .with_entities(func.count(OutlinerSegment.id))
+        .scalar()
+        or 0
+    )
+
+    segments_with_title_not_reviewed = (
+        seg_base.filter(has_title_text, segment_pending_review_when)
         .with_entities(func.count(OutlinerSegment.id))
         .scalar()
         or 0
@@ -1167,6 +1205,9 @@ def get_dashboard_stats(
         "document_count": document_count,
         "total_segments": total_segments,
         "segments_with_title_or_author": segments_with_title_or_author,
+        "segments_with_title_or_author_reviewed": segments_with_title_or_author_reviewed,
+        "segments_with_title_or_author_pending_review": segments_with_title_or_author_pending_review,
+        "segments_with_title_not_reviewed": segments_with_title_not_reviewed,
         "rejection_count": rejection_count,
         "document_status_counts": document_status_counts,
         "document_category_counts": document_category_counts,

@@ -6,9 +6,10 @@ interface StatsCardProps {
   readonly value: number | string
   readonly colorClass: string
   readonly hint?: string
+  readonly footer?: ReactNode
 }
 
-function StatsCard({ icon, title, value, colorClass, hint }: StatsCardProps) {
+function StatsCard({ icon, title, value, colorClass, hint, footer }: StatsCardProps) {
   return (
     <div className="rounded-xl border border-slate-200/90 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
       <div className="flex items-start gap-3">
@@ -19,6 +20,7 @@ function StatsCard({ icon, title, value, colorClass, hint }: StatsCardProps) {
           <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">{title}</p>
           <p className={`mt-1 text-2xl font-semibold tabular-nums tracking-tight ${colorClass}`}>{value}</p>
           {hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
+          {footer ? <div className="mt-3">{footer}</div> : null}
         </div>
       </div>
     </div>
