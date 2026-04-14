@@ -329,6 +329,25 @@ function SegmentRow({
                 {segment.status === 'checked' ? 'Done' : 'Under Process'}
               </span>
             )}
+                {segment.label && (
+             <div className="inline-flex  items-center gap-1 mt-2 mb-1">
+               <span
+                 className={
+                   "px-2 py-0.5 rounded-full text-xs font-semibold " +
+                   (segment.label === 'FRONT_MATTER'
+                     ? 'bg-amber-100 text-amber-800'
+                     : segment.label === 'TOC'
+                     ? 'bg-indigo-100 text-indigo-800'
+                     : segment.label === 'TEXT'
+                     ? 'bg-green-100 text-green-800'
+                     : 'bg-gray-100 text-gray-700')
+                 }
+                 title={`Label: ${segment.label}`}
+               >
+                 {segment.label.charAt(0).toUpperCase() + segment.label.slice(1)}
+               </span>
+             </div>
+           )}
           </div>
 
           {segment.status === 'rejected' && segment.rejection?.reason?.trim() ? (
@@ -337,7 +356,6 @@ function SegmentRow({
               <span className="whitespace-pre-wrap">{segment.rejection.reason}</span>
             </div>
           ) : null}
-
           <div>
             {isExpanded ? (
               <div className="text-sm text-gray-800 whitespace-pre-wrap max-h-[min(24rem,50vh)] overflow-y-auto font-monlam rounded-md border border-gray-200 bg-white/80 p-3">
@@ -353,7 +371,8 @@ function SegmentRow({
               </button>
             )}
           </div>
-
+       
+      
           <div className="relative text-sm flex flex-col gap-2 min-w-0" onClick={(e) => e.stopPropagation()}>
             {titleAuthorSaving && (
               <div className="absolute inset-0 z-10 bg-white/50 backdrop-blur-sm flex items-center justify-center gap-2 rounded">

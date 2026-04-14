@@ -116,6 +116,7 @@ export interface Segment {
   comments?: Comment[]
   created_at: string
   updated_at: string
+  label?: SegmentLabel | null
 }
 
 export interface DocumentStats {
