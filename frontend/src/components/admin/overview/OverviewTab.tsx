@@ -526,19 +526,19 @@ function OverviewTab({ stats, isLoading, annotators = [] }: OverviewTabProps) {
               footer={
                 <div className="space-y-1.5 border-t border-violet-200/80 pt-3 text-xs text-muted-foreground">
                   <div className="flex justify-between gap-2">
-                    <span>Reviewed (done or approved)</span>
+                    <span>Reviewed</span>
                     <span className="font-semibold tabular-nums text-foreground">
                       {stats.segments_with_title_or_author_reviewed.toLocaleString()}
                     </span>
                   </div>
                   <div className="flex justify-between gap-2">
-                    <span>Not yet reviewed</span>
+                    <span>Annotated (not reviewed)</span>
                     <span className="font-semibold tabular-nums text-foreground">
                       {stats.segments_with_title_or_author_pending_review.toLocaleString()}
                     </span>
                   </div>
                   <div className="flex justify-between gap-2">
-                    <span>Title set, not reviewed</span>
+                    <span>Title set (not reviewed)</span>
                     <span className="font-semibold tabular-nums text-foreground">
                       {stats.segments_with_title_not_reviewed.toLocaleString()}
                     </span>
