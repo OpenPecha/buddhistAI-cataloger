@@ -4,6 +4,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { Navigation, ProtectedRoute } from '@app';
 import { getCurrentUser, createUser } from './api/settings';
 import OutlinerAdminLayout from './features/outliner/components/OutlinerAdminLayout';
+import LogoutPage from './pages/LogoutPage';
 
 // Lazy load page components
 const TextsPage = lazy(() => import('./pages/Text'));
@@ -96,6 +97,7 @@ function App() {
         }>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/logout" element={<LogoutPage />} />
           <Route path="/profile" element={
             <ProtectedRoute>
               <Profile />
