@@ -67,8 +67,20 @@ async def list_documents(
     skip: int = 0,
     limit: int = 100,
     include_deleted: bool = False,
+    exclude_own_assigned: bool = Query(
+        False,
+        description=(
+            "When true and the caller is a reviewer, documents assigned to the caller "
+            "(document user_id) are omitted. Used by the admin reviewer document queue; "
+            "not used by the annotator workspace document list."
+        ),
+    ),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
+    exclude_document_user_id: Optional[str] = None
+    if exclude_own_assigned:
+        exclude_document_user_id = current_user.id
     return list_documents_ctrl(
         db=db,
         user_id=user_id,
@@ -77,6 +89,7 @@ async def list_documents(
         limit=limit,
         include_deleted=include_deleted,
         title=title,
+        exclude_document_user_id=exclude_document_user_id,
     )
 
 

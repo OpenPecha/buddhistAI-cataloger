@@ -136,11 +136,17 @@ def list_documents(
     limit: int = 100,
     include_deleted: bool = False,
     title: Optional[str] = None,
+    exclude_document_user_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     query = db.query(OutlinerDocument)
     if user_id:
         query = query.filter(OutlinerDocument.user_id == user_id)
 
+    if exclude_document_user_id:
+        query = query.filter(
+            (OutlinerDocument.user_id != exclude_document_user_id)
+            | (OutlinerDocument.user_id.is_(None))
+        )
     if status:
         query = query.filter(OutlinerDocument.status == status)
 

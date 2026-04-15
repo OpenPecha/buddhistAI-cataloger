@@ -17,7 +17,6 @@ interface DocumentRowProps {
 
 function DocumentRow({ document, annotatorName, onSelect, onDelete }: DocumentRowProps) {
   const statusKey = document.status || 'active';
-
   return (
     <TableRow className="hover:bg-gray-50">
       <TableCell className="px-6 py-4 whitespace-nowrap">
@@ -28,7 +27,6 @@ function DocumentRow({ document, annotatorName, onSelect, onDelete }: DocumentRo
         {annotatorName}
         </div>
       </TableCell>
-      
       <TableCell className="px-6 py-4 whitespace-nowrap align-middle">
         <div className="flex items-center gap-4">
           <span

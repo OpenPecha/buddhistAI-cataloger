@@ -9,10 +9,12 @@ import {
   useOutlinerUsers,
 } from '../hooks';
 import type { DocumentFilters } from '../hooks';
+import { useUser } from '../hooks/useUser';
 
 function OutlinerAdminDocument() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { user: appUser } = useUser();
 
   const status = searchParams.get('status') || undefined;
   const annotator = searchParams.get('annotator') || undefined;
@@ -35,8 +37,9 @@ function OutlinerAdminDocument() {
       title: debouncedTitle || undefined,
       page,
       pageSize: 20,
+      excludeOwnAssignedDocuments: true,
     }),
-    [status, annotator, debouncedTitle, page]
+    [status, annotator, debouncedTitle, page, appUser?.role]
   );
 
   const {

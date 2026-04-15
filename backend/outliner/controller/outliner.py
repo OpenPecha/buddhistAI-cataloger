@@ -72,6 +72,7 @@ def list_documents(
     limit: int = 100,
     include_deleted: bool = False,
     title: Optional[str] = None,
+    exclude_document_user_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """
     List all outliner documents, optionally filtered by user, status, and deletion status.
@@ -84,6 +85,7 @@ def list_documents(
         limit: Maximum number of documents to return
         include_deleted: If False (default), exclude deleted documents. If True, include all documents.
         title: If set, case-insensitive substring match on document filename (list UI title).
+        exclude_document_user_id: If set, omit documents whose owner/assignee user_id equals this value.
     """
     return outliner_repo.list_documents(
         db,
@@ -93,6 +95,7 @@ def list_documents(
         limit=limit,
         include_deleted=include_deleted,
         title=title,
+        exclude_document_user_id=exclude_document_user_id,
     )
 
 
