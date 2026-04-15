@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { outlinerFetch } from '@/api/outliner';
-import { OUTLINER_V1_URL } from '@/config/api';
+import { OUTLINER_BASE_URL } from '@/config/api';
 import type { Document } from '@/features/outliner/types';
 
 interface UseDocumentActionsProps {
@@ -20,8 +20,8 @@ export function useDocumentActions({
   const updateDocumentStatus = useCallback(async (documentId: string, newStatus: string) => {
     try {
       const token = await getAccessTokenSilently();
-      const response = await outlinerFetch(`${OUTLINER_V1_URL}/documents/${documentId}`, {
-        method: 'PATCH',
+      const response = await outlinerFetch(`${OUTLINER_BASE_URL}/documents/${documentId}/status`, {
+        method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -49,7 +49,7 @@ export function useDocumentActions({
 
     try {
       const token = await getAccessTokenSilently();
-      const response = await outlinerFetch(`${OUTLINER_V1_URL}/documents/${documentId}`, {
+      const response = await outlinerFetch(`${OUTLINER_BASE_URL}/documents/${documentId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

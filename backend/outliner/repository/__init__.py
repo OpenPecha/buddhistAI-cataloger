@@ -1,1 +1,1 @@
-"""Outliner SQLAlchemy data access layer."""
+"""Outliner data access layer."""

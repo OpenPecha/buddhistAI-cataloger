@@ -15,8 +15,8 @@ export const API_URL = import.meta.env.DEV
       : '/api');  // Default to /api in production (requires server proxy config)
 
 /**
- * Outliner REST v1 is mounted at `/api/v1/outliner` on the backend.
- * With the Vite proxy, one `/api` prefix is stripped, so the browser must use `/api` + `/api/v1/outliner`.
+ * Outliner routes are mounted at `/outliner` on the FastAPI app (`include_router(..., prefix="/outliner")`).
+ * In dev, `API_URL` is `/api`; Vite rewrites `/api` away, so the backend receives `/outliner/...`.
  */
-export const OUTLINER_V1_URL = `${API_URL}/api/v1/outliner`;
+export const OUTLINER_BASE_URL = `${API_URL}/outliner`;
 

@@ -11,7 +11,7 @@ import type { Document, Segment } from '../shared/types';
 import SegmentRow from './SegmentRow';
 import { Button } from '@/components/ui/button';
 import { outlinerFetch } from '@/api/outliner';
-import { OUTLINER_V1_URL } from '@/config/api';
+import { OUTLINER_BASE_URL } from '@/config/api';
 import { VolumeImagePanelCore } from '@/components/outliner/ImageWrapper';
 import { useParams } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -115,7 +115,7 @@ function SegmentsTab({
     setIsApproving(true);
     try {
       const token = await getAccessTokenSilently();
-      const response = await outlinerFetch(`${OUTLINER_V1_URL}/documents/${documentId}/reviews/approve`, {
+      const response = await outlinerFetch(`${OUTLINER_BASE_URL}/documents/${documentId}/approve`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

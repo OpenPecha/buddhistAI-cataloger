@@ -3,7 +3,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 import { outlinerFetch } from '@/api/outliner';
-import { OUTLINER_V1_URL } from '@/config/api';
+import { OUTLINER_BASE_URL } from '@/config/api';
 import type { Document, Segment, DocumentStats } from '@/features/outliner/types';
 import { withResolvedSegmentTexts } from '@/lib/outlinerSegmentText';
 
@@ -80,7 +80,7 @@ export function useDocuments(filters: DocumentFilters = {}) {
       if (excludeOwnAssignedDocuments) params.append('exclude_own_assigned', 'true');
       params.set('skip', String(skip));
       params.set('limit', String(pageSize));
-      const url = `${OUTLINER_V1_URL}/documents?${params.toString()}`;
+      const url = `${OUTLINER_BASE_URL}/documents?${params.toString()}`;
       const response = await outlinerFetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -131,7 +131,7 @@ export function useSegments(documentId: string | undefined) {
         throw new Error('Document ID is required');
       }
       const token = await getAccessTokenSilently();
-      const response = await outlinerFetch(`${OUTLINER_V1_URL}/documents/${documentId}/segments`, {
+      const response = await outlinerFetch(`${OUTLINER_BASE_URL}/documents/${documentId}/segments`, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -172,7 +172,7 @@ export function useDocument(documentId: string | undefined) {
         throw new Error('Document ID is required');
       }
       const token = await getAccessTokenSilently();
-      const response = await outlinerFetch(`${OUTLINER_V1_URL}/documents/${documentId}`, {
+      const response = await outlinerFetch(`${OUTLINER_BASE_URL}/documents/${documentId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
