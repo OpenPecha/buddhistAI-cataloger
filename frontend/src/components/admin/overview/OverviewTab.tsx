@@ -229,6 +229,22 @@ function formatChartLabel(key: string): string {
   return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
+/** Total segments footer: human workflow labels for segment status keys. */
+function segmentStatusLabelForTotalSegments(key: string): string {
+  switch (key) {
+    case 'unchecked':
+      return 'Annotating'
+    case 'checked':
+      return 'Annotated'
+    case 'approved':
+      return 'Reviewed'
+    case 'rejected':
+      return 'Rejected'
+    default:
+      return formatChartLabel(key)
+  }
+}
+
 function SectionHeading({
   eyebrow,
   title,
@@ -358,6 +374,21 @@ function OverviewTab({
         },
       ],
     }
+  }, [stats])
+
+  /** All segment statuses (canonical order, plus any extra keys from API) for Total segments footer. */
+  const segmentStatusFooterRows = useMemo(() => {
+    if (!stats) return []
+    const c = stats.segment_status_counts
+    const keys = sortKeys(
+      [...new Set([...SEG_STATUS_ORDER, ...Object.keys(c)])],
+      [...SEG_STATUS_ORDER],
+    )
+    return keys.map((k) => ({
+      key: k,
+      label: segmentStatusLabelForTotalSegments(k),
+      count: c[k] ?? 0,
+    }))
   }, [stats])
 
   const labelBarData = useMemo(() => {
@@ -534,6 +565,9 @@ function OverviewTab({
 
   const coverage = stats.annotation_coverage_pct
   const skippedDocuments = stats.document_status_counts.skipped ?? 0
+  const docApproved = stats.document_status_counts.approved ?? 0
+  const docCompleted = stats.document_status_counts.completed ?? 0
+  const docActive = stats.document_status_counts.active ?? 0
 
   const statsCardInner = 'border-0 bg-transparent shadow-none hover:shadow-none'
 
@@ -624,6 +658,34 @@ function OverviewTab({
               value={stats.document_count}
               colorClass="text-teal-700"
               hint="In current filters"
+              footer={
+                <div className="space-y-1.5 border-t border-teal-200/80 pt-3 text-xs text-muted-foreground">
+                  <div className="flex justify-between gap-2">
+                    <span>reviewed</span>
+                    <span className="shrink-0 font-semibold tabular-nums text-foreground">
+                      {docApproved.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span>annotated</span>
+                    <span className="shrink-0 font-semibold tabular-nums text-foreground">
+                      {docCompleted.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span>annotating</span>
+                    <span className="shrink-0 font-semibold tabular-nums text-foreground">
+                      {docActive.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span>Skipped</span>
+                    <span className="shrink-0 font-semibold tabular-nums text-foreground">
+                      {skippedDocuments.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              }
             />
           </MetricShell>
           <MetricShell accentClass="from-emerald-700 to-emerald-500">
@@ -633,6 +695,18 @@ function OverviewTab({
               title="Total segments"
               value={stats.total_segments}
               colorClass="text-emerald-800"
+              footer={
+                <div className="space-y-1.5 border-t border-emerald-200/80 pt-3 text-xs text-muted-foreground">
+                  {segmentStatusFooterRows.map((row) => (
+                    <div key={row.key} className="flex justify-between gap-2">
+                      <span className="min-w-0">{row.label}</span>
+                      <span className="shrink-0 font-semibold tabular-nums text-foreground">
+                        {row.count.toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              }
             />
           </MetricShell>
           <MetricShell accentClass="from-violet-700 to-violet-500">
@@ -644,42 +718,36 @@ function OverviewTab({
               colorClass="text-violet-800"
               footer={
                 <div className="space-y-1.5 border-t border-violet-200/80 pt-3 text-xs text-muted-foreground">
+                  
                   <div className="flex justify-between gap-2">
+                      <span>Annotating</span>
+                      <span className="font-semibold tabular-nums text-foreground">
+                        {(stats.unchecked_segments_with_title_or_author ?? 0).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-2">
+                      <span>Annotated (not reviewed)</span>
+                      <span className="font-semibold tabular-nums text-foreground">
+                        {stats.annotated_segments.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between gap-2">
                     <span>Reviewed</span>
                     <span className="font-semibold tabular-nums text-foreground">
-                      {stats.segments_with_title_or_author_reviewed.toLocaleString()}
+                      {stats.reviewed_segments.toLocaleString()}
                     </span>
                   </div>
-                  <div className="flex justify-between gap-2">
-                    <span>Annotated (not reviewed)</span>
-                    <span className="font-semibold tabular-nums text-foreground">
-                      {stats.segments_with_title_or_author_pending_review.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span>Title set (not reviewed)</span>
-                    <span className="font-semibold tabular-nums text-foreground">
-                      {stats.segments_with_title_not_reviewed.toLocaleString()}
-                    </span>
-                  </div>
+                    <div className="flex justify-between gap-2">
+                      <span>Rejected</span>
+                      <span className="font-semibold tabular-nums text-foreground">
+                        {(stats.rejected_segments_with_title_or_author ?? 0).toLocaleString()}
+                      </span>
+                    </div>
                 </div>
               }
             />
           </MetricShell>
-          <MetricShell accentClass="from-amber-700 to-amber-500">
-            <StatsCard
-              className={statsCardInner}
-              icon={<SkipForward className="h-6 w-6 text-amber-700" strokeWidth={1.75} />}
-              title="Skipped documents"
-              value={skippedDocuments}
-              colorClass="text-amber-800"
-              hint={
-                stats.document_count && skippedDocuments > 0
-                  ? `${Math.round((skippedDocuments / stats.document_count) * 100)}% of documents`
-                  : undefined
-              }
-            />
-          </MetricShell>
+         
          
           <MetricShell accentClass="from-fuchsia-700 to-pink-500">
             <StatsCard
@@ -688,19 +756,10 @@ function OverviewTab({
               title="Self-reviewed segments"
               value={stats.segments_self_reviewed_total}
               colorClass="text-fuchsia-900"
-              hint="Same user owns the document and is the recorded reviewer"
               footer={selfReviewCardFooter}
             />
           </MetricShell>
-          <MetricShell accentClass="from-red-700 to-red-500">
-            <StatsCard
-              className={statsCardInner}
-              icon={<Ban className="h-6 w-6 text-red-600" strokeWidth={1.75} />}
-              title="Rejected segments"
-              value={stats.rejection_count}
-              colorClass="text-red-800"
-            />
-          </MetricShell>
+        
           <MetricShell accentClass="from-orange-800 to-orange-500">
             <StatsCard
               className={statsCardInner}
@@ -708,7 +767,6 @@ function OverviewTab({
               title="Reviewer title/author edits"
               value={stats.segments_reviewer_corrected_title_or_author ?? 0}
               colorClass="text-orange-950"
-              hint="Approved segments where reviewer set title or author"
               footer={reviewerEditsCardFooter}
             />
           </MetricShell>

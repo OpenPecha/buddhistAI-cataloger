@@ -624,12 +624,16 @@ export interface DashboardStats {
   document_count: number;
   total_segments: number;
   segments_with_title_or_author: number;
-  /** Subset with title/author where segment status is checked or approved */
-  segments_with_title_or_author_reviewed: number;
-  /** Subset with title/author still not checked/approved */
-  segments_with_title_or_author_pending_review: number;
-  /** Non-empty title, segment not checked/approved */
-  segments_with_title_not_reviewed: number;
+  /** Subset with title/author where segment status is approved */
+  reviewed_segments: number;
+  /** Subset with title/author where segment status is checked */
+  annotated_segments: number;
+  /** Subset with title/author where segment status is rejected */
+  rejected_segments_with_title_or_author: number;
+  /** Subset with title/author where segment status is unchecked or null */
+  unchecked_segments_with_title_or_author: number;
+  annotating_segments: number;
+  /** Segments that are not checked/approved (e.g. unchecked or rejected) */
   /** Unresolved rejected segments: status rejected and latest rejection row is not resolved */
   rejection_count: number;
   /** Checked/approved segments that record who reviewed (reviewed_by_id set) */

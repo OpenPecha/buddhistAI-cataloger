@@ -1181,18 +1181,14 @@ def get_dashboard_stats(
 
     total_segments = seg_base.with_entities(func.count(OutlinerSegment.id)).scalar() or 0
 
-    has_title_or_author = and_(
+    has_title_or_author = or_(
         and_(OutlinerSegment.title.isnot(None), OutlinerSegment.title != ""),
         and_(OutlinerSegment.author.isnot(None), OutlinerSegment.author != ""),
     )
     segment_reviewed_when = OutlinerSegment.status == "approved"
-    segment_pending_review_when = OutlinerSegment.status != "approved"
-            
-    has_title_text = and_(
-        OutlinerSegment.title.isnot(None),
-        OutlinerSegment.title != "",
-    )
-
+    segment_pending_review_when = OutlinerSegment.status == "checked"
+    segment_rejected_when = OutlinerSegment.status == "rejected"
+    segment_unchecked_when = or_(OutlinerSegment.status.is_(None), OutlinerSegment.status == "unchecked") 
     segments_with_title_or_author = (
         seg_base.filter(has_title_or_author)
         .with_entities(func.count(OutlinerSegment.id))
@@ -1200,22 +1196,36 @@ def get_dashboard_stats(
         or 0
     )
 
-    segments_with_title_or_author_reviewed = (
+    reviewed_segments = (
         seg_base.filter(has_title_or_author, segment_reviewed_when)
         .with_entities(func.count(OutlinerSegment.id))
         .scalar()
         or 0
     )
 
-    segments_with_title_or_author_pending_review = (
+    annotated_segments = (
         seg_base.filter(has_title_or_author, segment_pending_review_when)
         .with_entities(func.count(OutlinerSegment.id))
         .scalar()
         or 0
     )
 
-    segments_with_title_not_reviewed = (
-        seg_base.filter(has_title_text, segment_pending_review_when)
+    rejected_segments_with_title_or_author = (
+        seg_base.filter(has_title_or_author, segment_rejected_when)
+        .with_entities(func.count(OutlinerSegment.id))
+        .scalar()
+        or 0
+    )
+
+    unchecked_segments_with_title_or_author = (
+        seg_base.filter(has_title_or_author, segment_unchecked_when)
+        .with_entities(func.count(OutlinerSegment.id))
+        .scalar()
+        or 0
+    )
+
+    annotating_segments = (
+        seg_base.filter(segment_unchecked_when)
         .with_entities(func.count(OutlinerSegment.id))
         .scalar()
         or 0
@@ -1223,8 +1233,7 @@ def get_dashboard_stats(
 
     latest_rej_sq = _latest_rejection_row_per_segment_subquery(db)
     rejection_count = (
-        seg_base.filter(OutlinerSegment.status == "rejected")
-        .join(
+        seg_base.join(
             latest_rej_sq,
             and_(
                 OutlinerSegment.id == latest_rej_sq.c.segment_id,
@@ -1235,17 +1244,22 @@ def get_dashboard_stats(
                 ),
             ),
         )
+        .filter(OutlinerSegment.status == "rejected")
         .with_entities(func.count(OutlinerSegment.id))
         .scalar()
         or 0
     )
 
- 
-
+    # Match get_annotator_performance_breakdown self_review_rows: reviewer recorded
+    # while segment is checked or approved (not approved-only).
+    segment_reviewed_or_checked = or_(
+        OutlinerSegment.status == "checked",
+        OutlinerSegment.status == "approved",
+    )
     segments_self_reviewed_total = (
         seg_base.join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
         .filter(
-            segment_reviewed_when,
+            segment_reviewed_or_checked,
             OutlinerSegment.reviewed_by_id.isnot(None),
             OutlinerDocument.user_id == OutlinerSegment.reviewed_by_id,
         )
@@ -1360,9 +1374,11 @@ def get_dashboard_stats(
         "document_count": document_count,
         "total_segments": total_segments,
         "segments_with_title_or_author": segments_with_title_or_author,
-        "segments_with_title_or_author_reviewed": segments_with_title_or_author_reviewed,
-        "segments_with_title_or_author_pending_review": segments_with_title_or_author_pending_review,
-        "segments_with_title_not_reviewed": segments_with_title_not_reviewed,
+        "reviewed_segments": reviewed_segments,
+        "annotated_segments": annotated_segments,
+        "rejected_segments_with_title_or_author": rejected_segments_with_title_or_author,
+        "unchecked_segments_with_title_or_author": unchecked_segments_with_title_or_author,
+        "annotating_segments": annotating_segments,
         "rejection_count": rejection_count,
         "segments_self_reviewed_total": segments_self_reviewed_total,
         "document_status_counts": document_status_counts,
