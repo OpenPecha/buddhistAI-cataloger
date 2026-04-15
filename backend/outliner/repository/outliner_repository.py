@@ -1181,21 +1181,13 @@ def get_dashboard_stats(
 
     total_segments = seg_base.with_entities(func.count(OutlinerSegment.id)).scalar() or 0
 
-    has_title_or_author = or_(
+    has_title_or_author = and_(
         and_(OutlinerSegment.title.isnot(None), OutlinerSegment.title != ""),
         and_(OutlinerSegment.author.isnot(None), OutlinerSegment.author != ""),
     )
-    segment_reviewed_when = or_(
-        OutlinerSegment.status == "checked",
-        OutlinerSegment.status == "approved",
-    )
-    segment_pending_review_when = or_(
-        OutlinerSegment.status.is_(None),
-        and_(
-            OutlinerSegment.status != "checked",
-            OutlinerSegment.status != "approved",
-        ),
-    )
+    segment_reviewed_when = OutlinerSegment.status == "approved"
+    segment_pending_review_when = OutlinerSegment.status != "approved"
+            
     has_title_text = and_(
         OutlinerSegment.title.isnot(None),
         OutlinerSegment.title != "",

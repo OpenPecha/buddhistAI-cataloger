@@ -15,12 +15,13 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUser } from '@/hooks/useUser';
 import { updateSegment, rejectSegment } from '@/api/outliner';
 import { toast } from 'sonner';
-import { ChevronDown, ChevronRight, FileText, Loader2, MessageCircle, User } from 'lucide-react';
+import {FileText, Loader2, User } from 'lucide-react';
 import type { Segment } from '../shared/types';
 import type { TextSegment } from '@/components/outliner/types';
 import type { FormDataType, Title, Author } from '@/components/outliner/AnnotationSidebar';
-import BDRCField from '@/components/outliner/sidebarFields/BDRCField';
 import { useDocument } from '@/hooks';
+import { getLabelColor, getStatusColor } from '@/components/outliner/utils';
+import ChevronUporDown from '@/components/outliner/utils/ChevronUporDown';
 
 interface SegmentRowProps {
   readonly segment: Segment;
@@ -281,76 +282,32 @@ function SegmentRow({
             className="p-1 rounded hover:bg-gray-200 transition-colors"
             aria-label={isExpanded ? 'Collapse segment' : 'Expand segment'}
           >
-            {isExpanded ? (
-              <ChevronDown className="w-4 h-4 text-gray-600" aria-hidden />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-gray-600" aria-hidden />
-            )}
+            <ChevronUporDown isExpanded={isExpanded} />
           </button>
           {listIndex != null && (
+            <>
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                segment.status === 'rejected'
-                  ? 'bg-red-500 text-white'
-                  : segment.status === 'approved'
-                    ? 'bg-blue-600 text-white'
-                    : segment.status === 'checked'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-200 text-gray-600'
+               getStatusColor(segment.status)
               }`}
             >
               {listIndex}
             </div>
+            <StatusBadge status={segment.status} rejection={segment.rejection} />
+              </>
           )}
         </div>
 
         <div className="flex-1 min-w-0 space-y-3">
-          <div className="flex flex-wrap items-center gap-2 pb-2 border-b border-gray-200">
-            {segment.comments && segment.comments.length > 0 && (
-              <span className="inline-flex rounded-full items-center gap-1 bg-gray-100 text-gray-800 px-2 py-1 text-xs font-semibold">
-                <MessageCircle className="w-4 h-4" aria-hidden />
-                {segment.comments.length}
-              </span>
-            )}
-            {segment.status === 'approved' ? (
-              <span
-                className="inline-block rounded-full bg-blue-100 text-blue-800 px-2 py-1 text-xs font-semibold"
-                title="Segment approved"
-              >
-                Approved
-              </span>
-            ) : segment.status === 'rejected' ? (
-              <span
-                className="inline-block rounded-full bg-red-100 text-red-800 px-2 py-1 text-xs font-semibold"
-                title="Segment rejected"
-              >
-                Rejected
-                {(segment.rejection?.count ?? 0) > 1 ? ` (${segment.rejection?.count ?? 0}x)` : ''}
-              </span>
-            ) : (
-              <span
-                className={
-                  segment.status === 'checked'
-                    ? 'inline-block rounded-full bg-green-100 text-green-800 px-2 py-1 text-xs font-semibold'
-                    : 'inline-block rounded-full bg-yellow-100 text-yellow-800 px-2 py-1 text-xs font-semibold'
-                }
-                title={segment.status === 'checked' ? 'Segment done' : 'Segment in progress'}
-              >
-                {segment.status === 'checked' ? 'Done' : 'Under Process'}
-              </span>
-            )}
+          <div className="flex flex-wrap justify-between items-center gap-2 pb-2 border-b border-gray-200">
+          
+          
                 {segment.label && (
              <div className="inline-flex  items-center gap-1 mt-2 mb-1">
                <span
                  className={
-                   "px-2 py-0.5 rounded-full text-xs font-semibold " +
-                   (segment.label === 'FRONT_MATTER'
-                     ? 'bg-amber-100 text-amber-800'
-                     : segment.label === 'TOC'
-                     ? 'bg-indigo-100 text-indigo-800'
-                     : segment.label === 'TEXT'
-                     ? 'bg-green-100 text-green-800'
-                     : 'bg-gray-100 text-gray-700')
+                   "px-2 text-sm font-bold py-0.5 rounded-full  " +
+                   getLabelColor(segment.label)
                  }
                  title={`Label: ${segment.label}`}
                >
@@ -588,3 +545,39 @@ function SegmentRow({
 
 export default SegmentRow;
 
+
+
+
+function StatusBadge({ status, rejection }: { status: Status, rejection: Rejection | null }) {
+  return (
+    <>
+    {status === 'approved' ? (
+      <span
+      className="inline-block rounded-full bg-blue-100 text-blue-800 px-2 py-1 text-xs font-semibold"
+      title="Segment approved"
+      >
+        Approved
+      </span>
+    ) : status === 'rejected' ? (
+      <span
+      className="inline-block rounded-full bg-red-100 text-red-800 px-2 py-1 text-xs font-semibold"
+        title="Segment rejected"
+      >
+        Rejected
+        {(rejection?.count ?? 0) > 1 ? ` (${rejection?.count ?? 0}x)` : ''}
+      </span>
+    ) : (
+      <span
+      className={
+        status === 'checked'
+        ? 'inline-block rounded-full bg-green-100 text-green-800 px-2 py-1 text-xs font-semibold'
+        : 'inline-block rounded-full bg-yellow-100 text-yellow-800 px-2 py-1 text-xs font-semibold'
+      }
+      title={status === 'checked' ? 'Segment done' : 'Segment in progress'}
+      >
+        {status === 'checked' ? 'Done' : 'Under Process'}
+      </span>
+    )}
+    </>
+  );
+}

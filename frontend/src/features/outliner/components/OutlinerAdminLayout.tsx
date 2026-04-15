@@ -1,5 +1,6 @@
+import ChevronUporDown from "@/components/outliner/utils/ChevronUporDown";
 import { useUser } from "@/hooks/useUser";
-import { ChevronDown, ChevronRight, FileIcon, HomeIcon, UsersIcon } from "lucide-react";
+import {FileIcon, HomeIcon, UsersIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -108,11 +109,7 @@ const OutlinerAdminLayout = ({ children }: { children: React.ReactNode }) => {
                           : `Expand ${label} submenu`
                       }
                     >
-                      {sectionOpen ? (
-                        <ChevronDown className="h-4 w-4" aria-hidden />
-                      ) : (
-                        <ChevronRight className="h-4 w-4" aria-hidden />
-                      )}
+                      <ChevronUporDown isExpanded={sectionOpen} />
                     </button>
                     <Link
                        to="#"

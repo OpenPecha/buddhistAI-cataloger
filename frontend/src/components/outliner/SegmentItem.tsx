@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
-import { ChevronDown, ChevronRight, Merge, AlertCircle, Loader2 } from 'lucide-react'
+import {  Merge, AlertCircle, Loader2 } from 'lucide-react'
 import type { TextSegment, SegmentLabel } from './types'
 import { SegmentTextContent } from './SegmentTextContent'
 import { useDocument,useCursor, useActions } from './contexts'
@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import ChevronUporDown from './utils/ChevronUporDown'
 
 /** Hoisted: avoid recreating array each render (see js-hoist-regexp / stable references). */
 const BONPO_TITLE_PATTERNS = ['་པོབམ', 'ལེའུ', 'བམཔོ', 'བམ་པོ་', 'ལེའུ་', 'བམ པོ'] as const
@@ -219,11 +220,8 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
               className="p-1 hover:bg-gray-200 rounded transition-colors collapse-button"
               aria-label={isCollapsed ? t('outliner.segment.expandSegment') : t('outliner.segment.collapseSegment')}
             >
-              {isCollapsed ? (
-                <ChevronRight className="w-4 h-4 text-gray-600" />
-              ) : (
-                <ChevronDown className="w-4 h-4 text-gray-600" />
-              )}
+            
+              <ChevronUporDown isExpanded={!isCollapsed} />
             </button>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
               isRejected
@@ -426,3 +424,4 @@ const AlertMessage = ({ segment }: { segment: TextSegment }) => {
     </div>
   )
 }
+
