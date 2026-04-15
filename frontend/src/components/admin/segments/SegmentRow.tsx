@@ -111,16 +111,26 @@ function SegmentRow({
   // --- Inline title / author (admin list) ---
   const [titleEditOpen, setTitleEditOpen] = useState(false);
   const [authorEditOpen, setAuthorEditOpen] = useState(false);
-  const [titleInput, setTitleInput] = useState(() => segment.reviewer_title || '');
-  const [authorInput, setAuthorInput] = useState(() => segment.reviewer_author || '');
+  const [titleInput, setTitleInput] = useState(() => {
+    if (segment.reviewer_title !== undefined && segment.reviewer_title !== null && segment.reviewer_title !== '') {
+      return segment.reviewer_title;
+    } else if (segment.title !== undefined && segment.title !== null && segment.title !== '') {
+      return segment.title;
+    } else {
+      return '';
+    }
+  });
+  
+  const [authorInput, setAuthorInput] = useState(() => {
+    if (segment.reviewer_author !== undefined && segment.reviewer_author !== null && segment.reviewer_author !== '') {
+      return segment.reviewer_author;
+    } else if (segment.author !== undefined && segment.author !== null && segment.author !== '') {
+      return segment.author;
+    } else {
+      return '';
+    }
+  });
 
-  useEffect(() => {
-    if (!titleEditOpen) setTitleInput(segment.reviewer_title || '');
-  }, [segment.reviewer_title, segment.id, titleEditOpen]);
-
-  useEffect(() => {
-    if (!authorEditOpen) setAuthorInput(segment.reviewer_author || '');
-  }, [segment.reviewer_author, segment.id, authorEditOpen]);
 
   const { mutate: patchTitleOrAuthor, isPending: titleAuthorSaving } = useMutation({
     mutationFn: (payload: { reviewer_title?: string | null; reviewer_author?: string | null }) =>
@@ -409,7 +419,8 @@ function SegmentRow({
                     className="text-left font-medium text-gray-900 font-monlam rounded px-1 py-0.5 -mx-1 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
                     onClick={() => {
                       setAuthorEditOpen(false);
-                      setTitleInput(segment.reviewer_title || '');
+                      const rt = segment.reviewer_title;
+                      setTitleInput(rt?.trim() ? rt : (segment.title ?? ''));
                       setTitleEditOpen(true);
                     }}
                     disabled={titleAuthorSaving}
@@ -460,7 +471,8 @@ function SegmentRow({
                     className="text-left text-gray-700 text-sm font-monlam rounded px-1 py-0.5 -mx-1 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
                     onClick={() => {
                       setTitleEditOpen(false);
-                      setAuthorInput(segment.reviewer_author || '');
+                      const ra = segment.reviewer_author;
+                      setAuthorInput(ra?.trim() ? ra : (segment.author ?? ''));
                       setAuthorEditOpen(true);
                     }}
                     disabled={titleAuthorSaving}
