@@ -98,6 +98,7 @@ def rejection_counts_reasons_reviewers_by_segment_ids(
 def latest_rejection_notice_by_document_ids(
     db: Session, document_ids: List[str]
 ) -> Dict[str, Optional[Dict[str, Any]]]:
+    """Newest unresolved rejection per document, only for segments still in status ``rejected``."""
     if not document_ids:
         return {}
     rn = (
@@ -122,6 +123,7 @@ def latest_rejection_notice_by_document_ids(
         .join(OutlinerSegment, SegmentRejection.segment_id == OutlinerSegment.id)
         .outerjoin(User, SegmentRejection.reviewer_id == User.id)
         .filter(OutlinerSegment.document_id.in_(document_ids))
+        .filter(OutlinerSegment.status == "rejected")
         .filter(
             or_(
                 SegmentRejection.resolved.is_(False),

@@ -280,7 +280,7 @@ class RejectedSegmentReviewerUser(BaseModel):
 
 
 class RejectedSegmentListNotice(BaseModel):
-    """Latest rejection on any segment in the document (for annotator list notices)."""
+    """Latest unresolved rejection on a segment that is still ``rejected`` (list payload may omit this)."""
     message: str = ""
     document_id: str
     segment_id: str
@@ -483,8 +483,9 @@ async def list_documents(
     """
     List all outliner documents, optionally filtered by user, status, title search, and deletion status.
 
-    Each item may include `rejected_segment`: the most recent segment rejection in that document
-    (message, document_id, segment_id, reviewer_user) for annotator-facing notices.
+    Each item may include `rejected_segment` when the document is ``approved`` or ``completed`` and
+    at least one segment is still ``rejected``: the newest unresolved rejection
+    (message, document_id, segment_id, reviewer_user).
 
     Args:
         user_id: Filter documents by user ID (annotator)

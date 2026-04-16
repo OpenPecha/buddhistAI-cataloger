@@ -115,7 +115,6 @@ async def _push_document_segments_to_bdrc(
             wa_id=wa_id,
             part_type="text" if wa_id != '' else "editorial"
         ))
-        print(rep_id, vol_id, vol_version, bdrc_status)
     return await update_volume(
         volume_id,
         VolumeInput(

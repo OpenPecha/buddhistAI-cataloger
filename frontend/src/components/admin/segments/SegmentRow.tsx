@@ -549,7 +549,7 @@ function SegmentRow({
 
           <div className="flex flex-wrap gap-2 pt-1 justify-between" onClick={(e) => e.stopPropagation()}>
             {segment.status === 'checked' && showApproveButton && (
-              <>
+              <div className='flex gap-2'>
                 <Button size="xs" onClick={handleSave} disabled={isSaving} variant="outline">
                   {isSaving ? 'Saving...' : 'Approve'}
                 </Button>
@@ -565,7 +565,7 @@ function SegmentRow({
                 >
                   Reject
                 </Button>
-              </>
+              </div>
             )}
             {segment.status === 'approved' && (
               <Button size="sm" onClick={handleReset} disabled={isSaving} variant="outline">

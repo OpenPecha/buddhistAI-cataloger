@@ -53,7 +53,7 @@ export interface OutlinerDocumentAiTocEntries {
   entries: AiTocEntryItem[];
 }
 
-/** Latest rejection on the document (any segment), from GET …/documents. */
+/** From GET …/documents: set only when document is approved/completed and a segment is still rejected. */
 export interface RejectedSegmentListNotice {
   message: string;
   document_id: string;

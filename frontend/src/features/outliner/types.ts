@@ -85,7 +85,7 @@ export interface Document {
   annotated_segments: number
   /** Segments with status rejected (admin list API) */
   rejection_count?: number
-  /** Latest rejection on any segment (list API; annotator notices) */
+  /** List API: present when document is approved/completed and a segment is still rejected */
   rejected_segment?: RejectedSegmentListNotice | null
   progress_percentage: number
   status?: string | null

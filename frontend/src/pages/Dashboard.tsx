@@ -120,15 +120,15 @@ const OutlinerUpload: React.FC = () => {
     navigate(`/outliner/${documentId}`);
   };
 
-  const rejected_document = documents.find(
-    (doc) => doc.rejected_segment?.message && doc.checked_segments !== doc.total_segments
-  );
+  const firstDocWithRejectionNotice = documents.find((doc) => doc.rejected_segment);
+  const firstRejectedNotice = firstDocWithRejectionNotice?.rejected_segment;
+  const rejectedLinkHref = firstRejectedNotice
+    ? `/outliner/${firstRejectedNotice.document_id}?segmentId=${firstRejectedNotice.segment_id}`
+    : null;
   const assignDisabled =
     assignWorkMutation.isPending ||
     !userId ||
-    !assignEligibility?.allowed 
-    
-  const rejected_url = "/outliner/"+rejected_document?.rejected_segment?.document_id+"?segmentId="+rejected_document?.rejected_segment?.segment_id;
+    !assignEligibility?.allowed;
    return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
@@ -161,12 +161,12 @@ const OutlinerUpload: React.FC = () => {
         </div>
 
         
-      {rejected_document && (
+      {rejectedLinkHref && (
         <div className="mb-6 flex justify-end">
             <p className="text-sm text-gray-600 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-red-600" />
-              Some documents have rejected segments. Please review them and 
-              <Link to={rejected_url} className="text-sm text-blue-600 underline"> fix them.</Link>
+              Some documents have rejected segments. Please review them and{' '}
+              <Link to={rejectedLinkHref} className="text-sm text-blue-600 underline">fix them.</Link>
               </p>
         </div>
        )}
@@ -241,7 +241,7 @@ const OutlinerUpload: React.FC = () => {
                             </span>
                             
                           </div>
-                          {doc.rejected_segment && rejected_document && (
+                          {doc.rejected_segment && (
                             <div className="flex items-start gap-2">
                               <AlertTriangle className="mt-0.5 animate-bounce h-4 w-4 shrink-0 text-red-600" aria-hidden />
                                 {doc.rejected_segment.reviewer_user?.picture && (

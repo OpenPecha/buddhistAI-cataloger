@@ -232,7 +232,7 @@ class RejectedSegmentReviewerUser(BaseModel):
 
 
 class RejectedSegmentListNotice(BaseModel):
-    """Latest rejection on any segment in the document (for annotator list notices)."""
+    """Latest unresolved rejection on a segment still in ``rejected`` status (when included on lists)."""
 
     message: str = ""
     document_id: str

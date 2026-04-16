@@ -65,6 +65,9 @@ def list_documents(
             unchecked = agg["unchecked_segments"]
             annotated = agg["annotated_segments"]
             rejection_count = agg["rejection_count"]
+        notice = latest_rejection_by_doc.get(doc.id)
+        if (doc.status or "") not in ("approved", "completed"):
+            notice = None
         result.append(
             {
                 "id": doc.id,
@@ -79,7 +82,7 @@ def list_documents(
                 "status": doc.status,
                 "created_at": doc.created_at,
                 "updated_at": doc.updated_at,
-                "rejected_segment": latest_rejection_by_doc.get(doc.id),
+                "rejected_segment": notice,
             }
         )
 
@@ -308,7 +311,6 @@ def allow_user_to_assign_volume(db: Session, user_id: str) -> bool:
         .filter(OutlinerDocument.user_id == user_id, OutlinerDocument.status == "active")
         .first()
     ):
-        print("document is active")
         return False
 
     bad_doc_status = (
@@ -323,7 +325,6 @@ def allow_user_to_assign_volume(db: Session, user_id: str) -> bool:
         .first()
     )
     if bad_doc_status is not None:
-        print("document is not in allowed statuses")
         return False
 
     if (
@@ -335,7 +336,6 @@ def allow_user_to_assign_volume(db: Session, user_id: str) -> bool:
         )
         .first()
     ): 
-        print("document has rejected segments")
         return False
 
     incomplete_on_finished = (
@@ -352,7 +352,6 @@ def allow_user_to_assign_volume(db: Session, user_id: str) -> bool:
         .first()
     )
     if incomplete_on_finished is not None:
-        print("document has incomplete segments",incomplete_on_finished)
         return False
     return incomplete_on_finished is None
 
