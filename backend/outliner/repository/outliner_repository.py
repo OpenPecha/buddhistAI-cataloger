@@ -25,7 +25,7 @@ from outliner.repository.document import (
     reset_segments,
     set_document_status_and_refresh,
     update_document_content,
-    user_has_blocking_document_for_assign_volume,
+    allow_user_to_assign_volume,
 )
 from outliner.repository.segment import (
     add_segment,

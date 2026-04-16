@@ -17,10 +17,7 @@ async def assign_volume_eligibility(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_outliner_access),
 ):
-    """
-    True in ``may_assign`` when every non-deleted document owned by the user is
-    skipped, or has at least one segment and every segment is checked or approved.
-    """
+  
     return get_assign_volume_eligibility(db, current_user.id)
 
 

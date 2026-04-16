@@ -510,7 +510,7 @@ export const assignVolume = async (): Promise<OutlinerDocument> => {
 };
 
 /** Server-side rule: every non-deleted owned document is skipped, or all its segments are checked or approved. */
-export const getAssignVolumeEligibility = async (): Promise<{ may_assign: boolean }> => {
+export const getAssignVolumeEligibility = async (): Promise<{ allowed: boolean }> => {
   const response = await outlinerFetch(`${OUTLINER_BASE_URL}/assign_volume/eligibility`);
   return handleApiResponse(response);
 };

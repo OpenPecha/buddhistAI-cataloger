@@ -76,7 +76,7 @@ const OutlinerUpload: React.FC = () => {
     staleTime: 0,
   });
 
-  const { data: assignEligibility } = useQuery<{ may_assign: boolean }>({
+  const { data: assignEligibility } = useQuery<{ allowed: boolean }>({
     queryKey: ['outliner-assign-volume-eligibility', userId],
     queryFn: () => getAssignVolumeEligibility(),
     enabled: !!userId,
@@ -126,7 +126,7 @@ const OutlinerUpload: React.FC = () => {
   const assignDisabled =
     assignWorkMutation.isPending ||
     !userId ||
-    assignEligibility?.may_assign !== true ||
+    assignEligibility?.allowed !== true ||
     !!rejected_document;
 
   const rejected_url = "/outliner/"+rejected_document?.rejected_segment?.document_id+"?segmentId="+rejected_document?.rejected_segment?.segment_id;

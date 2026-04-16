@@ -279,42 +279,83 @@ def list_completed_document_ids_all_segments_checked(
     return [r[0] for r in rows]
 
 
-def user_has_blocking_document_for_assign_volume(db: Session, user_id: str) -> bool:
+def allow_user_to_assign_volume(db: Session, user_id: str) -> bool:
     """
-    True when the user owns at least one non-deleted document that is not in a
-    assign-clear state: either ``status == skipped``, or the document has at least
-    one segment and every segment is ``checked`` or ``approved``.
+    Returns True when the user may request a new volume assignment.
+
+    Rules (documents are those with ``user_id`` set to this user):
+    - If the user has no such documents, they are allowed.
+    - No document may have status ``active``.
+    - Every document must have status one of: skipped, completed, approved, deleted
+      (including non-null; unknown or null status blocks assignment).
+    - If any segment on any of those documents is ``rejected``, assignment is blocked.
+    - For documents with status ``completed`` or ``approved``, every segment must be
+      ``checked`` or ``approved``. Skipped or deleted documents do not require that
+      segment-level completion check.
     """
-    not_deleted = or_(
-        OutlinerDocument.status.is_(None),
-        OutlinerDocument.status != "deleted",
+    allowed_doc_statuses = ("skipped", "completed", "approved", "deleted")
+
+    has_any = (
+        db.query(OutlinerDocument.id)
+        .filter(OutlinerDocument.user_id == user_id)
+        .first()
     )
-    skipped = OutlinerDocument.status == "skipped"
-    has_any_segment = exists().where(OutlinerSegment.document_id == OutlinerDocument.id)
-    has_non_terminal_segment = exists().where(
-        OutlinerSegment.document_id == OutlinerDocument.id,
-        or_(
-            OutlinerSegment.status.is_(None),
-            and_(
-                OutlinerSegment.status != "checked",
-                OutlinerSegment.status != "approved",
-            ),
-        ),
-    )
-    document_is_clear = or_(
-        skipped,
-        and_(has_any_segment, not_(has_non_terminal_segment)),
-    )
-    row = (
+    if has_any is None:
+        print("no documents found")
+        return True
+
+    if (
+        db.query(OutlinerDocument.id)
+        .filter(OutlinerDocument.user_id == user_id, OutlinerDocument.status == "active")
+        .first()
+    ):
+        print("document is active")
+        return False
+
+    bad_doc_status = (
         db.query(OutlinerDocument.id)
         .filter(
             OutlinerDocument.user_id == user_id,
-            not_deleted,
-            not_(document_is_clear),
+            or_(
+                OutlinerDocument.status.is_(None),
+                OutlinerDocument.status.notin_(allowed_doc_statuses),
+            ),
         )
         .first()
     )
-    return row is not None
+    if bad_doc_status is not None:
+        print("document is not in allowed statuses")
+        return False
+
+    if (
+        db.query(OutlinerSegment.id)
+        .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
+        .filter(
+            OutlinerDocument.user_id == user_id,
+            OutlinerSegment.status == "rejected",
+        )
+        .first()
+    ): 
+        print("document has rejected segments")
+        return False
+
+    incomplete_on_finished = (
+        db.query(OutlinerSegment.id)
+        .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
+        .filter(
+            OutlinerDocument.user_id == user_id,
+            OutlinerDocument.status=="completed",
+            or_(
+                OutlinerSegment.status.is_(None),
+                OutlinerSegment.status.notin_(("checked", "approved")),
+            ),
+        )
+        .first()
+    )
+    if incomplete_on_finished is not None:
+        print("document has incomplete segments",incomplete_on_finished)
+        return False
+    return incomplete_on_finished is None
 
 
 def map_document_id_to_filename(

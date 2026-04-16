@@ -319,12 +319,13 @@ def reset_segments(db: Session, document_id: str) -> None:
 
 def get_assign_volume_eligibility(db: Session, user_id: str) -> Dict[str, bool]:
     """
-    Whether the current user may request a new volume assignment: every non-deleted
-    document they own is either skipped, or has segments and every segment is
-    checked or approved.
+    Whether the current user may request a new volume assignment: no active documents,
+    every assigned document is skipped/completed/approved/deleted, no rejected segments
+    on any of their documents, and completed/approved documents have only checked or
+    approved segments.
     """
-    blocking = outliner_repo.user_has_blocking_document_for_assign_volume(db, user_id)
-    return {"may_assign": not blocking}
+    allowed = outliner_repo.allow_user_to_assign_volume(db, user_id)
+    return {"allowed": allowed}
 
 
 def list_completed_document_ids_all_segments_checked(
