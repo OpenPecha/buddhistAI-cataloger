@@ -41,6 +41,7 @@ function UsersTab({
               <option value="">All Roles</option>
               <option value="annotator">Annotator</option>
               <option value="reviewer">Reviewer</option>
+              <option value="admin">Admin</option>
             </select>
           </div>
         </div>
