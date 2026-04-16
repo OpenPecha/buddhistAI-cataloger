@@ -307,6 +307,12 @@ function OverviewTab({
   annotators = [],
   dashboardUserFilter,
 }: OverviewTabProps) {
+  const showReviewerWorkDoneCard = useMemo(() => {
+    if (!dashboardUserFilter || !stats) return false
+    const v = stats.segments_recorded_as_reviewer
+    return typeof v === 'number'
+  }, [dashboardUserFilter, stats])
+
   const overviewBarData = useMemo(() => {
     if (!stats) return null
     const skippedDocs = stats.document_status_counts.skipped ?? 0
@@ -770,6 +776,18 @@ function OverviewTab({
               footer={reviewerEditsCardFooter}
             />
           </MetricShell>
+          {showReviewerWorkDoneCard ? (
+            <MetricShell accentClass="from-orange-800 to-orange-500">
+              <StatsCard
+                className={statsCardInner}
+                icon={<UserRoundCheck className="h-6 w-6 text-fuchsia-700" strokeWidth={1.75} />}
+                title="Review Count"
+                value={stats.segments_recorded_as_reviewer ?? 0}
+                colorClass="text-orange-950"
+               
+              />
+            </MetricShell>
+          ) : null}
         </div>
       </motion.section>
 

@@ -647,6 +647,12 @@ export interface DashboardStats {
   segments_with_comments: number;
   /** Approved segments where the reviewer changed title or author after annotator check */
   segments_reviewer_corrected_title_or_author: number;
+  /**
+   * Present (number, possibly 0) only when user_id filter is set and that user is reviewer or
+   * admin: checked/approved segments where this user is recorded as reviewer (`reviewed_by_id`),
+   * across all annotators' documents in the date range. Omitted or null otherwise.
+   */
+  segments_recorded_as_reviewer?: number | null;
   annotation_coverage_pct: number;
   /** Per-annotator breakdown (same date range as dashboard; not scoped by user filter). */
   annotator_performance?: AnnotatorPerformanceRow[];

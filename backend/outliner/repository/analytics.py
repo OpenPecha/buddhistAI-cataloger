@@ -5,8 +5,12 @@ from typing import Any, Dict, List, Optional
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import Session
 
+from user.models.user import User
+
 from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentRejection
 from outliner.repository.segment_rejection import latest_rejection_row_per_segment_subquery
+
+_REVIEWER_WORK_STATS_ROLES = frozenset({"reviewer", "admin"})
 
 
 def get_annotator_performance_breakdown(
@@ -199,15 +203,17 @@ def get_dashboard_stats(
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
 ) -> Dict[str, Any]:
-    doc_query = db.query(OutlinerDocument.id).filter(
+    doc_query_base = db.query(OutlinerDocument.id).filter(
         (OutlinerDocument.status != "deleted") | (OutlinerDocument.status.is_(None))
     )
+    if start_date:
+        doc_query_base = doc_query_base.filter(OutlinerDocument.created_at >= start_date)
+    if end_date:
+        doc_query_base = doc_query_base.filter(OutlinerDocument.created_at <= end_date)
+
+    doc_query = doc_query_base
     if user_id:
         doc_query = doc_query.filter(OutlinerDocument.user_id == user_id)
-    if start_date:
-        doc_query = doc_query.filter(OutlinerDocument.created_at >= start_date)
-    if end_date:
-        doc_query = doc_query.filter(OutlinerDocument.created_at <= end_date)
 
     doc_ids_subq = doc_query.subquery()
 
@@ -296,10 +302,11 @@ def get_dashboard_stats(
         OutlinerSegment.status == "checked",
         OutlinerSegment.status == "approved",
     )
+    segment_reviewed = OutlinerSegment.status == "approved"
     segments_self_reviewed_total = (
         seg_base.join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
         .filter(
-            segment_reviewed_or_checked,
+            segment_reviewed,
             OutlinerSegment.reviewed_by_id.isnot(None),
             OutlinerDocument.user_id == OutlinerSegment.reviewed_by_id,
         )
@@ -400,6 +407,27 @@ def get_dashboard_stats(
         or 0
     )
 
+    # Full reviewer workload: only for dashboard user_id whose account role is reviewer or admin.
+    segments_recorded_as_reviewer: Optional[int] = None
+    if user_id:
+        filter_user_role = db.query(User.role).filter(User.id == user_id).scalar()
+        if (
+            filter_user_role
+            and str(filter_user_role).lower() in _REVIEWER_WORK_STATS_ROLES
+        ):
+            doc_ids_all_subq = doc_query_base.subquery()
+            segments_recorded_as_reviewer = (
+                db.query(func.count(OutlinerSegment.id))
+                .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
+                .filter(
+                    OutlinerDocument.id.in_(db.query(doc_ids_all_subq.c.id)),
+                    OutlinerSegment.reviewed_by_id == user_id,
+                    segment_reviewed_or_checked,
+                )
+                .scalar()
+                or 0
+            )
+
     annotation_coverage_pct = (
         round((segments_with_title_or_author / total_segments) * 100, 1)
         if total_segments
@@ -429,6 +457,7 @@ def get_dashboard_stats(
         "segments_with_parent": segments_with_parent,
         "segments_with_comments": segments_with_comments,
         "segments_reviewer_corrected_title_or_author": segments_reviewer_corrected_title_or_author,
+        "segments_recorded_as_reviewer": segments_recorded_as_reviewer,
         "annotation_coverage_pct": annotation_coverage_pct,
         "annotator_performance": annotator_performance,
     }
