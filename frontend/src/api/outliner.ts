@@ -509,6 +509,12 @@ export const assignVolume = async (): Promise<OutlinerDocument> => {
   return handleApiResponse(response);
 };
 
+/** Server-side rule: every non-deleted owned document is skipped, or all its segments are checked or approved. */
+export const getAssignVolumeEligibility = async (): Promise<{ may_assign: boolean }> => {
+  const response = await outlinerFetch(`${OUTLINER_BASE_URL}/assign_volume/eligibility`);
+  return handleApiResponse(response);
+};
+
 
 export const updateDocumentStatus = async (
   documentId: string,
@@ -636,7 +642,6 @@ export interface DashboardStats {
   /** Unresolved rejected segments: status rejected and latest rejection row is not resolved */
   rejection_count: number;
   /** Checked/approved segments that record who reviewed (reviewed_by_id set) */
-  segments_self_reviewed_total: number;
   document_status_counts: Record<string, number>;
   document_category_counts: Record<string, number>;
   segment_status_counts: Record<string, number>;

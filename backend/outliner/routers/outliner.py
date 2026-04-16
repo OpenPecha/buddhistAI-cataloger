@@ -6,6 +6,7 @@ from outliner.deps import (
     apply_authenticated_segment_reviewer,
     apply_authenticated_segment_reviewer_bulk,
     require_outliner_access,
+    user_may_record_segment_reviewed_by,
 )
 from pydantic import BaseModel, ConfigDict, Field, model_serializer
 from typing import Any, Dict, List, Optional, Tuple
@@ -939,11 +940,17 @@ async def update_segment_status(
     current_user: User = Depends(require_outliner_access),
 ):
     """Update segment status (checked/unchecked)"""
+    st = (status_update.status or "").strip().lower()
+    reviewer_id = (
+        current_user.id
+        if user_may_record_segment_reviewed_by(current_user) and st in ("checked", "approved")
+        else None
+    )
     return update_segment_status_ctrl(
         db=db,
         segment_id=segment_id,
         status=status_update.status,
-        reviewer_id=current_user.id,
+        reviewer_id=reviewer_id,
     )
 
 
@@ -1119,10 +1126,7 @@ class DashboardStatsResponse(BaseModel):
         description="Same as annotator chart: rejected segments whose latest rejection row is not resolved",
     )
  
-    segments_self_reviewed_total: int = Field(
-        ...,
-        description="Subset where document owner equals reviewed_by_id",
-    )
+  
     document_status_counts: Dict[str, int]
     document_category_counts: Dict[str, int]
     segment_status_counts: Dict[str, int]

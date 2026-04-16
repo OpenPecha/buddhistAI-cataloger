@@ -2,7 +2,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { listOutlinerDocuments, assignVolume, type OutlinerDocumentListItem } from '@/api/outliner';
+import {
+  listOutlinerDocuments,
+  assignVolume,
+  getAssignVolumeEligibility,
+  type OutlinerDocumentListItem,
+} from '@/api/outliner';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -71,6 +76,13 @@ const OutlinerUpload: React.FC = () => {
     staleTime: 0,
   });
 
+  const { data: assignEligibility } = useQuery<{ may_assign: boolean }>({
+    queryKey: ['outliner-assign-volume-eligibility', userId],
+    queryFn: () => getAssignVolumeEligibility(),
+    enabled: !!userId,
+    staleTime: 0,
+  });
+
   const canGoPrev = page > 1;
   const canGoNext = documents.length === LIMIT;
 
@@ -86,6 +98,7 @@ const OutlinerUpload: React.FC = () => {
     mutationFn: () => assignVolume(),
     onSuccess: (document) => {
       queryClient.invalidateQueries({ queryKey: ['outliner-documents', userId] });
+      queryClient.invalidateQueries({ queryKey: ['outliner-assign-volume-eligibility', userId] });
       toast.success(`Work assigned successfully! Document: ${document.filename || document.id}`);
       // Navigate to the assigned document
       navigate(`/outliner/${document.id}`);
@@ -107,12 +120,14 @@ const OutlinerUpload: React.FC = () => {
     navigate(`/outliner/${documentId}`);
   };
 
-  const rejected_document=documents.find(doc=>doc.rejected_segment?.message && doc.checked_segments!==doc.total_segments);
-  const assingDisabled= 
-  assignWorkMutation.isPending ||
-  !userId ||
-  !documents.every(doc=>doc.status==='skipped' || doc.status==='completed' ||doc.status==='approved')||
-  !!rejected_document
+  const rejected_document = documents.find(
+    (doc) => doc.rejected_segment?.message && doc.checked_segments !== doc.total_segments
+  );
+  const assignDisabled =
+    assignWorkMutation.isPending ||
+    !userId ||
+    assignEligibility?.may_assign !== true ||
+    !!rejected_document;
 
   const rejected_url = "/outliner/"+rejected_document?.rejected_segment?.document_id+"?segmentId="+rejected_document?.rejected_segment?.segment_id;
    return (
@@ -138,7 +153,7 @@ const OutlinerUpload: React.FC = () => {
        
                 <Button 
               onClick={assignWork}
-              disabled={assingDisabled}
+              disabled={assignDisabled}
             >
               {assignWorkMutation.isPending ? 'Assigning...' : 'Assign me a work'}
             </Button>

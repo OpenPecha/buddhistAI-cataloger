@@ -66,10 +66,16 @@ def require_outliner_access(
     return user
 
 
+def user_may_record_segment_reviewed_by(user: User) -> bool:
+    """Only reviewer/admin attribution updates reviewed_by_id on segments."""
+    role = (user.role or "user").strip().lower()
+    return role in ("reviewer", "admin")
+
+
 def apply_authenticated_segment_reviewer(patch: dict, user: User) -> None:
-    """Ignore client-supplied reviewer_id; set it from the token when status is reviewer-tracked."""
+    """Strip client reviewer_id; set from token only for reviewer/admin when status is checked/approved."""
     patch.pop("reviewer_id", None)
-    if patch.get("status") in ("checked", "approved"):
+    if patch.get("status") in ("checked", "approved") and user_may_record_segment_reviewed_by(user):
         patch["reviewer_id"] = user.id
 
 

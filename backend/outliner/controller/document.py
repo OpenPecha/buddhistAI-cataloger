@@ -317,6 +317,16 @@ def reset_segments(db: Session, document_id: str) -> None:
     if not outliner_repo.reset_segments(db, document_id):
         raise HTTPException(status_code=404, detail="Document not found")
 
+def get_assign_volume_eligibility(db: Session, user_id: str) -> Dict[str, bool]:
+    """
+    Whether the current user may request a new volume assignment: every non-deleted
+    document they own is either skipped, or has segments and every segment is
+    checked or approved.
+    """
+    blocking = outliner_repo.user_has_blocking_document_for_assign_volume(db, user_id)
+    return {"may_assign": not blocking}
+
+
 def list_completed_document_ids_all_segments_checked(
     db: Session,
     only_document_ids: Optional[List[str]] = None,

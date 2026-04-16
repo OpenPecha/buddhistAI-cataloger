@@ -506,23 +506,6 @@ function OverviewTab({
     }
   }, [stats, annotators])
 
-  const topSelfReviewers = useMemo(() => {
-    if (!stats) return []
-    const perf = stats.annotator_performance ?? []
-    let rows = perf.filter((r) => (r.segments_self_reviewed ?? 0) > 0)
-    if (dashboardUserFilter) {
-      rows = rows.filter((r) => r.user_id === dashboardUserFilter)
-    }
-    rows = [...rows].sort(
-      (a, b) => (b.segments_self_reviewed ?? 0) - (a.segments_self_reviewed ?? 0),
-    )
-    return rows.slice(0, 3).map((r) => ({
-      userId: r.user_id,
-      name: annotatorDisplayName(r.user_id, annotators),
-      count: r.segments_self_reviewed ?? 0,
-    }))
-  }, [stats, annotators, dashboardUserFilter])
-
   const topReviewerTitleAuthorEdits = useMemo(() => {
     if (!stats) return []
     const perf = stats.annotator_performance ?? []
@@ -577,32 +560,7 @@ function OverviewTab({
 
   const statsCardInner = 'border-0 bg-transparent shadow-none hover:shadow-none'
 
-  let selfReviewCardFooter: ReactNode = null
-  if (topSelfReviewers.length > 0) {
-    selfReviewCardFooter = (
-      <div className="space-y-1.5 border-t border-fuchsia-200/80 pt-3 text-xs text-muted-foreground">
-        <p className="font-medium text-foreground/80">
-          {dashboardUserFilter ? 'Self-review count' : 'Top 3 reviewers by self-review count'}
-        </p>
-        {topSelfReviewers.map((row) => (
-          <div key={row.userId ?? 'none'} className="flex justify-between gap-2">
-            <span className="min-w-0 truncate" title={row.name}>
-              {row.name}
-            </span>
-            <span className="shrink-0 font-semibold tabular-nums text-foreground">
-              {row.count.toLocaleString()}
-            </span>
-          </div>
-        ))}
-      </div>
-    )
-  } else if (stats.segments_self_reviewed_total > 0) {
-    selfReviewCardFooter = (
-      <div className="border-t border-fuchsia-200/80 pt-3 text-xs text-muted-foreground">
-        Breakdown unavailable for this filter.
-      </div>
-    )
-  }
+
 
   let reviewerEditsCardFooter: ReactNode = null
   if (topReviewerTitleAuthorEdits.length > 0) {
@@ -755,16 +713,7 @@ function OverviewTab({
           </MetricShell>
          
          
-          <MetricShell accentClass="from-fuchsia-700 to-pink-500">
-            <StatsCard
-              className={statsCardInner}
-              icon={<UserRoundCheck className="h-6 w-6 text-fuchsia-700" strokeWidth={1.75} />}
-              title="Self-reviewed segments"
-              value={stats.segments_self_reviewed_total}
-              colorClass="text-fuchsia-900"
-              footer={selfReviewCardFooter}
-            />
-          </MetricShell>
+     
         
           <MetricShell accentClass="from-orange-800 to-orange-500">
             <StatsCard
@@ -781,7 +730,7 @@ function OverviewTab({
               <StatsCard
                 className={statsCardInner}
                 icon={<UserRoundCheck className="h-6 w-6 text-fuchsia-700" strokeWidth={1.75} />}
-                title="Review Count"
+                title="Reviewed segment Count"
                 value={stats.segments_recorded_as_reviewer ?? 0}
                 colorClass="text-orange-950"
                

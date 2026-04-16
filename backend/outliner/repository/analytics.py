@@ -303,17 +303,7 @@ def get_dashboard_stats(
         OutlinerSegment.status == "approved",
     )
     segment_reviewed = OutlinerSegment.status == "approved"
-    segments_self_reviewed_total = (
-        seg_base.join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
-        .filter(
-            segment_reviewed,
-            OutlinerSegment.reviewed_by_id.isnot(None),
-            OutlinerDocument.user_id == OutlinerSegment.reviewed_by_id,
-        )
-        .with_entities(func.count(OutlinerSegment.id))
-        .scalar()
-        or 0
-    )
+  
 
     doc_id_filter = OutlinerDocument.id.in_(db.query(doc_ids_subq.c.id))
 
@@ -415,18 +405,27 @@ def get_dashboard_stats(
             filter_user_role
             and str(filter_user_role).lower() in _REVIEWER_WORK_STATS_ROLES
         ):
-            doc_ids_all_subq = doc_query_base.subquery()
-            segments_recorded_as_reviewer = (
+            # Count segments this user reviewed across all documents (not scoped to
+            # OutlinerDocument.user_id). Still respect deleted flag and dashboard date range.
+            reviewer_seg_q = (
                 db.query(func.count(OutlinerSegment.id))
                 .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
                 .filter(
-                    OutlinerDocument.id.in_(db.query(doc_ids_all_subq.c.id)),
+                    (OutlinerDocument.status != "deleted")
+                    | (OutlinerDocument.status.is_(None)),
                     OutlinerSegment.reviewed_by_id == user_id,
                     segment_reviewed_or_checked,
                 )
-                .scalar()
-                or 0
             )
+            if start_date:
+                reviewer_seg_q = reviewer_seg_q.filter(
+                    OutlinerDocument.created_at >= start_date
+                )
+            if end_date:
+                reviewer_seg_q = reviewer_seg_q.filter(
+                    OutlinerDocument.created_at <= end_date
+                )
+            segments_recorded_as_reviewer = reviewer_seg_q.scalar() or 0
 
     annotation_coverage_pct = (
         round((segments_with_title_or_author / total_segments) * 100, 1)
@@ -448,7 +447,6 @@ def get_dashboard_stats(
         "unchecked_segments_with_title_or_author": unchecked_segments_with_title_or_author,
         "annotating_segments": annotating_segments,
         "rejection_count": rejection_count,
-        "segments_self_reviewed_total": segments_self_reviewed_total,
         "document_status_counts": document_status_counts,
         "document_category_counts": document_category_counts,
         "segment_status_counts": segment_status_counts,

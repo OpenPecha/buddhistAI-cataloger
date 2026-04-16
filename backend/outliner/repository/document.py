@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import and_, exists, func, or_
+from sqlalchemy import and_, exists, func, not_, or_
 from sqlalchemy.orm import Session
 
 from user.models.user import User
@@ -266,6 +266,44 @@ def list_completed_document_ids_all_segments_checked(
         q = q.filter(OutlinerDocument.id.in_(only_document_ids))
     rows = q.all()
     return [r[0] for r in rows]
+
+
+def user_has_blocking_document_for_assign_volume(db: Session, user_id: str) -> bool:
+    """
+    True when the user owns at least one non-deleted document that is not in a
+    assign-clear state: either ``status == skipped``, or the document has at least
+    one segment and every segment is ``checked`` or ``approved``.
+    """
+    not_deleted = or_(
+        OutlinerDocument.status.is_(None),
+        OutlinerDocument.status != "deleted",
+    )
+    skipped = OutlinerDocument.status == "skipped"
+    has_any_segment = exists().where(OutlinerSegment.document_id == OutlinerDocument.id)
+    has_non_terminal_segment = exists().where(
+        OutlinerSegment.document_id == OutlinerDocument.id,
+        or_(
+            OutlinerSegment.status.is_(None),
+            and_(
+                OutlinerSegment.status != "checked",
+                OutlinerSegment.status != "approved",
+            ),
+        ),
+    )
+    document_is_clear = or_(
+        skipped,
+        and_(has_any_segment, not_(has_non_terminal_segment)),
+    )
+    row = (
+        db.query(OutlinerDocument.id)
+        .filter(
+            OutlinerDocument.user_id == user_id,
+            not_deleted,
+            not_(document_is_clear),
+        )
+        .first()
+    )
+    return row is not None
 
 
 def map_document_id_to_filename(

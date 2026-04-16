@@ -24,6 +24,7 @@ from outliner.controller.outliner import (
 from outliner.deps import (
     apply_authenticated_segment_reviewer,
     apply_authenticated_segment_reviewer_bulk,
+    user_may_record_segment_reviewed_by,
     require_outliner_access,
 )
 from user.models.user import User
@@ -215,11 +216,17 @@ async def update_segment_status(
     current_user: User = Depends(require_outliner_access),
 ):
     """Update segment status (checked/unchecked)"""
+    st = (status_update.status or "").strip().lower()
+    reviewer_id = (
+        current_user.id
+        if user_may_record_segment_reviewed_by(current_user) and st in ("checked", "approved")
+        else None
+    )
     return update_segment_status_ctrl(
         db=db,
         segment_id=segment_id,
         status=status_update.status,
-        reviewer_id=current_user.id,
+        reviewer_id=reviewer_id,
     )
 
 
