@@ -305,18 +305,28 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
 
   const applyReviewerTitle = useCallback(async () => {
     if (!activeSegment?.text || !activeSegmentId) return;
-    const trimmed = activeSegment.reviewer_title?.trim();
-    if (!trimmed) return;
+    const raw = activeSegment.reviewer_title;
+    if (raw === null || raw === undefined) return;
+    const trimmed = raw.trim();
+    const isExplicitEmpty = trimmed === '';
+    if (!trimmed && !isExplicitEmpty) return;
     setReviewerApplyField('title');
     try {
       const segmentText = activeSegment.text;
       const segStart = activeSegment.span_start ?? 0;
-      const span = findPhraseDocSpan(segmentText, segStart, trimmed);
+      const titleValue = trimmed;
+      const span = isExplicitEmpty
+        ? null
+        : findPhraseDocSpan(segmentText, segStart, trimmed);
       const payload: SegmentUpdateRequest = {
-        title: trimmed,
+        title: titleValue,
         reviewer_title: null,
       };
-      if (span) {
+      if (isExplicitEmpty) {
+        payload.title_span_start = null;
+        payload.title_span_end = null;
+        payload.updated_title = null;
+      } else if (span) {
         payload.title_span_start = span.start;
         payload.title_span_end = span.end;
         const sourceSlice = fullDocumentContent.slice(span.start, span.end);
@@ -328,7 +338,7 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
         payload.updated_title = !inSegment ? trimmed : null;
       }
       await updateSegmentMutation(activeSegmentId, payload);
-      handleTitleUpdate(trimmed);
+      handleTitleUpdate(titleValue);
       titleSourceSpanRef.current = span ?? null;
       aiBaselineTitleRef.current = null;
       toast.success(t('outliner.reviewerSuggestion.appliedTitle'));
@@ -349,18 +359,28 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
 
   const applyReviewerAuthor = useCallback(async () => {
     if (!activeSegment?.text || !activeSegmentId) return;
-    const trimmed = activeSegment.reviewer_author?.trim();
-    if (!trimmed) return;
+    const raw = activeSegment.reviewer_author;
+    if (raw === null || raw === undefined) return;
+    const trimmed = raw.trim();
+    const isExplicitEmpty = trimmed === '';
+    if (!trimmed && !isExplicitEmpty) return;
     setReviewerApplyField('author');
     try {
       const segmentText = activeSegment.text;
       const segStart = activeSegment.span_start ?? 0;
-      const span = findPhraseDocSpan(segmentText, segStart, trimmed);
+      const authorValue = trimmed;
+      const span = isExplicitEmpty
+        ? null
+        : findPhraseDocSpan(segmentText, segStart, trimmed);
       const payload: SegmentUpdateRequest = {
-        author: trimmed,
+        author: authorValue,
         reviewer_author: null,
       };
-      if (span) {
+      if (isExplicitEmpty) {
+        payload.author_span_start = null;
+        payload.author_span_end = null;
+        payload.updated_author = null;
+      } else if (span) {
         payload.author_span_start = span.start;
         payload.author_span_end = span.end;
         const sourceSlice = fullDocumentContent.slice(span.start, span.end);
@@ -372,7 +392,7 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
         payload.updated_author = !inSegment ? trimmed : null;
       }
       await updateSegmentMutation(activeSegmentId, payload);
-      handleAuthorUpdate(trimmed);
+      handleAuthorUpdate(authorValue);
       authorSourceSpanRef.current = span ?? null;
       aiBaselineAuthorRef.current = null;
       toast.success(t('outliner.reviewerSuggestion.appliedAuthor'));

@@ -612,6 +612,7 @@
     "reviewerSuggestion": {
       "labelTitle": "审核员建议（标题）",
       "labelAuthor": "审核员建议（作者）",
+      "emptyDisplay": "--empty--",
       "appliedTitle": "已采用审核员建议的标题",
       "appliedAuthor": "已采用审核员建议的作者"
     },

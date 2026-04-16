@@ -89,9 +89,15 @@ export const AuthorField = ({ disabled: disabledFromParent }: AuthorFieldProps =
     authorSuggestion.length > 0 &&
     authorSuggestion !== authorSearch.trim();
 
-  const reviewerAuthor = (reviewerSuggestionControls.reviewerAuthor ?? '').trim();
+  const rawReviewerAuthor = reviewerSuggestionControls.reviewerAuthor;
+  const hasReviewerAuthorSuggestion =
+    rawReviewerAuthor !== null && rawReviewerAuthor !== undefined;
+  const reviewerAuthorTrimmed = (rawReviewerAuthor ?? '').trim();
   const showReviewerAuthorSuggestion =
-    reviewerAuthor.length > 0 && reviewerAuthor !== authorSearch.trim();
+    hasReviewerAuthorSuggestion &&
+    (reviewerAuthorTrimmed.length > 0
+      ? reviewerAuthorTrimmed !== authorSearch.trim()
+      : true);
 
   return (
     <div>
@@ -136,7 +142,7 @@ export const AuthorField = ({ disabled: disabledFromParent }: AuthorFieldProps =
             className="w-full text-left rounded-lg border border-sky-200 bg-sky-50/90 px-2.5 py-1.5 text-sm font-monlam text-sky-950 shadow-sm transition hover:bg-sky-100 hover:border-sky-300 disabled:opacity-60"
             onClick={() => void reviewerSuggestionControls.onApplyReviewerAuthor()}
           >
-            {reviewerAuthor}
+            {reviewerAuthorTrimmed || t('outliner.reviewerSuggestion.emptyDisplay')}
           </button>
         </div>
       ) : null}

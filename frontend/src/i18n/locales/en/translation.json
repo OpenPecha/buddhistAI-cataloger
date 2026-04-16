@@ -612,6 +612,7 @@
     "reviewerSuggestion": {
       "labelTitle": "Reviewer suggestion (title)",
       "labelAuthor": "Reviewer suggestion (author)",
+      "emptyDisplay": "--empty--",
       "appliedTitle": "Title updated from reviewer suggestion",
       "appliedAuthor": "Author updated from reviewer suggestion"
     },

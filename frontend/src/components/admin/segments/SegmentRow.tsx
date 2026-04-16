@@ -15,7 +15,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUser } from '@/hooks/useUser';
 import { updateSegment, rejectSegment } from '@/api/outliner';
 import { toast } from 'sonner';
-import {FileText, Loader2, User } from 'lucide-react';
+import {FileText, Loader2, User, X } from 'lucide-react';
 import type { Segment } from '../shared/types';
 import type { TextSegment } from '@/components/outliner/types';
 import type { FormDataType, Title, Author } from '@/components/outliner/AnnotationSidebar';
@@ -30,6 +30,19 @@ interface SegmentRowProps {
   readonly documentFilename?: string | null;
   /** 1-based index in the visible list (matches annotator workspace segment number). */
   readonly listIndex?: number;
+}
+
+/** null = no reviewer suggestion in DB; '' = explicit empty; else trimmed text. */
+function storedReviewerNorm(v: string | null | undefined): string | null {
+  if (v === null || v === undefined) return null;
+  const t = v.trim();
+  return t === '' ? '' : t;
+}
+
+/** Normalized value to save from the input field (always a string: '' or trimmed text). */
+function committedReviewerInput(raw: string): string {
+  const t = raw.trim();
+  return t === '' ? '' : t;
 }
 
 function SegmentRow({
@@ -113,23 +126,21 @@ function SegmentRow({
   const [titleEditOpen, setTitleEditOpen] = useState(false);
   const [authorEditOpen, setAuthorEditOpen] = useState(false);
   const [titleInput, setTitleInput] = useState(() => {
-    if (segment.reviewer_title !== undefined && segment.reviewer_title !== null && segment.reviewer_title !== '') {
-      return segment.reviewer_title;
-    } else if (segment.title !== undefined && segment.title !== null && segment.title !== '') {
+    const rt = segment.reviewer_title;
+    if (rt !== null && rt !== undefined) return rt;
+    if (segment.title !== undefined && segment.title !== null && segment.title !== '') {
       return segment.title;
-    } else {
-      return '';
     }
+    return '';
   });
-  
+
   const [authorInput, setAuthorInput] = useState(() => {
-    if (segment.reviewer_author !== undefined && segment.reviewer_author !== null && segment.reviewer_author !== '') {
-      return segment.reviewer_author;
-    } else if (segment.author !== undefined && segment.author !== null && segment.author !== '') {
+    const ra = segment.reviewer_author;
+    if (ra !== null && ra !== undefined) return ra;
+    if (segment.author !== undefined && segment.author !== null && segment.author !== '') {
       return segment.author;
-    } else {
-      return '';
     }
+    return '';
   });
 
 
@@ -146,30 +157,48 @@ function SegmentRow({
   });
 
   const commitTitle = useCallback(() => {
-    const next = titleInput.trim();
-    const prev = (segment.reviewer_title || '').trim();
+    const next = committedReviewerInput(titleInput);
+    const prev = storedReviewerNorm(segment.reviewer_title);
     setTitleEditOpen(false);
     if (next === prev) return;
-    patchTitleOrAuthor({ reviewer_title: next || null });
+    patchTitleOrAuthor({ reviewer_title: next });
   }, [titleInput, segment.reviewer_title, patchTitleOrAuthor]);
 
   const commitAuthor = useCallback(() => {
-    const next = authorInput.trim();
-    const prev = (segment.reviewer_author || '').trim();
+    const next = committedReviewerInput(authorInput);
+    const prev = storedReviewerNorm(segment.reviewer_author);
     setAuthorEditOpen(false);
     if (next === prev) return;
-    patchTitleOrAuthor({ reviewer_author: next || null });
+    patchTitleOrAuthor({ reviewer_author: next });
   }, [authorInput, segment.reviewer_author, patchTitleOrAuthor]);
 
+  const clearReviewerSuggestions = useCallback((segmentId: string) => {
+    patchTitleOrAuthor({ reviewer_title: null, reviewer_author: null });
+  }, [patchTitleOrAuthor]);
+
   const cancelTitleEdit = useCallback(() => {
-    setTitleInput(segment.reviewer_title || '');
+    const rt = segment.reviewer_title;
+    setTitleInput(rt !== null && rt !== undefined ? rt : (segment.title ?? ''));
     setTitleEditOpen(false);
-  }, [segment.reviewer_title]);
+  }, [segment.reviewer_title, segment.title]);
 
   const cancelAuthorEdit = useCallback(() => {
-    setAuthorInput(segment.reviewer_author || '');
+    const ra = segment.reviewer_author;
+    setAuthorInput(ra !== null && ra !== undefined ? ra : (segment.author ?? ''));
     setAuthorEditOpen(false);
-  }, [segment.reviewer_author]);
+  }, [segment.reviewer_author, segment.author]);
+
+  useEffect(() => {
+    if (titleEditOpen) return;
+    const rt = segment.reviewer_title;
+    setTitleInput(rt !== null && rt !== undefined ? rt : (segment.title ?? ''));
+  }, [segment.reviewer_title, segment.title, segment.id, titleEditOpen]);
+
+  useEffect(() => {
+    if (authorEditOpen) return;
+    const ra = segment.reviewer_author;
+    setAuthorInput(ra !== null && ra !== undefined ? ra : (segment.author ?? ''));
+  }, [segment.reviewer_author, segment.author, segment.id, authorEditOpen]);
 
   // --- BDRC field state ---
   const [formData, setFormData] = useState<FormDataType>({
@@ -347,6 +376,9 @@ function SegmentRow({
                 Saving...
               </div>
             )}
+            {
+            segment.label==='TEXT' && (
+              <>
             <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-gray-500 flex gap-1 items-center">
                 <FileText className="w-3.5 h-3.5 shrink-0" aria-hidden />
@@ -377,7 +409,7 @@ function SegmentRow({
                     onClick={() => {
                       setAuthorEditOpen(false);
                       const rt = segment.reviewer_title;
-                      setTitleInput(rt?.trim() ? rt : (segment.title ?? ''));
+                      setTitleInput(rt !== null && rt !== undefined ? rt : (segment.title ?? ''));
                       setTitleEditOpen(true);
                     }}
                     disabled={titleAuthorSaving}
@@ -386,9 +418,10 @@ function SegmentRow({
                     <span className="block">
                       {segment.title?.trim() ? segment.title : '— No annotator title —'}
                     </span>
-                    {segment.reviewer_title?.trim() ? (
+                    {segment.reviewer_title != null ? (
                       <span className="block text-xs font-normal text-sky-800 mt-0.5">
-                        Suggestion: {segment.reviewer_title}
+                        Suggestion:{' '}
+                        {segment.reviewer_title.trim() ? segment.reviewer_title : '— Empty —'}
                       </span>
                     ) : (
                       <span className="block text-xs font-normal text-gray-500 mt-0.5">
@@ -429,7 +462,7 @@ function SegmentRow({
                     onClick={() => {
                       setTitleEditOpen(false);
                       const ra = segment.reviewer_author;
-                      setAuthorInput(ra?.trim() ? ra : (segment.author ?? ''));
+                      setAuthorInput(ra !== null && ra !== undefined ? ra : (segment.author ?? ''));
                       setAuthorEditOpen(true);
                     }}
                     disabled={titleAuthorSaving}
@@ -438,9 +471,10 @@ function SegmentRow({
                     <span className="block">
                       {segment.author?.trim() ? segment.author : '— No annotator author —'}
                     </span>
-                    {segment.reviewer_author?.trim() ? (
+                    {segment.reviewer_author != null ? (
                       <span className="block text-xs font-normal text-sky-800 mt-0.5">
-                        Suggestion: {segment.reviewer_author}
+                        Suggestion:{' '}
+                        {segment.reviewer_author.trim() ? segment.reviewer_author : '— Empty —'}
                       </span>
                     ) : (
                       <span className="block text-xs font-normal text-gray-500 mt-0.5">
@@ -451,6 +485,10 @@ function SegmentRow({
                 )}
               </span>
             </div>
+            </>)
+            }
+
+            
           </div>
 
           <div className="min-w-0 pt-1 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
@@ -465,7 +503,7 @@ function SegmentRow({
             /> */}
           </div>
 
-          <div className="flex flex-wrap gap-2 pt-1" onClick={(e) => e.stopPropagation()}>
+          <div className="flex flex-wrap gap-2 pt-1 justify-between" onClick={(e) => e.stopPropagation()}>
             {segment.status === 'checked' && showApproveButton && (
               <>
                 <Button size="xs" onClick={handleSave} disabled={isSaving} variant="outline">
@@ -494,6 +532,21 @@ function SegmentRow({
               <Button size="sm" onClick={handleUndoReject} disabled={isSaving} variant="outline">
                 Undo reject 
               </Button>
+            )}
+            {(segment.reviewer_title != null || segment.reviewer_author != null) && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  disabled={titleAuthorSaving}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    clearReviewerSuggestions(segment.id);
+                  }}
+                  className='w-min'
+                >
+                <X className="text-red-500 w-3.5 h-3.5 shrink-0" aria-hidden />Clear suggestions
+                </Button>
             )}
           </div>
         </div>

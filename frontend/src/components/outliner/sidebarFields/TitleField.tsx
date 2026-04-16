@@ -57,9 +57,15 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(function Ti
     titleSuggestion.length > 0 &&
     titleSuggestion !== titleSearch.trim();
 
-  const reviewerTitle = (reviewerSuggestionControls.reviewerTitle ?? '').trim();
+  const rawReviewerTitle = reviewerSuggestionControls.reviewerTitle;
+  const hasReviewerTitleSuggestion =
+    rawReviewerTitle !== null && rawReviewerTitle !== undefined;
+  const reviewerTitleTrimmed = (rawReviewerTitle ?? '').trim();
   const showReviewerTitleSuggestion =
-    reviewerTitle.length > 0 && reviewerTitle !== titleSearch.trim();
+    hasReviewerTitleSuggestion &&
+    (reviewerTitleTrimmed.length > 0
+      ? reviewerTitleTrimmed !== titleSearch.trim()
+      : true);
 
   return (
     <div>
@@ -113,7 +119,7 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(function Ti
             className="w-full text-left rounded-lg border border-sky-200 bg-sky-50/90 px-2.5 py-1.5 text-sm font-monlam text-sky-950 shadow-sm transition hover:bg-sky-100 hover:border-sky-300 disabled:opacity-60"
             onClick={() => void reviewerSuggestionControls.onApplyReviewerTitle()}
           >
-            {reviewerTitle}
+            {reviewerTitleTrimmed || t('outliner.reviewerSuggestion.emptyDisplay')}
           </button>
         </div>
       ) : null}
