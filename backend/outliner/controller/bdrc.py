@@ -266,4 +266,5 @@ async def approve_document(db: Session, document_id: str) -> OutlinerDocument:
         document, "reviewed", modified_by=modified_by
     )
     update_document_status(db, document_id, "approved")
+    outliner_repo.increment_document_submit_count(db, document_id)
     return response_bdrc

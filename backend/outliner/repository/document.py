@@ -165,6 +165,17 @@ def set_document_status_and_refresh(
     db.refresh(document)
 
 
+def increment_document_submit_count(db: Session, document_id: str) -> None:
+    """Bump review submit counter when admin approves the full document (POST .../approve)."""
+    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    if not document:
+        return
+    document.submit_count = (document.submit_count or 0) + 1
+    document.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(document)
+
+
 def get_document_progress(
     db: Session, document_id: str
 ) -> Optional[Dict[str, Any]]:

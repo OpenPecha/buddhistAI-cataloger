@@ -50,5 +50,6 @@ async def ai_outline(
         created_at=document.created_at,
         updated_at=document.updated_at,
         is_supplied_title=getattr(document, "is_supplied_title", None),
+        submit_count=getattr(document, "submit_count", None),
         segments=segments_resp,
     )

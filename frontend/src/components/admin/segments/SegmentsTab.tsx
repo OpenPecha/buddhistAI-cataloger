@@ -171,6 +171,7 @@ function SegmentsTab({
               <span className="text-red-600">Rejected: <span className="font-medium">{statusCounts.rejected}</span></span>
               <span className="text-green-600">Done: <span className="font-medium">{statusCounts.checked}</span></span>
               <span className="text-amber-600">Under Process: <span className="font-medium">{statusCounts.unchecked}</span></span>
+              <span className="text-blue-600">Review submits: <span className="font-medium">{selectedDocument.submit_count ?? 0}</span></span>
             </div>
           </div>
           <div className="flex items-center justify-between gap-3">

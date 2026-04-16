@@ -197,6 +197,7 @@ class DocumentResponse(BaseModel):
     user_id: Optional[str] = None
     status: Optional[str] = None  # active, completed, deleted, approved, rejected
     is_supplied_title: Optional[bool] = None
+    submit_count: Optional[int] = None  # admin review submits (POST .../approve)
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     segments: List[SegmentResponseDocument] = []

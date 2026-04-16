@@ -16,6 +16,7 @@ from outliner.repository.document import (
     fetch_document_workspace_row,
     fetch_documents_by_ids,
     get_document_progress,
+    increment_document_submit_count,
     insert_document,
     list_completed_document_ids_all_segments_checked,
     list_documents,

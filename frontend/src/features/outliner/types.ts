@@ -89,6 +89,8 @@ export interface Document {
   rejected_segment?: RejectedSegmentListNotice | null
   progress_percentage: number
   status?: string | null
+  /** Times reviewers submitted approved work from admin (POST .../approve) */
+  submit_count?: number | null
   created_at: string
   updated_at: string
   /** Present on admin document detail responses */

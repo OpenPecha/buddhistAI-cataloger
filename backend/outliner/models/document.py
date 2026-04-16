@@ -32,6 +32,7 @@ class OutlinerDocument(Base):
     )
     status: Mapped[str | None] = mapped_column(String, default="active", nullable=True)
     ai_toc_entries: Mapped[Any | None] = mapped_column(JSON, nullable=True)
+    submit_count: Mapped[int] = mapped_column(Integer, default=0, nullable=True)
     segments: Mapped[list["OutlinerSegment"]] = relationship(
         "OutlinerSegment",
         back_populates="document",
