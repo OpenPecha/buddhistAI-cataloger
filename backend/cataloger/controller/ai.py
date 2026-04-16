@@ -11,6 +11,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from dotenv import load_dotenv
+from utils.clean_tibetan_text import normalise_tibetan_text
 from outliner.models.outliner import OutlinerDocument, OutlinerSegment
 from cataloger.prompts.ai_prompts import (
     get_title_author_prompt,
@@ -22,6 +23,59 @@ load_dotenv(override=True)
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_API_MODEL = "gemini-2.5-flash"
+
+
+def _normalise_title_author_fields(data: Any) -> Dict[str, Optional[str]]:
+    if hasattr(data, "model_dump"):
+        d = data.model_dump()
+    elif isinstance(data, dict):
+        d = data
+    else:
+        d = {
+            "title": getattr(data, "title", None),
+            "suggested_title": getattr(data, "suggested_title", None),
+            "author": getattr(data, "author", None),
+            "suggested_author": getattr(data, "suggested_author", None),
+        }
+    return {
+        "title": normalise_tibetan_text(d.get("title")),
+        "suggested_title": normalise_tibetan_text(d.get("suggested_title")),
+        "author": normalise_tibetan_text(d.get("author")),
+        "suggested_author": normalise_tibetan_text(d.get("suggested_author")),
+    }
+
+
+def _normalise_title_only_fields(data: Any) -> Dict[str, Optional[str]]:
+    if hasattr(data, "model_dump"):
+        d = data.model_dump()
+    elif isinstance(data, dict):
+        d = data
+    else:
+        d = {
+            "title": getattr(data, "title", None),
+            "suggested_title": getattr(data, "suggested_title", None),
+        }
+    return {
+        "title": normalise_tibetan_text(d.get("title")),
+        "suggested_title": normalise_tibetan_text(d.get("suggested_title")),
+    }
+
+
+def _normalise_author_only_fields(data: Any) -> Dict[str, Optional[str]]:
+    if hasattr(data, "model_dump"):
+        d = data.model_dump()
+    elif isinstance(data, dict):
+        d = data
+    else:
+        d = {
+            "author": getattr(data, "author", None),
+            "suggested_author": getattr(data, "suggested_author", None),
+        }
+    return {
+        "author": normalise_tibetan_text(d.get("author")),
+        "suggested_author": normalise_tibetan_text(d.get("suggested_author")),
+    }
+
 
 def generate_title_author(content: str, response_schema: Any) -> Dict[str, Optional[str]]:
     """
@@ -67,16 +121,11 @@ def generate_title_author(content: str, response_schema: Any) -> Dict[str, Optio
         
         # Access the parsed response directly
         if hasattr(response, 'parsed') and response.parsed:
-            return response.parsed
+            return _normalise_title_author_fields(response.parsed)
         elif hasattr(response, 'text') and response.text:
             # Fallback: parse JSON manually if parsed attribute not available
             result = json.loads(response.text.strip())
-            return {
-                "title": result.get("title"),
-                "suggested_title": result.get("suggested_title"),
-                "author": result.get("author"),
-                "suggested_author": result.get("suggested_author")
-            }
+            return _normalise_title_author_fields(result)
         else:
             raise HTTPException(
                 status_code=500,
@@ -121,13 +170,10 @@ def generate_title_from_start(content: str, response_schema: Any) -> Any:
             },
         )
         if hasattr(response, "parsed") and response.parsed:
-            return response.parsed
+            return _normalise_title_only_fields(response.parsed)
         if hasattr(response, "text") and response.text:
             result = json.loads(response.text.strip())
-            return {
-                "title": result.get("title"),
-                "suggested_title": result.get("suggested_title"),
-            }
+            return _normalise_title_only_fields(result)
         raise HTTPException(status_code=500, detail="No response received from the model")
     except HTTPException:
         raise
@@ -167,13 +213,10 @@ def generate_author_from_end(content: str, response_schema: Any) -> Any:
             },
         )
         if hasattr(response, "parsed") and response.parsed:
-            return response.parsed
+            return _normalise_author_only_fields(response.parsed)
         if hasattr(response, "text") and response.text:
             result = json.loads(response.text.strip())
-            return {
-                "author": result.get("author"),
-                "suggested_author": result.get("suggested_author"),
-            }
+            return _normalise_author_only_fields(result)
         raise HTTPException(status_code=500, detail="No response received from the model")
     except HTTPException:
         raise
