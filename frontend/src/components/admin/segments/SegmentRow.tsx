@@ -30,6 +30,11 @@ interface SegmentRowProps {
   readonly documentFilename?: string | null;
   /** 1-based index in the visible list (matches annotator workspace segment number). */
   readonly listIndex?: number;
+  /**
+   * Segment body caret for BDRC image sync (document index = span_start + offset).
+   * Pass `offset: null` when this row no longer contributes (blur, collapse, unmount).
+   */
+  readonly onSegmentBodyCaretChange?: (segmentId: string, offset: number | null) => void;
 }
 
 /** null = no reviewer suggestion in DB; '' = explicit empty; else trimmed text. */
@@ -58,6 +63,7 @@ function SegmentRow({
   onToggleExpansion,
   documentFilename,
   listIndex,
+  onSegmentBodyCaretChange,
 }: SegmentRowProps) {
   const { documentId } = useParams<{ documentId: string }>();
   const queryClient = useQueryClient();
@@ -273,6 +279,28 @@ function SegmentRow({
     [onToggleExpansion, segment.id]
   );
 
+  const reportBodyCaret = useCallback(
+    (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+      if (!onSegmentBodyCaretChange) return;
+      const el = e.currentTarget;
+      const offset = Math.min(el.selectionStart, el.selectionEnd);
+      onSegmentBodyCaretChange(segment.id, offset);
+    },
+    [onSegmentBodyCaretChange, segment.id]
+  );
+
+  useEffect(() => {
+    if (!isExpanded) {
+      onSegmentBodyCaretChange?.(segment.id, null);
+    }
+  }, [isExpanded, segment.id, onSegmentBodyCaretChange]);
+
+  useEffect(() => {
+    return () => {
+      onSegmentBodyCaretChange?.(segment.id, null);
+    };
+  }, [segment.id, onSegmentBodyCaretChange]);
+
   const segmentAsTextSegment = useMemo<TextSegment>(() => ({
     id: segment.id,
     text: segment.text,
@@ -361,9 +389,18 @@ function SegmentRow({
           ) : null}
           <div>
             {isExpanded ? (
-              <div className="text-sm text-gray-800 whitespace-pre-wrap max-h-[min(24rem,50vh)] overflow-y-auto font-monlam rounded-md border border-gray-200 bg-white/80 p-3">
-                {segment.text}
-              </div>
+              <Textarea
+                readOnly
+                value={segment.text}
+                aria-label="Segment text (read-only; use caret for volume image sync)"
+                spellCheck={false}
+                onSelect={reportBodyCaret}
+                onClick={reportBodyCaret}
+                onKeyUp={reportBodyCaret}
+                onFocus={reportBodyCaret}
+                onBlur={() => onSegmentBodyCaretChange?.(segment.id, null)}
+                className="min-h-[8rem] max-h-[min(24rem,50vh)] cursor-text resize-none text-sm text-gray-800 whitespace-pre-wrap overflow-y-auto font-monlam rounded-md border border-gray-200 bg-white/80 p-3 focus-visible:ring-2 focus-visible:ring-blue-500/20"
+              />
             ) : (
               <button
                 type="button"

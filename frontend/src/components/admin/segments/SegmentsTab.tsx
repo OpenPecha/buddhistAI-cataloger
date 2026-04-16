@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SplitPane, Pane } from 'react-split-pane';
 import { PanelRightClose, PanelRightOpen } from 'lucide-react';
@@ -28,11 +28,13 @@ function AdminDocumentSegmentRow({
   expandedSegments,
   onToggleExpansion,
   documentFilename,
+  onSegmentBodyCaretChange,
 }: RowComponentProps<{
   segments: Segment[];
   expandedSegments: Set<string>;
   onToggleExpansion: (segmentId: string) => void;
   documentFilename?: string | null;
+  onSegmentBodyCaretChange?: (segmentId: string, offset: number | null) => void;
 }>) {
   const segment = segments[index];
   if (!segment) return null;
@@ -44,6 +46,7 @@ function AdminDocumentSegmentRow({
         onToggleExpansion={onToggleExpansion}
         documentFilename={documentFilename}
         listIndex={index + 1}
+        onSegmentBodyCaretChange={onSegmentBodyCaretChange}
       />
     </div>
   );
@@ -80,6 +83,25 @@ function SegmentsTab({
     [filteredSegments]
   );
 
+  /** Caret in segment body text (document coordinates via span_start + offset), for BDRC image sync. */
+  const [segmentBodyCaret, setSegmentBodyCaret] = useState<{
+    segmentId: string;
+    offset: number;
+  } | null>(null);
+
+  const handleSegmentBodyCaretChange = useCallback(
+    (segmentId: string, offset: number | null) => {
+      setSegmentBodyCaret((prev) => {
+        if (offset === null) {
+          if (prev?.segmentId === segmentId) return null;
+          return prev;
+        }
+        return { segmentId, offset };
+      });
+    },
+    []
+  );
+
   const rowHeight = useDynamicRowHeight({
     defaultRowHeight: 220,
     key: virtualListKey,
@@ -94,15 +116,28 @@ function SegmentsTab({
     return counts;
   }, [segments]);
 
-  /** First expanded row in current table order — drives BDRC page sync when enabled on the image panel. */
+  /**
+   * Document-level index for BDRC page sync (same idea as outliner VolumeImagePanel:
+   * span_start + caret offset in segment body when the user has focus there).
+   */
   const documentCharIndexForImage = useMemo((): number | null => {
+    if (segmentBodyCaret) {
+      const s = filteredSegments.find((seg) => seg.id === segmentBodyCaret.segmentId);
+      if (
+        s &&
+        expandedSegments.has(s.id) &&
+        typeof s.span_start === 'number'
+      ) {
+        return s.span_start + Math.max(0, segmentBodyCaret.offset);
+      }
+    }
     for (const s of filteredSegments) {
       if (expandedSegments.has(s.id) && typeof s.span_start === 'number') {
         return s.span_start;
       }
     }
     return null;
-  }, [filteredSegments, expandedSegments]);
+  }, [filteredSegments, expandedSegments, segmentBodyCaret]);
 
   
 
@@ -249,6 +284,7 @@ function SegmentsTab({
                 expandedSegments,
                 onToggleExpansion,
                 documentFilename: selectedDocument.filename,
+                onSegmentBodyCaretChange: handleSegmentBodyCaretChange,
               }}
             />
           </div>
