@@ -23,6 +23,16 @@ from outliner.utils.outliner_utils import (
 )
 
 
+def _normalize_reviewer_title_value(value: Any) -> Any:
+    """Reviewer title suggestions must not be stored as empty strings (use NULL)."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        stripped = value.strip()
+        return None if stripped == "" else stripped
+    return value
+
+
 def segment_orm_to_document_response_dict(seg: OutlinerSegment) -> Dict[str, Any]:
     """Flat dict for SegmentResponseDocument (stable across commit / session expiry)."""
     return {
@@ -264,7 +274,7 @@ def update_segment(
     if "updated_author" in patch:
         segment.updated_author = patch["updated_author"]
     if "reviewer_title" in patch:
-        segment.reviewer_title = patch["reviewer_title"]
+        segment.reviewer_title = _normalize_reviewer_title_value(patch["reviewer_title"])
     if "reviewer_author" in patch:
         segment.reviewer_author = patch["reviewer_author"]
 
@@ -376,7 +386,9 @@ def update_segments_bulk(
             if span_key in segment_update:
                 setattr(segment, span_key, segment_update[span_key])
         if 'reviewer_title' in segment_update:
-            segment.reviewer_title = segment_update['reviewer_title']
+            segment.reviewer_title = _normalize_reviewer_title_value(
+                segment_update['reviewer_title']
+            )
         if 'reviewer_author' in segment_update:
             segment.reviewer_author = segment_update['reviewer_author']
 

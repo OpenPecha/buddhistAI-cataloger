@@ -39,6 +39,13 @@ function storedReviewerNorm(v: string | null | undefined): string | null {
   return t === '' ? '' : t;
 }
 
+/** Reviewer title: never treat '' as distinct from absent; empty input → null in API. */
+function storedReviewerTitleNorm(v: string | null | undefined): string | null {
+  if (v === null || v === undefined) return null;
+  const t = v.trim();
+  return t === '' ? null : t;
+}
+
 /** Normalized value to save from the input field (always a string: '' or trimmed text). */
 function committedReviewerInput(raw: string): string {
   const t = raw.trim();
@@ -157,8 +164,8 @@ function SegmentRow({
   });
 
   const commitTitle = useCallback(() => {
-    const next = committedReviewerInput(titleInput);
-    const prev = storedReviewerNorm(segment.reviewer_title);
+    const next = storedReviewerTitleNorm(titleInput);
+    const prev = storedReviewerTitleNorm(segment.reviewer_title);
     setTitleEditOpen(false);
     if (next === prev) return;
     patchTitleOrAuthor({ reviewer_title: next });
