@@ -214,10 +214,14 @@ def get_document_progress(
 
 def reset_segments(db: Session, document_id: str) -> bool:
     document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    
     if not document:
         return False
     db.query(OutlinerSegment).filter(OutlinerSegment.document_id == document_id).delete()
+    document.status = "active"
+    document.updated_at = datetime.utcnow()
     db.commit()
+    db.refresh(document)
     return True
 
 

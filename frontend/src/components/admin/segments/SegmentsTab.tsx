@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SplitPane, Pane } from 'react-split-pane';
-import { PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { EllipsisVertical, PanelRightClose, PanelRightOpen, Undo } from 'lucide-react';
 import {
   List,
   useDynamicRowHeight,
@@ -10,14 +10,19 @@ import {
 import type { Document, Segment } from '../shared/types';
 import SegmentRow from './SegmentRow';
 import { Button } from '@/components/ui/button';
-import { outlinerFetch } from '@/api/outliner';
+import { outlinerFetch, resetSegments, updateDocumentStatus } from '@/api/outliner';
 import { OUTLINER_BASE_URL } from '@/config/api';
 import { VolumeImagePanelCore } from '@/components/outliner/ImageWrapper';
 import { useParams } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { updateDocumentStatus } from '@/api/outliner';
 
 type SegmentStatusFilter = 'all' | 'unchecked' | 'checked' | 'approved' | 'rejected';
 
@@ -193,6 +198,41 @@ function SegmentsTab({
     },
   });
 
+  const resetAllSegmentsMutation = useMutation({
+    mutationFn: async () => {
+      if (!documentId) throw new Error('Document ID is required');
+      return resetSegments(documentId);
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] }),
+        queryClient.invalidateQueries({ queryKey: ['outliner-admin-documents'] }),
+      ]);
+      toast.success('Segments reset successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to reset segments');
+    },
+  });
+
+  const handleResetAllSegments = () => {
+    if (!documentId) {
+      toast.error('Document ID is required');
+      return;
+    }
+    if (
+      !globalThis.confirm(
+        '⚠️Are you sure you want to reset the segments? This action cannot be undone.'
+      )
+    ) {
+      return;
+    }
+    if (!globalThis.confirm('⚠️Are you really sure?')) {
+      return;
+    }
+    resetAllSegmentsMutation.mutate();
+  };
+
   const segmentsPanel =
     !loadingSegments && selectedDocument && segments.length > 0 ? (
       <>
@@ -255,6 +295,29 @@ function SegmentsTab({
                   <PanelRightOpen className="h-4 w-4" aria-hidden />
                 )}
               </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 px-2"
+                    disabled={resetAllSegmentsMutation.isPending || !documentId}
+                    aria-label={t('outliner.workspace.resetAllSegments')}
+                  >
+                    <EllipsisVertical className="h-4 w-4" aria-hidden />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={handleResetAllSegments}
+                    className="text-red-600 focus:bg-red-50 focus:text-red-600"
+                  >
+                    <Undo className="h-4 w-4" aria-hidden />
+                    {t('outliner.workspace.resetAllSegments')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 size="sm"
                 onClick={handleApproveAll}
