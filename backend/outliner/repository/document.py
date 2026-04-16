@@ -301,7 +301,6 @@ def allow_user_to_assign_volume(db: Session, user_id: str) -> bool:
         .first()
     )
     if has_any is None:
-        print("no documents found")
         return True
 
     if (

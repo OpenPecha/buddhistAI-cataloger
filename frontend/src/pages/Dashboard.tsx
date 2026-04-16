@@ -126,9 +126,8 @@ const OutlinerUpload: React.FC = () => {
   const assignDisabled =
     assignWorkMutation.isPending ||
     !userId ||
-    assignEligibility?.allowed !== true ||
-    !!rejected_document;
-
+    !assignEligibility?.allowed 
+    
   const rejected_url = "/outliner/"+rejected_document?.rejected_segment?.document_id+"?segmentId="+rejected_document?.rejected_segment?.segment_id;
    return (
     <div className="min-h-screen bg-gray-50 p-8">
