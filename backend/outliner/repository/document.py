@@ -342,21 +342,17 @@ def allow_user_to_assign_volume(db: Session, user_id: str) -> bool:
     ): 
         return False
 
+    # Fix: consider a segment incomplete if its status is 'rejected' or 'unchecked'
     incomplete_on_finished = (
         db.query(OutlinerSegment.id)
         .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
         .filter(
             OutlinerDocument.user_id == user_id,
-            OutlinerDocument.status=="completed",
-            or_(
-                OutlinerSegment.status.is_(None),
-                OutlinerSegment.status.notin_(("checked", "approved")),
-            ),
+            OutlinerDocument.status.in_(("completed")),
+            OutlinerSegment.status.in_(("rejected", "unchecked")),
         )
         .first()
     )
-    if incomplete_on_finished is not None:
-        return False
     return incomplete_on_finished is None
 
 
