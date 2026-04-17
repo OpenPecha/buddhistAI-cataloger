@@ -23,12 +23,15 @@ export function useAbortableBlobUrl(
   const fetchEnabled = options?.fetchEnabled !== false
   const [objectUrl, setObjectUrl] = useState<string | null>(null)
   const prevSrcRef = useRef<string | null>(null)
+  /** `src` for which `objectUrl` was last created successfully — avoids refetch when `fetchEnabled` flips (e.g. scroll pause). */
+  const blobSrcRef = useRef<string | null>(null)
   const getFetchHeadersRef = useRef(options?.getFetchHeaders)
   getFetchHeadersRef.current = options?.getFetchHeaders
 
   useEffect(() => {
     if (!src) {
       prevSrcRef.current = null
+      blobSrcRef.current = null
       setObjectUrl((u) => {
         if (u) URL.revokeObjectURL(u)
         return null
@@ -38,6 +41,7 @@ export function useAbortableBlobUrl(
 
     const prev = prevSrcRef.current
     if (prev != null && prev !== src) {
+      blobSrcRef.current = null
       setObjectUrl((u) => {
         if (u) URL.revokeObjectURL(u)
         return null
@@ -48,16 +52,18 @@ export function useAbortableBlobUrl(
 
   useEffect(() => {
     if (!src || !fetchEnabled) return
+    if (blobSrcRef.current === src) return
 
     const ac = new AbortController()
     let cancelled = false
     const getExtra = getFetchHeadersRef.current
+    const requestSrc = src
 
     ;(async () => {
       try {
         const extra = getExtra ? await getExtra() : undefined
         const headers = extra ? new Headers(extra) : undefined
-        const res = await fetch(src, { signal: ac.signal, headers })
+        const res = await fetch(requestSrc, { signal: ac.signal, headers })
         if (cancelled || !res.ok) return
         const blob = await res.blob()
         if (cancelled || ac.signal.aborted) return
@@ -66,6 +72,11 @@ export function useAbortableBlobUrl(
           URL.revokeObjectURL(u)
           return
         }
+        if (requestSrc !== prevSrcRef.current) {
+          URL.revokeObjectURL(u)
+          return
+        }
+        blobSrcRef.current = requestSrc
         setObjectUrl((prev) => {
           if (prev) URL.revokeObjectURL(prev)
           return u
@@ -83,6 +94,7 @@ export function useAbortableBlobUrl(
 
   useEffect(() => {
     return () => {
+      blobSrcRef.current = null
       setObjectUrl((prev) => {
         if (prev) URL.revokeObjectURL(prev)
         return null

@@ -122,7 +122,7 @@ function PageImageRow({
       >
         {fetchUrl ? (
           <div className={MAIN_IMAGE_SLOT_CLASS}>
-            {blobUrl && fetchImageEnabled ? (
+            {blobUrl ? (
               <ImageZoom
                 src={blobUrl}
                 alt={volumePageAlt(index + 1)}
