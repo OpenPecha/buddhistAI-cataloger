@@ -308,6 +308,7 @@ def allow_user_to_assign_volume(db: Session, user_id: str) -> bool:
         .first()
     )
     if has_any is None:
+        print("has_any", "no document")
         return True
 
     if (
@@ -315,6 +316,7 @@ def allow_user_to_assign_volume(db: Session, user_id: str) -> bool:
         .filter(OutlinerDocument.user_id == user_id, OutlinerDocument.status == "active")
         .first()
     ):
+        print("has_any", "active document")
         return False
 
     bad_doc_status = (
@@ -329,6 +331,7 @@ def allow_user_to_assign_volume(db: Session, user_id: str) -> bool:
         .first()
     )
     if bad_doc_status is not None:
+        print("bad_doc_status", bad_doc_status)
         return False
 
     if (
@@ -340,6 +343,7 @@ def allow_user_to_assign_volume(db: Session, user_id: str) -> bool:
         )
         .first()
     ): 
+        print("incomplete_on_finished", "contain rejection")
         return False
 
     # Fix: consider a segment incomplete if its status is 'rejected' or 'unchecked'
@@ -348,11 +352,12 @@ def allow_user_to_assign_volume(db: Session, user_id: str) -> bool:
         .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
         .filter(
             OutlinerDocument.user_id == user_id,
-            OutlinerDocument.status.in_(("completed")),
+            OutlinerDocument.status=="completed",
             OutlinerSegment.status.in_(("rejected", "unchecked")),
         )
         .first()
     )
+    print("incomplete_on_finished", incomplete_on_finished)
     return incomplete_on_finished is None
 
 
