@@ -68,8 +68,11 @@ function DocumentRow({ document, annotatorName, onSelect, onDelete }: DocumentRo
           )}
         </div>
       </TableCell>
-      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-        {document.annotated_segments}/{document.total_segments}
+      <TableCell
+        className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+        title="Checked or approved segments / total segments"
+      >
+        {(document.checked_segments ?? 0)}/{document.total_segments}
       </TableCell>
      
       <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium">

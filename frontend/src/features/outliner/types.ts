@@ -83,6 +83,8 @@ export interface Document {
   user_id?: string | null
   total_segments: number
   annotated_segments: number
+  /** Segments with status checked or approved (same as annotator dashboard list). */
+  checked_segments?: number
   /** Segments with status rejected (admin list API) */
   rejection_count?: number
   /** List API: present when document is approved/completed and a segment is still rejected */

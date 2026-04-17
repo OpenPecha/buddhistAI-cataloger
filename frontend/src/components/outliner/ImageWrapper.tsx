@@ -1,27 +1,16 @@
 import { useAuth0 } from '@auth0/auth0-react'
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import ImageZoom from 'react-image-zooom'
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument'
 import { useBdrcOtVolume } from '@/features/outliner/bdrc/hook/useBdrcOtVolume'
 import { useDocument, useCursor, useSelection } from './contexts'
-import {
-  List,
-  useDynamicRowHeight,
-  useListRef,
-  type RowComponentProps,
-} from 'react-window'
+import { List, useListRef, type RowComponentProps } from 'react-window'
 import { Link2, Loader2 } from 'lucide-react'
 import { getAuth0AccessToken } from '@/lib/auth0AccessToken'
 import { proxiedImageUrl } from '@/lib/imageProxy'
 import { useAbortableBlobUrl } from '@/hooks/useAbortableBlobUrl'
+import useGetImageInfo from './hooks/useGetImageInfo'
 
 type BdrcPageLike = {
   pname?: string
@@ -59,22 +48,17 @@ const MAIN_IMAGE_SLOT_CLASS =
 const PAGE_FOOTER_CLASS =
   'mt-1 shrink-0 text-center text-[11px] tabular-nums text-gray-500'
 
+/** Space reserved for {@link PAGE_FOOTER_CLASS} (mt-1 + single line of 11px text). */
+const PAGE_IMAGE_FOOTER_HEIGHT_PX = 28
+
 /** Time with no scroll events before IIIF image fetches resume. */
 const SCROLL_IMAGE_IDLE_MS = 180
-
-/** Fallback row height (px) if the first-page probe never resolves. */
-const ROW_HEIGHT_CALIBRATION_FALLBACK = 240
-
-/** Max wait (ms) for first image before using {@link ROW_HEIGHT_CALIBRATION_FALLBACK}. */
-const ROW_HEIGHT_CALIBRATION_TIMEOUT_MS = 20_000
 
 type PageImageRowProps = {
   pages: BdrcPageLike[]
   volId: string | null
   volumePageAlt: (pageNum1Based: number) => string
   noImageLabel: string
-  /** Total row height from first-image calibration (image slot + footer). */
-  listRowMinHeight: number
   activeIndex: number
   /** When false, image fetch is paused (e.g. while the list is scrolling). */
   fetchImageEnabled: boolean
@@ -89,7 +73,6 @@ function PageImageRow({
   volId,
   volumePageAlt,
   noImageLabel,
-  listRowMinHeight,
   activeIndex,
   fetchImageEnabled,
   getProxyImageFetchHeaders,
@@ -113,12 +96,11 @@ function PageImageRow({
     <div {...ariaAttributes} style={style} className="box-border">
       <div
         className={[
-          'flex w-full min-h-0 flex-col overflow-hidden rounded',
+          'flex h-full min-h-0 w-full flex-col overflow-hidden rounded',
           isActive
             ? 'ring-2 ring-blue-400 ring-offset-1 ring-offset-white'
             : '',
         ].join(' ')}
-        style={{ minHeight: listRowMinHeight }}
       >
         {fetchUrl ? (
           <div className={MAIN_IMAGE_SLOT_CLASS}>
@@ -157,93 +139,6 @@ function PageImageRow({
   )
 }
 
-/** Same layout as {@link PageImageRow} but without list virtualization — measures total row height from the first page image. */
-function FirstPageRowHeightProbe({
-  volumePageAlt,
-  pagesLength,
-  noImageLabel,
-  fetchUrl,
-  blobUrl,
-  onMeasured,
-}: {
-  volumePageAlt: (pageNum1Based: number) => string
-  pagesLength: number
-  noImageLabel: string
-  fetchUrl: string | null
-  blobUrl: string | null
-  onMeasured: (heightPx: number) => void
-}) {
-  const measureRootRef = useRef<HTMLDivElement>(null)
-  const reportedRef = useRef(false)
-
-  const runMeasure = useCallback(() => {
-    if (reportedRef.current) return
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const box = measureRootRef.current?.getBoundingClientRect()
-        if (!box || reportedRef.current) return
-        const h = Math.ceil(box.height)
-        if (h > 0) {
-          reportedRef.current = true
-          onMeasured(Math.max(h, 72))
-        }
-      })
-    })
-  }, [onMeasured])
-
-  useEffect(() => {
-    reportedRef.current = false
-  }, [fetchUrl, blobUrl])
-
-  useLayoutEffect(() => {
-    if (!fetchUrl || !blobUrl) return
-    const img = measureRootRef.current?.querySelector('img')
-    if (img?.complete) runMeasure()
-  }, [fetchUrl, blobUrl, runMeasure])
-
-  useLayoutEffect(() => {
-    if (fetchUrl) return
-    requestAnimationFrame(() => {
-      const el = measureRootRef.current
-      if (!el || reportedRef.current) return
-      const h = Math.ceil(el.getBoundingClientRect().height)
-      if (h > 0) {
-        reportedRef.current = true
-        onMeasured(Math.max(h, 72))
-      }
-    })
-  }, [fetchUrl, onMeasured, pagesLength, noImageLabel])
-
-  return (
-    <div
-      ref={measureRootRef}
-      className="box-border flex w-full flex-col overflow-hidden rounded px-0.5 pt-0.5"
-    >
-      {fetchUrl ? (
-        <div className={MAIN_IMAGE_SLOT_CLASS}>
-          {blobUrl ? (
-            <img
-              src={blobUrl}
-              alt={volumePageAlt(1)}
-              className="relative z-1 mx-auto max-h-none max-w-full object-contain"
-              onLoad={runMeasure}
-            />
-          ) : (
-            <Loader2
-              className="h-6 w-6 shrink-0 animate-spin text-gray-400"
-              aria-hidden
-            />
-          )}
-        </div>
-      ) : (
-        <div className={MAIN_IMAGE_SLOT_CLASS}>
-          <span className="text-xs text-gray-500">{noImageLabel}</span>
-        </div>
-      )}
-      <div className={PAGE_FOOTER_CLASS}>1 / {pagesLength}</div>
-    </div>
-  )
-}
 
 export type VolumeImagePanelCoreProps = {
   /** When false, list does not auto-scroll on sync (e.g. tab hidden). */
@@ -299,43 +194,10 @@ export function VolumeImagePanelCore({
   /** After scroll settles, rows may fetch IIIF blobs; while scrolling, fetch URL is null to avoid churn. */
   const [fetchImageEnabled, setFetchImageEnabled] = useState(true)
   const scrollIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  /**
-   * Row height from measuring the first page (image + footer). The list mounts only after this is set.
-   */
-  const [listRowMinHeight, setListRowMinHeight] = useState<number | null>(null)
+  const listPanelRef = useRef<HTMLDivElement | null>(null)
+  const [listPanelWidth, setListPanelWidth] = useState(0)
 
   const firstPagePname = pages?.[0]?.pname
-  const firstPageFetchUrl = useMemo(() => {
-    const id = volId?.trim()
-    if (!id || !firstPagePname) return null
-    return proxiedImageUrl(
-      `https://iiif.bdrc.io/bdr:${id}::${firstPagePname}/full/max/0/gray.jpg`
-    )
-  }, [volId, firstPagePname])
-
-  const calibrationBlobUrl = useAbortableBlobUrl(firstPageFetchUrl, {
-    fetchEnabled: listRowMinHeight == null && firstPageFetchUrl != null,
-    getFetchHeaders: getProxyImageFetchHeaders,
-  })
-
-  const onFirstRowHeightMeasured = useCallback((heightPx: number) => {
-    setListRowMinHeight(heightPx)
-  }, [])
-
-  useEffect(() => {
-    setListRowMinHeight(null)
-  }, [volumeFilename, volId, firstPagePname])
-
-  useEffect(() => {
-    if (listRowMinHeight != null) return
-    if (firstPageFetchUrl == null) return
-    const t = globalThis.setTimeout(() => {
-      setListRowMinHeight(
-        (h) => h ?? ROW_HEIGHT_CALIBRATION_FALLBACK
-      )
-    }, ROW_HEIGHT_CALIBRATION_TIMEOUT_MS)
-    return () => globalThis.clearTimeout(t)
-  }, [firstPageFetchUrl, listRowMinHeight])
 
   useEffect(() => {
     setPreviewIndex(0)
@@ -393,22 +255,53 @@ export function VolumeImagePanelCore({
     }, SCROLL_IMAGE_IDLE_MS)
   }, [])
 
-  const rowHeightCalibrationKey = `${volumeFilename ?? 'no-volume'}\0${firstPagePname ?? ''}`
+  useLayoutEffect(() => {
+    const el = listPanelRef.current
+    if (!el) return
 
-  const rowHeight = useDynamicRowHeight({
-    defaultRowHeight: listRowMinHeight ?? 120,
-    key: `${rowHeightCalibrationKey}\0${listRowMinHeight ?? 'pending'}`,
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect?.width
+      setListPanelWidth(typeof w === 'number' && w > 0 ? Math.floor(w) : 0)
+    })
+    ro.observe(el)
+    const rect = el.getBoundingClientRect()
+    setListPanelWidth(rect.width > 0 ? Math.floor(rect.width) : 0)
+
+    return () => ro.disconnect()
+  }, [pageCount, volumeFilename])
+
+  const imageInfo = useGetImageInfo({
+    volId: volId ?? '',
+    pname: firstPagePname ?? '',
   })
 
+  /** Natural pixel size from IIIF info.json (full resolution, not list row height). */
+  const naturalW =
+    typeof imageInfo?.width === 'number' && imageInfo.width > 0
+      ? imageInfo.width
+      : 0
+  const naturalH =
+    typeof imageInfo?.height === 'number' && imageInfo.height > 0
+      ? imageInfo.height
+      : 0
+
+  /**
+   * Height each row needs so `object-contain` at full panel width matches the image aspect ratio,
+   * plus the page footer strip.
+   */
+  const rowHeight = useMemo(() => {
+    if (naturalW <= 0 || naturalH <= 0 || listPanelWidth <= 0) return 0
+    const slotHeight = Math.max(80, (listPanelWidth * naturalH) / naturalW)
+    return Math.ceil(slotHeight + PAGE_IMAGE_FOOTER_HEIGHT_PX)
+  }, [listPanelWidth, naturalH, naturalW])
   const rowProps = useMemo((): PageImageRowProps | null => {
     if (!pages || !Array.isArray(pages) || pages.length === 0) return null
-    if (listRowMinHeight == null) return null
+    if (rowHeight <= 0) return null
     return {
       pages,
       volId: volId?.trim() ? volId : null,
       volumePageAlt: (n: number) => t('outliner.images.volumePageAlt', { n }),
       noImageLabel: t('outliner.images.noImage'),
-      listRowMinHeight,
       activeIndex: previewIndex,
       fetchImageEnabled,
       getProxyImageFetchHeaders,
@@ -416,7 +309,7 @@ export function VolumeImagePanelCore({
   }, [
     pages,
     volId,
-    listRowMinHeight,
+    rowHeight,
     previewIndex,
     fetchImageEnabled,
     getProxyImageFetchHeaders,
@@ -475,22 +368,19 @@ export function VolumeImagePanelCore({
 
         {!isLoading && !error && pageCount > 0 && pages && (
           <div
+            ref={listPanelRef}
             className="flex min-h-0 flex-1 flex-col overflow-hidden rounded border border-gray-200 bg-gray-50"
             aria-label={t('outliner.images.pagesScrollAria')}
           >
-            {listRowMinHeight == null && (
-              <FirstPageRowHeightProbe
-                volumePageAlt={(n: number) =>
-                  t('outliner.images.volumePageAlt', { n })
-                }
-                pagesLength={pageCount}
-                noImageLabel={t('outliner.images.noImage')}
-                fetchUrl={firstPageFetchUrl}
-                blobUrl={calibrationBlobUrl}
-                onMeasured={onFirstRowHeightMeasured}
-              />
+            {rowHeight <= 0 && (
+              <div className="flex min-h-[120px] flex-1 items-center justify-center">
+                <Loader2
+                  className="h-6 w-6 shrink-0 animate-spin text-gray-400"
+                  aria-hidden
+                />
+              </div>
             )}
-            {listRowMinHeight != null && rowProps && (
+            {rowProps && rowHeight > 0 && (
               <List
                 key={volumeFilename ?? 'no-volume'}
                 listRef={listRef}
