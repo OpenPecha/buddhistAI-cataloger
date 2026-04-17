@@ -706,7 +706,7 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
   );
 
   const hasLabelledSegment = Boolean(activeSegment?.label);
-  const isMetadataDisabled = !activeSegment || !hasLabelledSegment || segments.length<2;
+  const isMetadataDisabled = !activeSegment || !hasLabelledSegment;
   
 
   const [labelFilter, setLabelFilter] = useState<LabelFilterValue[]>([]);
