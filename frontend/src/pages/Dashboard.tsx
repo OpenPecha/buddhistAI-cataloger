@@ -239,6 +239,9 @@ const OutlinerUpload: React.FC = () => {
                             <span className="text-xs text-gray-500">
                               {doc.status==='completed'&&"annotated"}
                             </span>
+                            <span className="text-xs text-gray-500">
+                              {doc.status==='skipped'&&"skipped"}
+                            </span>
                             
                           </div>
                           {doc.rejected_segment && (
