@@ -81,7 +81,7 @@ function PageImageRow({
   const fetchUrl =
     volId && pname
       ? proxiedImageUrl(
-          `https://iiif.bdrc.io/bdr:${volId}::${pname}/full/max/0/gray.jpg`
+          `https://iiif.bdrc.io/bdr:${volId}::${pname}/full/max/0/default.jpg`
         )
       : null
 
