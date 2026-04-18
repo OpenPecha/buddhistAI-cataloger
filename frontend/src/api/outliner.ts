@@ -84,6 +84,11 @@ export interface OutlinerDocumentListItem {
   rejection_count?: number;
   /** Total rejection comment rows on this document (admin list). */
   rejection_comment_count?: number;
+  /**
+   * Segments with rejection history not yet checked/approved. When 0 and rejection_comment_count > 0,
+   * every segment tied to a rejection is checked or approved.
+   */
+  rejection_open_segment_count?: number;
 }
 
 export type SegmentLabel = 'FRONT_MATTER' | 'TOC' | 'TEXT' | 'BACK_MATTER';

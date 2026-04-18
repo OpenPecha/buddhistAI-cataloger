@@ -17,27 +17,30 @@ interface DocumentRowProps {
 
 function DocumentRow({ document, annotatorName, onSelect, onDelete }: DocumentRowProps) {
   const statusKey = document.status || 'active';
-  const pendingRejected = (document.rejection_count ?? 0) > 0;
+  /** Prefer server join of rejections → segment status; fall back to rejected-status segment count on older APIs. */
+  const openRejectionSegments =
+    document.rejection_open_segment_count ?? document.rejection_count ?? 0;
+  const needsRejectionAttention = openRejectionSegments > 0;
   /** Prefer total rejection rows; fall back to rejected-segment count when the list API is older. */
   const commentCount = document.rejection_comment_count ?? document.rejection_count ?? 0;
-  /** Orange: no segment still rejected, but there are recorded comments or a checked+resolved rejection. */
-  const useOrange =
-    !pendingRejected &&
+  /** Light orange: rejection history exists and every linked segment is checked or approved. */
+  const useLightOrange =
+    !needsRejectionAttention &&
     (commentCount > 0 || document.rejection_resolved === true);
-  const badgeClass = pendingRejected
+  const badgeClass = needsRejectionAttention
     ? 'bg-red-100 text-red-700 border border-red-200'
-    : useOrange
-      ? 'bg-orange-100 text-orange-800 border border-orange-200'
+    : useLightOrange
+      ? 'bg-orange-50 text-orange-700 border border-orange-100'
       : 'bg-gray-100 text-gray-600 border border-gray-200';
-  const iconClass = pendingRejected
+  const iconClass = needsRejectionAttention
     ? 'text-red-400'
-    : useOrange
-      ? 'text-orange-500'
+    : useLightOrange
+      ? 'text-orange-400'
       : 'text-gray-400';
-  const badgeTitle = pendingRejected
-    ? 'Segments currently rejected; rejection comments shown'
+  const badgeTitle = needsRejectionAttention
+    ? 'Rejection comments on segments not yet checked or approved'
     : commentCount > 0
-      ? 'Rejection comments recorded; no segment is in rejected status now'
+      ? 'Rejection history; every linked segment is checked or approved'
       : document.rejection_resolved
         ? 'Reviewer rejection addressed (segment checked, latest rejection resolved)'
         : 'Rejection comments on segments in this document';

@@ -251,6 +251,13 @@ class DocumentListResponse(BaseModel):
         0,
         description="Total rejection events (rows in segment_rejections) on this document.",
     )
+    rejection_open_segment_count: int = Field(
+        0,
+        description=(
+            "Distinct segments with at least one rejection row whose status is not "
+            "checked or approved (rejection path not finished)."
+        ),
+    )
     progress_percentage: float
     checked_segments: int  # Segments with status checked or approved
     unchecked_segments: int  # Segments not yet checked or approved

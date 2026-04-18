@@ -92,6 +92,36 @@ def _rejection_comment_counts_by_document_ids(
     return {r.doc_id: int(r.cnt or 0) for r in rows}
 
 
+def _rejection_open_segments_by_document_ids(
+    db: Session, document_ids: List[str]
+) -> Dict[str, int]:
+    """
+    Per document: distinct segments that have at least one ``segment_rejections`` row
+    and are not yet ``checked`` or ``approved`` (annotator still on the rejection path).
+    """
+    if not document_ids:
+        return {}
+    not_addressed = or_(
+        OutlinerSegment.status.is_(None),
+        and_(
+            OutlinerSegment.status != "checked",
+            OutlinerSegment.status != "approved",
+        ),
+    )
+    rows = (
+        db.query(
+            OutlinerSegment.document_id.label("doc_id"),
+            func.count(func.distinct(OutlinerSegment.id)).label("cnt"),
+        )
+        .join(SegmentRejection, SegmentRejection.segment_id == OutlinerSegment.id)
+        .filter(OutlinerSegment.document_id.in_(document_ids))
+        .filter(not_addressed)
+        .group_by(OutlinerSegment.document_id)
+        .all()
+    )
+    return {r.doc_id: int(r.cnt or 0) for r in rows}
+
+
 def segment_list_for_document(db: Session, document_id: str) -> List[dict]:
     segments = (
         db.query(

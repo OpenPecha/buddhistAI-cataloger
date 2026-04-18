@@ -11,6 +11,7 @@ from user.models.user import User
 from outliner.models.outliner import OutlinerDocument, OutlinerSegment
 from outliner.repository.segment import (
     _rejection_comment_counts_by_document_ids,
+    _rejection_open_segments_by_document_ids,
     _segment_aggregate_counts_by_document_ids,
 )
 from outliner.repository.segment_rejection import (
@@ -61,6 +62,7 @@ def list_documents(
     resolved_rejection_doc_ids = document_ids_with_resolved_reviewer_rejection(db, doc_ids)
     counts_by_doc = _segment_aggregate_counts_by_document_ids(db, doc_ids)
     rejection_comments_by_doc = _rejection_comment_counts_by_document_ids(db, doc_ids)
+    rejection_open_segments_by_doc = _rejection_open_segments_by_document_ids(db, doc_ids)
 
     result = []
     for doc in documents:
@@ -74,6 +76,7 @@ def list_documents(
             annotated = agg["annotated_segments"]
             rejection_count = agg["rejection_count"]
         rejection_comment_count = rejection_comments_by_doc.get(doc.id, 0)
+        rejection_open_segment_count = rejection_open_segments_by_doc.get(doc.id, 0)
         notice = latest_rejection_by_doc.get(doc.id)
         if (doc.status or "") not in ("approved", "completed"):
             notice = None
@@ -91,6 +94,7 @@ def list_documents(
                 "annotated_segments": annotated,
                 "rejection_count": rejection_count,
                 "rejection_comment_count": rejection_comment_count,
+                "rejection_open_segment_count": rejection_open_segment_count,
                 "progress_percentage": (annotated / total) * 100 if total > 0 else 0,
                 "status": doc.status,
                 "created_at": doc.created_at,
