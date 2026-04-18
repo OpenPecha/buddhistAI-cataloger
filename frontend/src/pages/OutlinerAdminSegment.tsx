@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, redirect } from 'react-router-dom';
 import { SegmentsTab } from '../components/admin';
 import {
   useDocument,
 } from '../hooks';
+import { SkeletonLarger } from '@/components/ui/skeleton';
 
 function OutlinerAdminSegment() {
   const { documentId } = useParams<{ documentId: string }>();
@@ -33,28 +34,14 @@ function OutlinerAdminSegment() {
 
   if (isLoadingDocument) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <div className="flex min-h-screen flex-1 flex-col">
+      <SkeletonLarger />
+    </div>
     );
   }
 
-  // Don't render if document is not found
   if (!selectedDocument) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Document not found</h2>
-          <p className="text-gray-600 mb-4">The document you're looking for doesn't exist.</p>
-          <button
-            onClick={() => navigate('/outliner-admin/documents')}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-          >
-            Back to Documents
-          </button>
-        </div>
-      </div>
-    );
+   return redirect('/outliner-admin/documents');
   }
 
   return (

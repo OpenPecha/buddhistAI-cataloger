@@ -1,10 +1,11 @@
 import { Routes, Route, useLocation,Link } from 'react-router-dom';
 import { useEffect, lazy, Suspense } from 'react';
-import { useAuth0 } from '@auth0/auth0-react';
+
 import { Navigation, ProtectedRoute } from '@app';
-import { getCurrentUser, createUser } from './api/settings';
+
 import OutlinerAdminLayout from './features/outliner/components/OutlinerAdminLayout';
 import LogoutPage from './pages/LogoutPage';
+import useEnsureUserExists from './hooks/useEnsureUserExists';
 
 // Lazy load page components
 const TextsPage = lazy(() => import('./pages/Text'));
@@ -38,37 +39,11 @@ const OutlinerAdminBDRCPersonsLazy = lazy(() => import('@/features/outliner').th
 function App() {
   const location = useLocation();
   const isLoginPage = location.pathname === '/login';
-  const { isAuthenticated, user, isLoading } = useAuth0();
-
-  useEffect(() => {
-    const ensureUserExists = async () => {
-      if (isAuthenticated && user?.email && !isLoading) {
-        try {
-          // Check if user exists in database
-          const existingUser = await getCurrentUser();
-          
-          // If user doesn't exist, create them
-          if (!existingUser && user.sub) {
-            await createUser({
-              name: user.name || null,
-              picture: user.picture || null,
-            });
-          }
-        } catch (error) {
-          console.error('Error ensuring user exists:', error);
-        }
-      }
-    };
-
-    ensureUserExists();
-  }, [isAuthenticated, user, isLoading]);
-  
-
+  useEnsureUserExists();
+ 
   return (
 
     <div className="min-h-screen w-full  relative text-gray-900">
-   
-
   <div
     className="absolute inset-0 -z-10"
     style={{
@@ -96,6 +71,9 @@ function App() {
           </div>
         }>
           <Routes>
+          <Route path="/" element={
+              <Index />
+          } />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/logout" element={<LogoutPage />} />
           <Route path="/profile" element={
@@ -108,11 +86,7 @@ function App() {
               <Settings />
             </ProtectedRoute>
           } />
-          <Route path="/" element={
-            <ProtectedRoute>
-              <Index />
-            </ProtectedRoute>
-          } />
+         
           <Route path="/create" element={
             <ProtectedRoute>
               <Create />

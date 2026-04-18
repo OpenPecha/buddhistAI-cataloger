@@ -10,6 +10,7 @@ import {
 } from '../hooks';
 import type { DocumentFilters } from '../hooks';
 import { useUser } from '../hooks/useUser';
+import { SkeletonLarger } from '@/components/ui/skeleton';
 
 function OutlinerAdminDocument() {
   const navigate = useNavigate();
@@ -83,11 +84,12 @@ function OutlinerAdminDocument() {
 
   if (isLoading && !documents.length) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <div className="flex min-h-screen flex-1 flex-col">
+      <SkeletonLarger />
+    </div>
     );
   }
+ 
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4  p-4">

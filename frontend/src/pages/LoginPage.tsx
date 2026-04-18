@@ -1,3 +1,4 @@
+import { SkeletonLarger } from '@/components/ui/skeleton';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -25,12 +26,9 @@ function LoginPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
+      <div className="flex min-h-screen flex-1 flex-col">
+      <SkeletonLarger />
+    </div>
     );
   }
 

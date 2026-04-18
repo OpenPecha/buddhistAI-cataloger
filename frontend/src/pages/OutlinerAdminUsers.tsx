@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { UsersTab } from '../components/admin';
 import { SimplePagination } from '../components/ui/simple-pagination';
 import { useUsers, useUserActions } from '../hooks';
+import { SkeletonLarger } from '@/components/ui/skeleton';
 
 function OutlinerAdminUsers() {
   const [skip, setSkip] = useState(0);
@@ -47,9 +48,9 @@ function OutlinerAdminUsers() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <div className="flex min-h-screen flex-1 flex-col">
+      <SkeletonLarger />
+    </div>
     );
   }
 

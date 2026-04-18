@@ -5,15 +5,14 @@ import LanguageSelector from '@/components/formComponent/LanguageSelector';
 import { useUI } from '@/context/UIContext';
 import { Settings } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
-
+import { Button } from '@/components/ui/button';
 function Navigation() {
-  const { logout, isAuthenticated, isLoading } = useAuth0();
-  const { user } = useUser();
+  const { logout, isLoading,user,isAuthenticated,loginWithRedirect } = useAuth0();
   const { brandIconUrl, primaryColor } = useUI();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
+  const {user:userFromDb} = useUser();
   const hexToRgb = (hex: string) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result
@@ -49,12 +48,10 @@ function Navigation() {
     });
     setIsMenuOpen(false);
   };
-
   if (isLoading) return null;
-  if (!isAuthenticated || !user) return null;
 
   const isActive = (path: string) => location.pathname === path;
-  const isAdminOrReviewer = user?.role === 'admin' || user?.role === 'reviewer';
+  const isAdminOrReviewer = userFromDb?.role === 'admin' || userFromDb?.role === 'reviewer';
   const primaryRgb = hexToRgb(primaryColor);
   const getActiveStyle = (isActiveLink: boolean) => {
     if (!isActiveLink || !primaryRgb) return undefined;
@@ -64,6 +61,13 @@ function Navigation() {
     };
   };
 
+  const handleLogin = () => {
+    loginWithRedirect({
+      appState: {
+        returnTo: window.location.pathname || '/',
+      },
+    });
+  };
   return (
     <nav className="bg-white shadow-sm border-b border-gray-200">
       <div className="w-full mx-auto px-4 sm:px-6 lg:px-8">
@@ -123,8 +127,11 @@ function Navigation() {
 
           <div className="flex items-center gap-4">
             <LanguageSelector />
-
-            <div className="relative" ref={menuRef}>
+             {!isAuthenticated && <Button 
+              onClick={handleLogin} 
+              className='cursor-pointer'
+              variant="ghost">Login</Button>}
+            {isAuthenticated && <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -236,7 +243,7 @@ function Navigation() {
                   </button>
                 </div>
               )}
-            </div>
+            </div>}
           </div>
         </div>
       </div>

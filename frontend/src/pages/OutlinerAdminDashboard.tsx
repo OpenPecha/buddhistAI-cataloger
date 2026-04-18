@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { OverviewTab } from '../components/admin';
+import { SkeletonLarger } from '@/components/ui/skeleton';
 import { useDashboardStats, useOutlinerUsers } from '../hooks';
 
 function getDefaultDateRange() {
@@ -28,8 +29,8 @@ function OutlinerAdminDashboard() {
 
   if (isLoading && !stats) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex min-h-screen flex-1 flex-col">
+        <SkeletonLarger />
       </div>
     );
   }
