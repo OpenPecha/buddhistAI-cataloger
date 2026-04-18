@@ -88,6 +88,10 @@ async def list_documents(
     at least one segment is still ``rejected``: the newest unresolved rejection
     (message, document_id, segment_id, reviewer_user).
 
+    ``rejection_resolved`` is true for ``approved``/``completed`` documents where some segment is
+    ``checked``, its latest rejection was by a reviewer, and that rejection row is resolved
+    (annotator addressed the rejection).
+
     Args:
         user_id: Filter documents by user ID (annotator)
         status: Filter by document status (active, completed, approved)

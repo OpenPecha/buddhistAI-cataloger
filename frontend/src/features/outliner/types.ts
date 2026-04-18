@@ -87,6 +87,10 @@ export interface Document {
   checked_segments?: number
   /** Segments with status rejected (admin list API) */
   rejection_count?: number
+  /** Total segment_rejection rows (reviewer comments) on this document (admin list API). */
+  rejection_comment_count?: number
+  /** Reviewer rejection addressed: segment checked, latest rejection resolved (admin list). */
+  rejection_resolved?: boolean
   /** List API: present when document is approved/completed and a segment is still rejected */
   rejected_segment?: RejectedSegmentListNotice | null
   progress_percentage: number

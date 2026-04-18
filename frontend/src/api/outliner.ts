@@ -75,6 +75,15 @@ export interface OutlinerDocumentListItem {
   updated_at: string;
   /** Most recent reviewer rejection in this document; use for annotator notices. */
   rejected_segment?: RejectedSegmentListNotice | null;
+  /**
+   * Reviewer rejection was addressed: a segment is checked, latest rejection has a reviewer
+   * and is marked resolved. Shown on reviewer-facing document lists.
+   */
+  rejection_resolved?: boolean;
+  /** Segments currently in rejected status (admin list). */
+  rejection_count?: number;
+  /** Total rejection comment rows on this document (admin list). */
+  rejection_comment_count?: number;
 }
 
 export type SegmentLabel = 'FRONT_MATTER' | 'TOC' | 'TEXT' | 'BACK_MATTER';

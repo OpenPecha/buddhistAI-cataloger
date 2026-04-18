@@ -17,6 +17,30 @@ interface DocumentRowProps {
 
 function DocumentRow({ document, annotatorName, onSelect, onDelete }: DocumentRowProps) {
   const statusKey = document.status || 'active';
+  const pendingRejected = (document.rejection_count ?? 0) > 0;
+  /** Prefer total rejection rows; fall back to rejected-segment count when the list API is older. */
+  const commentCount = document.rejection_comment_count ?? document.rejection_count ?? 0;
+  /** Orange: no segment still rejected, but there are recorded comments or a checked+resolved rejection. */
+  const useOrange =
+    !pendingRejected &&
+    (commentCount > 0 || document.rejection_resolved === true);
+  const badgeClass = pendingRejected
+    ? 'bg-red-100 text-red-700 border border-red-200'
+    : useOrange
+      ? 'bg-orange-100 text-orange-800 border border-orange-200'
+      : 'bg-gray-100 text-gray-600 border border-gray-200';
+  const iconClass = pendingRejected
+    ? 'text-red-400'
+    : useOrange
+      ? 'text-orange-500'
+      : 'text-gray-400';
+  const badgeTitle = pendingRejected
+    ? 'Segments currently rejected; rejection comments shown'
+    : commentCount > 0
+      ? 'Rejection comments recorded; no segment is in rejected status now'
+      : document.rejection_resolved
+        ? 'Reviewer rejection addressed (segment checked, latest rejection resolved)'
+        : 'Rejection comments on segments in this document';
   return (
     <TableRow className="hover:bg-gray-50">
       <TableCell className="px-6 py-4 whitespace-nowrap">
@@ -58,14 +82,15 @@ function DocumentRow({ document, annotatorName, onSelect, onDelete }: DocumentRo
             ></span>
             {STATUS_LABEL[statusKey] || statusKey}
           </span>
-          {typeof document.rejection_count === 'number' && document.rejection_count > 0 && (
-            <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 text-xs font-bold px-2 py-0.5 rounded-full border border-red-200" title="Segments needing revision (rejected)">
-              <svg className="w-3 h-3 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M8.257 3.099c.366-.756 1.42-.756 1.786 0l7.451 15.396A1 1 0 0 1 16.584 20H3.416a1 1 0 0 1-.91-1.505L8.257 3.1zM11 14a1 1 0 1 0-2 0 1 1 0 0 0 2 0zm-1-5a1 1 0 0 0-.993.883L9 10v2a1 1 0 0 0 1.993.117L11 12v-2a1 1 0 0 0-1-1z" />
-              </svg>
-              {document.rejection_count}
-            </span>
-          )}
+          {commentCount>0&&<span
+            className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${badgeClass}`}
+            title={badgeTitle}
+          >
+            <svg className={`w-3 h-3 shrink-0 ${iconClass}`} fill="currentColor" viewBox="0 0 20 20">
+              <path d="M8.257 3.099c.366-.756 1.42-.756 1.786 0l7.451 15.396A1 1 0 0 1 16.584 20H3.416a1 1 0 0 1-.91-1.505L8.257 3.1zM11 14a1 1 0 1 0-2 0 1 1 0 0 0 2 0zm-1-5a1 1 0 0 0-.993.883L9 10v2a1 1 0 0 0 1.993.117L11 12v-2a1 1 0 0 0-1-1z" />
+            </svg>
+            {commentCount}
+          </span>}
         </div>
       </TableCell>
       <TableCell

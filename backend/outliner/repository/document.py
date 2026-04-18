@@ -9,8 +9,14 @@ from sqlalchemy.orm import Session
 
 from user.models.user import User
 from outliner.models.outliner import OutlinerDocument, OutlinerSegment
-from outliner.repository.segment import _segment_aggregate_counts_by_document_ids
-from outliner.repository.segment_rejection import latest_rejection_notice_by_document_ids
+from outliner.repository.segment import (
+    _rejection_comment_counts_by_document_ids,
+    _segment_aggregate_counts_by_document_ids,
+)
+from outliner.repository.segment_rejection import (
+    document_ids_with_resolved_reviewer_rejection,
+    latest_rejection_notice_by_document_ids,
+)
 
 
 def list_documents(
@@ -52,7 +58,9 @@ def list_documents(
     documents = query.order_by(OutlinerDocument.updated_at.desc()).offset(skip).limit(limit).all()
     doc_ids = [d.id for d in documents]
     latest_rejection_by_doc = latest_rejection_notice_by_document_ids(db, doc_ids)
+    resolved_rejection_doc_ids = document_ids_with_resolved_reviewer_rejection(db, doc_ids)
     counts_by_doc = _segment_aggregate_counts_by_document_ids(db, doc_ids)
+    rejection_comments_by_doc = _rejection_comment_counts_by_document_ids(db, doc_ids)
 
     result = []
     for doc in documents:
@@ -65,9 +73,13 @@ def list_documents(
             unchecked = agg["unchecked_segments"]
             annotated = agg["annotated_segments"]
             rejection_count = agg["rejection_count"]
+        rejection_comment_count = rejection_comments_by_doc.get(doc.id, 0)
         notice = latest_rejection_by_doc.get(doc.id)
         if (doc.status or "") not in ("approved", "completed"):
             notice = None
+        rejection_resolved = doc.id in resolved_rejection_doc_ids
+        if (doc.status or "") not in ("approved", "completed"):
+            rejection_resolved = False
         result.append(
             {
                 "id": doc.id,
@@ -78,11 +90,13 @@ def list_documents(
                 "total_segments": total,
                 "annotated_segments": annotated,
                 "rejection_count": rejection_count,
+                "rejection_comment_count": rejection_comment_count,
                 "progress_percentage": (annotated / total) * 100 if total > 0 else 0,
                 "status": doc.status,
                 "created_at": doc.created_at,
                 "updated_at": doc.updated_at,
                 "rejected_segment": notice,
+                "rejection_resolved": rejection_resolved,
             }
         )
 

@@ -247,6 +247,10 @@ class DocumentListResponse(BaseModel):
     total_segments: int
     annotated_segments: int
     rejection_count: int = 0  # Segments with status rejected in this document
+    rejection_comment_count: int = Field(
+        0,
+        description="Total rejection events (rows in segment_rejections) on this document.",
+    )
     progress_percentage: float
     checked_segments: int  # Segments with status checked or approved
     unchecked_segments: int  # Segments not yet checked or approved
@@ -254,6 +258,13 @@ class DocumentListResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     rejected_segment: Optional[RejectedSegmentListNotice] = None
+    rejection_resolved: bool = Field(
+        default=False,
+        description=(
+            "True when a reviewer rejected a segment, the annotator moved it to checked, "
+            "and the latest rejection row is resolved."
+        ),
+    )
 
     class Config:
         from_attributes = True

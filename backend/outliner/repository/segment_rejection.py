@@ -1,7 +1,7 @@
 """SQLAlchemy data access for segment_rejection rows and related lookups."""
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
@@ -159,6 +159,48 @@ def latest_rejection_notice_by_document_ids(
             "reviewer_user": rev_user,
         }
     return out
+
+
+def document_ids_with_resolved_reviewer_rejection(
+    db: Session, document_ids: List[str]
+) -> Set[str]:
+    """
+    Documents where at least one segment is ``checked`` and its latest ``segment_rejection``
+    row was by a reviewer, marked resolved (annotator addressed the rejection).
+    """
+    if not document_ids:
+        return set()
+    rn = (
+        func.row_number()
+        .over(
+            partition_by=SegmentRejection.segment_id,
+            order_by=SegmentRejection.created_at.desc(),
+        )
+        .label("rn")
+    )
+    subq = (
+        db.query(
+            OutlinerSegment.document_id.label("document_id"),
+            rn,
+            SegmentRejection.resolved.label("resolved"),
+            SegmentRejection.reviewer_id.label("reviewer_id"),
+            OutlinerSegment.status.label("seg_status"),
+        )
+        .select_from(SegmentRejection)
+        .join(OutlinerSegment, SegmentRejection.segment_id == OutlinerSegment.id)
+        .filter(OutlinerSegment.document_id.in_(document_ids))
+        .subquery()
+    )
+    rows = (
+        db.query(subq.c.document_id)
+        .filter(subq.c.rn == 1)
+        .filter(subq.c.seg_status == "checked")
+        .filter(subq.c.resolved.is_(True))
+        .filter(subq.c.reviewer_id.is_not(None))
+        .distinct()
+        .all()
+    )
+    return {r[0] for r in rows}
 
 
 def update_segment_with_rejection_fields(db: Session, segment_list: List[dict]) -> None:

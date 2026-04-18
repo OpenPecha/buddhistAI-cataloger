@@ -17,7 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { FileText, Calendar, BarChart3, Search, AlertTriangle } from 'lucide-react';
+import { FileText, Calendar, BarChart3, Search, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { SimplePagination } from '@/components/ui/simple-pagination';
 import { Input } from '@/components/ui/input';
 import { useUser } from '@/hooks/useUser';
@@ -125,6 +125,9 @@ const OutlinerUpload: React.FC = () => {
   const rejectedLinkHref = firstRejectedNotice
     ? `/outliner/${firstRejectedNotice.document_id}?segmentId=${firstRejectedNotice.segment_id}`
     : null;
+  const showRejectionResolvedMarker =
+    (user?.role === 'reviewer' || user?.role === 'admin') && !!userId;
+
   const assignDisabled =
     assignWorkMutation.isPending ||
     !userId ||
@@ -255,6 +258,15 @@ const OutlinerUpload: React.FC = () => {
                                 ) : null}
                             </div>
                         )}
+                          {showRejectionResolvedMarker && doc.rejection_resolved && (
+                            <div
+                              className="flex shrink-0 items-center gap-1.5 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-900"
+                              title="A reviewer-rejected segment was checked again by the annotator"
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-700" aria-hidden />
+                              <span>Rejection resolved</span>
+                            </div>
+                          )}
                         </div>
                        
                       </div>

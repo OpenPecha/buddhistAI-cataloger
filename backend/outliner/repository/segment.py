@@ -73,6 +73,25 @@ def _segment_aggregate_counts_by_document_ids(
     return out
 
 
+def _rejection_comment_counts_by_document_ids(
+    db: Session, document_ids: List[str]
+) -> Dict[str, int]:
+    """Total ``segment_rejections`` rows per document (historical rejection comments)."""
+    if not document_ids:
+        return {}
+    rows = (
+        db.query(
+            OutlinerSegment.document_id.label("doc_id"),
+            func.count(SegmentRejection.id).label("cnt"),
+        )
+        .join(SegmentRejection, SegmentRejection.segment_id == OutlinerSegment.id)
+        .filter(OutlinerSegment.document_id.in_(document_ids))
+        .group_by(OutlinerSegment.document_id)
+        .all()
+    )
+    return {r.doc_id: int(r.cnt or 0) for r in rows}
+
+
 def segment_list_for_document(db: Session, document_id: str) -> List[dict]:
     segments = (
         db.query(
