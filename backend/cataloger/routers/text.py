@@ -104,7 +104,7 @@ class BibliographyAnnotation(BaseModel):
         description="Annotation type: citation, reference, title, colophon, incipit, person"
     )
 
-class InstanceMetadata(BaseModel):
+class EditionMetadata(BaseModel):
     id: str
     type: str
     copyright: str
@@ -122,13 +122,13 @@ class InstanceMetadata(BaseModel):
         description="Alternative incipit titles in multiple languages"
     )
 
-class Instance(BaseModel):
+class Edition(BaseModel):
     content: Optional[str] = None
-    metadata: Optional[InstanceMetadata] = None
+    metadata: Optional[EditionMetadata] = None
     annotations: Optional[List[Annotation]] = None
     biblography_annotation: Optional[List[BibliographyAnnotation]] = None
 
-class InstanceListItem(BaseModel):
+class EditionListItem(BaseModel):
     id: str
     type: str
     source: Optional[str] = None
@@ -146,21 +146,21 @@ class InstanceListItem(BaseModel):
         description="Alternative incipit titles in multiple languages"
     )
 
-class CreateInstance(BaseModel):
+class CreateEdition(BaseModel):
     metadata: Dict[str, Any]
     annotation: List[Dict[str, Any]]
     biblography_annotation: Optional[List[BibliographyAnnotation]] = None
     content: str
     user: Optional[str] = None
     
-class UpdateInstance(BaseModel):
+class UpdateEdition(BaseModel):
     metadata: Dict[str, Any]
     annotation: List[Dict[str, Any]]
     biblography_annotation: Optional[List[BibliographyAnnotation]] = None
     content: str
     user: Optional[str] = None
 
-class CreateInstanceResponse(BaseModel):
+class CreateEditionResponse(BaseModel):
     message: str
     id: str
 
@@ -200,8 +200,8 @@ async def get_text(id: str):
 async def update_text(id: str, text: UpdateText):
     return openpecha_update_text(id, text.model_dump(exclude_none=True))
 
-@router.get("/{id}/instances")
-async def get_instances(id: str):
+@router.get("/{id}/editions")
+async def get_editions(id: str):
     data = openpecha_list_instances_for_text(id)
     if isinstance(data, dict) and "results" in data:
         return data["results"]
@@ -209,21 +209,21 @@ async def get_instances(id: str):
         return data
     return []
 
-@router.post("/{id}/instances",  status_code=201)
-async def create_instance(id: str, instance: CreateInstance):
-    payload = instance.model_dump(exclude_none=True)
+@router.post("/{id}/editions",  status_code=201)
+async def create_edition(id: str, edition: CreateEdition):
+    payload = edition.model_dump(exclude_none=True)
     payload.pop("user", None)
     return openpecha_create_instance_for_text(id, payload)
 
 
-@router.put("/instances/{instance_id}", status_code=200)
-async def update_instance(instance_id: str, instance: UpdateInstance):
-    payload = instance.model_dump(exclude_none=True)
-    return openpecha_update_instance(instance_id, payload)
+@router.put("/editions/{edition_id}", status_code=200)
+async def update_edition(edition_id: str, edition: UpdateEdition):
+    payload = edition.model_dump(exclude_none=True)
+    return openpecha_update_instance(edition_id, payload)
 
-@router.get("/instances/{instance_id}")
-async def get_instance(instance_id: str, annotation: bool = True):
-    return openpecha_get_instance(instance_id, annotation=annotation, content=True)
+@router.get("/editions/{edition_id}")
+async def get_edition(edition_id: str, annotation: bool = True):
+    return openpecha_get_instance(edition_id, annotation=annotation, content=True)
 
 
 

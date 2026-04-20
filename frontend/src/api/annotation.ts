@@ -118,17 +118,17 @@ export interface PreparedDataResponse {
 }
 
 /**
- * Fetch prepared alignment data for source and target instances
- * @param source_instance_id - The ID of the source instance
- * @param target_instance_id - The ID of the target instance
+ * Fetch prepared alignment data for source and target editions
+ * @param source_edition_id - The ID of the source edition
+ * @param target_edition_id - The ID of the target edition
  * @returns PreparedDataResponse containing texts, alignment status, and segmentation data
  */
 export const fetchPreparedAlignmentData = async (
-  source_instance_id: string,
-  target_instance_id: string
+  source_edition_id: string,
+  target_edition_id: string
 ): Promise<PreparedDataResponse> => {
   const response = await fetch(
-    `${API_URL}/aligner-data/prepare-alignment-data/${source_instance_id}/${target_instance_id}`,
+    `${API_URL}/aligner-data/prepare-alignment-data/${source_edition_id}/${target_edition_id}`,
     {
       headers: {
         'accept': 'application/json',

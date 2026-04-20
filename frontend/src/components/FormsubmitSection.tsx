@@ -17,7 +17,7 @@ function FormsubmitSection({
 
 const { t } = useTranslation();
 const params = useParams();
-const instance_id = params.instance_id as string;
+const instance_id = params.edition_id as string;
 const disabled = isSubmitting || disableSubmit;
   return (<div className="flex justify-center space-x-3 pt-4">
     {onCancel && (

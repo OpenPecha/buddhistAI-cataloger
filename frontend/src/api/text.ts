@@ -128,13 +128,13 @@ export const createText = async (textData: {
 };
 
 export const fetchTextInstances = async (id: string): Promise<OpenPechaTextInstance[]> => {
-  const response = await fetch(`${API_URL}/text/${id}/instances`);
+  const response = await fetch(`${API_URL}/text/${id}/editions`);
   const data = await response.json();
   return Array.isArray(data) ? data : [data];
 };
 
 export const fetchInstance = async (id: string): Promise<OpenPechaTextInstance> => {
-  const response = await fetch(`${API_URL}/text/instances/${id}?annotations=true`);
+  const response = await fetch(`${API_URL}/text/editions/${id}`);
   return response.json();
 };
 
@@ -247,7 +247,7 @@ export const createTextInstance = async (textId: string, instanceData: {
   }>;
   content: string;
 }): Promise<OpenPechaTextInstance> => {
-  const response = await fetch(`${API_URL}/text/${textId}/instances`, {
+  const response = await fetch(`${API_URL}/text/${textId}/editions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -299,12 +299,12 @@ export const createCommentary = async (instanceId: string, commentaryData: {
   copyright: string;
 }): Promise<{
   text_id: string;
-  instance_id: string;
+  edition_id: string;
   segmentation_annotation_id?: string;
   target_annotation_id?: string;
   alignment_annotation_id?: string;
 }> => {
-  const response = await fetch(`${API_URL}/instances/${instanceId}/commentary`, {
+  const response = await fetch(`${API_URL}/editions/${instanceId}/commentary`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -353,12 +353,12 @@ export const createTranslation = async (instanceId: string, translationData: {
   copyright: string;
 }): Promise<{
   text_id: string;
-  instance_id: string;
+  edition_id: string;
   segmentation_annotation_id?: string;
   target_annotation_id?: string;
   alignment_annotation_id?: string;
 }> => {
-  const response = await fetch(`${API_URL}/instances/${instanceId}/translation`, {
+  const response = await fetch(`${API_URL}/editions/${instanceId}/translation`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

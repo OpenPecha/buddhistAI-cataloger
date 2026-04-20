@@ -7,6 +7,7 @@ import { TableRow, TableCell } from './ui/table';
 import { useTranslation } from 'react-i18next';
 import { getLanguageColor, getLanguageLabel } from '@/utils/getLanguageLabel';
 import type { OpenPechaText } from '@/types/text';
+import { textEditionsLink } from '@/utils/links';
 
 interface TextListCardProps {
   text: OpenPechaText;
@@ -29,9 +30,12 @@ const TextListCard = ({ text }: TextListCardProps) => {
     if (title) return title;
     return text.title?.[text.language] || t('textsPage.untitled');
   }
-
- 
-  
+  function getType(){
+    if(text.commentaries.length>0|| text.translations.length>0) return "source"
+    if(text.translation_of) return "translation"
+    if(text.commentary_of) return "commentary"
+    return ""
+  }
   
   return (
     <TableRow>
@@ -40,7 +44,7 @@ const TextListCard = ({ text }: TextListCardProps) => {
       <Book className="w-4 h-4 text-yellow-500 "  />
         
         <Link 
-          to={`/texts/${text.id}/instances`} 
+          to={textEditionsLink(text.id)} 
           title={getTitle(text)}
           className="transition-colors duration-200 text-neutral-700 hover:text-blue-500 truncate max-w-[350px] line-clamp-1"
         >
@@ -71,9 +75,7 @@ const TextListCard = ({ text }: TextListCardProps) => {
         )}
       </TableCell>
       <TableCell>
-        {(text.translations.length>0 || text.commentaries.length>0) && "source"}
-        {text.translation_of && "Translation"}
-        {text.commentary_of && "Commentary"}
+        <TypeBadge type={getType()} />
       </TableCell>
       {/* Contributors Column */}
       <TableCell className="text-right relative">
@@ -151,3 +153,18 @@ const TextListCard = ({ text }: TextListCardProps) => {
 };
 
 export default TextListCard;
+
+function TypeBadge({ type }: { type: string }) {
+
+  const typeLabel={
+    "translation": {label: "Translation", color: "#3B82F6"},
+    "commentary": {label: "Commentary", color: "#10B981"},
+    "source": {label: "Source", color: "#6B7280"},
+  }
+  if(type==='') return null
+  return (
+    <Badge variant="outline" className="capitalize" style={{ color: typeLabel[type].color }}>
+      {typeLabel[type].label}
+    </Badge>
+  );
+}

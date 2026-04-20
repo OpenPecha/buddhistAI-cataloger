@@ -19,8 +19,8 @@ export const textKeys = {
   list: (filters: Record<string, unknown>) => [...textKeys.lists(), { filters }] as const,
   details: () => [...textKeys.all, 'detail'] as const,
   detail: (id: string) => [...textKeys.details(), id] as const,
-  instances: (id: string) => [...textKeys.detail(id), 'instances'] as const,
-  instance: (id: string) => ['instance', id] as const,
+  editions: (id: string) => [...textKeys.detail(id), 'editions'] as const,
+  edition: (id: string) => ['edition', id] as const,
   annotation: (id: string) => ['annotation', id] as const,
 };
 
@@ -107,7 +107,7 @@ export const useTextTitleSearch = (searchQuery: string, debounceMs: number = 500
  */
 export const useTextInstances = (textId: string | null) => {
   return useQuery({
-    queryKey: textKeys.instances(textId || "textId"),
+    queryKey: textKeys.editions(textId || "textId"),
     queryFn: () => textId ? fetchTextInstances(textId) : null,
     enabled: !!textId,
     staleTime: 10 * 60 * 1000, // 10 minutes
@@ -124,7 +124,7 @@ export const useTextInstances = (textId: string | null) => {
  */
 export const useInstance = (instanceId: string | null) => {
   return useQuery({
-    queryKey: textKeys.instance(instanceId || "instanceId"),
+    queryKey: textKeys.edition(instanceId || "instanceId"),
     queryFn: () => instanceId ? fetchInstance(instanceId) : null,
     enabled: !!instanceId && instanceId !== '',
     staleTime: 10 * 60 * 1000, // 10 minutes
@@ -499,7 +499,7 @@ export const useLoadTextContent = () => {
     },
     onSuccess: (data) => {
       // Cache the text instance data
-      queryClient.setQueryData(textKeys.instance(data.instanceId), (oldData: OpenPechaTextInstance | undefined) => {
+      queryClient.setQueryData(textKeys.edition(data.instanceId), (oldData: OpenPechaTextInstance | undefined) => {
         if (oldData) return oldData;
         return {
           id: data.instanceId,

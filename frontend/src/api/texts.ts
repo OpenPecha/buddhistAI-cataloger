@@ -162,36 +162,36 @@ export const createText = async (textData: any): Promise<OpenPechaText> => {
 
 export const fetchTextInstances = async (id: string): Promise<OpenPechaTextInstanceListItem[]> => {
   try {
-    const response = await fetch(`${API_URL}/text/${id}/instances`);
+    const response = await fetch(`${API_URL}/text/${id}/editions`);
     return await handleApiResponse(response, {
-      404: 'Text instances not found. The text may not exist or has no instances yet.'
+      404: 'Text editions not found. The text may not exist or has no editions yet.'
     });
   } catch (error) {
     if (error instanceof Error) {
       throw error;
     }
-    throw new Error('Unable to load text instances. Please check your connection and try again.');
+    throw new Error('Unable to load text editions. Please check your connection and try again.');
   }
 };
 
 export const fetchInstance = async (id: string): Promise<OpenPechaTextInstance> => {
   try {
-    const response = await fetch(`${API_URL}/text/instances/${id}`);
+    const response = await fetch(`${API_URL}/text/editions/${id}`);
     return await handleApiResponse(response, {
-      404: 'Instance not found. It may have been deleted or the link is incorrect.'
+      404: 'Edition not found. It may have been deleted or the link is incorrect.'
     });
   } catch (error) {
     if (error instanceof Error) {
       throw error;
     }
-    throw new Error('Unable to load instance details. Please check your connection and try again.');
+    throw new Error('Unable to load edition details. Please check your connection and try again.');
   }
 };
 
 // Real API function for creating text instances
 export const createTextInstance = async (textId: string, instanceData: any, user: string): Promise<CreateInstanceResponse> => {
   try {
-    const response = await fetch(`${API_URL}/text/${textId}/instances`, {
+    const response = await fetch(`${API_URL}/text/${textId}/editions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -200,14 +200,14 @@ export const createTextInstance = async (textId: string, instanceData: any, user
     });
 
     return await handleApiResponse(response, {
-      400: 'Invalid instance data. Please check all required fields and try again.',
-      404: 'Text not found. Cannot create instance for non-existent text.'
+      400: 'Invalid edition data. Please check all required fields and try again.',
+      404: 'Text not found. Cannot create edition for non-existent text.'
     });
   } catch (error) {
     if (error instanceof Error) {
       throw error;
     }
-    throw new Error('Unable to create text instance. Please check your connection and try again.');
+    throw new Error('Unable to create text edition. Please check your connection and try again.');
   }
 };
 
@@ -237,7 +237,7 @@ export const fetchTextByBdrcId = async (bdrcId: string): Promise<OpenPechaText |
 
 export const createTranslation = async (instanceId: string, translationData: any, user: string): Promise<any> => {
   try {
-    const response = await fetch(`${API_URL}/instances/${instanceId}/translation`, {
+    const response = await fetch(`${API_URL}/editions/${instanceId}/translation`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -257,7 +257,7 @@ export const createTranslation = async (instanceId: string, translationData: any
 
 export const createCommentary = async (instanceId: string, commentaryData: any, user: string): Promise<any> => {
   try {
-    const response = await fetch(`${API_URL}/instances/${instanceId}/commentary`, {
+    const response = await fetch(`${API_URL}/editions/${instanceId}/commentary`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -304,7 +304,7 @@ export const updateInstance = async (textId: string, instanceId: string, instanc
       delete instanceData.biblography_annotation;
     }
     
-    const response = await fetch(`${API_URL}/text/instances/${instanceId}`, {
+    const response = await fetch(`${API_URL}/text/editions/${instanceId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -313,14 +313,14 @@ export const updateInstance = async (textId: string, instanceId: string, instanc
     });
     
     return await handleApiResponse(response, {
-      400: 'Invalid instance data. Please check all required fields and try again.',
-      404: 'Instance not found. It may have been deleted or the link is incorrect.'
+      400: 'Invalid edition data. Please check all required fields and try again.',
+      404: 'Edition not found. It may have been deleted or the link is incorrect.'
     });
   } catch (error) {
     if (error instanceof Error) {
       throw error;
     }
-    throw new Error('Unable to update instance. Please check your connection and try again.');
+    throw new Error('Unable to update edition. Please check your connection and try again.');
   }
 };
 
@@ -360,14 +360,14 @@ export const fetchEnums = async (type: string): Promise<any> => {
 
 export const fetchRelatedInstances = async (instanceId: string): Promise<any[]> => {
   try {
-    const response = await fetch(`${API_URL}/instances/${instanceId}/related`);
+    const response = await fetch(`${API_URL}/editions/${instanceId}/related`);
     return await handleApiResponse(response, {
-      404: 'Related instances not found. The instance may not exist or has no related instances.'
+      404: 'Related editions not found. The edition may not exist or has no related editions.'
     });
   } catch (error) {
     if (error instanceof Error) {
       throw error;
     }
-    throw new Error('Unable to load related instances. Please check your connection and try again.');
+    throw new Error('Unable to load related editions. Please check your connection and try again.');
   }
 };

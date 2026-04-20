@@ -1,39 +1,12 @@
 
-interface RelatedInstance {
-  // Support both API response formats
-  id?: string;
-  instance_id?: string;
-  type?: string;
-  incipit_title?: Record<string, string>;
-  alt_incipit_titles?: Record<string, string>;
-  content?: string;
-  annotations?: Array<{
-    annotation_id: string;
-    type: string;
-  }>;
-  // New API response format
-  metadata?: {
-    instance_type?: string;
-    copyright?: string;
-    text_id?: string;
-    title?: Record<string, string>;
-    alt_titles?: Array<Record<string, string>>;
-    language?: string;
-    contributions?: Array<{
-      person_id: string;
-      role: string;
-    }>;
-  };
-  annotation?: string;
-  relationship?: string;
-}
+import type { RelatedInstance } from '@/types/text';
 
 const API_URL = '/api';
 
 
-export const fetchRelatedInstances = async (instanceId: string): Promise<RelatedInstance[]> => {
+export const fetchRelatedInstances = async (editionId: string): Promise<RelatedInstance[]> => {
   const response = await fetch(
-    `${API_URL}/instances/${instanceId}/related`,
+    `${API_URL}/editions/${editionId}/related`,
     {
       headers: {
         'accept': 'application/json',
@@ -42,7 +15,7 @@ export const fetchRelatedInstances = async (instanceId: string): Promise<Related
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch related instances: ${response.status} ${response.statusText}`);
+    throw new Error(`Failed to fetch related editions: ${response.status} ${response.statusText}`);
   }
 
   const data = await response.json();
@@ -58,5 +31,4 @@ export const fetchRelatedInstances = async (instanceId: string): Promise<Related
     return [];
   }
 };
-
 

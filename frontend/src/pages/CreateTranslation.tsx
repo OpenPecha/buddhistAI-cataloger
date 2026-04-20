@@ -24,13 +24,13 @@ import { Label } from '@/components/ui/label';
 
 
 const CreateTranslation = () => {
-  const { text_id, instance_id } = useParams();
+  const { text_id, edition_id } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { user } = useAuth0();
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Fetch instance data
-  const { data: instance, isLoading: instanceLoading } = useInstance(instance_id || '');
+  const { data: instance, isLoading: instanceLoading } = useInstance(edition_id || '');
 
   // Form state
   const [language, setLanguage] = useState('');
@@ -245,11 +245,10 @@ const CreateTranslation = () => {
       }
 
       // Create translation
-      const response = await createTranslation(instance_id || '', translationData, JSON.stringify(user || {}));
-      
-      // Extract instance_id from response
-      if (response && response.instance_id) {
-        setCreatedInstanceId(response.instance_id);
+      const response = await createTranslation(edition_id || '', translationData, JSON.stringify(user || {}));
+      const newEditionId = response?.edition_id ?? response?.instance_id;
+      if (response && newEditionId) {
+        setCreatedInstanceId(newEditionId);
       }
       
       // Clear bibliography annotations after successful submission
@@ -277,7 +276,7 @@ const CreateTranslation = () => {
   // Handle modal close - navigate back to instance page
   const handleModalClose = () => {
     setSuccess(false);
-    navigate(`/texts/${text_id}/instances/${instance_id}`);
+    navigate(`/texts/${text_id}/editions/${edition_id}`);
   };
 
   const modalContent = showConfirmModal ? (
@@ -385,7 +384,7 @@ const CreateTranslation = () => {
           message={`${t('textForm.translation')} ${t('messages.createSuccess').toLowerCase()}`}
           onClose={handleModalClose}
           instanceId={createdInstanceId || null}
-          parentInstanceId={instance_id || null}
+          parentInstanceId={edition_id || null}
         />
       )}
 
@@ -414,7 +413,7 @@ const CreateTranslation = () => {
             <div className="mb-6">
               <button
                 type="button"
-                onClick={() => navigate(`/texts/${text_id}/instances/${instance_id}`)}
+                onClick={() => navigate(`/texts/${text_id}/editions/${edition_id}`)}
                 className="mb-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
               >
                 <ArrowLeft className="w-4 h-4" />

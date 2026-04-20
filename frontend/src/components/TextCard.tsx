@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { usePermission } from "@/hooks/usePermission";
 import PermissionButton from "./PermissionButton";
+import { alignmentLink } from "@/utils/links";
 
 interface TextCardProps {
   title: string;
@@ -48,11 +49,13 @@ const TextCard = ({
       const source=sourceInstanceId
       const target= instanceId
       const alignmentInfo=getAlignmentInfo(source,target);
+      let url;
       if(relationship === "translation" || relationship === "commentary"){
-        navigate(`/align/${alignmentInfo.source}/${alignmentInfo.target}`)
+        url= alignmentLink(alignmentInfo.source, alignmentInfo.target)
       }else{
-        navigate(`/align/${alignmentInfo.target}/${alignmentInfo.source}`)
+        url= alignmentLink(alignmentInfo.target, alignmentInfo.source)
       }
+      navigate(url)
     }
 
 

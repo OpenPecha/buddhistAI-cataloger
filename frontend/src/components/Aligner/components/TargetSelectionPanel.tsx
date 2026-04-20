@@ -9,12 +9,15 @@ import { applySegmentation, generateFileSegmentation, extractInstanceSegmentatio
 import { reconstructSegments } from '../utils/generateAnnotation';
 import LoadingOverlay from './LoadingOverlay';
 import { CATALOGER_URL } from '../../../config';
+import { editionIdFromRelated } from '@/utils/links';
 
 // Interface for the API response structure
 interface RelatedInstanceResponse {
-  instance_id: string;
+  edition_id?: string;
+  instance_id?: string;
   metadata: {
-    instance_type: string;
+    edition_type?: string;
+    instance_type?: string;
     copyright: string;
     text_id: string;
     title: Record<string, string>;
@@ -259,7 +262,7 @@ function TargetSelectionPanel() {
       
       // Determine and set target type based on metadata
       const selectedInstance = relatedInstances.find(instance => 
-        (instance.instance_id || instance.id) === selectedInstanceId
+        editionIdFromRelated(instance) === selectedInstanceId
       );
       const targetType = determineTargetType(selectedInstance || null);
       setTargetType(targetType);
@@ -349,7 +352,7 @@ function TargetSelectionPanel() {
     
     // Find the selected instance from the related instances
     const selectedInstance = relatedInstances.find(instance => 
-      (instance.instance_id || instance.id) === instanceId
+      editionIdFromRelated(instance) === instanceId
     );
     
     if (selectedInstance) {
@@ -542,8 +545,8 @@ function TargetSelectionPanel() {
                 if (!instance) return null;
                 
                 // Handle both API response formats
-                const instanceId = instance.instance_id || instance.id;
-                const isNewFormat = 'instance_id' in instance && 'metadata' in instance;
+                const instanceId = editionIdFromRelated(instance);
+                const isNewFormat = ('edition_id' in instance || 'instance_id' in instance) && 'metadata' in instance;
                 
                 let title: string;
                 let instanceType: string;

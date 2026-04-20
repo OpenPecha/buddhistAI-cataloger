@@ -5,6 +5,7 @@ import { applySegmentation, generateFileSegmentation, extractInstanceSegmentatio
 import { reconstructSegments } from '../utils/generateAnnotation';
 import { useTextSelectionStore } from '../../../stores/textSelectionStore';
 import type { RelatedInstance } from './useRelatedInstances';
+import { editionIdFromRelated } from '@/utils/links';
 
 // Interface for alignment annotation response
 interface AlignmentAnnotationData {
@@ -34,9 +35,11 @@ interface AlignmentAnnotationResponse {
 }
 
 interface RelatedInstanceResponse {
-  instance_id: string;
+  edition_id?: string;
+  instance_id?: string;
   metadata: {
-    instance_type: string;
+    edition_type?: string;
+    instance_type?: string;
     copyright: string;
     text_id: string;
     title: Record<string, string>;
@@ -226,7 +229,7 @@ export function useAlignmentSegmentation({
       );
       
       const selectedInstance = relatedInstances.find(instance => 
-        (instance.instance_id || instance.id) === selectedTargetInstanceId
+        editionIdFromRelated(instance) === selectedTargetInstanceId
       );
       const targetType = determineTargetType(selectedInstance || null);
       setTargetType(targetType);

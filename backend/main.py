@@ -73,7 +73,7 @@ app.add_middleware(
 app.include_router(person.router, prefix="/person", tags=["person"])
 app.include_router(text.router, prefix="/text", tags=["text"])
 app.include_router(bdrc.router, prefix="/bdrc", tags=["bdrc"])
-app.include_router(translation.router, prefix="/instances", tags=["translation"])
+app.include_router(translation.router, prefix="/editions", tags=["translation"])
 app.include_router(annotation.router, prefix="/v2/annotations", tags=["annotation"])
 app.include_router(segments.router, prefix="/segments", tags=["segments"])
 app.include_router(category.router, prefix="/v2/categories", tags=["category"])

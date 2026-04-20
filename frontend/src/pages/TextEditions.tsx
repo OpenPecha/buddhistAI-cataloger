@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { editionIdFromRelated } from "@/utils/links";
 
 function TextInstances() {
   const { t } = useTranslation();
@@ -296,13 +297,13 @@ function TextInstances() {
                       {filteredInstances.map((relatedInstance: RelatedInstance) => {
                         const metadata = relatedInstance.metadata;
                         const textId = metadata.text_id;
-                        const instanceId = relatedInstance.instance_id;
+                        const instanceId = editionIdFromRelated(relatedInstance);
                         const isAnnotationAvailable = !!relatedInstance.annotation;
                         const sourceInstanceId = criticalInstance?.id;
                         return (
                           <Link
-                            key={relatedInstance.instance_id}
-                            to={`/texts/${textId}/instances/${instanceId}`}
+                            key={instanceId}
+                            to={editionLink(textId, instanceId)}
                             className="contents"
                           >
                             <TextCard
@@ -333,6 +334,7 @@ function TextInstances() {
 import { Select, SelectContent, SelectItem, SelectTrigger,SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {  MenuIcon } from "lucide-react";
+import { editionLink } from "@/utils/links";
 
 type PropFilterType = {
  readonly filterType: "translation" | "commentary" | 'all';

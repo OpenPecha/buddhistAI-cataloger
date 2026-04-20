@@ -60,7 +60,7 @@ export interface IncipitTitle {
   [language: string]: string;
 }
 
-// Instance list item (flat structure from GET /text/{text_id}/instances)
+// Edition list item (flat structure from GET /text/{text_id}/editions)
 export interface OpenPechaTextInstanceListItem {
   id: string;
   type: string;
@@ -83,7 +83,7 @@ export interface InstanceMetadata {
   alt_incipit_titles: string | null;
 }
 
-// Single instance detail (nested structure from GET /v2/instances/{instance_id})
+// Single edition detail (nested structure from GET /text/editions/{edition_id})
 export interface OpenPechaTextInstance {
   content: string;
   metadata: InstanceMetadata;
@@ -93,7 +93,7 @@ export interface OpenPechaTextInstance {
   alignment_targets?: string[];
 }
 
-// Response when creating a new instance (POST /text/{id}/instances)
+// Response when creating a new edition (POST /text/{id}/editions)
 export interface CreateInstanceResponse {
   message: string;
   id: string;
@@ -106,9 +106,11 @@ export interface RelatedInstanceContribution {
   role: string;
 }
 
-// Related instance metadata
+// Related edition metadata
 export interface RelatedInstanceMetadata {
-  instance_type: string;
+  edition_type?: string;
+  /** @deprecated Prefer edition_type */
+  instance_type?: string;
   source?: string | null;
   text_id: string;
   title: Title;
@@ -117,9 +119,11 @@ export interface RelatedInstanceMetadata {
   contributions: RelatedInstanceContribution[];
 }
 
-// Related instance response from GET /instances/{instance_id}/related
+// Related edition response from GET /editions/{edition_id}/related
 export interface RelatedInstance {
-  instance_id: string;
+  edition_id?: string;
+  /** @deprecated Prefer edition_id */
+  instance_id?: string;
   metadata: RelatedInstanceMetadata;
   annotation?: string | null;
   relationship: string;

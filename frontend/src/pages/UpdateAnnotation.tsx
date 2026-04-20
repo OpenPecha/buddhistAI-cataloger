@@ -19,14 +19,14 @@ import { SkeletonLarger } from "@/components/ui/skeleton";
 
 
 const UpdateAnnotation = () => {
-  const { text_id, instance_id } = useParams();
+  const { text_id, edition_id } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const instanceFormRef = useRef<InstanceCreationFormRef>(null);
 
   // Fetch text and instance data
   const { data: text, isLoading: textLoading ,isRefetching: textRefetching} = useText(text_id || "");
-  const { data: instance, isLoading: instanceLoading ,isRefetching: instanceRefetching} = useInstance(instance_id || "");
+  const { data: instance, isLoading: instanceLoading ,isRefetching: instanceRefetching} = useInstance(edition_id || "");
 
 
   // Find segmentation annotation ID from instance.annotations array
@@ -259,7 +259,7 @@ const UpdateAnnotation = () => {
         type="button"
         variant="outline"
         size="sm"
-        onClick={() => navigate(`/texts/${text_id}/instances/${instance_id}`)}
+        onClick={() => navigate(`/texts/${text_id}/editions/${edition_id}`)}
         className="flex items-center gap-2"
       >
         <ArrowLeft className="w-4 h-4" />

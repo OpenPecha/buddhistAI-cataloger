@@ -149,7 +149,7 @@ def prepare_data(source_instance_id: str, target_instance_id: str) -> Dict[str, 
 
         for related in related_instances:
             if isinstance(related, dict):
-                related_id = related.get("instance_id")
+                related_id = related.get("edition_id") or related.get("instance_id")
                 if related_id == target_instance_id:
                     alignment_ann_id = related.get("annotation")
                     if alignment_ann_id:
@@ -244,10 +244,10 @@ def prepare_data(source_instance_id: str, target_instance_id: str) -> Dict[str, 
     }
 
 
-@router.get("/prepare-alignment-data/{source_instance_id}/{target_instance_id}")
+@router.get("/prepare-alignment-data/{source_edition_id}/{target_edition_id}")
 async def prepare_alignment_data(
-    source_instance_id: str,
-    target_instance_id: str
+    source_edition_id: str,
+    target_edition_id: str
 ) -> PreparedDataResponse:
     """
     Prepare alignment data by loading texts, checking for alignments,
@@ -258,7 +258,7 @@ async def prepare_alignment_data(
     """
     try:
         # Prepare data (fetch instances, annotations, etc.)
-        prepared_data = prepare_data(source_instance_id, target_instance_id)
+        prepared_data = prepare_data(source_edition_id, target_edition_id)
         
         source_text = prepared_data["source_text"]
         target_text = prepared_data["target_text"]

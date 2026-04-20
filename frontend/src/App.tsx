@@ -1,16 +1,15 @@
-import { Routes, Route, useLocation,Link } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { useEffect, lazy, Suspense } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { Navigation, ProtectedRoute } from '@app';
 import { getUserByEmail, createUser } from './api/settings';
 import OutlinerAdminLayout from './features/outliner/components/OutlinerAdminLayout';
-import { useUser } from './hooks/useUser';
 
 // Lazy load page components
 const TextsPage = lazy(() => import('./pages/Text'));
 const PersonsPage = lazy(() => import('./pages/Person'));
-const TextInstances = lazy(() => import('./pages/TextInstances'));
-const Instance = lazy(() => import('./pages/Instance'));
+const TextEditions = lazy(() => import('./pages/TextEditions'));
+const Edition = lazy(() => import('./pages/Edition'));
 const Index = lazy(() => import('./pages/Index'));
 const Create = lazy(() => import('./pages/Create'));
 const CreateTranslation = lazy(() => import('./pages/CreateTranslation'));
@@ -134,27 +133,27 @@ function App() {
               <PersonsPage />
             </ProtectedRoute>
           } />
-          <Route path="/texts/:text_id/instances" element={
+          <Route path="/texts/:text_id/editions" element={
             <ProtectedRoute>
-              <TextInstances />
+              <TextEditions />
             </ProtectedRoute>
           } />
-          <Route path="/texts/:text_id/instances/:instance_id" element={
+          <Route path="/texts/:text_id/editions/:edition_id" element={
             <ProtectedRoute>
-              <Instance />
+              <Edition />
             </ProtectedRoute>
           } />
-          <Route path="/texts/:text_id/instances/:instance_id/translation" element={
+          <Route path="/texts/:text_id/editions/:edition_id/translation" element={
             <ProtectedRoute>
               <CreateTranslation />
             </ProtectedRoute>
           } />
-          <Route path="/texts/:text_id/instances/:instance_id/commentary" element={
+          <Route path="/texts/:text_id/editions/:edition_id/commentary" element={
             <ProtectedRoute>
               <CreateCommentary />
             </ProtectedRoute>
           } />
-          <Route path="/texts/:text_id/instances/:instance_id/edit" element={
+          <Route path="/texts/:text_id/editions/:edition_id/edit" element={
             <ProtectedRoute>
               <UpdateAnnotation />
             </ProtectedRoute>

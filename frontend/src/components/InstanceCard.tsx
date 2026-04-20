@@ -18,7 +18,7 @@ interface InstanceCardProps {
 const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { text_id, instance_id } = useParams();
+  const { text_id, edition_id } = useParams();
   const [expandedAnnotations, setExpandedAnnotations] = useState<string[]>([]);
   const { data: permission,isFetching:isFetchingPermission } = usePermission();
   const isAdmin=permission?.role === "admin";
@@ -140,7 +140,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
             <Button
               disabled={!isAdmin}
               onClick={() => {
-                navigate(`/texts/${text_id}/instances/${instance_id}/translation`);
+                navigate(`/texts/${text_id}/editions/${edition_id}/translation`);
               }}
               className={cn(buttonClass, "bg-gradient-to-r from-sky-400 to-cyan-500 hover:from-sky-500 hover:to-cyan-600")}
                >
@@ -153,7 +153,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
             <Button
               disabled={!isAdmin}
               onClick={() => {
-                navigate(`/texts/${text_id}/instances/${instance_id}/commentary`);
+                navigate(`/texts/${text_id}/editions/${edition_id}/commentary`);
               }}
               className={cn(buttonClass, "bg-gradient-to-r from-emerald-400 to-green-500 hover:from-emerald-500 hover:to-green-600")}
               >
@@ -172,7 +172,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
             variant="ghost"
               disabled={!isAdmin ||!instance.content}
               onClick={() => {
-                navigate(`/texts/${text_id}/instances/${instance_id}/edit`);
+                navigate(`/texts/${text_id}/editions/${edition_id}/edit`);
               }}
               >
               <PermissionButton isLoading={isFetchingPermission} icon={<PencilIcon className="w-4 h-4 text-neutral-500" />} text={""} />

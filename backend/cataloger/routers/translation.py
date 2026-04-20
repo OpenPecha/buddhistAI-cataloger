@@ -9,10 +9,6 @@ from cataloger.controller.openpecha_api.instances import (
     create_translation as openpecha_create_translation,
     list_related_instances as openpecha_list_related_instances,
 )
-from cataloger.controller.openpecha_api.texts import (
-    list_instances_for_text as openpecha_list_instances_for_text,
-)
-
 load_dotenv(override=True)
 
 router = APIRouter()
@@ -86,20 +82,9 @@ class CreateCommentary(BaseModel):
 
 class TranslationResponse(BaseModel):
     message: str
-    instance_id: str
+    edition_id: str
     text_id: str
 
-
-
-class InstanceListItem(BaseModel):
-    id: str
-    type: str
-    source: Optional[str] = None
-    bdrc: Optional[str] = None
-    wiki: Optional[str] = None
-    colophon: Optional[str] = None
-    incipit_title: Optional[Dict[str, str]] = None
-    alt_incipit_titles: List[Dict[str, str]] = []
 
 
 class Contribution(BaseModel):
@@ -108,8 +93,8 @@ class Contribution(BaseModel):
     role: str
 
 
-class RelatedInstanceMetadata(BaseModel):
-    instance_type: str
+class RelatedEditionMetadata(BaseModel):
+    edition_type: str
     copyright: str
     text_id: str
     title: Dict[str, str]
@@ -118,44 +103,37 @@ class RelatedInstanceMetadata(BaseModel):
     contributions: List[Contribution] = []
 
 
-class RelatedInstance(BaseModel):
-    instance_id: str
-    metadata: RelatedInstanceMetadata
+class RelatedEdition(BaseModel):
+    edition_id: str
+    metadata: RelatedEditionMetadata
     annotation: Optional[str] = None
     relationship: str
 
 
-@router.get("/{text_id}/instances")
-async def get_text_instances(text_id: str):
-    """Get all instances for a specific text"""
-    return openpecha_list_instances_for_text(text_id)
-
-
-
-@router.post("/{instance_id}/translation", status_code=201)
-async def create_translation(instance_id: str, translation: CreateTranslation):
-    """Create a translation for a specific instance"""
+@router.post("/{edition_id}/translation", status_code=201)
+async def create_translation(edition_id: str, translation: CreateTranslation):
+    """Create a translation from a source edition."""
     payload = translation.model_dump(exclude_none=True)
     payload.pop("user", None)
-    return openpecha_create_translation(instance_id, payload)
+    return openpecha_create_translation(edition_id, payload)
 
 
-@router.post("/{instance_id}/commentary", status_code=201)
-async def create_commentary(instance_id: str, commentary: CreateCommentary):
-    """Create a commentary for a specific instance"""
+@router.post("/{edition_id}/commentary", status_code=201)
+async def create_commentary(edition_id: str, commentary: CreateCommentary):
+    """Create a commentary from a source edition."""
     payload = commentary.model_dump(exclude_none=True)
     payload.pop("user", None)
-    return openpecha_create_commentary(instance_id, payload)
+    return openpecha_create_commentary(edition_id, payload)
 
 
-@router.get("/{instance_id}/related")
-async def get_related_instances(instance_id: str, type: Optional[str] = None):
-    """Get all instances related to a specific instance
+@router.get("/{edition_id}/related")
+async def get_related_editions(edition_id: str, type: Optional[str] = None):
+    """Editions related to the given edition (same text family).
 
     Args:
-        instance_id: The ID of the instance to get related instances for
+        edition_id: Source edition id
         type: Optional filter by relationship type (root, commentary, translation)
     """
-    return openpecha_list_related_instances(instance_id, relationship_type=type)
+    return openpecha_list_related_instances(edition_id, relationship_type=type)
 
 

@@ -133,10 +133,10 @@ async def update_annotation(annotation_id: str, annotation: UpdateAnnotation):
     """Update an annotation by ID"""
     return openpecha_update_annotation_body(annotation_id, annotation.dict())
 
-@router.post("/{instance_id}/annotation")
-async def create_annotation(instance_id: str, annotation: CreateAnnotation):
-    """Create an annotation for a specific instance"""
-    return openpecha_create_annotation_for_instance(instance_id, annotation.dict())
+@router.post("/{edition_id}/annotation")
+async def create_annotation(edition_id: str, annotation: CreateAnnotation):
+    """Create an annotation on a specific edition."""
+    return openpecha_create_annotation_for_instance(edition_id, annotation.dict())
 
 
 

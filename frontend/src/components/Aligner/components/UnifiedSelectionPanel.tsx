@@ -17,6 +17,7 @@ import {
   fetchInstance,
 } from "../../../api/text";
 import { fetchRelatedInstances } from "../../../api/instances";
+import { editionIdFromRelated } from "@/utils/links";
 import {
   applySegmentation,
   generateFileSegmentation,
@@ -194,7 +195,7 @@ function UnifiedSelectionPanel() {
 
       const actionType =
         action === "create-translation" ? "translation" : "commentary";
-      const url = `${CATALOGER_URL}/texts/${sourceTextId}/instances/${sourceInstanceId}/${actionType}`;
+      const url = `${CATALOGER_URL}/texts/${sourceTextId}/editions/${sourceInstanceId}/${actionType}`;
       window.open(url, "_blank");
     },
     [sourceTextId, sourceInstanceId]
@@ -427,7 +428,7 @@ function UnifiedSelectionPanel() {
         try {
           // Find the selected instance in related instances
           const selectedInstance = relatedInstances.find(
-            (instance) => (instance.instance_id || instance.id) === instanceId
+            (instance) => editionIdFromRelated(instance) === instanceId
           );
 
           if (!selectedInstance) {
@@ -568,7 +569,7 @@ function UnifiedSelectionPanel() {
 
       // If it has alignment then do the current workflow
       const selectedInstance = relatedInstances.find(
-        (instance) => (instance.instance_id || instance.id) === instanceId
+        (instance) => editionIdFromRelated(instance) === instanceId
       );
 
       if (selectedInstance) {
@@ -621,7 +622,7 @@ function UnifiedSelectionPanel() {
       relatedInstances.length > 0
     ) {
       const targetInstance = relatedInstances.find(
-        (instance) => (instance.instance_id || instance.id) === urlTargetId
+        (instance) => editionIdFromRelated(instance) === urlTargetId
       );
 
       if (targetInstance) {

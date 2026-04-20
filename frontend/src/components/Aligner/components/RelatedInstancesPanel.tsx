@@ -3,11 +3,14 @@ import { useRelatedInstances, type RelatedInstance } from '../hooks/useRelatedIn
 import { getLanguageFromCode } from '../utils/languageUtils';
 import { RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { editionIdFromRelated } from '@/utils/links';
 
 interface RelatedInstanceResponse {
-  instance_id: string;
+  edition_id?: string;
+  instance_id?: string;
   metadata: {
-    instance_type: string;
+    edition_type?: string;
+    instance_type?: string;
     copyright: string;
     text_id: string;
     title: Record<string, string>;
@@ -43,13 +46,13 @@ export function RelatedInstancesPanel({
 
 
   const getInstanceTitle = (instance: RelatedInstance): string => {
-    const isNewFormat = 'instance_id' in instance && 'metadata' in instance;
+    const isNewFormat = ('edition_id' in instance || 'instance_id' in instance) && 'metadata' in instance;
     
     if (isNewFormat) {
       const apiInstance = instance as RelatedInstanceResponse;
       const titleObj = apiInstance.metadata.title;
       const firstTitleKey = titleObj ? Object.keys(titleObj)[0] : undefined;
-      return (firstTitleKey && titleObj[firstTitleKey]) || `Instance ${instance.instance_id || instance.id}`;
+      return (firstTitleKey && titleObj[firstTitleKey]) || `Edition ${editionIdFromRelated(apiInstance)}`;
     } else {
       const titleObj = instance.incipit_title;
       const altTitlesObj = instance.alt_incipit_titles;
@@ -60,12 +63,12 @@ export function RelatedInstancesPanel({
       
       return (firstTitleKey && titleObjTyped?.[firstTitleKey]) || 
              (firstAltTitleKey && altTitlesObjTyped?.[firstAltTitleKey]) || 
-             `Instance ${instance.instance_id || instance.id}`;
+             `Edition ${editionIdFromRelated(instance)}`;
     }
   };
 
   const getInstanceMetadata = (instance: RelatedInstance) => {
-    const isNewFormat = 'instance_id' in instance && 'metadata' in instance;
+    const isNewFormat = ('edition_id' in instance || 'instance_id' in instance) && 'metadata' in instance;
     
     if (isNewFormat) {
       const apiInstance = instance as RelatedInstanceResponse;
@@ -203,7 +206,7 @@ return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {availableTargetInstances.map((instance) => {
         
-        const instanceId = instance.instance_id || instance.id;
+        const instanceId = editionIdFromRelated(instance);
         
         const isSelected = selectedTargetInstanceId === instanceId;
         const title = getInstanceTitle(instance);

@@ -208,7 +208,7 @@ def _create_linked_text_and_edition(
 
     return {
         "message": "Created successfully",
-        "instance_id": new_edition_id,
+        "edition_id": new_edition_id,
         "text_id": new_text_id,
     }
 
@@ -266,9 +266,9 @@ def _related_edition_to_legacy(ed: Dict[str, Any], relationship: str = "related"
         except HTTPException:
             t = {}
     return {
-        "instance_id": ed.get("id"),
+        "edition_id": ed.get("id"),
         "metadata": {
-            "instance_type": ed.get("type", ""),
+            "edition_type": ed.get("type", ""),
             "copyright": "",
             "text_id": text_id,
             "title": t.get("title") or {},

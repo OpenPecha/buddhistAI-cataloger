@@ -1,6 +1,7 @@
 import React from 'react';
 import type { OpenPechaTextInstanceListItem } from '@/types/text';
 import { Link, useParams } from 'react-router-dom';
+import { editionLink } from '@/utils/links';
 
 interface TextInstanceCardProps {
   instance: OpenPechaTextInstanceListItem;
@@ -51,7 +52,7 @@ const TextInstanceCard: React.FC<TextInstanceCardProps> = ({ instance }) => {
       : "Text Instance";
   }
   return (
-    <Link to={`/texts/${text_id}/instances/${instance.id}`} className="relative bg-white rounded-lg shadow-md border border-gray-200 p-4 sm:p-6 hover:shadow-lg transition-shadow duration-200">
+    <Link to={editionLink(text_id || '', instance.id)} className="relative bg-white rounded-lg shadow-md border border-gray-200 p-4 sm:p-6 hover:shadow-lg transition-shadow duration-200">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-0 mb-0 sm:mb-4">
         <div className="flex-1 min-w-0">

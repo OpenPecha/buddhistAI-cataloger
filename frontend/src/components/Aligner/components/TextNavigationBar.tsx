@@ -77,7 +77,7 @@ function TextNavigationBar() {
       const titleKeys = Object.keys(titleObj);
       if (titleKeys.length > 0) {
         const title = titleObj[titleKeys[0]];
-        const instanceType = (metadata.instance_type as string) || 'Instance';
+        const instanceType = (metadata.edition_type as string) || (metadata.instance_type as string) || 'Edition';
         const language = metadata.language ? ` (${metadata.language as string})` : '';
         return `${instanceType} - ${title}${language}`;
       }
@@ -101,7 +101,7 @@ function TextNavigationBar() {
     }
     
     // Fallback to instance type and ID
-    const instanceType = (metadata?.instance_type as string) || (metadata?.type as string) || (data.type as string) || 'Instance';
+    const instanceType = (metadata?.edition_type as string) || (metadata?.instance_type as string) || (metadata?.type as string) || (data.type as string) || 'Edition';
     return `${instanceType} ${instanceId}`;
   };
 

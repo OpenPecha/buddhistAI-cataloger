@@ -52,10 +52,10 @@ const BreadCrumb: React.FC<BreadCrumbProps> = ({
       if (params.text_id && textname) {
         breadcrumbs.push({
           label: textname,
-          href: `/texts/${params.text_id}/instances`,
+          href: `/texts/${params.text_id}/editions`,
         });
-        if (pathSegments.includes('instances')) {
-          if (params.instance_id && instancename) {
+        if (pathSegments.includes('editions')) {
+          if (params.edition_id && instancename) {
             breadcrumbs.push({
               label: instancename,
               icon: <FileText className="w-4 h-4" />,

@@ -4,6 +4,7 @@ import { fetchRelatedInstances } from '../../../api/instances';
 export interface RelatedInstance {
   // Support both API response formats
   id?: string;
+  edition_id?: string;
   instance_id?: string;
   type?: string;
   incipit_title?: Record<string, string>;
@@ -15,6 +16,7 @@ export interface RelatedInstance {
   }>;
   // New API response format
   metadata?: {
+    edition_type?: string;
     instance_type?: string;
     copyright?: string;
     text_id?: string;

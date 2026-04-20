@@ -33,7 +33,8 @@
     "texts": "Texts",
     "persons": "Persons",
     "create": "Create",
-    "instances": "Instances"
+    "instances": "Instances",
+    "editions": "Editions"
   },
   "footer": {
     "copyright": "© 2025 OpenPecha",

@@ -56,7 +56,7 @@ export const useTextInstance = (id: string) => {
 
 export const useInstance = (id: string) => {
   return useQuery({
-    queryKey: ["instance", id],
+    queryKey: ["edition", id],
     queryFn: () => fetchInstance(id),
     // fetchInstance already returns OpenPechaTextInstance, no need for select
     enabled: !!id, // Only fetch when id exists
@@ -127,7 +127,7 @@ export const useUpdateInstance = () => {
       user: string;
     }) => updateInstance(textId, instanceId, instanceData, user),
     onSuccess: (_, { textId, instanceId }) => {
-      queryClient.invalidateQueries({ queryKey: ["instance", instanceId] });
+      queryClient.invalidateQueries({ queryKey: ["edition", instanceId] });
       queryClient.invalidateQueries({ queryKey: ["textInstance", textId] });
       queryClient.invalidateQueries({ queryKey: ["annotation"] });
     }
@@ -147,7 +147,7 @@ export const useUpdateSegmentContent = () => {
     }) => updateSegmentContent(segmentId, content),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["annotation"] });
-      queryClient.invalidateQueries({ queryKey: ["instance"] });
+      queryClient.invalidateQueries({ queryKey: ["edition"] });
     }
   });
 };

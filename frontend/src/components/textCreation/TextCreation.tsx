@@ -27,7 +27,7 @@ import { cn } from "@/lib/utils";
 interface SuccessResult {
   message: string;
   textId: string;
-  instanceId: string;
+  editionId: string;
 }
 
 const TextCreation = () => {
@@ -405,7 +405,7 @@ const TextCreation = () => {
           ? t("create.textAndInstanceCreated")
           : t("create.instanceCreated"),
         textId,
-        instanceId,
+        editionId: instanceId,
       });
       setSelectedText(null);
       setTextSearch("");
@@ -421,7 +421,7 @@ const TextCreation = () => {
 
   const handleSuccessModalClose = useCallback(() => {
     if (successResult) {
-      navigate(`/texts/${successResult.textId}/instances/${successResult.instanceId}`);
+      navigate(`/texts/${successResult.textId}/editions/${successResult.editionId}`);
     }
     setSuccessResult(null);
   }, [successResult, navigate]);
