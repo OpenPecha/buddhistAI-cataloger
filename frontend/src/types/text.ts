@@ -83,7 +83,7 @@ export interface InstanceMetadata {
   alt_incipit_titles: string | null;
 }
 
-// Single edition detail (nested structure from GET /text/editions/{edition_id})
+// Single edition detail (nested structure from GET /editions/{edition_id})
 export interface OpenPechaTextInstance {
   content: string;
   metadata: InstanceMetadata;

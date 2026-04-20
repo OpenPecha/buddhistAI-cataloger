@@ -4,10 +4,6 @@ from typing import List, Optional, Dict, Any, Literal
 import os
 from dotenv import load_dotenv
 
-from cataloger.controller.openpecha_api.instances import (
-    get_instance as openpecha_get_instance,
-    update_instance as openpecha_update_instance,
-)
 from cataloger.controller.openpecha_api.texts import (
     create_instance_for_text as openpecha_create_instance_for_text,
     create_text as openpecha_create_text,
@@ -237,17 +233,4 @@ async def create_edition(id: str, edition: CreateEdition):
     payload = edition.model_dump(exclude_none=True)
     payload.pop("user", None)
     return openpecha_create_instance_for_text(id, payload)
-
-
-@router.put("/editions/{edition_id}", status_code=200)
-async def update_edition(edition_id: str, edition: UpdateEdition):
-    payload = edition.model_dump(exclude_none=True)
-    return openpecha_update_instance(edition_id, payload)
-
-@router.get("/editions/{edition_id}")
-async def get_edition(edition_id: str, annotation: bool = True):
-    return openpecha_get_instance(edition_id, annotation=annotation, content=True)
-
-
-
 

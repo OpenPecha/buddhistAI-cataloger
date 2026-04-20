@@ -120,6 +120,10 @@ class AnnotationResponse(BaseModel):
     data: Union[AlignmentAnnotationData, List[SegmentationAnnotationItem], None] = None
 
 
+
+
+
+
 @router.get("/{annotation_id}")
 async def get_annotation(annotation_id: str):
     """Get annotation by ID"""

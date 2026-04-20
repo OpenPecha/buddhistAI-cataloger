@@ -280,6 +280,77 @@ def _related_edition_to_legacy(ed: Dict[str, Any], relationship: str = "related"
     }
 
 
+def get_edition_segmentations(
+    edition_id: str,
+    *,
+    timeout: int = 120,
+) -> Any:
+    """GET /v2/editions/{id}/segmentations on OpenPecha."""
+    try:
+        r = requests.get(
+            openpecha_url("editions", edition_id, "segmentations"),
+            headers=openpecha_headers(),
+            timeout=timeout,
+        )
+        if r.status_code != 200:
+            raise HTTPException(status_code=r.status_code, detail=r.text)
+        try:
+            return r.json()
+        except ValueError:
+            return []
+    except HTTPException:
+        raise
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out",
+        )
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error connecting to OpenPecha API: {str(e)}",
+        )
+
+
+def post_edition_segmentations(
+    edition_id: str,
+    payload: Dict[str, Any],
+    *,
+    timeout: int = 120,
+) -> Any:
+    """POST /v2/editions/{id}/segmentations on OpenPecha."""
+    try:
+        r = requests.post(
+            openpecha_url("editions", edition_id, "segmentations"),
+            json=payload,
+            headers=json_headers(),
+            timeout=timeout,
+        )
+        if r.status_code not in (200, 201, 204):
+            raise HTTPException(status_code=r.status_code, detail=r.text)
+        if r.status_code == 204 or not (r.text or "").strip():
+            return {"status": "ok"}
+        ct = (r.headers.get("content-type") or "").lower()
+        if "application/json" in ct:
+            try:
+                return r.json()
+            except ValueError:
+                return {"status": "ok", "raw": r.text}
+        return {"status": "ok", "raw": r.text}
+    except HTTPException:
+        raise
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out",
+        )
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error connecting to OpenPecha API: {str(e)}",
+        )
+
+
 def list_related_instances(
     instance_id: str,
     *,

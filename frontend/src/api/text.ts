@@ -134,7 +134,7 @@ export const fetchTextInstances = async (id: string): Promise<OpenPechaTextInsta
 };
 
 export const fetchInstance = async (id: string): Promise<OpenPechaTextInstance> => {
-  const response = await fetch(`${API_URL}/text/editions/${id}`);
+  const response = await fetch(`${API_URL}/editions/${id}`);
   return response.json();
 };
 

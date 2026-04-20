@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { OpenPechaTextInstance, SegmentationAnnotation } from '@/types/text';
-import { useAnnnotation, useText } from '@/hooks/useTexts';
+import { useAnnnotation, useEditionSegmentations, useText } from '@/hooks/useTexts';
 import { Button } from './ui/button';
 import FormattedTextDisplay from './FormattedTextDisplay';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +13,23 @@ import AudioPlayer from './AudioPlayer';
 
 interface InstanceCardProps {
   instance: OpenPechaTextInstance;
+}
+
+/** Build display lines from saved segmentation blocks (character spans in edition content). */
+function linesFromSavedSegmentation(
+  content: string,
+  segments: Array<{ lines?: Array<{ start: number; end: number }> }>,
+): string[] {
+  const lines: string[] = [];
+  const n = content.length;
+  for (const seg of segments) {
+    for (const ln of seg.lines || []) {
+      const start = Math.max(0, Math.min(ln.start, n));
+      const end = Math.max(start, Math.min(ln.end, n));
+      if (start < end) lines.push(content.slice(start, end));
+    }
+  }
+  return lines;
 }
 
 const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
@@ -34,6 +51,14 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
     error: annotationError
   } = useAnnnotation(segmentationAnnotationId);
   const {data:text} = useText(text_id || '');
+  const { data: segmentationVersions = [], isLoading: segmentationListLoading } =
+    useEditionSegmentations(edition_id || '');
+  const [pickedSegmentationId, setPickedSegmentationId] = useState('');
+
+  useEffect(() => {
+    setPickedSegmentationId('');
+  }, [edition_id]);
+
   const title_text = text?.title?.tib || text?.title?.bo || text?.title?.en || text?.title?.sa || text?.title?.pi || t('instance.content');
   const toggleAnnotation = (annotationType: string) => {
     setExpandedAnnotations(prev => 
@@ -69,7 +94,25 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
 
     return lines.join('\n');
   };
-  const contentForView=getFormattedContent().split('\n');
+
+  const contentForView = (() => {
+    if (!instance.content) return [];
+    if (pickedSegmentationId) {
+      const item = segmentationVersions.find((x) => x.id === pickedSegmentationId);
+      if (item?.segments?.length) {
+        const fromList = linesFromSavedSegmentation(instance.content, item.segments);
+        if (fromList.length > 0) return fromList;
+      }
+    }
+    return getFormattedContent().split('\n');
+  })();
+
+  let defaultSegmentationOptionLabel = 'Default (annotation)';
+  if (segmentationListLoading) {
+    defaultSegmentationOptionLabel = 'Loading…';
+  } else if (segmentationVersions.length === 0) {
+    defaultSegmentationOptionLabel = 'None available';
+  }
   const renderAnnotationContent = (annotationType: string, annotations: unknown[]) => {
     if (annotationType === 'segmentation') {
       return annotations.map((annotation) => {
@@ -181,11 +224,34 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
         </div>
       </div>
 
+      {edition_id && instance.content && (
+        <div className="px-4 sm:px-6 py-3 border-b border-gray-100 bg-gray-50/80">
+          <label className="flex flex-col gap-1 min-w-0 max-w-xl">
+            <span className="text-xs font-medium text-gray-600">
+              Saved segmentations
+            </span>
+            <select
+              className="text-sm border border-gray-200 rounded-md px-2 py-2 bg-white text-gray-900 min-h-10"
+              disabled={segmentationListLoading || segmentationVersions.length === 0}
+              value={pickedSegmentationId}
+              onChange={(e) => setPickedSegmentationId(e.target.value)}
+            >
+              <option value="">{defaultSegmentationOptionLabel}</option>
+              {segmentationVersions.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.id.slice(0, 8)}… · {v.segments?.length ?? 0} segments
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
+
       {/* Content Text with Line Breaks Applied */}
       {instance.content && (
         <div className="p-4 sm:p-6  border-t-4 border-double border-red-200">
-          {/* Loading State for Annotation */}
-          {segmentationAnnotationId && isLoadingAnnotation && (
+          {/* Loading State for Annotation (skip when showing a saved segmentation from the list) */}
+          {!pickedSegmentationId && segmentationAnnotationId && isLoadingAnnotation && (
             <div className="flex flex-col items-center justify-center py-16 bg-linear-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
               <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mb-4"></div>
               <span className="text-sm font-medium text-gray-700">{t('instance.loadingContent')}</span>
@@ -193,7 +259,7 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
           )}
 
           {/* Error State for Annotation */}
-          {segmentationAnnotationId && annotationError && (
+          {!pickedSegmentationId && segmentationAnnotationId && annotationError && (
             <div className="bg-linear-to-r from-yellow-50 to-orange-50 border-l-4 border-yellow-400 rounded-lg p-4 mb-4">
               <div className="flex items-start">
                 <svg className="w-5 h-5 text-yellow-600 mt-0.5 mr-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -206,8 +272,10 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
               </div>
             </div>
           )}
-          {/* Content Display - Only show after annotation is loaded or if no annotation exists */}
-          {(!segmentationAnnotationId || !isLoadingAnnotation) && (
+          {/* Content Display - saved list needs no annotation fetch; otherwise wait for annotation */}
+          {(pickedSegmentationId ||
+            !segmentationAnnotationId ||
+            !isLoadingAnnotation) && (
             <FormattedTextDisplay lines={contentForView} />
           )}
         </div>

@@ -3,9 +3,10 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, X,  FileText, Code, ArrowLeft, Loader2 } from "lucide-react";
 import type { InstanceCreationFormRef } from "@/components/InstanceCreationForm";
-import { useText, useInstance, useAnnnotation, useUpdateText } from "@/hooks/useTexts";
+import { useText, useInstance, useAnnnotation, useUpdateText, usePostEditionSegmentations } from "@/hooks/useTexts";
 import { useTranslation } from "react-i18next";
-import { SegmentUpdateWrapper } from "@/components/segmentUpdate";
+import { Textarea } from "@/components/ui/textarea";
+import type { EditionSegmentationsPayload } from "@/api/texts";
 import type { OpenPechaText, Title as TitleType } from "@/types/text";
 import Title from "@/components/formComponent/Title";
 import AlternativeTitle from "@/components/formComponent/AlternativeTitle";
@@ -18,11 +19,59 @@ import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
 import { SkeletonLarger } from "@/components/ui/skeleton";
 
 
+function reconstructContentWithSegmentation(
+  content: string,
+  annotationData: unknown
+): string {
+  if (!content) return "";
+
+  const segmentationAnnotations = (annotationData as { data?: unknown[] })?.data;
+  if (
+    !segmentationAnnotations ||
+    !Array.isArray(segmentationAnnotations) ||
+    segmentationAnnotations.length === 0
+  ) {
+    return content;
+  }
+
+  type Ann = { span?: { start: number; end: number } };
+  const sortedAnnotations = [...(segmentationAnnotations as Ann[])].sort(
+    (a, b) => (a.span?.start || 0) - (b.span?.start || 0)
+  );
+
+  const lines = sortedAnnotations.map((annotation) => {
+    if (!annotation.span) return "";
+    return content.substring(annotation.span.start, annotation.span.end);
+  });
+
+  return lines.join("\n");
+}
+
+function buildSegmentationsPayload(
+  fullContent: string,
+  editorText: string
+): EditionSegmentationsPayload {
+  const parts = editorText.split("\n");
+  if (parts.join("") !== fullContent) {
+    throw new Error(
+      "The text must match the edition content exactly; use line breaks only to mark segment boundaries."
+    );
+  }
+  let offset = 0;
+  const segments = parts.map((part) => {
+    const lines = [{ start: offset, end: offset + part.length }];
+    offset += part.length;
+    return { lines };
+  });
+  return { segments, metadata: {} };
+}
+
 const UpdateAnnotation = () => {
   const { text_id, edition_id } = useParams();
   const navigate = useNavigate();
   const { t } = useTranslation();
   const instanceFormRef = useRef<InstanceCreationFormRef>(null);
+  const postSegmentations = usePostEditionSegmentations();
 
   // Fetch text and instance data
   const { data: text, isLoading: textLoading ,isRefetching: textRefetching} = useText(text_id || "");
@@ -45,48 +94,33 @@ const UpdateAnnotation = () => {
   } = useAnnnotation(segmentationAnnotationId);
   // State
 
-  const [editedContent, setEditedContent] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [activePanel, setActivePanel] = useState<"form" | "editor">("form");
   const [isInitialized, setIsInitialized] = useState(false);
+  const [segmentEditorValue, setSegmentEditorValue] = useState("");
+  const [segmentEditorReady, setSegmentEditorReady] = useState(false);
 
 
 
-  
+  useEffect(() => {
+    setSegmentEditorReady(false);
+  }, [edition_id, segmentationAnnotationId]);
 
-  // Helper function to reconstruct content with segmentation line breaks
-  const reconstructContentWithSegmentation = (
-    content: string,
-    annotationData: any
-  ): string => {
-    if (!content) return "";
-
-    // Check if we have segmentation annotations
-    const segmentationAnnotations = annotationData?.data;
-    if (
-      !segmentationAnnotations ||
-      !Array.isArray(segmentationAnnotations) ||
-      segmentationAnnotations.length === 0
-    ) {
-      // No segmentation, return content as-is
-      return content;
-    }
-
-    // Sort annotations by span start position
-    const sortedAnnotations = [...segmentationAnnotations].sort(
-      (a: any, b: any) => {
-        return (a.span?.start || 0) - (b.span?.start || 0);
-      }
+  useEffect(() => {
+    if (!instance || segmentEditorReady) return;
+    if (segmentationAnnotationId && annotationLoading) return;
+    const raw = instance.content ?? "";
+    setSegmentEditorValue(
+      reconstructContentWithSegmentation(raw, annotationData)
     );
-
-    // Extract each segment and join with newlines
-    const lines = sortedAnnotations.map((annotation: any) => {
-      if (!annotation.span) return "";
-      return content.substring(annotation.span.start, annotation.span.end);
-    });
-
-    return lines.join("\n");
-  };
+    setSegmentEditorReady(true);
+  }, [
+    instance,
+    annotationData,
+    annotationLoading,
+    segmentationAnnotationId,
+    segmentEditorReady,
+  ]);
 
   // Initialize forms with existing data
   useEffect(() => {
@@ -96,16 +130,6 @@ const UpdateAnnotation = () => {
       instanceFormRef.current &&
       (annotationData || !segmentationAnnotationId) // Wait for annotation if it exists
     ) {
-      // Initialize instance form and content with segmentation
-      if (instance.content) {
-        // Reconstruct content with line breaks from segmentation annotations
-        const formattedContent = reconstructContentWithSegmentation(
-          instance.content,
-          annotationData
-        );
-        setEditedContent(formattedContent);
-      }
-
       // Set instance metadata
       if (instance.metadata) {
         const meta = instance.metadata;
@@ -254,7 +278,7 @@ const UpdateAnnotation = () => {
         
             {/* Editor Header */}
             <div className=" px-4 py-3 ">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-2">
               <Button
         type="button"
         variant="outline"
@@ -265,8 +289,43 @@ const UpdateAnnotation = () => {
         <ArrowLeft className="w-4 h-4" />
         {t("common.back")}
       </Button>
-               
+              <Button
+                type="button"
+                size="sm"
+                disabled={postSegmentations.isPending || !segmentEditorReady}
+                className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white"
+                onClick={async () => {
+                  if (!edition_id || !instance) return;
+                  setError(null);
+                  try {
+                    const payload = buildSegmentationsPayload(
+                      instance.content ?? "",
+                      segmentEditorValue
+                    );
+                    await postSegmentations.mutateAsync({
+                      editionId: edition_id,
+                      payload,
+                    });
+                  } catch (e: unknown) {
+                    const msg =
+                      e instanceof Error ? e.message : t("messages.updateError");
+                    setError(msg);
+                  }
+                }}
+              >
+                {postSegmentations.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    {t("common.saving") ?? "Saving…"}
+                  </>
+                ) : (
+                  t("common.save") ?? "Save segmentations"
+                )}
+              </Button>
               </div>
+              <p className="text-xs text-gray-500 mt-2 max-w-2xl">
+                Line breaks mark segment boundaries. The characters between breaks must match the edition text exactly.
+              </p>
             </div>
 
             {/* Editor */}
@@ -274,10 +333,20 @@ const UpdateAnnotation = () => {
               {isFetching ? (
                 <SkeletonLarger />
               ) : (
-           <SegmentUpdateWrapper
-                content={instance?.content}
-                annotationData={annotationData}
-                />
+                <div className="h-full px-4 pb-4 flex flex-col min-h-0">
+                  <Textarea
+                    className="flex-1 min-h-[50vh] font-monlam text-base leading-relaxed resize-none"
+                    spellCheck={false}
+                    value={segmentEditorValue}
+                    onChange={(e) => setSegmentEditorValue(e.target.value)}
+                    readOnly={!segmentEditorReady}
+                    placeholder={
+                      segmentEditorReady
+                        ? undefined
+                        : "Loading edition text…"
+                    }
+                  />
+                </div>
               )}
             {isLoading && (
               <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/20 bg-opacity-60">

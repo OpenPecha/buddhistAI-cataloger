@@ -2,13 +2,16 @@ import {
   createText,
   createTextInstance,
   fetchAnnotation,
+  fetchEditionSegmentations,
   fetchInstance,
   fetchRelatedInstances,
   fetchText,
   fetchTextInstances,
   fetchTexts,
+  postEditionSegmentations,
   updateInstance,
   updateText,
+  type EditionSegmentationsPayload,
 } from "@/api/texts";
 import { updateSegmentContent } from "@/api/segments";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -60,6 +63,16 @@ export const useInstance = (id: string) => {
     queryFn: () => fetchInstance(id),
     // fetchInstance already returns OpenPechaTextInstance, no need for select
     enabled: !!id, // Only fetch when id exists
+  });
+};
+
+export const useEditionSegmentations = (editionId: string) => {
+  return useQuery({
+    queryKey: ["editionSegmentations", editionId],
+    queryFn: () => fetchEditionSegmentations(editionId),
+    enabled: !!editionId,
+    staleTime: 60 * 1000,
+    retry: 1,
   });
 };
 
@@ -167,6 +180,25 @@ export const useUpdateText = () => {
       queryClient.invalidateQueries({ queryKey: ["text", textId] });
       queryClient.invalidateQueries({ queryKey: ["texts"] });
     }
+  });
+};
+
+export const usePostEditionSegmentations = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      editionId,
+      payload,
+    }: {
+      editionId: string;
+      payload: EditionSegmentationsPayload;
+    }) => postEditionSegmentations(editionId, payload),
+    onSuccess: (_, { editionId }) => {
+      queryClient.invalidateQueries({ queryKey: ["edition", editionId] });
+      queryClient.invalidateQueries({ queryKey: ["editionSegmentations", editionId] });
+      queryClient.invalidateQueries({ queryKey: ["annotation"] });
+    },
   });
 };
  

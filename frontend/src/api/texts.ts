@@ -176,7 +176,7 @@ export const fetchTextInstances = async (id: string): Promise<OpenPechaTextInsta
 
 export const fetchInstance = async (id: string): Promise<OpenPechaTextInstance> => {
   try {
-    const response = await fetch(`${API_URL}/text/editions/${id}`);
+    const response = await fetch(`${API_URL}/editions/${id}`);
     return await handleApiResponse(response, {
       404: 'Edition not found. It may have been deleted or the link is incorrect.'
     });
@@ -304,7 +304,7 @@ export const updateInstance = async (textId: string, instanceId: string, instanc
       delete instanceData.biblography_annotation;
     }
     
-    const response = await fetch(`${API_URL}/text/editions/${instanceId}`, {
+    const response = await fetch(`${API_URL}/editions/${instanceId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -321,6 +321,82 @@ export const updateInstance = async (textId: string, instanceId: string, instanc
       throw error;
     }
     throw new Error('Unable to update edition. Please check your connection and try again.');
+  }
+};
+
+export type EditionSegmentationLineSpan = { start: number; end: number };
+
+export type EditionSegmentationSegment = { lines: EditionSegmentationLineSpan[] };
+
+export type EditionSegmentationsPayload = {
+  segments: EditionSegmentationSegment[];
+  metadata?: Record<string, unknown>;
+};
+
+/** One stored segmentation variant from GET /editions/{id}/segmentations */
+export type EditionSegmentationListItem = {
+  id: string;
+  segments: Array<{
+    id?: string;
+    lines: EditionSegmentationLineSpan[];
+  }>;
+};
+
+export const fetchEditionSegmentations = async (
+  editionId: string
+): Promise<EditionSegmentationListItem[]> => {
+  try {
+    const response = await fetch(`${API_URL}/editions/${editionId}/segmentations`);
+    if (response.status === 404) {
+      return [];
+    }
+    const data = await handleApiResponse(response, {
+      404: 'Edition not found.',
+    });
+    return Array.isArray(data) ? (data as EditionSegmentationListItem[]) : [];
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unable to load segmentation list. Please check your connection and try again.');
+  }
+};
+
+export const postEditionSegmentations = async (
+  editionId: string,
+  payload: EditionSegmentationsPayload
+): Promise<unknown> => {
+  try {
+    const response = await fetch(`${API_URL}/editions/${editionId}/segmentations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        segments: payload.segments,
+        metadata: payload.metadata ?? {},
+      }),
+    });
+    if (!response.ok) {
+      return await handleApiResponse(response, {
+        400: 'Invalid segmentation data. Check line boundaries and try again.',
+        404: 'Edition not found.',
+      });
+    }
+    const raw = await response.text();
+    if (!raw.trim()) {
+      return {};
+    }
+    try {
+      return JSON.parse(raw) as unknown;
+    } catch {
+      return { raw };
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unable to save segmentations. Please check your connection and try again.');
   }
 };
 
