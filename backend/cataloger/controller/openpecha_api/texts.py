@@ -100,7 +100,7 @@ def get_text(text_id: str, *, x_application: Optional[str] = None) -> Any:
         )
         if response.status_code != 200:
             raise HTTPException(status_code=response.status_code, detail=response.text)
-        return text_output_to_legacy(response.json())
+        return response.json()
     except requests.exceptions.Timeout:
         raise HTTPException(
             status_code=504,
@@ -229,20 +229,17 @@ def create_instance_for_text(text_id: str, payload: Dict[str, Any], *, timeout: 
         )
 
 
-def fetch_edition_metadata(edition_id: str, *, timeout: Optional[int] = None) -> Dict[str, Any]:
+def fetch_edition_metadata(edition_id: str) -> Dict[str, Any]:
     kw: Dict[str, Any] = {"headers": openpecha_headers()}
-    if timeout is not None:
-        kw["timeout"] = timeout
-    r = requests.get(openpecha_url("editions", edition_id, "metadata"), **kw)
+    r = requests.get(openpecha_url("editions", edition_id), **kw)
     if r.status_code != 200:
         raise HTTPException(status_code=r.status_code, detail=r.text)
     return r.json()
 
 
-def fetch_edition_content(edition_id: str, *, timeout: Optional[int] = None) -> str:
+def fetch_edition_content(edition_id: str) -> str:
     kw: Dict[str, Any] = {"headers": openpecha_headers()}
-    if timeout is not None:
-        kw["timeout"] = timeout
+   
     r = requests.get(openpecha_url("editions", edition_id, "content"), **kw)
     if r.status_code != 200:
         raise HTTPException(status_code=r.status_code, detail=r.text)
@@ -253,19 +250,17 @@ def fetch_edition_content(edition_id: str, *, timeout: Optional[int] = None) -> 
         return r.text
 
 
-def fetch_edition_annotations(
+from typing import Literal, List
+
+AnnotationType = Literal["segmentations", "alignments", "paginations", "bibliographic","pagination", "durchens"]
+
+def fetch_edition_annotation(
     edition_id: str,
-    *,
-    types: Optional[List[str]] = None,
-    timeout: Optional[int] = None,
+    type: AnnotationType = None,
 ) -> Dict[str, Any]:
-    params = {}
-    if types:
-        params["type"] = types
-    kw: Dict[str, Any] = {"headers": openpecha_headers(), "params": params}
-    if timeout is not None:
-        kw["timeout"] = timeout
-    r = requests.get(openpecha_url("editions", edition_id, "annotations"), **kw)
+    if type is None:
+        raise HTTPException(status_code=400, detail="type is required")
+    r = requests.get(openpecha_url("editions", edition_id, type))
     if r.status_code != 200:
         raise HTTPException(status_code=r.status_code, detail=r.text)
     return r.json()

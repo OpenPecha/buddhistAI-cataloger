@@ -183,9 +183,7 @@ def build_legacy_instance_view(
             "incipit_title": edition_meta.get("incipit_title"),
             "alt_incipit_titles": edition_meta.get("alt_incipit_titles"),
         },
-        "annotations": annotation_bundle_to_legacy_refs(ann_bundle),
-        "biblography_annotation": bibliography_items_from_bundle(ann_bundle),
-        "alignment_targets": [],
+        "annotations": ann_bundle,
     }
 
 

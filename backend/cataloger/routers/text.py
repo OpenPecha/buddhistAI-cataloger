@@ -32,21 +32,44 @@ class Contribution(BaseModel):
 
 class Text(BaseModel):
     id: str
-    type: str
     title: Dict[str, str] = Field(
         ...,
-        example={"bo": "དཔེ་མཚོན་ཞིག", "en": "Example Text"},
+        example={"bo": "སྤྱོད་པའི་གླུ།"},
         description="Title in multiple languages, keyed by language code"
     )
     language: str
-    target: Optional[str] = None
-    contributions: Optional[List[Contribution]] = None
-    date: Optional[str] = None
     bdrc: Optional[str] = None
     wiki: Optional[str] = None
+    date: Optional[str] = None
+    alt_titles: Optional[List[Dict[str, str]]] = Field(
+        default=None,
+        example=[{"cmg": "yabudal-un dagulal kemegdeküi"}],
+        description="Alternative titles in multiple languages"
+    )
+    commentary_of: Optional[str] = None
+    translation_of: Optional[str] = None
     category_id: Optional[str] = None
+    license: Optional[str] = None
+    contributions: Optional[List[Contribution]] = None
+    commentaries: Optional[List[str]] = Field(
+        default=None,
+        description="List of commentary text IDs"
+    )
+    translations: Optional[List[str]] = Field(
+        default=None,
+        description="List of translation text IDs"
+    )
+    editions: Optional[List[str]] = Field(
+        default=None,
+        description="List of edition IDs"
+    )
+    tag_ids: Optional[List[str]] = Field(
+        default=None,
+        description="List of tag IDs"
+    )
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
+
 
 class TextResponse(BaseModel):
     results: List[Text]

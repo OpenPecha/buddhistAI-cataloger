@@ -6,7 +6,7 @@ from fastapi import HTTPException
 from cataloger.controller.openpecha_api.base import json_headers, openpecha_headers, openpecha_url
 from cataloger.controller.openpecha_api.texts import (
     _post_edition_annotations,
-    fetch_edition_annotations,
+    fetch_edition_annotation,
     fetch_edition_content,
     fetch_edition_metadata,
     get_text,
@@ -26,19 +26,18 @@ def get_instance(
     query_params: Optional[Dict[str, Any]] = None,
     annotation: bool = True,
     content: Any = True,
-    timeout: Optional[int] = None,
 ) -> Any:
     _ = query_params
     fetch_ann = annotation is not False
     fetch_body = content is not False
     try:
-        meta = fetch_edition_metadata(instance_id, timeout=timeout)
+        meta = fetch_edition_metadata(instance_id)
         text_content = ""
         if fetch_body:
-            text_content = fetch_edition_content(instance_id, timeout=timeout)
+            text_content = fetch_edition_content(instance_id)
         ann_bundle: Dict[str, Any] = {}
         if fetch_ann:
-            ann_bundle = fetch_edition_annotations(instance_id, timeout=timeout)
+            ann_bundle = fetch_edition_annotation(edition_id=instance_id, type="segmentations")
         return build_legacy_instance_view(meta, text_content, ann_bundle)
     except HTTPException:
         raise
