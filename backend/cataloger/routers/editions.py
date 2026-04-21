@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field
 from cataloger.controller.openpecha_api.instances import (
     get_edition_segmentations as openpecha_get_edition_segmentations,
     get_instance as openpecha_get_instance,
+    openpecha_get_edition_alignments,
+    openpecha_post_edition_alignments,
     post_edition_segmentations as openpecha_post_edition_segmentations,
     update_instance as openpecha_update_instance,
     update_instance_content as openpecha_update_instance_content,
@@ -26,6 +28,18 @@ class SegmentationSegmentBlock(BaseModel):
 
 class EditionSegmentationsBody(BaseModel):
     segments: List[SegmentationSegmentBlock]
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class AlignedSegmentBlock(BaseModel):
+    lines: List[SegmentationLineSpan]
+    alignment_indices: List[int]
+
+
+class EditionAlignmentsBody(BaseModel):
+    target_id: str
+    target_segments: List[SegmentationSegmentBlock]
+    aligned_segments: List[AlignedSegmentBlock]
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
@@ -59,6 +73,25 @@ async def create_edition_segmentations(
         edition_id,
         body.model_dump(exclude_none=True),
     )
+    
+@router.get("/{edition_id}/alignments")
+async def get_edition_alignments(edition_id):
+    return openpecha_get_edition_alignments(edition_id)    
+
+
+@router.post("/{edition_id}/alignments", status_code=201)
+async def create_edition_alignments(
+    edition_id: str,
+    body: EditionAlignmentsBody,
+):
+    return openpecha_post_edition_alignments(
+        edition_id,
+        body.model_dump(exclude_none=True),
+    )
+
+
+
+
 
 @router.put("/{edition_id}/content", status_code=200)
 async def update_edition_content(

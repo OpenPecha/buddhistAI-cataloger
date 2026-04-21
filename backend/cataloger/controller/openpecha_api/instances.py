@@ -21,7 +21,7 @@ from cataloger.controller.openpecha_api.v2_adapters import (
 
 
 def get_instance(
-    instance_id: str,
+    edition_id: str,
     *,
     query_params: Optional[Dict[str, Any]] = None,
     annotation: bool = True,
@@ -31,13 +31,13 @@ def get_instance(
     fetch_ann = annotation is not False
     fetch_body = content is not False
     try:
-        meta = fetch_edition_metadata(instance_id)
+        meta = fetch_edition_metadata(edition_id)
         text_content = ""
         if fetch_body:
-            text_content = fetch_edition_content(instance_id)
+            text_content = fetch_edition_content(edition_id)
         ann_bundle: Dict[str, Any] = {}
         if fetch_ann:
-            ann_bundle = fetch_edition_annotation(edition_id=instance_id, type="segmentations")
+            ann_bundle = fetch_edition_annotation(edition_id=edition_id, type="segmentations")
         return build_legacy_instance_view(meta, text_content, ann_bundle)
     except HTTPException:
         raise
@@ -314,17 +314,14 @@ def get_edition_segmentations(
 
 def post_edition_segmentations(
     edition_id: str,
-    payload: Dict[str, Any],
-    *,
-    timeout: int = 120,
+    payload: Dict[str, Any]
 ) -> Any:
     """POST /v2/editions/{id}/segmentations on OpenPecha."""
     try:
         r = requests.post(
             openpecha_url("editions", edition_id, "segmentations"),
             json=payload,
-            headers=json_headers(),
-            timeout=timeout,
+            headers=json_headers()
         )
         if r.status_code not in (200, 201, 204):
             raise HTTPException(status_code=r.status_code, detail=r.text)
@@ -348,6 +345,38 @@ def post_edition_segmentations(
         raise HTTPException(
             status_code=500,
             detail=f"Error connecting to OpenPecha API: {str(e)}",
+        )
+
+
+
+def openpecha_post_edition_alignments(edition_id: str, payload: Dict[str, Any]) -> Any:
+    try:
+        r = requests.post(
+            openpecha_url("editions", edition_id, "alignments"),
+            json=payload,
+            headers=json_headers()
+        )
+        return r.json()
+    except HTTPException:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out",
+        )
+def openpecha_get_edition_alignments(edition_id: str) -> Any:
+    try:
+        r = requests.get(
+            openpecha_url("editions", edition_id, "alignments"),
+            headers=openpecha_headers()
+        )
+        if r.status_code != 200:
+            raise HTTPException(status_code=r.status_code, detail=r.text)
+        return r.json()
+    except HTTPException:
+        raise
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out",
         )
 
 
@@ -387,5 +416,4 @@ def list_related_instances(
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=response.text)
     data = response.json()
-    editions = data if isinstance(data, list) else []
-    return [_related_edition_to_legacy(e) for e in editions if isinstance(e, dict)]
+    return data

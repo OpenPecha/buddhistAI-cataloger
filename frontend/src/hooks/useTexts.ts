@@ -8,10 +8,12 @@ import {
   fetchText,
   fetchTextInstances,
   fetchTexts,
+  postEditionAlignments,
   postEditionSegmentations,
   updateEditionContent,
   updateInstance,
   updateText,
+  type EditionAlignmentsPayload,
   type EditionSegmentationsPayload,
 } from "@/api/texts";
 import type { CreateTextPayload, UpdateTextPayload } from "@/types/text";
@@ -198,6 +200,27 @@ export const usePostEditionSegmentations = () => {
       queryClient.invalidateQueries({ queryKey: ["edition", editionId] });
       queryClient.invalidateQueries({ queryKey: ["editionSegmentations", editionId] });
       queryClient.invalidateQueries({ queryKey: ["annotation"] });
+    },
+  });
+};
+
+export const usePostEditionAlignments = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (vars: {
+      editionId: string;
+      rootEditionId: string;
+      payload: EditionAlignmentsPayload;
+    }) => postEditionAlignments(vars.editionId, vars.payload),
+    onSuccess: (_, { editionId, rootEditionId }) => {
+      queryClient.invalidateQueries({ queryKey: ["edition", editionId] });
+      if (rootEditionId) {
+        queryClient.invalidateQueries({ queryKey: ["edition", rootEditionId] });
+      }
+      queryClient.invalidateQueries({ queryKey: ["annotation"] });
+      queryClient.invalidateQueries({ queryKey: ["preparedData"] });
+      queryClient.invalidateQueries({ queryKey: ["preparedAlignmentData"] });
     },
   });
 };

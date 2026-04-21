@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { fetchPreparedAlignmentData, type PreparedDataResponse } from '../../../api/annotation';
+import { fetchAlignment, type PreparedDataResponse } from '../../../api/annotation';
 
 /**
  * Hook for fetching prepared alignment data for source and target instances
@@ -18,7 +18,7 @@ export const usePreparedAlignmentData = (
       if (!sourceInstanceId || !targetInstanceId) {
         throw new Error('Source and target instance IDs are required');
       }
-      return fetchPreparedAlignmentData(sourceInstanceId, targetInstanceId);
+      return fetchAlignment(sourceInstanceId, targetInstanceId);
     },
     enabled: Boolean(sourceInstanceId) && Boolean(targetInstanceId),
     staleTime: 10 * 60 * 1000, // 10 minutes

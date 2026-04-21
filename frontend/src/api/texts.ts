@@ -406,6 +406,60 @@ export const fetchEditionSegmentations = async (
   }
 };
 
+export type EditionAlignmentTargetSegment = { lines: EditionSegmentationLineSpan[] };
+
+export type EditionAlignmentAlignedSegment = {
+  lines: EditionSegmentationLineSpan[];
+  alignment_indices: number[];
+};
+
+export type EditionAlignmentsPayload = {
+  target_id: string;
+  target_segments: EditionAlignmentTargetSegment[];
+  aligned_segments: EditionAlignmentAlignedSegment[];
+  metadata?: Record<string, unknown>;
+};
+
+export const postEditionAlignments = async (
+  editionId: string,
+  payload: EditionAlignmentsPayload
+): Promise<unknown> => {
+  try {
+    const response = await fetch(`${API_URL}/editions/${editionId}/alignments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        target_id: payload.target_id,
+        target_segments: payload.target_segments,
+        aligned_segments: payload.aligned_segments,
+        metadata: payload.metadata ?? {},
+      }),
+    });
+    if (!response.ok) {
+      return await handleApiResponse(response, {
+        400: 'Invalid alignment data. Check line boundaries and try again.',
+        404: 'Edition not found.',
+      });
+    }
+    const raw = await response.text();
+    if (!raw.trim()) {
+      return {};
+    }
+    try {
+      return JSON.parse(raw) as unknown;
+    } catch {
+      return { raw };
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unable to save alignments. Please check your connection and try again.');
+  }
+};
+
 export const postEditionSegmentations = async (
   editionId: string,
   payload: EditionSegmentationsPayload

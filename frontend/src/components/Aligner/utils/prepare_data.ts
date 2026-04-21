@@ -1,6 +1,6 @@
 // get alignment data if given s_id and t_id;
 
-import { fetchPreparedAlignmentData } from "../../../api/annotation";
+import { fetchAlignment } from "../../../api/annotation";
 import { populateMissingSpans, reverse_cleaned_alignments, addContentToAnnotations } from "./alignment_generator";
 
 // Type for alignment annotation data structure
@@ -27,7 +27,7 @@ async function prepareData(
     onProgress?: ProgressCallback
 ) {
     onProgress?.("Fetching source instance data...");
-    const preparedData = await fetchPreparedAlignmentData(sourceInstanceId, targetInstanceId);
+    const preparedData = await fetchAlignment(sourceInstanceId, targetInstanceId);
     const targetText = preparedData.target_text;
     const sourceText = preparedData.source_text;
     const annotation = preparedData.annotation;
