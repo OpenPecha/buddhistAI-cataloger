@@ -203,6 +203,45 @@ const REJECTION_RATE_HBAR_OPTIONS: ChartOptions<'bar'> = {
   },
 }
 
+/** Horizontal bar: reviewer title/author corrections as % of that user's segment count (same scope as dashboard). */
+const REVIEWER_TITLE_AUTHOR_EDITS_HBAR_OPTIONS: ChartOptions<'bar'> = {
+  indexAxis: 'y',
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: {
+        label: (tooltipItem: TooltipItem<'bar'>) => {
+          const meta = (
+            tooltipItem.dataset as { metaAt?: { edits: number; segments: number }[] }
+          ).metaAt?.[tooltipItem.dataIndex]
+          const raw = tooltipItem.parsed.x
+          const pct = typeof raw === 'number' ? raw.toFixed(1) : String(raw)
+          if (!meta) return `${pct}% of segments`
+          return `${meta.edits.toLocaleString()} corrected at review / ${meta.segments.toLocaleString()} segments (${pct}%)`
+        },
+      },
+    },
+  },
+  scales: {
+    x: {
+      beginAtZero: true,
+      suggestedMax: 100,
+      grid: { color: GRID },
+      ticks: {
+        font: { size: 11 },
+        color: MUTED,
+        callback: (value) => `${value}%`,
+      },
+    },
+    y: {
+      grid: { display: false },
+      ticks: { font: { size: 11 }, color: INK },
+    },
+  },
+}
+
 const DOC_STATUS_ORDER = [
   'active',
   'completed',
@@ -561,6 +600,7 @@ function OverviewTab({
           Math.round((events / r.segment_count) * 1000) / 10
         return { ...r, events, pct }
       })
+      .filter((r) => r.events > 0)
       .sort((a, b) => b.pct - a.pct)
     if (rows.length === 0) return null
     return {
@@ -577,23 +617,34 @@ function OverviewTab({
     }
   }, [stats, annotators, dashboardUserFilter])
 
-  const topReviewerTitleAuthorEdits = useMemo(() => {
-    if (!stats) return []
-    const perf = stats.annotator_performance ?? []
-    let rows = perf.filter((r) => (r.segments_reviewer_corrected_title_or_author ?? 0) > 0)
+  const annotatorReviewerTitleAuthorEditsChart = useMemo(() => {
+    if (!stats) return null
+    let perf = stats.annotator_performance ?? []
     if (dashboardUserFilter) {
-      rows = rows.filter((r) => r.user_id === dashboardUserFilter)
+      perf = perf.filter((r) => r.user_id === dashboardUserFilter)
     }
-    rows = [...rows].sort(
-      (a, b) =>
-        (b.segments_reviewer_corrected_title_or_author ?? 0) -
-        (a.segments_reviewer_corrected_title_or_author ?? 0),
-    )
-    return rows.slice(0, 3).map((r) => ({
-      userId: r.user_id,
-      name: annotatorDisplayName(r.user_id, annotators),
-      count: r.segments_reviewer_corrected_title_or_author ?? 0,
-    }))
+    const rows = perf
+      .filter((r) => r.segment_count > 0)
+      .map((r) => {
+        const edits = r.segments_reviewer_corrected_title_or_author ?? 0
+        const pct = Math.round((edits / r.segment_count) * 1000) / 10
+        return { ...r, edits, pct }
+      })
+      .filter((r) => r.edits > 0)
+      .sort((a, b) => b.pct - a.pct)
+    if (rows.length === 0) return null
+    return {
+      labels: rows.map((r) => annotatorDisplayName(r.user_id, annotators)),
+      datasets: [
+        {
+          label: 'Corrections at review (% of segments)',
+          data: rows.map((r) => r.pct),
+          metaAt: rows.map((r) => ({ edits: r.edits, segments: r.segment_count })),
+          backgroundColor: ORANGE,
+          borderRadius: 8,
+        },
+      ],
+    }
   }, [stats, annotators, dashboardUserFilter])
 
   if (isLoading && !stats) {
@@ -630,37 +681,6 @@ function OverviewTab({
   const docActive = stats.document_status_counts.active ?? 0
 
   const statsCardInner = 'border-0 bg-transparent shadow-none hover:shadow-none'
-
-
-
-  let reviewerEditsCardFooter: ReactNode = null
-  if (topReviewerTitleAuthorEdits.length > 0) {
-    reviewerEditsCardFooter = (
-      <div className="space-y-1.5 border-t border-orange-200/80 pt-3 text-xs text-muted-foreground">
-        <p className="font-medium text-foreground/80">
-          {dashboardUserFilter
-            ? 'Segments corrected at review'
-            : 'Top 3 annotators by segments corrected at review'}
-        </p>
-        {topReviewerTitleAuthorEdits.map((row) => (
-          <div key={row.userId ?? 'none'} className="flex justify-between gap-2">
-            <span className="min-w-0 truncate" title={row.name}>
-              {row.name}
-            </span>
-            <span className="shrink-0 font-semibold tabular-nums text-foreground">
-              {row.count.toLocaleString()}
-            </span>
-          </div>
-        ))}
-      </div>
-    )
-  } else if ((stats.segments_reviewer_corrected_title_or_author ?? 0) > 0) {
-    reviewerEditsCardFooter = (
-      <div className="border-t border-orange-200/80 pt-3 text-xs text-muted-foreground">
-        Per-annotator breakdown unavailable for this filter.
-      </div>
-    )
-  }
 
   return (
     <div className="relative space-y-12">
@@ -793,7 +813,7 @@ function OverviewTab({
               title="Reviewer title/author edits"
               value={stats.segments_reviewer_corrected_title_or_author ?? 0}
               colorClass="text-orange-950"
-              footer={reviewerEditsCardFooter}
+              hint="Segments where a reviewer changed title or author at review; per-user % of segments chart below."
             />
           </MetricShell>
           {showReviewerWorkDoneCard ? (
@@ -949,11 +969,7 @@ function OverviewTab({
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
           Annotator rejection rate
         </p>
-        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
-          Each bar is the count of <code className="rounded bg-muted px-1 py-0.5 text-xs">segment_rejections</code>{' '}
-          rows for that user&apos;s documents, as a percentage of their total segments in the selected date range
-          (same scope as per-user workload). Multiple rejections on one segment count separately.
-        </p>
+     
         <div
           className="mt-5 min-h-64"
           style={{ height: Math.min(720, Math.max(280, (annotatorRejectionRateChart?.labels.length ?? 0) * 36)) }}
@@ -962,7 +978,34 @@ function OverviewTab({
             <Bar data={annotatorRejectionRateChart} options={REJECTION_RATE_HBAR_OPTIONS} />
           ) : (
             <div className="flex h-full min-h-48 items-center justify-center text-sm text-muted-foreground">
-              No annotators with segments in this date range.
+              No annotators with rejection rows in this date range.
+            </div>
+          )}
+        </div>
+      </motion.section>
+
+      <motion.section
+        initial={{ opacity: 0, y: 14 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        className={cardPanel}
+      >
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+          Reviewer title/author edits by annotator
+        </p>
+      
+        <div
+          className="mt-5 min-h-64"
+          style={{
+            height: Math.min(720, Math.max(280, (annotatorReviewerTitleAuthorEditsChart?.labels.length ?? 0) * 36)),
+          }}
+        >
+          {annotatorReviewerTitleAuthorEditsChart ? (
+            <Bar data={annotatorReviewerTitleAuthorEditsChart} options={REVIEWER_TITLE_AUTHOR_EDITS_HBAR_OPTIONS} />
+          ) : (
+            <div className="flex h-full min-h-48 items-center justify-center text-sm text-muted-foreground">
+              No annotators with reviewer title/author corrections in this date range.
             </div>
           )}
         </div>
