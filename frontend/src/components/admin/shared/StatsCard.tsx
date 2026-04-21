@@ -15,7 +15,7 @@ function StatsCard({ icon, title, value, colorClass, hint, footer, className }: 
   return (
     <div
       className={cn(
-        'rounded-xl border border-slate-200/90 bg-white p-5 shadow-sm transition-shadow hover:shadow-md',
+        'rounded-xl border border-slate-200/90 bg-white  shadow-sm transition-shadow hover:shadow-md',
         className,
       )}
     >

@@ -305,6 +305,11 @@ function colorsForKeys(keys: string[], map: Record<string, string>, fallback: st
 function formatChartLabel(key: string): string {
   if (key === 'TOC') return 'TOC'
   if (key === 'unset' || key === 'unknown') return key === 'unset' ? 'Unset' : 'Unknown'
+  if (key ==='approved') return 'Reviewed'
+  if (key ==='checked') return 'Annotated'
+  if (key ==='unchecked') return 'Annotating'
+  if (key==='completed') return 'Annotated (not reviewed)'
+  if (key==='active') return 'Annotating'
   return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
@@ -358,15 +363,13 @@ function MetricShell({
   readonly children: ReactNode
 }) {
   return (
-    <motion.div variants={motionItem} className="group relative h-full">
+    <MotionSection  >
       <div
         className={`pointer-events-none absolute left-0 top-5 z-10 h-[calc(100%-2.5rem)] w-1 rounded-full bg-gradient-to-b ${accentClass} opacity-[0.92]`}
         aria-hidden
       />
-      <div className="shadow-elegant h-full overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-card via-card to-muted/20 pl-2.5 transition-smooth group-hover:border-primary/20 group-hover:shadow-lg">
         {children}
-      </div>
-    </motion.div>
+    </MotionSection>
   )
 }
 
@@ -694,11 +697,7 @@ function OverviewTab({
       />
 
     
-      <motion.section
-        variants={motionContainer}
-        initial="hidden"
-        animate="show"
-        viewport={{ once: true, margin: '-40px' }}
+      <MotionSection
       >
         <SectionHeading
           eyebrow="Volume"
@@ -801,11 +800,7 @@ function OverviewTab({
                 </div>
               }
             />
-          </MetricShell>
-         
-         
-     
-        
+          </MetricShell>        
           <MetricShell accentClass="from-orange-800 to-orange-500">
             <StatsCard
               className={statsCardInner}
@@ -829,13 +824,9 @@ function OverviewTab({
             </MetricShell>
           ) : null}
         </div>
-      </motion.section>
+      </MotionSection>
 
-      <motion.section
-        initial={{ opacity: 0, y: 14 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: '-24px' }}
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      <MotionSection
       >
         <SectionHeading
           eyebrow="Quality"
@@ -887,15 +878,10 @@ function OverviewTab({
           
           </div>
         </div>
-      </motion.section>
+      </MotionSection>
 
       {overviewBarData && (
-        <motion.section
-          initial={{ opacity: 0, y: 14 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          className={`${cardPanel} relative overflow-hidden`}
+        <MotionSection
         >
           <div
             className="absolute left-0 top-0 h-1 w-full bg-gradient-to-r from-primary via-secondary to-teal-600"
@@ -908,15 +894,10 @@ function OverviewTab({
           <div className="mt-5 h-64">
             <Bar data={overviewBarData} options={CHART_OPTIONS} />
           </div>
-        </motion.section>
+        </MotionSection>
       )}
 
-      <motion.section
-        initial={{ opacity: 0, y: 14 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        className="grid gap-6 lg:grid-cols-3"
+      <div className='flex justify-around'
       >
         <div className={cardPanel}>
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
@@ -957,14 +938,9 @@ function OverviewTab({
             )}
           </div>
         </div>
-      </motion.section>
+      </div>
 
-      <motion.section
-        initial={{ opacity: 0, y: 14 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        className={cardPanel}
+      <MotionSection
       >
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
           Annotator rejection rate
@@ -982,14 +958,9 @@ function OverviewTab({
             </div>
           )}
         </div>
-      </motion.section>
+      </MotionSection>
 
-      <motion.section
-        initial={{ opacity: 0, y: 14 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        className={cardPanel}
+      <MotionSection
       >
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
           Reviewer title/author edits by annotator
@@ -1009,14 +980,9 @@ function OverviewTab({
             </div>
           )}
         </div>
-      </motion.section>
+      </MotionSection>
 
-      <motion.section
-        initial={{ opacity: 0, y: 14 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        className={cardPanel}
+      <MotionSection
       >
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Per-user workload</p>
        
@@ -1029,9 +995,24 @@ function OverviewTab({
             </div>
           )}
         </div>
-      </motion.section>
+      </MotionSection>
     </div>
   )
 }
 
 export default OverviewTab
+
+
+function MotionSection({ children }: { children: ReactNode }) {
+  return (
+    <motion.section
+    initial={{ opacity: 0, y: 14 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true }}
+    transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+    className={cardPanel}
+    >
+      {children}
+    </motion.section>
+  )
+}
