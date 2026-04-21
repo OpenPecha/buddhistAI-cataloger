@@ -115,6 +115,20 @@ def get_annotator_performance_breakdown(
         .all()
     )
 
+    annotator_for_rejection_events = func.coalesce(
+        SegmentRejection.user_id,
+        OutlinerDocument.user_id,
+    )
+    rejection_event_rows = (
+        db.query(annotator_for_rejection_events, func.count(SegmentRejection.id))
+        .select_from(SegmentRejection)
+        .join(OutlinerSegment, SegmentRejection.segment_id == OutlinerSegment.id)
+        .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
+        .filter(doc_scope)
+        .group_by(annotator_for_rejection_events)
+        .all()
+    )
+
     reviewer_title_author_edit_rows = (
         db.query(OutlinerDocument.user_id, func.count(OutlinerSegment.id))
         .join(OutlinerSegment, OutlinerSegment.document_id == OutlinerDocument.id)
@@ -136,6 +150,7 @@ def get_annotator_performance_breakdown(
             "segment_count": 0,
             "segments_with_title_or_author": 0,
             "rejection_count": 0,
+            "rejection_event_count": 0,
             "segments_reviewed": 0,
             "segments_self_reviewed": 0,
             "reviewer_rejection_count": 0,
@@ -164,12 +179,21 @@ def get_annotator_performance_breakdown(
         by_user.setdefault(rid, _default_row())
         by_user[rid]["reviewer_rejection_count"] = int(cnt)
 
+    for uid, ev_cnt in rejection_event_rows:
+        by_user.setdefault(uid, _default_row())
+        by_user[uid]["rejection_event_count"] = int(ev_cnt)
+
     for uid, edit_cnt in reviewer_title_author_edit_rows:
         by_user.setdefault(uid, _default_row())
         by_user[uid]["segments_reviewer_corrected_title_or_author"] = int(edit_cnt)
 
     rows: List[Dict[str, Any]] = []
     for uid, m in by_user.items():
+        seg_cnt = m["segment_count"]
+        rej_ev = m["rejection_event_count"]
+        rejection_events_pct = (
+            round((rej_ev / seg_cnt) * 100, 1) if seg_cnt else None
+        )
         rows.append(
             {
                 "user_id": uid,
@@ -177,6 +201,8 @@ def get_annotator_performance_breakdown(
                 "segment_count": m["segment_count"],
                 "segments_with_title_or_author": m["segments_with_title_or_author"],
                 "rejection_count": m["rejection_count"],
+                "rejection_event_count": rej_ev,
+                "rejection_events_pct_of_segments": rejection_events_pct,
                 "segments_reviewed": m["segments_reviewed"],
                 "segments_self_reviewed": m["segments_self_reviewed"],
                 "reviewer_rejection_count": m["reviewer_rejection_count"],

@@ -629,6 +629,10 @@ export interface AnnotatorPerformanceRow {
   segments_with_title_or_author: number;
   /** Unresolved rejected segments on that annotator's documents in range (latest rejection not resolved) */
   rejection_count: number;
+  /** All segment_rejection rows attributed to that annotator (same document date scope as segment_count) */
+  rejection_event_count?: number;
+  /** 100 * rejection_event_count / segment_count when segment_count > 0 */
+  rejection_events_pct_of_segments?: number | null;
   /** Segments in checked/approved state with this user as recorded reviewer */
   segments_reviewed?: number;
   /** Same as segments_reviewed but document owner is also this user (self-check) */

@@ -25,6 +25,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js'
+import type { ChartOptions, TooltipItem } from 'chart.js'
 import { Bar, Doughnut, Line } from 'react-chartjs-2'
 import StatsCard from '../shared/StatsCard'
 import type { DashboardStats } from '@/api/outliner'
@@ -162,6 +163,45 @@ const ANNOTATOR_LINE_OPTIONS = {
     },
   },
 } as const
+
+/** Horizontal bar: rejection events as % of that user's segment count (same date scope as dashboard). */
+const REJECTION_RATE_HBAR_OPTIONS: ChartOptions<'bar'> = {
+  indexAxis: 'y',
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: {
+        label: (tooltipItem: TooltipItem<'bar'>) => {
+          const meta = (
+            tooltipItem.dataset as { metaAt?: { events: number; segments: number }[] }
+          ).metaAt?.[tooltipItem.dataIndex]
+          const raw = tooltipItem.parsed.x
+          const pct = typeof raw === 'number' ? raw.toFixed(1) : String(raw)
+          if (!meta) return `${pct}% of segments`
+          return `${meta.events.toLocaleString()} rejection rows / ${meta.segments.toLocaleString()} segments (${pct}%)`
+        },
+      },
+    },
+  },
+  scales: {
+    x: {
+      beginAtZero: true,
+      suggestedMax: 100,
+      grid: { color: GRID },
+      ticks: {
+        font: { size: 11 },
+        color: MUTED,
+        callback: (value) => `${value}%`,
+      },
+    },
+    y: {
+      grid: { display: false },
+      ticks: { font: { size: 11 }, color: INK },
+    },
+  },
+}
 
 const DOC_STATUS_ORDER = [
   'active',
@@ -325,7 +365,7 @@ function OverviewTab({
         'With title/author',
         'Skipped docs',
         'Unresolved rejected',
-        'Reviewer title/author edits',
+        'Reviewer title/author edits'
       ],
       datasets: [
         {
@@ -505,6 +545,37 @@ function OverviewTab({
       ],
     }
   }, [stats, annotators])
+
+  const annotatorRejectionRateChart = useMemo(() => {
+    if (!stats) return null
+    let perf = stats.annotator_performance ?? []
+    if (dashboardUserFilter) {
+      perf = perf.filter((r) => r.user_id === dashboardUserFilter)
+    }
+    const rows = perf
+      .filter((r) => r.segment_count > 0)
+      .map((r) => {
+        const events = r.rejection_event_count ?? 0
+        const pct =
+          r.rejection_events_pct_of_segments ??
+          Math.round((events / r.segment_count) * 1000) / 10
+        return { ...r, events, pct }
+      })
+      .sort((a, b) => b.pct - a.pct)
+    if (rows.length === 0) return null
+    return {
+      labels: rows.map((r) => annotatorDisplayName(r.user_id, annotators)),
+      datasets: [
+        {
+          label: 'Rejection rows (% of segments)',
+          data: rows.map((r) => r.pct),
+          metaAt: rows.map((r) => ({ events: r.events, segments: r.segment_count })),
+          backgroundColor: RED,
+          borderRadius: 8,
+        },
+      ],
+    }
+  }, [stats, annotators, dashboardUserFilter])
 
   const topReviewerTitleAuthorEdits = useMemo(() => {
     if (!stats) return []
@@ -865,6 +936,35 @@ function OverviewTab({
               </div>
             )}
           </div>
+        </div>
+      </motion.section>
+
+      <motion.section
+        initial={{ opacity: 0, y: 14 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        className={cardPanel}
+      >
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+          Annotator rejection rate
+        </p>
+        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+          Each bar is the count of <code className="rounded bg-muted px-1 py-0.5 text-xs">segment_rejections</code>{' '}
+          rows for that user&apos;s documents, as a percentage of their total segments in the selected date range
+          (same scope as per-user workload). Multiple rejections on one segment count separately.
+        </p>
+        <div
+          className="mt-5 min-h-64"
+          style={{ height: Math.min(720, Math.max(280, (annotatorRejectionRateChart?.labels.length ?? 0) * 36)) }}
+        >
+          {annotatorRejectionRateChart ? (
+            <Bar data={annotatorRejectionRateChart} options={REJECTION_RATE_HBAR_OPTIONS} />
+          ) : (
+            <div className="flex h-full min-h-48 items-center justify-center text-sm text-muted-foreground">
+              No annotators with segments in this date range.
+            </div>
+          )}
         </div>
       </motion.section>
 

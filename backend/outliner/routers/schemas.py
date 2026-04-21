@@ -317,6 +317,17 @@ class AnnotatorPerformanceRow(BaseModel):
         ...,
         description="Segments still rejected with latest rejection unresolved (annotator has not addressed)",
     )
+    rejection_event_count: int = Field(
+        0,
+        description=(
+            "Total rows in segment_rejections for this annotator's documents "
+            "(user_id on rejection or document owner), scoped by document.created_at."
+        ),
+    )
+    rejection_events_pct_of_segments: Optional[float] = Field(
+        None,
+        description="100 * rejection_event_count / segment_count when segment_count > 0.",
+    )
     segments_reviewed: int = Field(
         0,
         description="Segments currently checked/approved where this user is recorded as reviewer",
