@@ -9,10 +9,12 @@ import {
   fetchTextInstances,
   fetchTexts,
   postEditionSegmentations,
+  updateEditionContent,
   updateInstance,
   updateText,
   type EditionSegmentationsPayload,
 } from "@/api/texts";
+import type { CreateTextPayload, UpdateTextPayload } from "@/types/text";
 import { updateSegmentContent } from "@/api/segments";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -88,7 +90,7 @@ export const useCreateText = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: createText,
+    mutationFn: (payload: CreateTextPayload) => createText(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["texts"] });
     }
@@ -132,13 +134,11 @@ export const useUpdateInstance = () => {
       textId,
       instanceId,
       instanceData,
-      user
     }: {
       textId: string;
       instanceId: string;
-      instanceData: any;
-      user: string;
-    }) => updateInstance(textId, instanceId, instanceData, user),
+      instanceData: Record<string, unknown>;
+    }) => updateInstance(textId, instanceId, instanceData),
     onSuccess: (_, { textId, instanceId }) => {
       queryClient.invalidateQueries({ queryKey: ["edition", instanceId] });
       queryClient.invalidateQueries({ queryKey: ["textInstance", textId] });
@@ -171,10 +171,10 @@ export const useUpdateText = () => {
   return useMutation({
     mutationFn: ({
       textId,
-      textData
+      textData,
     }: {
       textId: string;
-      textData: any;
+      textData: UpdateTextPayload;
     }) => updateText(textId, textData),
     onSuccess: (_, { textId }) => {
       queryClient.invalidateQueries({ queryKey: ["text", textId] });
@@ -201,4 +201,30 @@ export const usePostEditionSegmentations = () => {
     },
   });
 };
- 
+
+export const useUpdateEditionContent = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      editionId,
+      content,
+      start,
+      end,
+    }: {
+      editionId: string;
+      content: string;
+      start: number;
+      end: number;
+    }) =>
+      updateEditionContent(editionId, {
+        content,
+        start,
+        end,
+      }),
+    onSuccess: async (_, { editionId }) => {
+      await queryClient.refetchQueries({ queryKey: ["edition", editionId] });
+    },
+  });
+};
+

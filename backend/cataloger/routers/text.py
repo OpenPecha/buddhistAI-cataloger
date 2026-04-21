@@ -76,25 +76,41 @@ class CreateTextResponse(BaseModel):
     id: str
 
 class CreateText(BaseModel):
-    type: str
     title: Dict[str, str] = Field(
         ...,
-        example={"bo": "དཔེ་མཚོན་ཞིག", "en": "Example Text"},
+        example={"bo": "དཔེ་མཚོན་ཞིག"},
         description="Title in multiple languages, keyed by language code"
     )
-    language: str
-    contributions:List[Contribution] = []
-    target: Optional[str] = None
-    date: Optional[str] = None
-    bdrc: Optional[str] = None
-    category_id: Optional[str] = None
-    alt_titles: List[Dict[str, str]] = Field(
-        default=[],
-        example=[{"bo": "མཚན་གཞན", "en": "Alternative Title"}],
+    alt_titles: Optional[List[Dict[str, str]]] = Field(
+        default=None,
+        example=[{"bo": "མཚན་གཞན"}],
         description="Alternative titles in multiple languages"
     )
-    copyright: Optional[str] = None
-    license: Optional[str] = None
+    language: str = Field(
+        ...,
+        example="bo",
+        description="ISO 639-1 or 639-3 language code"
+    )
+    bdrc: Optional[str] = Field(default=None, description="BDRC identifier")
+    wiki: Optional[str] = Field(default=None, description="Wikidata identifier")
+    date: Optional[str] = Field(default=None, example="1600", description="Date as string")
+    commentary_of: Optional[str] = Field(default=None, description="Text ID this is a commentary of")
+    translation_of: Optional[str] = Field(default=None, description="Text ID this is a translation of")
+    category_id: str = Field(..., description="Category ID for this text")
+    license: Optional[str] = Field(default=None, example="public", description="License of the text")
+    contributions: List[Dict[str, Optional[str]]] = Field(
+        ...,
+        example=[
+            {"person_id": "string", "person_bdrc_id": "string", "role": "translator"},
+            {"ai_id": "string", "role": "translator"}
+        ],
+        description="List of contributors with roles. Either 'person_id', 'person_bdrc_id', or 'ai_id', plus 'role'"
+    )
+    tag_ids: Optional[List[str]] = Field(
+        default=None,
+        example=["tag1", "tag2"],
+        description="List of tag IDs for the text"
+    )
 
 
 class UpdateText(BaseModel):
@@ -106,6 +122,7 @@ class UpdateText(BaseModel):
     contributions: Optional[List[Contribution]] = None
     date: Optional[str] = None
     alt_title: Optional[Dict[str, List[str]]] = None
+    category_id: Optional[str] = None
 
 class Annotation(BaseModel):
     annotation_id: str

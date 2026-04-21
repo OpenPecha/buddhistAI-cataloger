@@ -25,7 +25,7 @@
     "upload": "Upload",
     "download": "Download",
     "updateText": "Update Text",
-    "updateTextDescription": "Update text metadata"
+    "updateTextDescription": "Update text detail"
   },
   "header": {
     "title": "OpenPecha Text Cataloger",
@@ -132,6 +132,11 @@
     "citation": "Citation",
     "comment": "Comment",
     "reference": "Reference"
+  },
+  "updateAnnotation": {
+    "replaceEditionContent": "Replace edition text",
+    "replaceEditionContentHint": "Saves the textarea as the full edition body (start 0 through the previous text length). Existing segmentation may no longer match until you save segmentations again.",
+    "segmentationHint": "Line breaks mark segment boundaries. The characters between breaks must match the edition text exactly."
   },
   "messages": {
     "createSuccess": "Created successfully",
@@ -304,6 +309,7 @@
     "copyrightUnknown": "Unknown",
     "license": "License",
     "licenseUnknown": "unknown",
+    "licensePublic": "public",
     "licenseCC0": "CC0",
     "licensePublicDomainMark": "Public Domain Mark",
     "licenseCCBY": "CC BY",

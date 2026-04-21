@@ -7,7 +7,13 @@ import {
   useRef,
 } from "react";
 import type { Person } from "@/types/person";
-import type { OpenPechaText ,Title as TitleType} from "@/types/text";
+import {
+  coerceLicense,
+  type CreateTextPayload,
+  type LicenseType,
+  type OpenPechaText,
+  type Title as TitleType,
+} from "@/types/text";
 import { MultilevelCategorySelector } from "@/components/MultilevelCategorySelector";
 import { useTranslation } from "react-i18next";
 import LanguageSelectorForm from "./formComponent/LanguageSelectorForm";
@@ -75,7 +81,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     const [categoryId, setCategoryId] = useState<string>("");
     const [categoryError, setCategoryError] = useState<boolean>(false);
     const [copyright, setCopyright] = useState<string>("Unknown");
-    const [license, setLicense] = useState<string>("Unknown");
+    const [license, setLicense] = useState<LicenseType>("public");
 
     // Contributor management
     const [contributors, setContributors] = useState<ContributorItem[]>([]);
@@ -140,47 +146,31 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         })
         .filter((alt) => Object.keys(alt).length > 0);
 
-      // Build final payload
-      const textData: any = {
-        type: selectedType,
+      // Build final payload (POST /text — matches cataloger CreateText; no extra keys for OpenPecha)
+      const textData: CreateTextPayload = {
         title,
         language: language.trim(),
-        alt_titles: altTitlesArray,
+        category_id: categoryId.trim(),
+        license: copyright === "Unknown" ? "unknown" : license,
       };
 
-      // Only add contributions if there are any
+      if (altTitlesArray.length > 0) {
+        textData.alt_titles = altTitlesArray;
+      }
+
       if (contributors.length > 0) {
         textData.contributions = contributionsArray;
       }
 
-      // Add target field for translation and commentary types
-      if (selectedType === "translation" || selectedType === "commentary") {
-        textData.target = target.trim() || "N/A";
+      if (selectedType === "translation") {
+        const t = target.trim();
+        if (t && t !== "N/A") {
+          textData.translation_of = t;
+        }
       }
 
-      // Add optional fields
       if (date.trim()) textData.date = date.trim();
       if (bdrc.trim()) textData.bdrc = bdrc.trim();
-      
-      // Add required category
-      if (categoryId && categoryId.trim()) {
-        textData.category_id = categoryId.trim();
-      }
-
-      // Add copyright (optional field)
-      if (copyright && copyright.trim()) {
-        textData.copyright = copyright.trim();
-      }
-
-      // Add license (if copyright is Unknown, send "unknown", otherwise use selected license or default to "CC0")
-      if (copyright === "Unknown") {
-        textData.license = "unknown";
-      } else if (license && license.trim()) {
-        textData.license = license.trim();
-      } else {
-        // If license is empty, send "CC0" as default
-        textData.license = "CC0";
-      }
 
       return textData;
     }, [
@@ -314,7 +304,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         if (data.date) setDate(data.date);
         if (data.categoryId) setCategoryId(data.categoryId);
         if (data.copyright) setCopyright(data.copyright);
-        if (data.license) setLicense(data.license);
+        if (data.license) setLicense(coerceLicense(data.license));
         if (data.bdrc) {
           bdrcWorkRef.current?.setBdrcId(data.bdrc, data.bdrc);
         }

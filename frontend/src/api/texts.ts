@@ -1,6 +1,14 @@
 
 import { API_URL } from '@/config/api';
-import type { OpenPechaText, OpenPechaTextInstance, OpenPechaTextInstanceListItem, CreateInstanceResponse } from '@/types/text';
+import type {
+  OpenPechaText,
+  OpenPechaTextInstance,
+  OpenPechaTextInstanceListItem,
+  CreateInstanceResponse,
+  CreateTextPayload,
+  CreateTextResponse,
+  UpdateTextPayload,
+} from '@/types/text';
 
 // Helper function to handle API responses with better error messages
 const handleApiResponse = async (response: Response, customMessages?: { 400?: string; 404?: string; 500?: string }) => {
@@ -71,6 +79,9 @@ const handleApiResponse = async (response: Response, customMessages?: { 400?: st
   if (contentType && contentType.includes('application/json')) {
     return await response.json();
   } else {
+    if (response.status === 204) {
+      return null;
+    }
     throw new Error('The server returned an invalid response. Please contact support if this persists.');
   }
 };
@@ -139,7 +150,9 @@ export const fetchTextsByTitle = async (title: string, signal?: AbortSignal): Pr
 
 
 // Real API function for creating texts
-export const createText = async (textData: any): Promise<OpenPechaText> => {
+export const createText = async (
+  textData: CreateTextPayload
+): Promise<CreateTextResponse> => {
   try {
     const response = await fetch(`${API_URL}/text`, {
       method: 'POST',
@@ -297,6 +310,37 @@ export const updateAnnotation = async (annotationId: string, annotationData: any
   }
 };
 
+export type UpdateEditionContentPayload = {
+  content: string;
+  start: number;
+  end: number;
+};
+
+export const updateEditionContent = async (
+  editionId: string,
+  payload: UpdateEditionContentPayload
+): Promise<unknown> => {
+  try {
+    const response = await fetch(`${API_URL}/editions/${editionId}/content`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    return await handleApiResponse(response, {
+      400: 'Invalid content update. Please check the text and try again.',
+      404: 'Edition not found. It may have been deleted or the link is incorrect.',
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unable to update edition content. Please check your connection and try again.');
+  }
+};
+
 export const updateInstance = async (textId: string, instanceId: string, instanceData: any): Promise<any> => {
   try {
     
@@ -400,7 +444,10 @@ export const postEditionSegmentations = async (
   }
 };
 
-export const updateText = async (textId: string, textData: any): Promise<any> => {
+export const updateText = async (
+  textId: string,
+  textData: UpdateTextPayload
+): Promise<unknown> => {
   try {
     const response = await fetch(`${API_URL}/text/${textId}`, {
       method: 'PUT',

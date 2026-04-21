@@ -3,19 +3,16 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, X,  FileText, Code, ArrowLeft, Loader2 } from "lucide-react";
 import type { InstanceCreationFormRef } from "@/components/InstanceCreationForm";
-import { useText, useInstance, useAnnnotation, useUpdateText, usePostEditionSegmentations } from "@/hooks/useTexts";
+import {
+  useText,
+  useInstance,
+  useAnnnotation,
+  usePostEditionSegmentations,
+  useUpdateEditionContent,
+} from "@/hooks/useTexts";
 import { useTranslation } from "react-i18next";
 import { Textarea } from "@/components/ui/textarea";
 import type { EditionSegmentationsPayload } from "@/api/texts";
-import type { OpenPechaText, Title as TitleType } from "@/types/text";
-import Title from "@/components/formComponent/Title";
-import AlternativeTitle from "@/components/formComponent/AlternativeTitle";
-import Contributor, { type ContributorItem } from "@/components/formComponent/Contributor";
-import Copyright from "@/components/formComponent/Copyright";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import type { Person } from "@/types/person";
-import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
 import { SkeletonLarger } from "@/components/ui/skeleton";
 
 
@@ -72,6 +69,7 @@ const UpdateAnnotation = () => {
   const { t } = useTranslation();
   const instanceFormRef = useRef<InstanceCreationFormRef>(null);
   const postSegmentations = usePostEditionSegmentations();
+  const updateEditionContentMutation = useUpdateEditionContent();
 
   // Fetch text and instance data
   const { data: text, isLoading: textLoading ,isRefetching: textRefetching} = useText(text_id || "");
@@ -223,50 +221,9 @@ const UpdateAnnotation = () => {
 
    
 
-      {/* Two-Panel Layout */}
-      <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gradient-to-br from-blue-50 to-indigo-100 flex overflow-hidden">
-        {/* Mobile Toggle Button */}
-        <button
-          onClick={() =>
-            setActivePanel(activePanel === "form" ? "editor" : "form")
-          }
-          className="md:hidden fixed bottom-6 right-6 z-30 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white rounded-full p-4 shadow-lg transition-all duration-200 flex items-center gap-2"
-        >
-          {activePanel === "form" ? (
-            <>
-              <Code className="w-5 h-5" />
-              <span className="text-sm font-medium">{t("editor.content")}</span>
-            </>
-          ) : (
-            <>
-              <FileText className="w-5 h-5" />
-              <span className="text-sm font-medium">{t("common.edit")}</span>
-            </>
-          )}
-        </button>
-
-
-        <PanelGroup direction="horizontal" className="flex-1">
-      <Panel defaultSize={35} minSize={25} className="min-h-0">
-       {isFetching ? 
-       (
-         <SkeletonLarger />
-       )
-       :(
-       <UpdateTextForm text={text} activePanel={activePanel} />
-       )}
-      </Panel>
-      
-      {/* Resize handle between panels */}
-      <PanelResizeHandle className="w-1 bg-gray-200 hover:bg-blue-400 transition-colors duration-200 cursor-col-resize flex items-center justify-center group">
-        <div className="w-0.5 h-8 bg-gray-400 rounded-full opacity-40 group-hover:opacity-100 group-hover:bg-blue-500 transition-all"></div>
-      </PanelResizeHandle>
-      
-      <Panel defaultSize={65} minSize={30} className="min-h-0">
-        {/* RIGHT PANEL: Editor */}
         <div
           className={cn(
-            "w-full mx-auto h-full overflow-hidden bg-gray-50",
+            "container mt-2 mx-auto h-full overflow-hidden bg-gray-50",
             "absolute md:relative",
             "transition-transform duration-300 ease-in-out",
             activePanel === "editor"
@@ -289,6 +246,51 @@ const UpdateAnnotation = () => {
         <ArrowLeft className="w-4 h-4" />
         {t("common.back")}
       </Button>
+              <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={
+                  updateEditionContentMutation.isPending ||
+                  postSegmentations.isPending ||
+                  !segmentEditorReady
+                }
+                onClick={async () => {
+                  if (!edition_id || !instance) return;
+                  setError(null);
+                  // Show confirm dialog before updating content
+                  const confirmed = window.confirm(
+                      "Are you sure you want to replace the edition content? This will overwrite the current text."
+                  );
+                  if (!confirmed) return;
+
+                  const previous = instance.content ?? "";
+                  try {
+                    await updateEditionContentMutation.mutateAsync({
+                      editionId: edition_id,
+                      content: segmentEditorValue,
+                      start: 0,
+                      end: previous.length,
+                    });
+                    setSegmentEditorReady(false);
+                  } catch (e: unknown) {
+                    const msg =
+                      e instanceof Error ? e.message : t("messages.updateError");
+                    setError(msg);
+                  }
+                }}
+        
+              >
+                {updateEditionContentMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    {t("common.saving") ?? "Saving…"}
+                  </>
+                ) : (
+                  "update content"
+                )}
+              </Button>
               <Button
                 type="button"
                 size="sm"
@@ -319,13 +321,11 @@ const UpdateAnnotation = () => {
                     {t("common.saving") ?? "Saving…"}
                   </>
                 ) : (
-                  t("common.save") ?? "Save segmentations"
+                  "new segmentation"
                 )}
               </Button>
               </div>
-              <p className="text-xs text-gray-500 mt-2 max-w-2xl">
-                Line breaks mark segment boundaries. The characters between breaks must match the edition text exactly.
-              </p>
+              </div>
             </div>
 
             {/* Editor */}
@@ -373,289 +373,10 @@ const UpdateAnnotation = () => {
             </div>
           </div>
         </div>
-      </Panel>
-    </PanelGroup>
 
-      </div>
     </>
   );
 };
 
 export default UpdateAnnotation;
 
-
-const UpdateTextForm = ({ text, activePanel }: { text: OpenPechaText; activePanel: "form" | "editor" }) => {
-  const { t } = useTranslation();
-  const { text_id } = useParams();
-  const updateTextMutation = useUpdateText();
-  
-  const [titles, setTitles] = useState<TitleType[]>([]);
-  const [altTitles, setAltTitles] = useState<TitleType[][]>([]);
-  const [bdrc, setBdrc] = useState("");
-  const [wiki, setWiki] = useState("");
-  const [copyright, setCopyright] = useState<string>("Unknown");
-  const [license, setLicense] = useState<string>("unknown");
-  const [contributors, setContributors] = useState<ContributorItem[]>([]);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-
-  const cn = (...classes: Array<string | false | null | undefined>) => {
-    return classes.filter(Boolean).join(" ");
-  };
-
-  // Initialize form with existing text data
-  useEffect(() => {
-    if (text) {
-      // Initialize titles
-      if (text.title) {
-        const titleArray: TitleType[] = Object.entries(text.title).map(([lang, value]) => ({
-          language: lang,
-          value: value,
-        }));
-        setTitles(titleArray);
-      }
-
-      // Initialize alt_titles
-      if (text.alt_titles && Array.isArray(text.alt_titles) && text.alt_titles.length > 0) {
-        const altTitlesArray: TitleType[][] = text.alt_titles.map((altTitle) =>
-          Object.entries(altTitle).map(([lang, value]) => ({
-            language: lang,
-            value: value,
-          }))
-        );
-        setAltTitles(altTitlesArray);
-      }
-
-      // Initialize other fields
-      if (text.bdrc) setBdrc(text.bdrc);
-      if (text.wiki) setWiki(text.wiki);
-    }
-  }, [text]);
-
-  // Initialize contributors - create minimal person objects from contribution data
-  // Full person data will be fetched by Contributor component if needed
-  useEffect(() => {
-    if (text?.contributions && Array.isArray(text.contributions)) {
-      const contributorsArray: ContributorItem[] = text.contributions.map((contrib) => {
-        // Create minimal person object from contribution data
-        // The Contributor component can fetch full person data if needed
-        const person: Person = {
-          id: contrib.person_id || "",
-          bdrc: contrib.person_bdrc_id || "",
-          name: contrib.person_name || {},
-          alt_names: null,
-          wiki: null,
-        };
-
-        return {
-          person,
-          role: contrib.role as "translator" | "author",
-        };
-      });
-      
-      setContributors(contributorsArray);
-    }
-  }, [text]);
-
-  const handleSubmit = async () => {
-    setError(null);
-    setIsSubmitting(true);
-
-    try {
-      if (!text_id) {
-        throw new Error("Missing text ID");
-      }
-
-      // Build title object from titles array
-      const title: Record<string, string> = {};
-      titles.forEach((titleEntry) => {
-        if (titleEntry.language && titleEntry.value.trim()) {
-          title[titleEntry.language] = titleEntry.value.trim();
-        }
-      });
-
-      // Build contributions array
-      const contributionsArray = contributors?.map((contributor) => {
-        const personBdrcId = contributor.person!.bdrc || contributor.person!.id;
-        return {
-          person_bdrc_id: personBdrcId,
-          person_id: contributor.person!.id,
-          role: contributor.role,
-        };
-      });
-
-      // Build update payload (only include fields that have values)
-      const updatePayload: any = {};
-
-      if (Object.keys(title).length > 0) {
-        updatePayload.title = title;
-      }
-      if (bdrc.trim()) {
-        updatePayload.bdrc = bdrc.trim();
-      }
-      if (wiki.trim()) {
-        updatePayload.wiki = wiki.trim();
-      }
-      if (copyright && copyright !== "Unknown") {
-        updatePayload.copyright = copyright.trim();
-      }
-      if (license && license !== "unknown") {
-        updatePayload.license = license.trim();
-      }
-      
-      if (contributionsArray && contributionsArray.length > 0) {
-        updatePayload.contributions = contributionsArray;
-      }
-      // Note: alt_title in UpdateText is Dict[str, List[str]], but we're using alt_titles format
-      // We'll convert it if needed, but for now skip it as it's a different format
-
-      await updateTextMutation.mutateAsync({
-        textId: text_id,
-        textData: updatePayload,
-      });
-
-      setSuccess(true);
-      setTimeout(() => {
-        setSuccess(false);
-      }, 3000);
-    } catch (err: any) {
-      setError(err.message || t("messages.updateError"));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <div
-      className={cn(
-        " mx-auto h-full overflow-y-auto bg-white",
-        "absolute md:relative",
-        "transition-transform duration-300 ease-in-out",
-        activePanel === "form"
-          ? "translate-x-0"
-          : "-translate-x-full md:translate-x-0"
-      )}
-    >
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="border-b pb-4">
-          <h2 className="text-2xl font-bold text-gray-800">{t("common.updateText") || "Update Text"}</h2>
-          <p className="text-sm text-gray-600 mt-1">{t("common.updateTextDescription") || "Update text metadata"}</p>
-        </div>
-
-        {/* Success Message */}
-        {success && (
-          <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 flex items-center gap-3">
-            <div className="w-5 h-5 text-green-500 flex-shrink-0">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <span className="text-sm font-medium text-gray-800">
-              {t("messages.updateSuccess") || "Text updated successfully!"}
-            </span>
-          </div>
-        )}
-
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 flex items-center gap-3">
-            <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
-            <span className="text-sm font-medium text-gray-800">{error}</span>
-            <button
-              onClick={() => setError(null)}
-              className="ml-auto text-gray-400 hover:text-gray-600"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        {/* Title Field */}
-        <div>
-          <Title setTitles={setTitles} errors={undefined} initialTitles={titles} />
-        </div>
-
-        {/* Alternative Titles Field */}
-        <div>
-          <AlternativeTitle altTitles={altTitles} setAltTitles={setAltTitles} titles={titles} />
-        </div>
-
-        {/* BDRC Field */}
-        <div>
-          <Label htmlFor="bdrc" className="mb-2">
-            {t("textForm.bdrcWorkId")}
-          </Label>
-          <Input
-            id="bdrc"
-            type="text"
-            value={bdrc}
-            onChange={(e) => setBdrc(e.target.value)}
-            placeholder={t("textForm.enterBdrcId") || "Enter BDRC Work ID"}
-          />
-        </div>
-
-        {/* Wiki Field */}
-        <div>
-          <Label htmlFor="wiki" className="mb-2">
-            {t("wiki") || "Wiki"}
-          </Label>
-          <Input
-            id="wiki"
-            type="text"
-            value={wiki}
-            onChange={(e) => setWiki(e.target.value)}
-          />
-        </div>
-
-     
-
-        {/* Copyright and License */}
-        <div>
-          <Copyright
-            copyright={copyright}
-            setCopyright={setCopyright}
-            license={license}
-            setLicense={setLicense}
-          />
-        </div>
-
-        {/* Contributors */}
-        <div>
-          <Contributor
-            contributors={contributors}
-            setContributors={setContributors}
-          />
-        </div>
-
-        {/* Submit Button */}
-        <div className="flex gap-4 pt-4 border-t">
-          <Button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white"
-          >
-            {isSubmitting ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                {t("common.saving") || "Saving..."}
-              </>
-            ) : (
-              t("common.save") || "Save"
-            )}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};

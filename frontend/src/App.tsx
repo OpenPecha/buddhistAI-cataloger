@@ -4,6 +4,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { Navigation, ProtectedRoute } from '@app';
 import { getUserByEmail, createUser } from './api/settings';
 import OutlinerAdminLayout from './features/outliner/components/OutlinerAdminLayout';
+import { UpdateTextForm } from './features/cataloger/components/UpdateTextForm';
 
 // Lazy load page components
 const TextsPage = lazy(() => import('./pages/Text'));
@@ -136,6 +137,11 @@ function App() {
           <Route path="/texts/:text_id/editions" element={
             <ProtectedRoute>
               <TextEditions />
+            </ProtectedRoute>
+          } />
+          <Route path="/texts/:text_id/update" element={
+            <ProtectedRoute>
+              <UpdateTextForm />
             </ProtectedRoute>
           } />
           <Route path="/texts/:text_id/editions/:edition_id" element={

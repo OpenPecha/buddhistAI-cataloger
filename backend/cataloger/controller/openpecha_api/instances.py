@@ -351,6 +351,25 @@ def post_edition_segmentations(
         )
 
 
+def update_instance_content(edition_id: str, content: str,start:int, end:int) -> Any:
+    try:
+        r = requests.patch(
+            openpecha_url("editions", edition_id, "content"),
+            json={"text": content, "start": start, "end": end,"type":"replace"},
+            headers=json_headers(),
+        )
+        if r.status_code != 200:
+            raise HTTPException(status_code=r.status_code, detail=r.text)
+        return r.json()
+    except HTTPException:
+        raise
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out",
+        )
+
+
 def list_related_instances(
     instance_id: str,
     *,

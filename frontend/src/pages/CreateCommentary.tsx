@@ -11,7 +11,7 @@ import { useBdrcSearch } from '@/hooks/useBdrcSearch';
 import { MultilevelCategorySelector } from '@/components/MultilevelCategorySelector';
 import type { Person } from '@/types/person';
 import { useInstance, useText } from '@/hooks/useTexts';
-import type { OpenPechaTextInstance } from '@/types/text';
+import type { LicenseType, OpenPechaTextInstance } from '@/types/text';
 import { useBibliography } from '@/context/BibliographyContext';
 import { useBibliographyAPI } from '@/hooks/useBibliographyAPI';
 import TextCreationSuccessModal from '@/components/textCreation/TextCreationSuccessModal';
@@ -44,7 +44,7 @@ const CreateCommentary = () => {
   const [source, setSource] = useState('');
   const [altTitles, setAltTitles] = useState<string[]>([]);
   const [copyright, setCopyright] = useState<string>('Unknown');
-  const [license, setLicense] = useState<string>('Unknown');
+  const [license, setLicense] = useState<LicenseType>('public');
   const [categoryId, setCategoryId] = useState<string>('');
   const [content, setContent] = useState('');
   const [uploadedFilename, setUploadedFilename] = useState('');
@@ -111,13 +111,15 @@ const CreateCommentary = () => {
     return () => clearTimeout(timer);
   }, [personSearch]);
 
-  // Auto-set license to "unknown" when copyright is "Unknown"
   useEffect(() => {
     if (copyright === "Unknown") {
       setLicense("unknown");
     }
     if (copyright === "Public domain") {
-      setLicense("Public Domain Mark");
+      setLicense("public");
+    }
+    if (copyright === "In copyright") {
+      setLicense("copyrighted");
     }
   }, [copyright]);
 

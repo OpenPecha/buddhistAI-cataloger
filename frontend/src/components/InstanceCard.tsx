@@ -211,21 +211,22 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
                    
          
 
-            <Button
-            variant="ghost"
-              disabled={!isAdmin ||!instance.content}
-              onClick={() => {
-                navigate(`/texts/${text_id}/editions/${edition_id}/edit`);
-              }}
-              >
+          
+
+            <Button 
+            className={cn(buttonClass, "bg-gradient-to-r from-purple-400 to-purple-500 hover:from-purple-500 hover:to-purple-600")}
+            onClick={() => {
+              navigate(`/texts/${text_id}/update`);
+            }}>
               <PermissionButton isLoading={isFetchingPermission} icon={<PencilIcon className="w-4 h-4 text-neutral-500" />} text={""} />
-            </Button>
+              {t("common.updateTextDescription")}
+              </Button>
           </div>
         </div>
       </div>
 
       {edition_id && instance.content && (
-        <div className="px-4 sm:px-6 py-3 border-b border-gray-100 bg-gray-50/80">
+        <div className="flex justify-between px-4 sm:px-6 py-3 border-b border-gray-100 bg-gray-50/80">
           <label className="flex flex-col gap-1 min-w-0 max-w-xl">
             <span className="text-xs font-medium text-gray-600">
               Saved segmentations
@@ -244,6 +245,15 @@ const InstanceCard: React.FC<InstanceCardProps> = ({ instance }) => {
               ))}
             </select>
           </label>
+          <Button
+            variant="ghost"
+              disabled={!isAdmin ||!instance.content}
+              onClick={() => {
+                navigate(`/texts/${text_id}/editions/${edition_id}/edit`);
+              }}
+              >
+              <PermissionButton isLoading={isFetchingPermission} icon={<PencilIcon className="w-4 h-4 text-black" />} text={"update content/segmentations"} />
+            </Button>
         </div>
       )}
 

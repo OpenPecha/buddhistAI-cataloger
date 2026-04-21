@@ -55,50 +55,7 @@ def wrap_text_list(raw: Any, *, limit: int, offset: int) -> Dict[str, Any]:
     return {"results": legacy, "count": len(legacy)}
 
 
-def create_text_payload_from_legacy(body: Dict[str, Any]) -> Dict[str, Any]:
-    """Map cataloger CreateText to v2 TextInput."""
-    title = body.get("title") or {}
-    if not title:
-        raise ValueError("title is required")
-    category_id = body.get("category_id")
-    if not category_id:
-        raise ValueError("category_id is required for OpenPecha v2")
-    contributions = body.get("contributions") or []
-    mapped_contribs: List[Dict[str, Any]] = []
-    for c in contributions:
-        if not isinstance(c, dict):
-            continue
-        if c.get("ai_id"):
-            mapped_contribs.append({"ai_id": c["ai_id"], "role": c.get("role", "author")})
-        else:
-            entry: Dict[str, Any] = {"role": c.get("role", "author")}
-            if c.get("person_id"):
-                entry["person_id"] = c["person_id"]
-            if c.get("person_bdrc_id"):
-                entry["person_bdrc_id"] = c["person_bdrc_id"]
-            mapped_contribs.append(entry)
-    out: Dict[str, Any] = {
-        "title": title,
-        "language": body.get("language", ""),
-        "category_id": category_id,
-        "contributions": mapped_contribs,
-        "license": normalize_license(body.get("license")),
-    }
-    if body.get("bdrc") is not None:
-        out["bdrc"] = body["bdrc"]
-    if body.get("wiki") is not None:
-        out["wiki"] = body["wiki"]
-    if body.get("date") is not None:
-        out["date"] = body["date"]
-    if body.get("alt_titles"):
-        out["alt_titles"] = body["alt_titles"]
-    t = body.get("type")
-    tgt = body.get("target")
-    if t == "translation" and tgt:
-        out["translation_of"] = tgt
-    elif t == "commentary" and tgt:
-        out["commentary_of"] = tgt
-    return out
+
 
 
 def patch_text_payload_from_legacy(body: Dict[str, Any]) -> Dict[str, Any]:

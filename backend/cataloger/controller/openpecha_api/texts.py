@@ -9,13 +9,11 @@ from cataloger.controller.openpecha_api.base import (
     openpecha_url,
 )
 from cataloger.controller.openpecha_api.v2_adapters import (
-    create_text_payload_from_legacy,
     edition_metadata_from_legacy,
     edition_output_to_instance_list_item,
     patch_text_payload_from_legacy,
     segmentation_from_legacy_annotation_list,
     text_output_to_legacy,
-    wrap_text_list,
     bibliographic_request_from_legacy,
 )
 
@@ -59,17 +57,13 @@ def list_texts(
 
 
 def create_text(payload: Dict[str, Any], *, x_application: Optional[str] = None) -> Any:
-    try:
-        body = create_text_payload_from_legacy(payload)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+
     headers = json_headers(x_application=x_application)
     try:
         response = requests.post(
             openpecha_url("texts"),
-            json=body,
+            json=payload,
             headers=headers,
-            timeout=60,
         )
         if response.status_code != 201:
             raise HTTPException(status_code=response.status_code, detail=response.text)

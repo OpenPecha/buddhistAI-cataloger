@@ -8,12 +8,13 @@ import {
 } from "@/components/ui/select"
 import { Label } from '../ui/label';
 import { useEffect } from 'react';
+import type { LicenseType } from '@/types/text';
 
 interface CopyrightProps {
  readonly copyright: string;
  readonly setCopyright: (copyright: string) => void;
-  readonly license: string;
- readonly setLicense: (license: string) => void;
+  readonly license: LicenseType;
+ readonly setLicense: (license: LicenseType) => void;
  readonly copyrightLabelKey?: string;
  readonly  licenseLabelKey?: string;
  readonly required?: boolean;
@@ -32,20 +33,18 @@ function Copyright({
 }: CopyrightProps) {
   const { t } = useTranslation();
 
-    // Auto-set license to "unknown" when copyright is "Unknown"
+    // Auto-set license when copyright category changes (slugs match API LicenseType)
     useEffect(() => {
       if (copyright === "Unknown") {
         setLicense("unknown");
+      } else if (copyright === "Public domain") {
+        setLicense("public");
+      } else if (copyright === "In copyright") {
+        setLicense("copyrighted");
       }
-      if (copyright === "Public domain") {
-        setLicense("Public Domain Mark");
-      }
-      if (copyright === "In copyright") {
-        setLicense("under copyright");
-      }
-    }, [copyright]);
+    }, [copyright, setLicense]);
 
-  const isLicenseDisabled = copyright === "Unknown" || copyright === "Public domain";
+  const isLicenseDisabled = copyright === "Unknown";
 
   return (
     <div className={className}>
@@ -79,7 +78,7 @@ function Copyright({
         <Select 
         name="license"
           value={license} 
-          onValueChange={setLicense}
+          onValueChange={(v) => setLicense(v as LicenseType)}
         >
           <SelectTrigger 
             className={`w-full ${isLicenseDisabled ? "bg-gray-100 cursor-not-allowed opacity-60" : ""}`}
@@ -88,16 +87,16 @@ function Copyright({
             <SelectValue placeholder={t("textForm.licenseUnknown")} />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="public">{t("textForm.licensePublic")}</SelectItem>
+            <SelectItem value="cc0">{t("textForm.licenseCC0")}</SelectItem>
+            <SelectItem value="cc-by">{t("textForm.licenseCCBY")}</SelectItem>
+            <SelectItem value="cc-by-sa">{t("textForm.licenseCCBYSA")}</SelectItem>
+            <SelectItem value="cc-by-nd">{t("textForm.licenseCCBYND")}</SelectItem>
+            <SelectItem value="cc-by-nc">{t("textForm.licenseCCBYNC")}</SelectItem>
+            <SelectItem value="cc-by-nc-sa">{t("textForm.licenseCCBYNCSA")}</SelectItem>
+            <SelectItem value="cc-by-nc-nd">{t("textForm.licenseCCBYNCND")}</SelectItem>
+            <SelectItem value="copyrighted">{t("textForm.licenseUnderCopyright")}</SelectItem>
             <SelectItem value="unknown">{t("textForm.licenseUnknown")}</SelectItem>
-            <SelectItem value="CC0">{t("textForm.licenseCC0")}</SelectItem>
-            <SelectItem value="Public Domain Mark">{t("textForm.licensePublicDomainMark")}</SelectItem>
-            <SelectItem value="CC BY">{t("textForm.licenseCCBY")}</SelectItem>
-            <SelectItem value="CC BY-SA">{t("textForm.licenseCCBYSA")}</SelectItem>
-            <SelectItem value="CC BY-ND">{t("textForm.licenseCCBYND")}</SelectItem>
-            <SelectItem value="CC BY-NC">{t("textForm.licenseCCBYNC")}</SelectItem>
-            <SelectItem value="CC BY-NC-SA">{t("textForm.licenseCCBYNCSA")}</SelectItem>
-            <SelectItem value="CC BY-NC-ND">{t("textForm.licenseCCBYNCND")}</SelectItem>
-            <SelectItem value="under copyright">{t("textForm.licenseUnderCopyright")}</SelectItem>
           </SelectContent>
         </Select>
       </div>

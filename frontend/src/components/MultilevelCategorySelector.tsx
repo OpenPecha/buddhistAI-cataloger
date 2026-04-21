@@ -79,8 +79,7 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
     }
     // Clear selection when navigating
     setSelectedCategory(null);
-  };
-
+  }; 
   // Reset selection
   return (
     <div className="space-y-3 ">
@@ -142,7 +141,9 @@ export const MultilevelCategorySelector: React.FC<MultilevelCategorySelectorProp
             <div className="flex flex-wrap gap-2">
               {categories.map((category) => {
                 return (
-                  <CategoryBadge key={category.id} category={category} selectedCategory={selectedCategory} handleCategoryClick={handleCategoryClick} />
+                  <div key={category.id} className={`${selectedCategoryId=== category.id ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:shadow-sm'}`}>
+                  <CategoryBadge  category={category} selectedCategory={selectedCategory} handleCategoryClick={handleCategoryClick} />
+                  </div>
                 );
               })}
             </div>

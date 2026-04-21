@@ -1,13 +1,79 @@
 // Types for OpenPecha API response
+
+/** Matches backend LicenseType / OpenAPI enum */
+export const LICENSE_TYPES = [
+  "cc0",
+  "public",
+  "cc-by",
+  "cc-by-sa",
+  "cc-by-nd",
+  "cc-by-nc",
+  "cc-by-nc-sa",
+  "cc-by-nc-nd",
+  "copyrighted",
+  "unknown",
+] as const;
+
+export type LicenseType = (typeof LICENSE_TYPES)[number];
+
+/** Map stored/API license strings onto LicenseType for selects */
+export function coerceLicense(value: string | null | undefined): LicenseType {
+  if (!value) return "public";
+  const k = value
+    .trim()
+    .toLowerCase()
+    .replaceAll(/\s+/g, "-")
+    .replaceAll("_", "-");
+  if ((LICENSE_TYPES as readonly string[]).includes(k)) {
+    return k as LicenseType;
+  }
+  return "unknown";
+}
+
+/** POST /text body (cataloger CreateText) */
+export interface CreateTextPayload {
+  title: Record<string, string>;
+  language: string;
+  alt_titles?: Record<string, string>[];
+  bdrc?: string;
+  wiki?: string;
+  date?: string;
+  commentary_of?: string;
+  translation_of?: string;
+  category_id?: string;
+  license?: LicenseType;
+  contributions?: Array<Record<string, string | undefined>>;
+  tag_ids?: string[];
+}
+
+export interface CreateTextResponse {
+  message: string;
+  id: string;
+}
+
+/** PUT /text/{id} body (cataloger UpdateText) */
+export interface UpdateTextPayload {
+  title?: Record<string, string>;
+  bdrc?: string;
+  wiki?: string;
+  copyright?: string;
+  license?: LicenseType;
+  contributions?: Contribution[];
+  date?: string;
+  alt_title?: Record<string, string[]>;
+  category_id?: string;
+}
+
 export interface AltTitle {
   [language: string]: string;
 }
 
 export interface Contribution {
-  person_bdrc_id: string;
-  person_id: string;
+  person_bdrc_id?: string;
+  person_id?: string;
+  ai_id?: string;
   role: string;
-  person_name:{
+  person_name?: {
     [language: string]: string;
   };
 }

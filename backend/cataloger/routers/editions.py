@@ -8,6 +8,7 @@ from cataloger.controller.openpecha_api.instances import (
     get_instance as openpecha_get_instance,
     post_edition_segmentations as openpecha_post_edition_segmentations,
     update_instance as openpecha_update_instance,
+    update_instance_content as openpecha_update_instance_content,
 )
 from cataloger.routers.text import UpdateEdition
 
@@ -26,6 +27,12 @@ class SegmentationSegmentBlock(BaseModel):
 class EditionSegmentationsBody(BaseModel):
     segments: List[SegmentationSegmentBlock]
     metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class UpdateEditionContentBody(BaseModel):
+    content: str
+    start: int
+    end: int
 
 
 @router.put("/{edition_id}", status_code=200)
@@ -51,4 +58,13 @@ async def create_edition_segmentations(
     return openpecha_post_edition_segmentations(
         edition_id,
         body.model_dump(exclude_none=True),
+    )
+
+@router.put("/{edition_id}/content", status_code=200)
+async def update_edition_content(
+    edition_id: str,
+    body: UpdateEditionContentBody,
+):
+    return openpecha_update_instance_content(
+        edition_id, body.content, body.start, body.end
     )
