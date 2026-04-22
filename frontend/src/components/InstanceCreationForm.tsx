@@ -10,12 +10,23 @@ import FormsubmitSection from "./FormsubmitSection";
 import SourceSelection from "./formComponent/SourceSelection";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+
+/** OpenPecha edition metadata `type` (v2). */
+export type EditionMetadataType = "diplomatic" | "critical" | "collated";
+
+function parseEditionType(value: unknown): EditionMetadataType {
+  if (value === "diplomatic" || value === "critical" || value === "collated") {
+    return value;
+  }
+  return "critical";
+}
 
 export interface InstanceData {
   metadata: {
     bdrc?: string;
     wiki?: string;
-    type: "diplomatic" | "critical";
+    type: EditionMetadataType;
     source?: string;
     colophon?: string;
     incipit_title?: {
@@ -110,8 +121,8 @@ const InstanceCreationForm = forwardRef<
   const { t } = useTranslation();
   
   // State declarations
-  const [type, setType] = useState<"diplomatic" | "critical">(
-    "critical"
+  const [type, setType] = useState<EditionMetadataType>(() =>
+    parseEditionType(instance?.metadata?.type)
   );
   const [source, setSource] = useState(instance?.metadata?.source ?? "");
   const [colophon, setColophon] = useState(instance?.metadata?.colophon ?? "");
@@ -139,9 +150,9 @@ const InstanceCreationForm = forwardRef<
   // Bibliography annotations hook
   const { getAPIAnnotations, hasAnnotations } = useBibliographyAPI();
 
-  // Clear BDRC ID when switching to critical type
+  // BDRC instance id is only for diplomatic editions
   useEffect(() => {
-    if (type === "critical" && bdrc) {
+    if (type !== "diplomatic" && bdrc) {
       setBdrc("");
       setSelectedBdrc(null);
       setBdrcSearch("");
@@ -252,7 +263,7 @@ const InstanceCreationForm = forwardRef<
       wiki?: string;
       colophon?: string;
     }) => {
-      if (data.type) setType(data.type as "diplomatic" | "critical");
+      if (data.type) setType(parseEditionType(data.type));
       if (data.source) setSource(data.source);
       if (data.bdrc) {
         setBdrc(data.bdrc);
@@ -447,7 +458,7 @@ const InstanceCreationForm = forwardRef<
     }
 
     // Validate BDRC ID for diplomatic type
-    if (type === "diplomatic" && !bdrc?.trim()) {
+    if (type === "diplomatic" && !selectedBdrc?.id) {
       setErrors({ bdrc: t("instance.bdrcIdRequired") });
       return;
     }
@@ -545,7 +556,39 @@ const InstanceCreationForm = forwardRef<
       {/* Metadata Section */}
       <div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-       
+          {/* Edition type */}
+          <div className="md:col-span-2">
+            <Label className="mb-3 block">
+              {t("instance.editionType")} <span className="text-red-500">*</span>
+            </Label>
+            <RadioGroup
+              value={type}
+              onValueChange={(v) => setType(parseEditionType(v))}
+              className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-6"
+            >
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="diplomatic" id="edition-type-diplomatic" />
+                <Label htmlFor="edition-type-diplomatic" className="font-normal cursor-pointer">
+                  {t("instance.diplomatic")}
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="critical" id="edition-type-critical" />
+                <Label htmlFor="edition-type-critical" className="font-normal cursor-pointer">
+                  {t("instance.critical")}
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="collated" id="edition-type-collated" />
+                <Label htmlFor="edition-type-collated" className="font-normal cursor-pointer">
+                  {t("instance.collated")}
+                </Label>
+              </div>
+            </RadioGroup>
+            {errors.type && (
+              <p className="mt-1 text-sm text-red-600">{errors.type}</p>
+            )}
+          </div>
 
           {/* Source */}
           <div className="md:col-span-2">
@@ -626,7 +669,7 @@ const InstanceCreationForm = forwardRef<
                                 type="button"
                                 onClick={() => {
                                   setSelectedBdrc({
-                                    id: result.instanceId ?? "",
+                                    id: result.workId ?? "",
                                     label: result.title ?? "",
                                   });
                                   setBdrc(result.instanceId ?? "");

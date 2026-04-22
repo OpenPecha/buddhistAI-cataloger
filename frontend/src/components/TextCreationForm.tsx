@@ -66,7 +66,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
     const { t } = useTranslation();
     // State declarations
     const [selectedType, setSelectedType] = useState<
-      "root" | "translation" | ""
+      "root" | "translation" | "commentary" | ""
     >("root");
     const [titles, setTitles] = useState<TitleType[]>([]);
     const [altTitles, setAltTitles] = useState<TitleType[][]>([]);
@@ -166,6 +166,13 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         const t = target.trim();
         if (t && t !== "N/A") {
           textData.translation_of = t;
+        }
+      }
+
+      if (selectedType === "commentary") {
+        const c = target.trim();
+        if (c && c !== "N/A") {
+          textData.commentary_of = c;
         }
       }
 
@@ -353,7 +360,7 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         </div>
 
         {/* Target field - only for commentary/translation */}
-        {selectedType === "translation"&& (
+        {(selectedType === "translation" || selectedType === "commentary") && (
           <div>
             <Label
               htmlFor="target"

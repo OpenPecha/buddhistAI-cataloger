@@ -14,7 +14,6 @@ export function validateContentEndsWithTsheg(language: string, content: string):
 
   // Trim trailing whitespace
   const trimmedContent = content.trimEnd();
-
   // Tibetan (bo): validate that text ends with ("།", "༔", "༎")
   if (language === 'bo') {
     const isValid = trimmedContent.endsWith('།') || 

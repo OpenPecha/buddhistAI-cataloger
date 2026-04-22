@@ -30,7 +30,23 @@ interface SuccessResult {
   editionId: string;
 }
 
-const TextCreation = () => {
+/** When set, skip catalog text search and run “new text + edition” under a parent text route. */
+export type TextCreationEmbeddedConfig = {
+  forceNewText: true;
+  createType: "edition" | "translation" | "commentary";
+  /**
+   * Route `text_id`.
+   * - `edition`: add an instance to this existing text (no new text).
+   * - `translation` / `commentary`: new text with `translation_of` / `commentary_of` set to this id.
+   */
+  parentTextId: string;
+};
+
+export interface TextCreationProps {
+  embedded?: TextCreationEmbeddedConfig;
+}
+
+const TextCreation = ({ embedded }: TextCreationProps) => {
   const navigate = useNavigate();
   const { user } = useAuth0();
   const { t } = useTranslation();
@@ -76,8 +92,14 @@ const TextCreation = () => {
   const w_id = searchParams.get("w_id") || "";
   const i_id = searchParams.get("i_id") || "";
 
+  const isEmbeddedEdition =
+    !!embedded?.forceNewText && embedded.createType === "edition";
+
   // — Workflow & selection —
-  const [isCreatingNewText, setIsCreatingNewText] = useState(false);
+  /** Translation/commentary embedded flows create a new text; edition adds an instance to the URL text only. */
+  const [isCreatingNewText, setIsCreatingNewText] = useState(
+    () => !!(embedded?.forceNewText && embedded.createType !== "edition")
+  );
   const [selectedText, setSelectedText] = useState<OpenPechaText | null>(null);
   const [textSearch, setTextSearch] = useState(t_id);
   const [showTextDropdown, setShowTextDropdown] = useState(false);
@@ -109,6 +131,12 @@ const TextCreation = () => {
   // Only fetch texts when t_id is present in URL (for auto-selection)
   // Use useText to fetch only the specific text needed instead of all texts
   const { data: textFromUrl, isLoading: isLoadingTextFromUrl } = useText(t_id || '');
+  const embeddedEditionParentId = isEmbeddedEdition ? embedded!.parentTextId : "";
+  const {
+    data: embeddedParentText,
+    isLoading: isLoadingEmbeddedParent,
+    isError: isEmbeddedParentError,
+  } = useText(embeddedEditionParentId);
   const createTextMutation = useCreateText();
   const createInstanceMutation = useCreateTextInstance();
   
@@ -142,6 +170,27 @@ const TextCreation = () => {
     }
   }, [t_id, textFromUrl, selectedText]);
   // Auto-select text when t_id is provided in URL
+
+  // Embedded /texts/:id/create?type=edition — bind existing text, no new text record
+  useEffect(() => {
+    if (!isEmbeddedEdition) return;
+    if (!embeddedParentText) return;
+    setSelectedText(embeddedParentText);
+    setTextSearch(
+      embeddedParentText.title.bo ||
+        embeddedParentText.title.en ||
+        Object.values(embeddedParentText.title)[0] ||
+        "Untitled"
+    );
+    setIsCreatingNewText(false);
+  }, [isEmbeddedEdition, embeddedParentText]);
+
+  useEffect(() => {
+    if (!isEmbeddedEdition) return;
+    if (embeddedParentText?.language) {
+      setSelectedLanguage(embeddedParentText.language);
+    }
+  }, [isEmbeddedEdition, embeddedParentText]);
 
   // Helper function to get text display name
   const getTextDisplayName = (text: OpenPechaText): string => {
@@ -195,6 +244,29 @@ const TextCreation = () => {
     const t = setTimeout(run, 150);
     return () => clearTimeout(t);
   }, [isCreatingNewText]);
+
+  // Prefill text form when opened from /texts/:text_id/create?type=translation|commentary
+  useEffect(() => {
+    if (!embedded?.forceNewText) return;
+    if (embedded.createType === "edition") return;
+    const timer = setTimeout(() => {
+      if (!textFormRef.current) return;
+      const { createType, parentTextId } = embedded;
+      const linkTarget = parentTextId.trim();
+      if (createType === "translation") {
+        textFormRef.current.initializeForm?.({
+          type: "translation",
+          target: linkTarget,
+        });
+      } else if (createType === "commentary") {
+        textFormRef.current.initializeForm?.({
+          type: "commentary",
+          target: linkTarget,
+        });
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [embedded]);
 
   // Handle BDRC workId from URL when page loads (e.g. /create?w_id=W12345)
   useEffect(() => {
@@ -250,11 +322,15 @@ const TextCreation = () => {
     // Clear all state
     setSelectedText(null);
     setTextSearch("");
-    setIsCreatingNewText(false);
+    setIsCreatingNewText(
+      !!(embedded?.forceNewText && embedded.createType !== "edition")
+    );
     clearFileUpload();
     clearAnnotations();
     // Clear URL params
-    clearUrlParams();
+    if (!embedded?.forceNewText) {
+      clearUrlParams();
+    }
   };
 
   const handleTextSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -290,6 +366,9 @@ const TextCreation = () => {
 
   // Handle when existing text is found from TextCreationForm BDRC selection
   const handleExistingTextFoundFromForm = (text: OpenPechaText) => {
+    if (embedded?.forceNewText) {
+      return;
+    }
     // Switch from creating new text to using existing text
     setSelectedText(text);
     setTextSearch(getTextDisplayName(text));
@@ -510,6 +589,10 @@ const TextCreation = () => {
   // Show loading screen when auto-selecting text from URL
   const isAutoSelecting = t_id && (isLoadingTextFromUrl || (textFromUrl && !selectedText));
 
+  const isEmbeddedEditionLoading =
+    isEmbeddedEdition &&
+    (isLoadingEmbeddedParent || (!embeddedParentText && !isEmbeddedParentError));
+
  
 
   return (
@@ -665,7 +748,7 @@ const TextCreation = () => {
       )}
 
       {/* Beautiful Loading Screen - Show while auto-selecting text from URL */}
-      {isAutoSelecting && (
+      {(isAutoSelecting || isEmbeddedEditionLoading) && (
         <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center z-40">
           <div className="text-center max-w-md mx-auto px-6">
             {/* Animated Logo/Icon */}
@@ -775,8 +858,27 @@ const TextCreation = () => {
         </div>
       )}
 
-      {/* Single Full-Page Message when text exists in cataloger */}
-      {selectedText && !isCreatingNewText ? (
+      {isEmbeddedEdition &&
+        isEmbeddedParentError &&
+        !isLoadingEmbeddedParent && (
+          <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 z-40 flex items-center justify-center bg-gray-50 px-6">
+            <div className="max-w-md rounded-lg border border-gray-200 bg-white p-8 text-center shadow-sm">
+              <p className="text-gray-800 mb-6">{t("messages.createError")}</p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  navigate(`/texts/${embedded!.parentTextId}/editions`)
+                }
+              >
+                {t("common.back")}
+              </Button>
+            </div>
+          </div>
+        )}
+
+      {/* Single Full-Page Message when text exists in cataloger (not when adding edition to URL text) */}
+      {selectedText && !isCreatingNewText && !isEmbeddedEdition ? (
         <div className="fixed inset-0 top-16 left-0 right-0 bottom-0 bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-8">
           <div className="max-w-md w-full bg-white rounded-lg shadow-lg border border-gray-200 p-8 text-center">
             <div className="mb-6">
@@ -870,7 +972,7 @@ const TextCreation = () => {
               
               <div className="space-y-4">
                 {/* Search Input - Only show when no text is selected and not creating new */}
-                {!selectedText && !isCreatingNewText && (
+                {!embedded?.forceNewText && !selectedText && !isCreatingNewText && (
                   <div className="relative">
                     <Label
                       htmlFor="text-search"
@@ -1001,8 +1103,10 @@ const TextCreation = () => {
 
              
 
-                {/* Show instance form only when creating new text with content */}
-                {isCreatingNewText && editedContent && editedContent.trim() !== "" && (
+                {/* Show instance form when new text + content, or embedded edition on existing text + content */}
+                {(isCreatingNewText || (isEmbeddedEdition && selectedText)) &&
+                  editedContent &&
+                  editedContent.trim() !== "" && (
                   <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
                     <InstanceCreationForm
                       ref={instanceFormRef}
