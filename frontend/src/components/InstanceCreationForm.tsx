@@ -11,34 +11,62 @@ import SourceSelection from "./formComponent/SourceSelection";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 
-interface InstanceData {
+export interface InstanceData {
   metadata: {
-    type: string;
-    source: string;
-    colophon?: string;
-    incipit_title?: Record<string, string>;
-    alt_incipit_titles?: Record<string, string>[];
     bdrc?: string;
-    wiki?: string | null;
+    wiki?: string;
+    type: "diplomatic" | "critical";
+    source?: string;
+    colophon?: string;
+    incipit_title?: {
+      [key: string]: string;
+    };
+    alt_incipit_titles?: Array<{
+      [key: string]: string;
+    }>;
   };
-  annotation?: Array<{
-    span: { start: number; end: number };
-    reference?: string;
-  }>;
+  // (Optional) Pagination details of the instance, if applicable.
+  pagination?: {
+    volumes: Array<{
+      index: number;
+      pages: Array<{
+        lines: Array<{
+          start: number;
+          end: number;
+        }>;
+        reference: string;
+      }>;
+      metadata: Record<string, unknown>;
+    }>;
+    metadata: Record<string, unknown>;
+  };
+  segmentation: {
+    segments: Array<{
+      lines: Array<{
+        start: number;
+        end: number;
+      }>;
+    }>;
+    metadata: Record<string, unknown>;
+  };
+  content: string;
+}
+
+/** OpenPecha post-create annotation bundle (not part of the edition body schema). */
+export type InstanceCreatePayload = InstanceData & {
   biblography_annotation?: Array<{
     span: { start: number; end: number };
     type: string;
   }>;
-  content?: string;
-}
+};
 
 interface InstanceCreationFormProps {
-  onSubmit: (instanceData: InstanceData) => void;
+  onSubmit: (instanceData: InstanceCreatePayload) => void;
   isSubmitting: boolean;
   onCancel?: () => void;
   content?: string; // Content from editor for annotation calculation
   disableSubmit?: boolean; // Additional condition to disable submit button
-  instance?:InstanceData|null;
+  instance?: InstanceData | null;
 }
 
 export interface InstanceCreationFormRef {
@@ -46,7 +74,7 @@ export interface InstanceCreationFormRef {
   addIncipit: (text: string, language?: string) => void;
   addAltIncipit: (text: string, language?: string) => void;
   hasIncipit: () => boolean;
-  getFormData: () => InstanceData | null;
+  getFormData: () => InstanceCreatePayload | null;
   initializeForm?: (data: {
     type?: string;
     source?: string;
@@ -319,15 +347,29 @@ const InstanceCreationForm = forwardRef<
   };
 
   // Data cleaning function
-  const cleanFormData = (): InstanceData => {
-    const cleaned: InstanceData = {
+  const cleanFormData = (): InstanceCreatePayload => {
+    const { annotations, cleanedContent } = content
+      ? calculateAnnotations(content)
+      : { annotations: [], cleanedContent: "" };
+
+    const lineSpans = annotations.map((a) => ({
+      start: a.span.start,
+      end: a.span.end,
+    }));
+
+    const pageReference = type === "diplomatic" ? "temp" : "";
+
+    const cleaned: InstanceCreatePayload = {
       metadata: {
-        type: type,
-        source: source.trim(),
+        type,
       },
+      segmentation: {
+        segments: lineSpans.map((span) => ({ lines: [span] })),
+        metadata: {},
+      },
+      content: cleanedContent,
     };
 
-    // Add optional metadata fields only if non-empty
     if (bdrc?.trim()) {
       cleaned.metadata.bdrc = bdrc.trim();
     }
@@ -340,7 +382,6 @@ const InstanceCreationForm = forwardRef<
       cleaned.metadata.colophon = colophon.trim();
     }
 
-    // Build incipit_title only if has non-empty values
     const incipitTitle: Record<string, string> = {};
     incipitTitles.forEach(({ language, value }) => {
       if (language && value.trim()) {
@@ -351,7 +392,6 @@ const InstanceCreationForm = forwardRef<
       cleaned.metadata.incipit_title = incipitTitle;
     }
 
-    // Build alt_incipit_titles only if incipit_title exists
     if (cleaned.metadata.incipit_title && altIncipitTitles.length > 0) {
       const altTitles = altIncipitTitles
         .map((titleGroup) => {
@@ -370,24 +410,6 @@ const InstanceCreationForm = forwardRef<
       }
     }
 
-    // Add content and calculate annotations
-    if (content) {
-      const { annotations, cleanedContent } = calculateAnnotations(content);
-      cleaned.content = cleanedContent; // Content without newlines
-      
-      // Add reference field for diplomatic type only
-      if (type === "diplomatic") {
-        cleaned.annotation = annotations.map(ann => ({
-          ...ann,
-          reference: "temp"
-        }));
-      } else {
-        // Critical type - no reference field
-        cleaned.annotation = annotations;
-      }
-    }
-
-    // Add bibliography annotations if they exist
     if (hasAnnotations()) {
       cleaned.biblography_annotation = getAPIAnnotations();
     }

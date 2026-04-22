@@ -4,7 +4,6 @@ import { Label } from '../ui/label';
 import { useTranslation } from 'react-i18next';
 import { Plus, X, User } from 'lucide-react';
 import type { Person } from '@/types/person';
-import { useBdrcSearch } from '@/hooks/useBdrcSearch';
 import { usePersons } from '@/hooks/usePersons';
 import { useThrottledValue } from '@tanstack/react-pacer';
 import RoleSelectionForm from './RoleSelectionForm';
@@ -43,19 +42,12 @@ const Contributor: React.FC<ContributorProps> = ({
   // Person creation modal
   const [showPersonFormModal, setShowPersonFormModal] = useState(false);
 
-  // BDRC search hook for persons
   const [debouncedPersonSearch] = useThrottledValue(personSearch, { wait: 1000 });
-  const { results: bdrcPersonResults, isLoading: bdrcPersonLoading } = useBdrcSearch(
-    debouncedPersonSearch,
-    "Person",
-    1000
-  );
-
-  const { isLoading: personsLoading } = usePersons({
+  const { data: PersonResults, isLoading: PersonLoading } = usePersons({
     limit: 100,
     offset: 0,
+    name: debouncedPersonSearch,
   });
-
   const getPersonDisplayName = useCallback((person: Person): string => {
     if (!person?.name || typeof person.name !== "object") {
       return person?.id || t("textForm.unknown");
@@ -121,6 +113,12 @@ const Contributor: React.FC<ContributorProps> = ({
       <div className="flex items-center justify-between mb-2">
         <Label htmlFor="contributors" className="mb-2">
           {t("textForm.contributors")}
+          <label
+              htmlFor="type"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              {t("textForm.type")} <span className="text-red-500">*</span>
+            </label>
         </Label>
         <Button
           type="button"
@@ -187,15 +185,10 @@ const Contributor: React.FC<ContributorProps> = ({
               placeholder={t("textForm.searchForPerson")}
             />
 
-            {personsLoading && (
-              <div className="absolute right-3 top-9">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-              </div>
-            )}
+          
 
             {showPersonDropdown && (
               <div className="absolute z-10 top-full w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-96 overflow-y-auto">
-                {/* BDRC Person Results Section */}
                 {debouncedPersonSearch.trim() && (
                   <>
                     <div className="px-4 py-2 bg-gray-100 border-b border-gray-200">
@@ -203,21 +196,23 @@ const Contributor: React.FC<ContributorProps> = ({
                         {t("textForm.bdrcCatalogPerson")}
                       </span>
                     </div>
-                    {bdrcPersonLoading ? (
-                      <div className="px-4 py-4 flex items-center gap-2">
+                    {PersonLoading && <div className="px-4 py-4 flex items-center gap-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
                         <div className="text-sm text-gray-500">{t("textForm.searchingBdrcPerson")}</div>
                       </div>
-                    ) : bdrcPersonResults.length > 0 ? (
-                      <BdrcPersonList
-                        bdrcPersonResults={bdrcPersonResults}
+                    }
+                    {PersonResults && PersonResults.length > 0 && (
+                      <PersonList
+                        PersonResults={PersonResults}
                         handlePersonSelect={handlePersonSelect}
                       />
-                    ) : debouncedPersonSearch.trim() ? (
-                      <div className="px-4 py-2 text-gray-500 text-sm">
-                        {t("textForm.noResults")}
-                      </div>
-                    ) : null}
+                    )} 
+                      {
+                        PersonResults?.length === 0 && <div className="px-4 py-2 text-gray-500 text-sm">
+                          {t("textForm.noResults")}
+                        </div>
+                        } 
+                     
                   </>
                 )}
               </div>
@@ -269,43 +264,25 @@ const Contributor: React.FC<ContributorProps> = ({
   );
 };
 
-/** Normalize BDRC result name to a string (API may return string or lang-keyed object). */
-function getBdrcResultName(result: { name?: string | Record<string, string> }): string {
-  const n = result.name
-  if (typeof n === "string" && n.trim()) return n.trim()
-  if (n && typeof n === "object") {
-    const first = n["bo"] ?? n["en"] ?? Object.values(n)[0]
-    if (typeof first === "string" && first.trim()) return first.trim()
-  }
-  return ""
-}
 
 // BdrcPersonList component
-interface BdrcPersonListProps {
-  bdrcPersonResults: Array<{ bdrc_id?: string; name?: string | Record<string, string> }>;
+interface PersonListProps {
+  PersonResults: Person[];
   handlePersonSelect: (person: Person) => void;
 }
 
-const BdrcPersonList = memo(({ bdrcPersonResults, handlePersonSelect }: BdrcPersonListProps) => {
-  const handlePersonClick = useCallback((result: { bdrc_id?: string; name?: string | Record<string, string> }) => {
-    const displayName = getBdrcResultName(result)
-    const bdrcPerson: Person = {
-      id: result.bdrc_id || '',
-      name: displayName ? { bo: displayName } : { bo: '' },
-      alt_names: [],
-      bdrc: result.bdrc_id || '',
-      wiki: null
-    };
-    handlePersonSelect(bdrcPerson);
+const PersonList = memo(({ PersonResults, handlePersonSelect }: PersonListProps) => {
+  const handlePersonClick = useCallback((result: Person) => {
+    handlePersonSelect(result);
   }, [handlePersonSelect]);
 
   return (
     <div className="z-50">
-      {bdrcPersonResults.map((result) => {
-        const displayName = getBdrcResultName(result)
+      {PersonResults.map((result) => {
+        const displayName = result.name.bo || result.name.en || Object.values(result.name)[0] || ""
         return (
         <button
-          key={result.bdrc_id}
+          key={result.bdrc}
           type="button"
           onClick={() => handlePersonClick(result)}
           className="w-full px-4 py-2 z-50 text-left hover:bg-purple-50 border-b border-gray-100"
@@ -316,10 +293,10 @@ const BdrcPersonList = memo(({ bdrcPersonResults, handlePersonSelect }: BdrcPers
             </span>
             <div className="flex-1">
               <div className="font-medium text-sm">
-                {displayName || result.bdrc_id || "Untitled"}
+                {displayName || result.bdrc || "Untitled"}
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                {result.bdrc_id}
+                {result.bdrc}
               </div>
             </div>
           </div>
@@ -330,6 +307,6 @@ const BdrcPersonList = memo(({ bdrcPersonResults, handlePersonSelect }: BdrcPers
   );
 });
 
-BdrcPersonList.displayName = "BdrcPersonList";
+PersonList.displayName = "PersonList";
 
 export default Contributor;

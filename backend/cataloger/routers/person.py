@@ -55,10 +55,20 @@ class CreatePersonResponse(BaseModel):
 
 @router.get("", response_model=List[Person])
 async def get_persons(
+    name: Optional[str] = None,
+    bdrc: Optional[str] = None,
+    wiki: Optional[str] = None,
     limit: int = 100,
     offset: int = 0,
 ):
-    return openpecha_list_persons(limit=limit, offset=offset)
+    # Fetch persons with filtering if params supplied.
+    return openpecha_list_persons(
+        limit=limit,
+        offset=offset,
+        name=name,
+        bdrc=bdrc,
+        wiki=wiki,
+    )
 
 
 @router.get("/{id}", response_model=Person)

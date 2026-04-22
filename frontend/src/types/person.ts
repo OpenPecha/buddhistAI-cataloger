@@ -9,10 +9,17 @@ export interface PersonName {
 
 export interface Person {
   id: string;
-  name: PersonName;
-  alt_names: AltName[] | null;
+  name: {
+    [lang: string]: string | null;
+  };
+  alt_names: {
+    [lang: string]: string | null;
+    id?: string;
+  }[] | null;
   bdrc: string;
   wiki: string | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export type CreatePersonData = Omit<Person, 'id'>;

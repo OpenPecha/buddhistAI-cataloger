@@ -182,12 +182,35 @@ class EditionListItem(BaseModel):
         description="Alternative incipit titles in multiple languages"
     )
 
+class Line(BaseModel):
+    start: int
+    end: int
+
+class Page(BaseModel):
+    lines: List[Line]
+    reference: Optional[str] = None
+
+class Volume(BaseModel):
+    index: int
+    pages: List[Page]
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+class Pagination(BaseModel):
+    volumes: List[Volume]
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+class Segment(BaseModel):
+    lines: List[Line]
+
+class Segmentation(BaseModel):
+    segments: List[Segment]
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
 class CreateEdition(BaseModel):
     metadata: Dict[str, Any]
-    annotation: List[Dict[str, Any]]
-    biblography_annotation: Optional[List[BibliographyAnnotation]] = None
+    pagination: Optional[Pagination] = None
+    segmentation: Optional[Segmentation] = None
     content: str
-    user: Optional[str] = None
     
 class UpdateEdition(BaseModel):
     metadata: Dict[str, Any]

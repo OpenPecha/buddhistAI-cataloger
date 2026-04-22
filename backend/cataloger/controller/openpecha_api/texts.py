@@ -179,13 +179,25 @@ def _post_edition_annotations(edition_id: str, ann: Dict[str, Any]) -> None:
 
 def create_instance_for_text(text_id: str, payload: Dict[str, Any], *, timeout: int = 120) -> Any:
     metadata = edition_metadata_from_legacy(payload.get("metadata") or {})
-    seg = segmentation_from_legacy_annotation_list(payload.get("annotation") or [])
+    seg: Optional[Dict[str, Any]] = None
+    _seg_in = payload.get("segmentation")
+    if isinstance(_seg_in, dict) and _seg_in.get("segments"):
+        s: Dict[str, Any] = {"segments": _seg_in.get("segments") or []}
+        m = _seg_in.get("metadata")
+        if isinstance(m, dict) and m:
+            s["metadata"] = m
+        seg = s
+    if seg is None:
+        seg = segmentation_from_legacy_annotation_list(payload.get("annotation") or [])
     body: Dict[str, Any] = {
         "metadata": metadata,
         "content": payload.get("content") or "",
     }
     if seg:
         body["segmentation"] = seg
+    pag = payload.get("pagination")
+    if isinstance(pag, dict) and pag:
+        body["pagination"] = pag
     headers = json_headers()
     try:
         response = requests.post(

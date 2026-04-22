@@ -311,7 +311,6 @@ const TextCreationForm = forwardRef<TextCreationFormRef, TextCreationFormProps>(
         if (data.target) setTarget(data.target);
       },
     }), [language, titles, altTitles, contributors]);
-
     return (
       <div className="space-y-6 text-lg">
         {/* Type and Language */}

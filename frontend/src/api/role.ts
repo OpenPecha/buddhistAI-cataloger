@@ -10,26 +10,12 @@ export interface RolesResponse {
 }
 
 export const fetchRole = async (): Promise<RolesResponse> => {
-  const response = await fetch(`${API_URL}/v2/role/roles`);
-
-  if (!response.ok) {
-    const contentType = response.headers.get('content-type');
-    let errorMessage = '';
-
-    if (contentType?.includes('application/json')) {
-      try {
-        const errorData = await response.json();
-        errorMessage =
-          errorData.detail || errorData.message || errorData.error || '';
-      } catch {
-        // ignore parse errors
-      }
-    }
-
-    throw new Error(
-      errorMessage || `Unable to load roles (${response.status}).`,
-    );
-  }
-
-  return response.json();
+  return {
+    items: [
+      { name: "translator" },
+      { name: "reviser" },
+      { name: "author" },
+      { name: "scholar" }
+    ]
+  };
 };

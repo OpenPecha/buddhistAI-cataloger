@@ -118,7 +118,7 @@ const deletePerson = async (_id: string): Promise<void> => {
 };
 
 // Person hooks
-export const usePersons = (params?: { limit?: number; offset?: number }) => {
+export const usePersons = (params?: { limit?: number; offset?: number; name?: string; bdrc?: string; wiki?: string }) => {
   return useQuery({
     queryKey: ['persons', params],
     queryFn: () => fetchPersons(params),
