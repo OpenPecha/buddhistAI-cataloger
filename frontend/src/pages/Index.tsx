@@ -1,24 +1,14 @@
-import { Link, useNavigate } from "react-router-dom"
-import { Button } from "@/components/ui/button"
+import { Link} from "react-router-dom"
 import { useTranslation } from "react-i18next"
-import { useLocalStorage } from "@/hooks/useLocalStorage"
 import {
   BookOpen,
   PersonStanding,
-  Plus,
   Library,
-  Users,
-  Code2,
 } from "lucide-react"
-import { usePermission } from "@/hooks/usePermission"
-import PermissionButton from "@/components/PermissionButton"
 
 const Index = () => {
-  const navigate = useNavigate()
   const { t } = useTranslation()
-  const [, setEditedContent] = useLocalStorage("editedContent", "")
-  const { data: permission, isFetching: isFetchingPermission } = usePermission()
-  const isAdmin = permission?.role === "admin"
+ 
 
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col gap-12">
@@ -33,23 +23,7 @@ const Index = () => {
               {t("home.heroTagline")}
             </p>
           </div>
-          {isAdmin && (
-            <Button
-              size="lg"
-              onClick={() => {
-                setEditedContent("")
-                navigate("/create")
-              }}
-              disabled={!isAdmin}
-              className="shrink-0 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white cursor-pointer"
-            >
-              <PermissionButton
-                isLoading={isFetchingPermission}
-                icon={<Plus className="w-5 h-5" />}
-                text={t("common.create")}
-              />
-            </Button>
-          )}
+      
         </div>
       </section>
 

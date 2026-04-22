@@ -8,6 +8,10 @@ import {  useNavigate } from "react-router-dom";
 import TextList from "@/components/TextList";
 import TextFilter from "@/components/TextFilter";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { usePermission } from "@/hooks/usePermission";
+import PermissionButton from "@/components/PermissionButton";
+import { Plus } from "lucide-react";
 
 const TextsPage = () => {
   const { t } = useTranslation();
@@ -81,23 +85,23 @@ const TextsPage = () => {
   };
 
   
-
   // Determine what to display
   const displayTexts = filteredFoundText ? [filteredFoundText] : texts;
   const showPagination = !filteredFoundText;
-
+ 
   return (
     <div className="container  mx-auto py-16  space-y-4 sm:space-y-6 px-2 sm:px-0">
       {/* Header */}
       <div className={`flex flex-col sm:flex-row justify-between items-center sm:items-center gap-3 sm:gap-0`}>
         <h2 className="text-xl sm:text-2xl font-bold text-gray-800 text-center sm:text-left">{t('textsPage.title')}</h2>
+        <TextCreateButton/>
       </div>
 
       {/* Content */}
       <div className="space-y-4 bg-white ">
       <TextFilter param={param} setParam={setParam} clearSearch={clearSearch}  />
         
-
+     
       
 
         
@@ -184,3 +188,29 @@ const TextsPage = () => {
 
 
 export default TextsPage;
+
+
+function TextCreateButton() {
+  const { t } = useTranslation();
+  
+  const navigate = useNavigate()
+  const [, setEditedContent] = useLocalStorage("editedContent", "")
+  const { data: permission, isFetching: isFetchingPermission } = usePermission()
+  const isAdmin = permission?.role === "admin"
+  return (
+      <Button
+        size="lg"
+        onClick={() => {
+          setEditedContent("")
+          navigate("/create")
+        }}
+        disabled={!isAdmin}
+        className="shrink-0 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-white cursor-pointer"
+      >
+        <PermissionButton
+          isLoading={isFetchingPermission}
+          icon={<Plus className="w-5 h-5" />}
+          text={t("common.create")}
+        />
+      </Button>
+    )}

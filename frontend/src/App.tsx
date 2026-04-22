@@ -5,6 +5,7 @@ import { Navigation, ProtectedRoute } from '@app';
 import { getUserByEmail, createUser } from './api/settings';
 import OutlinerAdminLayout from './features/outliner/components/OutlinerAdminLayout';
 import { UpdateTextForm } from './features/cataloger/components/UpdateTextForm';
+import CreateEdition from './pages/CreateEdition';
 
 // Lazy load page components
 const TextsPage = lazy(() => import('./pages/Text'));
@@ -142,6 +143,11 @@ function App() {
           <Route path="/texts/:text_id/update" element={
             <ProtectedRoute>
               <UpdateTextForm />
+            </ProtectedRoute>
+          } />
+           <Route path="/texts/:text_id/create" element={
+            <ProtectedRoute>
+              <CreateEdition />
             </ProtectedRoute>
           } />
           <Route path="/texts/:text_id/editions/:edition_id" element={

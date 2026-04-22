@@ -52,23 +52,40 @@ const TextInstanceCard: React.FC<TextInstanceCardProps> = ({ instance }) => {
       : "Text Instance";
   }
   return (
-    <Link to={editionLink(text_id || '', instance.id)} className="relative bg-white rounded-lg shadow-md border border-gray-200 p-4 sm:p-6 hover:shadow-lg transition-shadow duration-200">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-0 mb-0 sm:mb-4">
+    <div className="relative bg-white rounded-xl shadow-lg border border-gray-200 p-6 group transition-all hover:shadow-xl hover:border-blue-300 duration-200">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
         <div className="flex-1 min-w-0">
-          <h3 className="text-base sm:text-lg font-semibold text-gray-900  break-words">
-            {title}
-    
-          </h3>
+          <Link to={editionLink(text_id || '', instance.id)} className="no-underline">
+            <h3 className="text-lg font-bold text-gray-900 break-words group-hover:text-blue-700 transition-colors">
+              {title}
+            </h3>
+          </Link>
         </div>
-        <div className="absolute bottom-0 right-0 flex gap-2 flex-shrink-0">
-          <span className={`px-2.5 sm:px-3 py-1 text-xs font-medium border ${getTypeColor(instance.type || '')}`}>
-            {instance.type}
-          </span>
-        </div>
+        <span className={`px-3 py-1 rounded-full border text-xs font-semibold capitalize shadow-sm mt-2 sm:mt-0 ${getTypeColor(instance.type || '')}`}>
+          {instance.type}
+        </span>
       </div>
-     
-    </Link>
+      <div className="flex gap-3 mt-2">
+        <Link
+          to={`/texts/${text_id}/create?type=translation&edition_id=${instance.id}`}
+          className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-md text-sm font-medium border border-blue-100 hover:bg-blue-100 hover:text-blue-800 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          Add translation
+        </Link>
+        <Link
+          to={`/texts/${text_id}/create?type=commentary&edition_id=${instance.id}`}
+          className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-50 text-yellow-800 rounded-md text-sm font-medium border border-yellow-100 hover:bg-yellow-100 hover:text-yellow-900 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          Add commentary
+        </Link>
+      </div>
+    </div>
   );
 };
 

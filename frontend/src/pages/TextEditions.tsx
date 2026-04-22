@@ -8,7 +8,7 @@ import TextCard from "@/components/TextCard";
 import TextInstanceCard from "@/components/TextInstanceCard";
 import { BreadCrumb } from '@app';
 import type { OpenPechaTextInstanceListItem, RelatedInstance } from "@/types/text";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Table,
@@ -18,12 +18,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { editionIdFromRelated } from "@/utils/links";
+import PublishOptions from "@/features/cataloger/components/PublishOptions";
+import RelatedInstanceItem from "@/features/cataloger/components/RelatedEditionItem";
+import { Plus } from "lucide-react";
 
 function TextInstances() {
   const { t } = useTranslation();
   const { text_id } = useParams();
-  const [filter, setFilter] = useState<"translation" | "commentary" | "all">("all");
   const {
     data: instances = [],
     isLoading: isLoadingInstances,
@@ -182,9 +183,19 @@ function TextInstances() {
         )}
         </h2>
       
-        
-       <TextInstanceOptions handlePublishToWebuddhist={handlePublishToWebuddhist} />
+          <div className="flex items-center gap-2">
+            
+       <PublishOptions handlePublishToWebuddhist={handlePublishToWebuddhist} />
+       <Link
+         to={`/texts/${text_id}/create?type=edition`}
+         className="inline-flex items-center gap-2 rounded-md bg-green-600 text-white px-4 py-2 text-sm font-semibold shadow-sm hover:bg-green-700 transition-colors border border-green-700"
+       >
+         <Plus className="w-4 h-4" />
+         Create New Edition
+       </Link>
+  
 
+          </div>
       </div>
 
       {/* Original Instances Layout */}
@@ -240,7 +251,6 @@ function TextInstances() {
               </button>
             </div>
           )}
-
           {/* Display related instances */}
           {!isLoadingRelated && !relatedError && (
             <>
@@ -294,79 +304,9 @@ function TextInstances() {
 }
 
 
-import { Select, SelectContent, SelectItem, SelectTrigger,SelectValue } from "@/components/ui/select";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import {  MenuIcon } from "lucide-react";
 
-type PropFilterType = {
- readonly filterType: "translation" | "commentary" | 'all';
- readonly setFilterType: (filterType: "translation" | "commentary" | 'all') => void;
-};
-
-function FilterTranslationOrCommentary({ filterType, setFilterType }:PropFilterType) {
-  return (
-    <Select value={filterType} onValueChange={(value) => setFilterType(value as "translation" | "commentary" | 'all')}>
-      <SelectTrigger>
-        <SelectValue placeholder="Filter by translation or commentary" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">All</SelectItem>
-        <SelectItem value="translation">Translation</SelectItem>
-        <SelectItem value="commentary">Commentary</SelectItem>
-      </SelectContent>
-    </Select>
-  );
-}
 export default TextInstances;
 
 
 
 
-
-
-function TextInstanceOptions({handlePublishToWebuddhist}: {handlePublishToWebuddhist: () => void}) {
-  return (
-    <div>
-      <DropdownMenu>
-  <DropdownMenuTrigger asChild>
-    <Button variant="outline"><MenuIcon/> <span className="hidden sm:block">Publish</span></Button>
-  </DropdownMenuTrigger>
-  <DropdownMenuContent>
-    <DropdownMenuGroup>
-      <DropdownMenuItem className="cursor-pointer hover:bg-gray-100 transition-colors duration-200" onClick={handlePublishToWebuddhist}>
-      Webuddhist
-    </DropdownMenuItem>
-    </DropdownMenuGroup>
-  </DropdownMenuContent>
-</DropdownMenu>
-      
-    </div>
-  );
-}
-
-function RelatedInstanceItem({ sourceInstanceId,relatedInstance }: { sourceInstanceId:string,relatedInstance: RelatedInstance }) {
-  const textId = relatedInstance.text_id;
-  const instanceId =relatedInstance.id;
-  const {t} = useTranslation();
-  const {data:textDetails} =useText(textId);
-  const title = textDetails?.title?.bo|| textDetails?.title?.tib||textDetails?.title?.tibphono || textDetails?.title?.en || textDetails?.title?.sa || textDetails?.title?.pi || t('textInstances.untitled');
-  const type=textDetails?.translation_of ? 'translation' : textDetails?.commentary_of ? 'commentary' : 'other';
-  function getEditionLink(){
-    return `/texts/${textId}/editions`;
-  }
-  return <Link
-      key={instanceId}
-      to={getEditionLink()}
-      className="contents"
-      >
-       <TextCard
-         title={title}
-         language={textDetails?.language || ''}
-         type={type}
-         isAnnotationAvailable={false}
-         instanceId={instanceId}
-         sourceInstanceId={sourceInstanceId}
-         />
-     </Link>
-
-}

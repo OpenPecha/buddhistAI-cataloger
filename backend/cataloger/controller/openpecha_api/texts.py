@@ -40,8 +40,6 @@ def list_texts(
     headers = openpecha_headers(x_application=x_application)
     try:
         response = requests.get(openpecha_url("texts"), params=params, headers=headers, timeout=60)
-        if response.status_code != 200:
-            raise HTTPException(status_code=response.status_code, detail=response.text)
         raw = response.json()
         return raw
     except requests.exceptions.Timeout:
