@@ -595,7 +595,6 @@ function OverviewTab({
       perf = perf.filter((r) => r.user_id === dashboardUserFilter)
     }
     const rows = perf
-      .filter((r) => r.segment_count > 0)
       .map((r) => {
         const events = r.rejection_event_count ?? 0
         const pct =
@@ -603,7 +602,6 @@ function OverviewTab({
           Math.round((events / r.segment_count) * 1000) / 10
         return { ...r, events, pct }
       })
-      .filter((r) => r.events > 0)
       .sort((a, b) => b.pct - a.pct)
     if (rows.length === 0) return null
     return {
@@ -627,13 +625,11 @@ function OverviewTab({
       perf = perf.filter((r) => r.user_id === dashboardUserFilter)
     }
     const rows = perf
-      .filter((r) => r.segment_count > 0)
       .map((r) => {
         const edits = r.segments_reviewer_corrected_title_or_author ?? 0
         const pct = Math.round((edits / r.segment_count) * 1000) / 10
         return { ...r, edits, pct }
       })
-      .filter((r) => r.edits > 0)
       .sort((a, b) => b.pct - a.pct)
     if (rows.length === 0) return null
     return {
