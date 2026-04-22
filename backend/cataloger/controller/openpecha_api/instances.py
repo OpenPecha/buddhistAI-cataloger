@@ -400,18 +400,11 @@ def update_instance_content(edition_id: str, content: str,start:int, end:int) ->
 
 
 def list_related_instances(
-    instance_id: str,
-    *,
-    relationship_type: Optional[str] = None,
-    timeout: Optional[int] = None,
+    edition_id: str
 ) -> Any:
-    del relationship_type
-    kw: Dict[str, Any] = {"headers": openpecha_headers()}
-    if timeout is not None:
-        kw["timeout"] = timeout
     response = requests.get(
-        openpecha_url("editions", instance_id, "related"),
-        **kw,
+        openpecha_url("editions", edition_id, "related"),
+        headers=openpecha_headers(),
     )
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=response.text)

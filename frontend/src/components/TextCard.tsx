@@ -19,7 +19,6 @@ interface TextCardProps {
   isAnnotationAvailable?: boolean;
   instanceId: string;
   sourceInstanceId: string;
-  relationship: string;
 }
 
 const TextCard = ({
@@ -29,7 +28,6 @@ const TextCard = ({
   isAnnotationAvailable,
   instanceId,
   sourceInstanceId,
-  relationship,
 }: TextCardProps) => {
   const { data: permission,isFetching:isFetchingPermission } = usePermission();
   const isAdmin=permission?.role === "admin";
@@ -50,7 +48,7 @@ const TextCard = ({
       const target= instanceId
       const alignmentInfo=getAlignmentInfo(source,target);
       let url;
-      if(relationship === "translation" || relationship === "commentary"){
+      if(type === "translation" || type === "commentary"){
         url= alignmentLink(alignmentInfo.source, alignmentInfo.target)
       }else{
         url= alignmentLink(alignmentInfo.target, alignmentInfo.source)

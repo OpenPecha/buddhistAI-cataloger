@@ -187,10 +187,13 @@ export interface RelatedInstanceMetadata {
 
 // Related edition response from GET /editions/{edition_id}/related
 export interface RelatedInstance {
-  edition_id?: string;
-  /** @deprecated Prefer edition_id */
-  instance_id?: string;
-  metadata: RelatedInstanceMetadata;
-  annotation?: string | null;
-  relationship: string;
+  bdrc: string | null;
+  wiki: string | null;
+  type: string;
+  source: string | null;
+  colophon: string | null;
+  incipit_title: IncipitTitle | null;
+  alt_incipit_titles: string | null;
+  id: string;
+  text_id: string;
 }

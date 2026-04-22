@@ -146,19 +146,8 @@ function TextInstances() {
   const title = text?.title?.bo || text?.title?.en || text?.title?.sa || text?.title?.pi|| t('textInstances.untitled');
 
   const textWithoutAlignmentExists = relatedInstances.some((relatedInstance: RelatedInstance) => !relatedInstance.annotation);
-  // Helper function to get title - always get the first value from dictionary
-  const getTitle = (titleObj: RelatedInstance["metadata"]["title"]) => {
-    if (!titleObj || Object.keys(titleObj).length === 0) {
-      return t('textInstances.untitled');
-    }
-    return Object.values(titleObj)[0] || t('textInstances.untitled');
-  };
-  const filteredInstances = relatedInstances.filter((instance: RelatedInstance) => {
-    if (filter === "all") {
-      return true;
-    }
-    return instance.relationship === filter;
-  });
+
+ 
   const handlePublishToWebuddhist = () => {
   const webuddhist_cataloger=import.meta.env.VITE_WEBUDDHIST_CATALOGER_URL
   const url= `${webuddhist_cataloger}/text/${text_id}`;
@@ -209,13 +198,7 @@ function TextInstances() {
       {/* Related Instances Section - Only show if critical instance exists */}
       {criticalInstance && (
         <div className="space-y-4 mt-8">
-          <div className="flex justify-between items-center px-2 sm:px-0">
-            <h3 className="text-lg sm:text-xl font-semibold text-gray-600">{t('textInstances.relatedTexts')}</h3>
-            <span className="flex items-center gap-2">
-              <span className="text-gray-500">Filter by:</span>
-            <FilterTranslationOrCommentary filterType={filter} setFilterType={setFilter} />
-            </span>
-          </div>
+      
 
           {/* Loading state for related instances */}
           {isLoadingRelated && (
@@ -294,30 +277,10 @@ function TextInstances() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredInstances.map((relatedInstance: RelatedInstance) => {
-                        const metadata = relatedInstance.metadata;
-                        const textId = metadata.text_id;
-                        const instanceId = editionIdFromRelated(relatedInstance);
-                        const isAnnotationAvailable = !!relatedInstance.annotation;
-                        const sourceInstanceId = criticalInstance?.id;
-                        return (
-                          <Link
-                            key={instanceId}
-                            to={editionLink(textId, instanceId)}
-                            className="contents"
-                          >
-                            <TextCard
-                              title={getTitle(metadata.title)}
-                              language={metadata.language}
-                              type={relatedInstance.relationship}
-                              isAnnotationAvailable={isAnnotationAvailable}
-                              instanceId={instanceId}
-                              sourceInstanceId={sourceInstanceId}
-                              relationship={relatedInstance.relationship}
-                            />
-                          </Link>
-                        );
-                      })}
+                      {
+  relatedInstances.map((relatedInstance: RelatedInstance) => <RelatedInstanceItem key={relatedInstance.id}  sourceInstanceId = {criticalInstance?.id} relatedInstance={relatedInstance} />)
+                      }
+                  
                     </TableBody>
                   </Table>
                 </div>
@@ -334,7 +297,6 @@ function TextInstances() {
 import { Select, SelectContent, SelectItem, SelectTrigger,SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {  MenuIcon } from "lucide-react";
-import { editionLink } from "@/utils/links";
 
 type PropFilterType = {
  readonly filterType: "translation" | "commentary" | 'all';
@@ -380,4 +342,31 @@ function TextInstanceOptions({handlePublishToWebuddhist}: {handlePublishToWebudd
       
     </div>
   );
+}
+
+function RelatedInstanceItem({ sourceInstanceId,relatedInstance }: { sourceInstanceId:string,relatedInstance: RelatedInstance }) {
+  const textId = relatedInstance.text_id;
+  const instanceId =relatedInstance.id;
+  const {t} = useTranslation();
+  const {data:textDetails} =useText(textId);
+  const title = textDetails?.title?.bo|| textDetails?.title?.tib||textDetails?.title?.tibphono || textDetails?.title?.en || textDetails?.title?.sa || textDetails?.title?.pi || t('textInstances.untitled');
+  const type=textDetails?.translation_of ? 'translation' : textDetails?.commentary_of ? 'commentary' : 'other';
+  function getEditionLink(){
+    return `/texts/${textId}/editions`;
+  }
+  return <Link
+      key={instanceId}
+      to={getEditionLink()}
+      className="contents"
+      >
+       <TextCard
+         title={title}
+         language={textDetails?.language || ''}
+         type={type}
+         isAnnotationAvailable={false}
+         instanceId={instanceId}
+         sourceInstanceId={sourceInstanceId}
+         />
+     </Link>
+
 }

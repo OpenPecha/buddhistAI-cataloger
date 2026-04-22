@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from cataloger.controller.openpecha_api.instances import (
     get_edition_segmentations as openpecha_get_edition_segmentations,
     get_instance as openpecha_get_instance,
+    list_related_instances,
     openpecha_get_edition_alignments,
     openpecha_post_edition_alignments,
     post_edition_segmentations as openpecha_post_edition_segmentations,
@@ -90,7 +91,15 @@ async def create_edition_alignments(
     )
 
 
+@router.get("/{edition_id}/related")
+async def get_related_editions(edition_id: str, type: Optional[str] = None):
+    """Editions related to the given edition (same text family).
 
+    Args:
+        edition_id: Source edition id
+        type: Optional filter by relationship type (root, commentary, translation)
+    """
+    return list_related_instances(edition_id)
 
 
 @router.put("/{edition_id}/content", status_code=200)
