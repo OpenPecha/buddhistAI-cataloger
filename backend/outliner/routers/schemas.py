@@ -411,14 +411,7 @@ class DashboardStatsResponse(BaseModel):
         ...,
         description="Approved segments where reviewer changed title or author vs snapshot at check time",
     )
-    segments_recorded_as_reviewer: Optional[int] = Field(
-        None,
-        description=(
-            "Set only when user_id is set and that user has role reviewer or admin: count of "
-            "checked/approved segments with reviewed_by_id equal to that user, scoped to documents "
-            "in the date range (all annotators, not owner-scoped). Null otherwise."
-        ),
-    )
+   
     annotation_coverage_pct: float
     annotator_performance: List[AnnotatorPerformanceRow]
     reviewer_segment_activity: List[ReviewerSegmentActivityRow] = Field(

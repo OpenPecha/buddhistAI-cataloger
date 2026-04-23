@@ -684,7 +684,6 @@ export interface DashboardStats {
    * admin: checked/approved segments where this user is recorded as reviewer (`reviewed_by_id`),
    * across all annotators' documents in the date range. Omitted or null otherwise.
    */
-  segments_recorded_as_reviewer?: number | null;
   annotation_coverage_pct: number;
   /** Per-annotator breakdown (same date range as dashboard; not scoped by user filter). */
   annotator_performance?: AnnotatorPerformanceRow[];

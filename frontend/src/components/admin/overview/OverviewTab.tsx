@@ -1,16 +1,10 @@
 import { useMemo, type ReactNode } from 'react'
 import {
-  Ban,
-  BadgeCheck,
   FileText,
   Layers,
   Link2,
-  MessageSquare,
   PenLine,
   PencilLine,
-  SkipForward,
-  Sparkles,
-  UserRoundCheck,
   BarChart3,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -311,22 +305,7 @@ const SEG_STATUS_COLORS: Record<string, string> = {
 
 const CHART_PALETTE = [PRIMARY, TEAL, VIOLET, GOLD, '#0369a1', '#86198f', '#3f6212', EMERALD]
 
-const motionContainer = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.055, delayChildren: 0.04 },
-  },
-}
 
-const motionItem = {
-  hidden: { opacity: 0, y: 16 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.42, ease: [0.22, 1, 0.36, 1] as const },
-  },
-}
 
 const cardPanel =
   'rounded-2xl border border-border/70 bg-card/95 p-6 shadow-elegant backdrop-blur-[2px]'
@@ -433,11 +412,7 @@ function OverviewTab({
   annotators = [],
   dashboardUserFilter,
 }: OverviewTabProps) {
-  const showReviewerWorkDoneCard = useMemo(() => {
-    if (!dashboardUserFilter || !stats) return false
-    const v = stats.segments_recorded_as_reviewer
-    return typeof v === 'number'
-  }, [dashboardUserFilter, stats])
+
 
   const overviewBarData = useMemo(() => {
     if (!stats) return null
@@ -890,18 +865,7 @@ function OverviewTab({
               hint="Segments where a reviewer changed title or author at review; per-user % of segments chart below."
             />
           </MetricShell>
-          {showReviewerWorkDoneCard ? (
-            <MetricShell accentClass="from-orange-800 to-orange-500">
-              <StatsCard
-                className={statsCardInner}
-                icon={<UserRoundCheck className="h-6 w-6 text-fuchsia-700" strokeWidth={1.75} />}
-                title="Reviewed segment Count"
-                value={stats.segments_recorded_as_reviewer ?? 0}
-                colorClass="text-orange-950"
-               
-              />
-            </MetricShell>
-          ) : null}
+          
         </div>
       </MotionSection>
 

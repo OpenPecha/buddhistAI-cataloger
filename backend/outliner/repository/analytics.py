@@ -544,35 +544,7 @@ def get_dashboard_stats(
         or 0
     )
 
-    # Full reviewer workload: only for dashboard user_id whose account role is reviewer or admin.
-    segments_recorded_as_reviewer: Optional[int] = None
-    if user_id:
-        filter_user_role = db.query(User.role).filter(User.id == user_id).scalar()
-        if (
-            filter_user_role
-            and str(filter_user_role).lower() in _REVIEWER_WORK_STATS_ROLES
-        ):
-            # Count segments this user reviewed across all documents (not scoped to
-            # OutlinerDocument.user_id). Still respect deleted flag and dashboard date range.
-            reviewer_seg_q = (
-                db.query(func.count(OutlinerSegment.id))
-                .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
-                .filter(
-                    (OutlinerDocument.status != "deleted")
-                    | (OutlinerDocument.status.is_(None)),
-                    OutlinerSegment.reviewed_by_id == user_id,
-                    segment_reviewed_or_checked,
-                )
-            )
-            if start_date:
-                reviewer_seg_q = reviewer_seg_q.filter(
-                    OutlinerDocument.created_at >= start_date
-                )
-            if end_date:
-                reviewer_seg_q = reviewer_seg_q.filter(
-                    OutlinerDocument.created_at <= end_date
-                )
-            segments_recorded_as_reviewer = reviewer_seg_q.scalar() or 0
+   
 
     annotation_coverage_pct = (
         round((segments_with_title_or_author / total_segments) * 100, 1)
@@ -606,7 +578,6 @@ def get_dashboard_stats(
         "segments_with_parent": segments_with_parent,
         "segments_with_comments": segments_with_comments,
         "segments_reviewer_corrected_title_or_author": segments_reviewer_corrected_title_or_author,
-        "segments_recorded_as_reviewer": segments_recorded_as_reviewer,
         "annotation_coverage_pct": annotation_coverage_pct,
         "annotator_performance": annotator_performance,
         "reviewer_segment_activity": reviewer_segment_activity,
