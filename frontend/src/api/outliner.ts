@@ -643,6 +643,15 @@ export interface AnnotatorPerformanceRow {
   segments_reviewer_corrected_title_or_author?: number;
 }
 
+/** Per reviewer/admin user; scoped to dashboard document filter and date range. */
+export interface ReviewerSegmentActivityRow {
+  user_id: string;
+  /** Checked/approved segments where this user is recorded as ``reviewed_by_id``. */
+  segments_recorded_as_reviewer: number;
+  /** Approved segments where trimmed reviewer title/author differs from title/author (same ``reviewed_by_id``). */
+  reviewer_title_author_edits: number;
+}
+
 export interface DashboardStats {
   document_count: number;
   total_segments: number;
@@ -679,6 +688,8 @@ export interface DashboardStats {
   annotation_coverage_pct: number;
   /** Per-annotator breakdown (same date range as dashboard; not scoped by user filter). */
   annotator_performance?: AnnotatorPerformanceRow[];
+  /** Reviewer/admin roster with segment activity in current dashboard scope. */
+  reviewer_segment_activity?: ReviewerSegmentActivityRow[];
 }
 
 export const getDashboardStats = async (

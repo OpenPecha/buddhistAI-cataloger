@@ -238,7 +238,7 @@ const OutlinerUpload: React.FC = () => {
                         <div className="flex items-center gap-3">
                           <FileText className="w-5 h-5 shrink-0 text-blue-600" />
                           <div className="font-medium flex min-w-0 flex-col text-gray-900">
-                            {doc.filename?.slice(0, 20)+"..."}
+                            {doc.filename}
                             <span className="text-xs text-gray-500">
                               {doc.status==='completed'&&"annotated"}
                             </span>

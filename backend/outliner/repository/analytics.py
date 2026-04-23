@@ -13,6 +13,129 @@ from outliner.repository.segment_rejection import latest_rejection_row_per_segme
 _REVIEWER_WORK_STATS_ROLES = frozenset({"reviewer", "admin"})
 
 
+def _is_reviewer_or_admin_role(role: Optional[str]) -> bool:
+    """Same normalization as ``outliner.deps.user_may_record_segment_reviewed_by`` role check."""
+    norm = (role or "user").strip().lower()
+    return norm in _REVIEWER_WORK_STATS_ROLES
+
+
+def get_reviewer_segment_activity(
+    db: Session,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None,
+) -> List[Dict[str, Any]]:
+    """
+    Per-reviewer counts for segments, scoped to non-deleted documents.
+
+    When ``start_date`` / ``end_date`` are set, only documents whose ``created_at`` falls in
+    that range are included (same as dashboard ``segments_recorded_as_reviewer`` / annotator
+    performance breakdown).
+
+    ``segments_recorded_as_reviewer``: checked/approved segments where ``reviewed_by_id`` is set
+    (reviewer/admin who moved the segment into review).
+
+    ``reviewer_title_author_edits``: approved segments with reviewer title/author that actually
+    differ from ``title`` / ``author`` (trimmed), same ``reviewed_by_id`` (best-effort attribution).
+    """
+    doc_filters = [
+        (OutlinerDocument.status != "deleted") | (OutlinerDocument.status.is_(None))
+    ]
+    if start_date:
+        doc_filters.append(OutlinerDocument.created_at >= start_date)
+    if end_date:
+        doc_filters.append(OutlinerDocument.created_at <= end_date)
+    doc_scope = and_(*doc_filters)
+
+    reviewed_when = or_(
+        OutlinerSegment.status == "checked",
+        OutlinerSegment.status == "approved",
+    )
+
+    recorded_rows = (
+        db.query(OutlinerSegment.reviewed_by_id, func.count(OutlinerSegment.id))
+        .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
+        .filter(
+            doc_scope,
+            reviewed_when,
+            OutlinerSegment.reviewed_by_id.isnot(None),
+        )
+        .group_by(OutlinerSegment.reviewed_by_id)
+        .all()
+    )
+    recorded: Dict[str, int] = {
+        str(rid): int(cnt) for rid, cnt in recorded_rows if rid is not None
+    }
+
+    rt = OutlinerSegment.reviewer_title
+    ra = OutlinerSegment.reviewer_author
+    t = OutlinerSegment.title
+    au = OutlinerSegment.author
+    rt_trim = func.trim(func.coalesce(rt, ""))
+    ra_trim = func.trim(func.coalesce(ra, ""))
+    t_trim = func.trim(func.coalesce(t, ""))
+    au_trim = func.trim(func.coalesce(au, ""))
+    title_is_real_correction = and_(
+        rt.isnot(None),
+        func.length(rt_trim) > 0,
+        rt_trim != t_trim,
+    )
+    author_is_real_correction = and_(
+        ra.isnot(None),
+        func.length(ra_trim) > 0,
+        ra_trim != au_trim,
+    )
+    correction_rows = (
+        db.query(OutlinerSegment.reviewed_by_id, func.count(OutlinerSegment.id))
+        .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
+        .filter(
+            doc_scope,
+            OutlinerSegment.status == "approved",
+            OutlinerSegment.reviewed_by_id.isnot(None),
+            or_(title_is_real_correction, author_is_real_correction),
+        )
+        .group_by(OutlinerSegment.reviewed_by_id)
+        .all()
+    )
+    corrections: Dict[str, int] = {
+        str(rid): int(cnt) for rid, cnt in correction_rows if rid is not None
+    }
+
+    role_norm = func.lower(func.trim(User.role))
+    reviewer_id_rows = (
+        db.query(User.id, User.role)
+        .filter(
+            User.role.isnot(None),
+            role_norm.in_(tuple(_REVIEWER_WORK_STATS_ROLES)),
+        )
+        .all()
+    )
+    reviewer_ids = [
+        str(uid)
+        for uid, role in reviewer_id_rows
+        if role is not None and _is_reviewer_or_admin_role(role)
+    ]
+
+    rows: List[Dict[str, Any]] = []
+    for uid in reviewer_ids:
+        rec = recorded.get(uid, 0)
+        corr = corrections.get(uid, 0)
+        rows.append(
+            {
+                "user_id": uid,
+                "segments_recorded_as_reviewer": rec,
+                "reviewer_title_author_edits": corr,
+            }
+        )
+    rows.sort(
+        key=lambda r: (
+            r["segments_recorded_as_reviewer"] + r["reviewer_title_author_edits"],
+            r["segments_recorded_as_reviewer"],
+        ),
+        reverse=True,
+    )
+    return rows
+
+
 def get_annotator_performance_breakdown(
     db: Session,
     start_date: Optional[datetime] = None,
@@ -328,8 +451,6 @@ def get_dashboard_stats(
         OutlinerSegment.status == "checked",
         OutlinerSegment.status == "approved",
     )
-    segment_reviewed = OutlinerSegment.status == "approved"
-  
 
     doc_id_filter = OutlinerDocument.id.in_(db.query(doc_ids_subq.c.id))
 
@@ -463,6 +584,10 @@ def get_dashboard_stats(
         db, start_date=start_date, end_date=end_date
     )
 
+    reviewer_segment_activity = get_reviewer_segment_activity(
+        db, start_date=start_date, end_date=end_date
+    )
+
     return {
         "document_count": document_count,
         "total_segments": total_segments,
@@ -484,4 +609,5 @@ def get_dashboard_stats(
         "segments_recorded_as_reviewer": segments_recorded_as_reviewer,
         "annotation_coverage_pct": annotation_coverage_pct,
         "annotator_performance": annotator_performance,
+        "reviewer_segment_activity": reviewer_segment_activity,
     }

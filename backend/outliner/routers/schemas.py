@@ -348,6 +348,25 @@ class AnnotatorPerformanceRow(BaseModel):
     )
 
 
+class ReviewerSegmentActivityRow(BaseModel):
+    user_id: str
+    segments_recorded_as_reviewer: int = Field(
+        ...,
+        description=(
+            "Checked or approved segments in scope where this user is ``reviewed_by_id`` "
+            "(who recorded the review transition)."
+        ),
+    )
+    reviewer_title_author_edits: int = Field(
+        0,
+        description=(
+            "Approved segments in scope with matching ``reviewed_by_id`` where trimmed "
+            "``reviewer_title`` differs from ``title`` and/or trimmed ``reviewer_author`` "
+            "differs from ``author`` (non-empty reviewer field required for that side)."
+        ),
+    )
+
+
 class DashboardStatsResponse(BaseModel):
     document_count: int
     total_segments: int
@@ -402,3 +421,10 @@ class DashboardStatsResponse(BaseModel):
     )
     annotation_coverage_pct: float
     annotator_performance: List[AnnotatorPerformanceRow]
+    reviewer_segment_activity: List[ReviewerSegmentActivityRow] = Field(
+        default_factory=list,
+        description=(
+            "All users with role reviewer or admin: segment counts in the same document scope "
+            "and date range as the rest of this response (respects annotator user_id filter)."
+        ),
+    )

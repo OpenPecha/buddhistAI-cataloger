@@ -11,6 +11,7 @@ import {
   SkipForward,
   Sparkles,
   UserRoundCheck,
+  BarChart3,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import {
@@ -45,7 +46,7 @@ ChartJS.register(
 interface OverviewTabProps {
   readonly stats: DashboardStats | null
   readonly isLoading?: boolean
-  readonly annotators?: ReadonlyArray<{ id: string; name: string | null }>
+  readonly annotators?: ReadonlyArray<{ id: string; name: string | null; role?: string | null }>
   /** When set, top self-reviewers list is limited to this user (matches scoped dashboard totals). */
   readonly dashboardUserFilter?: string
 }
@@ -242,6 +243,44 @@ const REVIEWER_TITLE_AUTHOR_EDITS_HBAR_OPTIONS: ChartOptions<'bar'> = {
   },
 }
 
+/** Grouped horizontal bars: per-reviewer segment counts (raw numbers, not %). */
+const REVIEWER_ACTIVITY_HBAR_OPTIONS: ChartOptions<'bar'> = {
+  indexAxis: 'y',
+  responsive: true,
+  maintainAspectRatio: false,
+  datasets: {
+    bar: {
+      categoryPercentage: 0.72,
+      barPercentage: 0.88,
+    },
+  },
+  plugins: {
+    legend: {
+      display: true,
+      position: 'top',
+      labels: {
+        boxWidth: 10,
+        boxHeight: 10,
+        padding: 14,
+        font: { size: 11 },
+        color: MUTED,
+      },
+    },
+    title: { display: false },
+  },
+  scales: {
+    x: {
+      beginAtZero: true,
+      grid: { color: GRID },
+      ticks: { font: { size: 11 }, color: MUTED },
+    },
+    y: {
+      grid: { display: false },
+      ticks: { font: { size: 11 }, color: INK },
+    },
+  },
+}
+
 const DOC_STATUS_ORDER = [
   'active',
   'completed',
@@ -373,9 +412,14 @@ function MetricShell({
   )
 }
 
+function isReviewerOrAdminRole(role: string | null | undefined): boolean {
+  const n = (role ?? 'user').trim().toLowerCase()
+  return n === 'reviewer' || n === 'admin'
+}
+
 function annotatorDisplayName(
   userId: string | null,
-  annotators: ReadonlyArray<{ id: string; name: string | null }>,
+  annotators: ReadonlyArray<{ id: string; name: string | null; role?: string | null }>,
 ): string {
   if (userId == null || userId === '') return 'Unassigned'
   const u = annotators.find((a) => a.id === userId)
@@ -646,6 +690,45 @@ function OverviewTab({
     }
   }, [stats, annotators, dashboardUserFilter])
 
+  const reviewerActivityRows = useMemo(() => {
+    const raw = stats?.reviewer_segment_activity ?? []
+    return raw.filter((row) => {
+      const u = annotators.find((a) => a.id === row.user_id)
+      if (u?.role == null || u.role === '') return true
+      return isReviewerOrAdminRole(u.role)
+    })
+  }, [stats?.reviewer_segment_activity, annotators])
+
+  const reviewerActivityChartData = useMemo(() => {
+    const rows = reviewerActivityRows.filter(
+      (r) => r.segments_recorded_as_reviewer > 0 || r.reviewer_title_author_edits > 0,
+    )
+    if (rows.length === 0) return null
+    const sorted = [...rows].sort((a, b) => {
+      const ta = a.segments_recorded_as_reviewer + a.reviewer_title_author_edits
+      const tb = b.segments_recorded_as_reviewer + b.reviewer_title_author_edits
+      if (tb !== ta) return tb - ta
+      return b.segments_recorded_as_reviewer - a.segments_recorded_as_reviewer
+    })
+    return {
+      labels: sorted.map((r) => annotatorDisplayName(r.user_id, annotators)),
+      datasets: [
+        {
+          label: 'Segments reviewed',
+          data: sorted.map((r) => r.segments_recorded_as_reviewer),
+          backgroundColor: EMERALD,
+          borderRadius: 6,
+        },
+        {
+          label: 'Title/author updated at review',
+          data: sorted.map((r) => r.reviewer_title_author_edits),
+          backgroundColor: ORANGE,
+          borderRadius: 6,
+        },
+      ],
+    }
+  }, [reviewerActivityRows, annotators])
+
   if (isLoading && !stats) {
     return (
       <div
@@ -819,6 +902,39 @@ function OverviewTab({
               />
             </MetricShell>
           ) : null}
+        </div>
+      </MotionSection>
+
+      <MotionSection>
+        <SectionHeading eyebrow="People" title="Reviewers & segment activity" />
+        
+        <div className="mt-6 rounded-lg border border-stone-200/80 bg-white/60 px-3 pb-3 pt-2 sm:px-5">
+          {reviewerActivityRows.length === 0 ? (
+            <div className="flex items-center gap-3 px-2 py-10 text-sm text-muted-foreground">
+              <BarChart3 className="h-5 w-5 shrink-0 opacity-60" aria-hidden />
+              <span>No reviewer or admin accounts found in scope.</span>
+            </div>
+          ) : reviewerActivityChartData == null ? (
+            <div className="flex items-center gap-3 px-2 py-10 text-sm text-muted-foreground">
+              <BarChart3 className="h-5 w-5 shrink-0 opacity-60" aria-hidden />
+              <span>
+                No reviewer activity in this range: everyone has zero segments reviewed and zero
+                title/author edits.
+              </span>
+            </div>
+          ) : (
+            <div
+              className="min-h-64 w-full"
+              style={{
+                height: Math.min(
+                  720,
+                  Math.max(280, reviewerActivityChartData.labels.length * 44),
+                ),
+              }}
+            >
+              <Bar data={reviewerActivityChartData} options={REVIEWER_ACTIVITY_HBAR_OPTIONS} />
+            </div>
+          )}
         </div>
       </MotionSection>
 
