@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { OverviewTab } from '../components/admin';
 import { SkeletonLarger } from '@/components/ui/skeleton';
 import { useDashboardStats, useOutlinerUsers } from '../hooks';
+import { UserFilter } from '@/components/admin/documents/UserFilter';
 
 function getDefaultDateRange() {
   const end = new Date();
@@ -34,26 +35,12 @@ function OutlinerAdminDashboard() {
       </div>
     );
   }
-
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4">
       <div className="mb-4 flex flex-wrap items-center justify-end gap-3 bg-gray-50/80">
         <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Filters</span>
-        <select
-          id="user-filter"
-          value={selectedUserId}
-          onChange={(e) => setSelectedUserId(e.target.value)}
-          className="border border-gray-300 px-2.5 py-1.5 text-sm min-w-[140px] bg-white"
-          disabled={usersLoading}
-          aria-label="Annotator"
-        >
-          <option value="">All users</option>
-          {outlinerUsers.map((u: { id: string; name: string | null }) => (
-            <option key={u.id} value={u.id}>
-              {u.name || u.id}
-            </option>
-          ))}
-        </select>
+        <UserFilter currentAnnotator={selectedUserId || ''} handleAnnotatorChange={setSelectedUserId} annotators={outlinerUsers} annotatorsLoading={usersLoading} />
+       
         <label className="sr-only" htmlFor="start-date">From</label>
         <input
           id="start-date"
