@@ -1027,9 +1027,9 @@ function OverviewTab({
                   <thead>
                     <tr className="border-b border-stone-200 bg-stone-50/90 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       <th className="px-4 py-3">Batch ID</th>
-                      <th className="px-4 py-3 text-right tabular-nums">Active</th>
-                      <th className="px-4 py-3 text-right tabular-nums">In progress</th>
-                      <th className="px-4 py-3 text-right tabular-nums">In review</th>
+                      <th className="px-4 py-3 text-right tabular-nums">Available</th>
+                      <th className="px-4 py-3 text-right tabular-nums">Annotating+skipped</th>
+                      <th className="px-4 py-3 text-right tabular-nums">Annotated</th>
                       <th className="px-4 py-3 text-right tabular-nums">Reviewed</th>
                     </tr>
                   </thead>
