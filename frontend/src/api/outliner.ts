@@ -643,6 +643,14 @@ export interface AnnotatorPerformanceRow {
   segments_reviewer_corrected_title_or_author?: number;
 }
 
+/** Per volume batch from BEC OT API ``/stats/volume-batches`` (batch id is the object key). */
+export interface VolumeBatchStatusCounts {
+  in_review: number;
+  reviewed: number;
+  in_progress: number;
+  active: number;
+}
+
 /** Per reviewer/admin user; scoped to dashboard document filter and date range. */
 export interface ReviewerSegmentActivityRow {
   user_id: string;
@@ -691,6 +699,11 @@ export interface DashboardStats {
   annotator_performance?: AnnotatorPerformanceRow[];
   /** Reviewer/admin roster with segment activity in current dashboard scope. */
   reviewer_segment_activity?: ReviewerSegmentActivityRow[];
+  /**
+   * Per batch ID from BEC OT API; not scoped by dashboard date or annotator filters.
+   * Null when the cataloger server could not reach the upstream API.
+   */
+  volume_batch_stats?: Record<string, VolumeBatchStatusCounts> | null;
 }
 
 export const getDashboardStats = async (

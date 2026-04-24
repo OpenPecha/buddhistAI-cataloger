@@ -348,6 +348,15 @@ class AnnotatorPerformanceRow(BaseModel):
     )
 
 
+class VolumeBatchStatusCounts(BaseModel):
+    """Counts for one volume batch from BEC OT API ``/stats/volume-batches``."""
+
+    in_review: int
+    reviewed: int
+    in_progress: int
+    active: int
+
+
 class ReviewerSegmentActivityRow(BaseModel):
     user_id: str
     segments_recorded_as_reviewer: int = Field(
@@ -426,5 +435,12 @@ class DashboardStatsResponse(BaseModel):
         description=(
             "All users with role reviewer or admin: segment counts in the same document scope "
             "and date range as the rest of this response (respects annotator user_id filter)."
+        ),
+    )
+    volume_batch_stats: Optional[Dict[str, VolumeBatchStatusCounts]] = Field(
+        default=None,
+        description=(
+            "Per batch ID from BEC OT API ``/api/v1/stats/volume-batches``. "
+            "Not scoped by dashboard date or annotator filters. Null if the upstream request failed."
         ),
     )

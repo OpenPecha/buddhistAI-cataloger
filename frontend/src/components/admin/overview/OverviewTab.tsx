@@ -3,6 +3,7 @@ import {
   FileText,
   Layers,
   Link2,
+  Library,
   PenLine,
   PencilLine,
   BarChart3,
@@ -23,7 +24,7 @@ import {
 import type { ChartOptions, TooltipItem } from 'chart.js'
 import { Bar, Doughnut, Line } from 'react-chartjs-2'
 import StatsCard from '../shared/StatsCard'
-import type { DashboardStats } from '@/api/outliner'
+import type { DashboardStats, VolumeBatchStatusCounts } from '@/api/outliner'
 
 ChartJS.register(
   CategoryScale,
@@ -686,6 +687,34 @@ function OverviewTab({
     }
   }, [reviewerActivityRows, annotators])
 
+  const volumeBatchSection = useMemo(() => {
+    const raw = stats?.volume_batch_stats
+    if (raw === undefined || raw === null) {
+      return { state: 'unavailable' as const }
+    }
+    const entries = Object.entries(raw) as [string, VolumeBatchStatusCounts][]
+    if (entries.length === 0) {
+      return { state: 'empty' as const }
+    }
+    const rows = entries
+      .map(([batchId, c]) => ({
+        batchId,
+        in_review: c.in_review,
+        reviewed: c.reviewed,
+        in_progress: c.in_progress,
+        active: c.active,
+      }))
+      .sort((a, b) => {
+        const na = Number(a.batchId)
+        const nb = Number(b.batchId)
+        if (!Number.isNaN(na) && !Number.isNaN(nb) && na !== nb) {
+          return na - nb
+        }
+        return a.batchId.localeCompare(b.batchId, undefined, { numeric: true })
+      })
+    return { state: 'rows' as const, rows }
+  }, [stats?.volume_batch_stats])
+
   if (isLoading && !stats) {
     return (
       <div
@@ -849,6 +878,82 @@ function OverviewTab({
             />
           </MetricShell>
           
+        </div>
+      </MotionSection>
+
+      <MotionSection>
+        <SectionHeading
+          eyebrow="BEC Volume Batches"
+          title="Available Batches"
+          description="Counts from bec-otapi /api/v1/stats/volume-batches. Batch ID is the row key from the API. Not scoped by dashboard date or annotator filters."
+        />
+        <div className="mt-5 overflow-x-auto rounded-lg border border-stone-200/80 bg-white/60">
+          {volumeBatchSection.state === 'unavailable' && (
+            <div className="flex items-center gap-3 px-4 py-10 text-sm text-muted-foreground">
+              <Library className="h-5 w-5 shrink-0 opacity-60" aria-hidden />
+              <span>
+                Volume batch stats are unavailable (cataloger could not reach BEC OT API, or the
+                response was empty). Set BEC_OTAPI_BASE_URL if you use a non-default host.
+              </span>
+            </div>
+          )}
+          {volumeBatchSection.state === 'empty' && (
+            <div className="flex items-center gap-3 px-4 py-10 text-sm text-muted-foreground">
+              <Library className="h-5 w-5 shrink-0 opacity-60" aria-hidden />
+              <span>No volume batches returned for the configured max_batches limit.</span>
+            </div>
+          )}
+          {volumeBatchSection.state === 'rows' && (() => {
+            // Calculate the sum of all 'active' counts
+            const totalActive = volumeBatchSection.rows.reduce((sum, row) => sum + (row.active || 0), 0);
+            return (
+              <>
+                {totalActive < 50 && (
+                  <div className="mb-4 flex items-center gap-3 rounded-md border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-900">
+                    <span className="font-semibold">Warning:</span>
+                    <span>
+                      All active volume batches are finished or nearly finished. Please prepare new batches for annotation and review.
+                    </span>
+                  </div>
+                )}
+                <table className="w-full min-w-[32rem] border-collapse text-sm">
+                  <thead>
+                    <tr className="border-b border-stone-200 bg-stone-50/90 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <th className="px-4 py-3">Batch ID</th>
+                      <th className="px-4 py-3 text-right tabular-nums">Active</th>
+                      <th className="px-4 py-3 text-right tabular-nums">In progress</th>
+                      <th className="px-4 py-3 text-right tabular-nums">In review</th>
+                      <th className="px-4 py-3 text-right tabular-nums">Reviewed</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {volumeBatchSection.rows.map((row) => (
+                      <tr
+                        key={row.batchId}
+                        className="border-b border-stone-100 last:border-0 hover:bg-stone-50/80"
+                      >
+                        <td className="px-4 py-2.5 font-medium text-foreground">{row.batchId}</td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                          {row.active.toLocaleString()}
+                        </td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                          {row.in_progress.toLocaleString()}
+                        </td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                          {row.in_review.toLocaleString()}
+                        </td>
+                        <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                          {row.reviewed.toLocaleString()}
+                        </td>
+                       
+                       
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            );
+          })()}
         </div>
       </MotionSection>
 

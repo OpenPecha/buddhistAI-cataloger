@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from user.models.user import User
 
+from outliner.bec_otapi_client import fetch_volume_batch_stats
 from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentRejection
 from outliner.repository.segment_rejection import latest_rejection_row_per_segment_subquery
 
@@ -580,6 +581,8 @@ def get_dashboard_stats(
         db, start_date=start_date, end_date=end_date
     )
 
+    volume_batch_stats = fetch_volume_batch_stats()
+
     return {
         "document_count": document_count,
         "total_segments": total_segments,
@@ -601,4 +604,5 @@ def get_dashboard_stats(
         "annotation_coverage_pct": annotation_coverage_pct,
         "annotator_performance": annotator_performance,
         "reviewer_segment_activity": reviewer_segment_activity,
+        "volume_batch_stats": volume_batch_stats,
     }
