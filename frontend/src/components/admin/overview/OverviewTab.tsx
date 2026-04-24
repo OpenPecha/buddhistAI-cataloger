@@ -885,7 +885,7 @@ function OverviewTab({
         <SectionHeading
           eyebrow="BEC Volume Batches"
           title="Available Batches"
-          description="Counts from bec-otapi /api/v1/stats/volume-batches. Batch ID is the row key from the API. Not scoped by dashboard date or annotator filters."
+          description="count status of volumes from bdrc ."
         />
         <div className="mt-5 overflow-x-auto rounded-lg border border-stone-200/80 bg-white/60">
           {volumeBatchSection.state === 'unavailable' && (
@@ -909,8 +909,8 @@ function OverviewTab({
             return (
               <>
                 {totalActive < 50 && (
-                  <div className="mb-4 flex items-center gap-3 rounded-md border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-900">
-                    <span className="font-semibold">Warning:</span>
+                  <div className="mb-4 flex items-center gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-yellow-900">
+                    <span className="font-semibold animate-bounce">Warning:</span>
                     <span>
                       All active volume batches are finished or nearly finished. Please prepare new batches for annotation and review.
                     </span>
