@@ -36,6 +36,9 @@ def get_reviewer_segment_activity(
 
     ``reviewer_title_author_edits``: approved segments with reviewer title/author that actually
     differ from ``title`` / ``author`` (trimmed), same ``reviewed_by_id`` (best-effort attribution).
+
+    ``reviewer_rejection_count``: rows in ``segment_rejections`` with ``reviewer_id`` set, on
+    segments in scoped documents (same join and document date filter as annotator performance).
     """
     doc_filters = [
         (OutlinerDocument.status != "deleted") | (OutlinerDocument.status.is_(None))
@@ -100,6 +103,18 @@ def get_reviewer_segment_activity(
         str(rid): int(cnt) for rid, cnt in correction_rows if rid is not None
     }
 
+    reviewer_rej_rows = (
+        db.query(SegmentRejection.reviewer_id, func.count(SegmentRejection.id))
+        .join(OutlinerSegment, SegmentRejection.segment_id == OutlinerSegment.id)
+        .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
+        .filter(doc_scope, SegmentRejection.reviewer_id.isnot(None))
+        .group_by(SegmentRejection.reviewer_id)
+        .all()
+    )
+    rejection_by_reviewer: Dict[str, int] = {
+        str(rid): int(cnt) for rid, cnt in reviewer_rej_rows if rid is not None
+    }
+
     role_norm = func.lower(func.trim(User.role))
     reviewer_id_rows = (
         db.query(User.id, User.role)
@@ -119,17 +134,22 @@ def get_reviewer_segment_activity(
     for uid in reviewer_ids:
         rec = recorded.get(uid, 0)
         corr = corrections.get(uid, 0)
+        rej = rejection_by_reviewer.get(uid, 0)
         rows.append(
             {
                 "user_id": uid,
                 "segments_recorded_as_reviewer": rec,
                 "reviewer_title_author_edits": corr,
+                "reviewer_rejection_count": rej,
             }
         )
     rows.sort(
         key=lambda r: (
-            r["segments_recorded_as_reviewer"] + r["reviewer_title_author_edits"],
+            r["segments_recorded_as_reviewer"]
+            + r["reviewer_title_author_edits"]
+            + r["reviewer_rejection_count"],
             r["segments_recorded_as_reviewer"],
+            r["reviewer_rejection_count"],
         ),
         reverse=True,
     )

@@ -159,61 +159,47 @@ const ANNOTATOR_LINE_OPTIONS = {
   },
 } as const
 
-/** Horizontal bar: rejection events as % of that user's segment count (same date scope as dashboard). */
-const REJECTION_RATE_HBAR_OPTIONS: ChartOptions<'bar'> = {
+/** Grouped horizontal bars: rejection rate vs reviewer title/author corrections (% of each user's segments). */
+const ANNOTATOR_QUALITY_SIGNALS_HBAR_OPTIONS: ChartOptions<'bar'> = {
   indexAxis: 'y',
   responsive: true,
   maintainAspectRatio: false,
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      callbacks: {
-        label: (tooltipItem: TooltipItem<'bar'>) => {
-          const meta = (
-            tooltipItem.dataset as { metaAt?: { events: number; segments: number }[] }
-          ).metaAt?.[tooltipItem.dataIndex]
-          const raw = tooltipItem.parsed.x
-          const pct = typeof raw === 'number' ? raw.toFixed(1) : String(raw)
-          if (!meta) return `${pct}% of segments`
-          return `${meta.events.toLocaleString()} rejection rows / ${meta.segments.toLocaleString()} segments (${pct}%)`
-        },
-      },
+  datasets: {
+    bar: {
+      categoryPercentage: 0.72,
+      barPercentage: 0.88,
     },
   },
-  scales: {
-    x: {
-      beginAtZero: true,
-      suggestedMax: 100,
-      grid: { color: GRID },
-      ticks: {
+  plugins: {
+    legend: {
+      display: true,
+      position: 'top',
+      labels: {
+        boxWidth: 10,
+        boxHeight: 10,
+        padding: 14,
         font: { size: 11 },
         color: MUTED,
-        callback: (value) => `${value}%`,
       },
     },
-    y: {
-      grid: { display: false },
-      ticks: { font: { size: 11 }, color: INK },
-    },
-  },
-}
-
-/** Horizontal bar: reviewer title/author corrections as % of that user's segment count (same scope as dashboard). */
-const REVIEWER_TITLE_AUTHOR_EDITS_HBAR_OPTIONS: ChartOptions<'bar'> = {
-  indexAxis: 'y',
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { display: false },
+    title: { display: false },
     tooltip: {
       callbacks: {
         label: (tooltipItem: TooltipItem<'bar'>) => {
-          const meta = (
-            tooltipItem.dataset as { metaAt?: { edits: number; segments: number }[] }
-          ).metaAt?.[tooltipItem.dataIndex]
+          const i = tooltipItem.dataIndex
           const raw = tooltipItem.parsed.x
           const pct = typeof raw === 'number' ? raw.toFixed(1) : String(raw)
-          if (!meta) return `${pct}% of segments`
+          if (tooltipItem.datasetIndex === 0) {
+            const meta = (
+              tooltipItem.dataset as { metaReject?: { events: number; segments: number }[] }
+            ).metaReject?.[i]
+            if (!meta) return `Rejection : ${pct}% of segments`
+            return `${meta.events.toLocaleString()} rejection  / ${meta.segments.toLocaleString()} segments (${pct}%)`
+          }
+          const meta = (
+            tooltipItem.dataset as { metaEdits?: { edits: number; segments: number }[] }
+          ).metaEdits?.[i]
+          if (!meta) return `Corrections at review: ${pct}% of segments`
           return `${meta.edits.toLocaleString()} corrected at review / ${meta.segments.toLocaleString()} segments (${pct}%)`
         },
       },
@@ -570,17 +556,7 @@ function OverviewTab({
           pointHoverRadius: 6,
           pointBackgroundColor: EMERALD,
         },
-        {
-          label: 'Self-review (same user)',
-          data: perf.map((r) => r.segments_self_reviewed ?? 0),
-          borderColor: '#86198f',
-          backgroundColor: 'rgba(134, 25, 143, 0.12)',
-          borderWidth: 2,
-          tension: 0.25,
-          pointRadius: 4,
-          pointHoverRadius: 6,
-          pointBackgroundColor: '#86198f',
-        },
+       
         {
           label: 'Rejections logged',
           data: perf.map((r) => r.reviewer_rejection_count ?? 0),
@@ -607,59 +583,47 @@ function OverviewTab({
     }
   }, [stats, annotators])
 
-  const annotatorRejectionRateChart = useMemo(() => {
+  const annotatorQualitySignalsChartData = useMemo(() => {
     if (!stats) return null
     let perf = stats.annotator_performance ?? []
     if (dashboardUserFilter) {
       perf = perf.filter((r) => r.user_id === dashboardUserFilter)
     }
+    if (perf.length === 0) return null
     const rows = perf
       .map((r) => {
         const events = r.rejection_event_count ?? 0
-        const pct =
+        const edits = r.segments_reviewer_corrected_title_or_author ?? 0
+        const rejectionPct =
           r.rejection_events_pct_of_segments ??
-          Math.round((events / r.segment_count) * 1000) / 10
-        return { ...r, events, pct }
+          (r.segment_count > 0 ? Math.round((events / r.segment_count) * 1000) / 10 : 0)
+        const editsPct =
+          r.segment_count > 0 ? Math.round((edits / r.segment_count) * 1000) / 10 : 0
+        return { ...r, events, edits, rejectionPct, editsPct }
       })
-      .sort((a, b) => b.pct - a.pct)
-    if (rows.length === 0) return null
+      .sort((a, b) => {
+        const ta = a.events + a.edits
+        const tb = b.events + b.edits
+        if (tb !== ta) return tb - ta
+        if (b.rejectionPct !== a.rejectionPct) return b.rejectionPct - a.rejectionPct
+        return b.editsPct - a.editsPct
+      })
     return {
       labels: rows.map((r) => annotatorDisplayName(r.user_id, annotators)),
       datasets: [
         {
           label: 'Rejection rows (% of segments)',
-          data: rows.map((r) => r.pct),
-          metaAt: rows.map((r) => ({ events: r.events, segments: r.segment_count })),
+          data: rows.map((r) => r.rejectionPct),
+          metaReject: rows.map((r) => ({ events: r.events, segments: r.segment_count })),
           backgroundColor: RED,
-          borderRadius: 8,
+          borderRadius: 6,
         },
-      ],
-    }
-  }, [stats, annotators, dashboardUserFilter])
-
-  const annotatorReviewerTitleAuthorEditsChart = useMemo(() => {
-    if (!stats) return null
-    let perf = stats.annotator_performance ?? []
-    if (dashboardUserFilter) {
-      perf = perf.filter((r) => r.user_id === dashboardUserFilter)
-    }
-    const rows = perf
-      .map((r) => {
-        const edits = r.segments_reviewer_corrected_title_or_author ?? 0
-        const pct = Math.round((edits / r.segment_count) * 1000) / 10
-        return { ...r, edits, pct }
-      })
-      .sort((a, b) => b.pct - a.pct)
-    if (rows.length === 0) return null
-    return {
-      labels: rows.map((r) => annotatorDisplayName(r.user_id, annotators)),
-      datasets: [
         {
           label: 'Corrections at review (% of segments)',
-          data: rows.map((r) => r.pct),
-          metaAt: rows.map((r) => ({ edits: r.edits, segments: r.segment_count })),
-          backgroundColor: ORANGE,
-          borderRadius: 8,
+          data: rows.map((r) => r.editsPct),
+          metaEdits: rows.map((r) => ({ edits: r.edits, segments: r.segment_count })),
+          backgroundColor: INK,
+          borderRadius: 6,
         },
       ],
     }
@@ -676,14 +640,26 @@ function OverviewTab({
 
   const reviewerActivityChartData = useMemo(() => {
     const rows = reviewerActivityRows.filter(
-      (r) => r.segments_recorded_as_reviewer > 0 || r.reviewer_title_author_edits > 0,
+      (r) =>
+        r.segments_recorded_as_reviewer > 0 ||
+        r.reviewer_title_author_edits > 0 ||
+        (r.reviewer_rejection_count ?? 0) > 0,
     )
     if (rows.length === 0) return null
     const sorted = [...rows].sort((a, b) => {
-      const ta = a.segments_recorded_as_reviewer + a.reviewer_title_author_edits
-      const tb = b.segments_recorded_as_reviewer + b.reviewer_title_author_edits
+      const ta =
+        a.segments_recorded_as_reviewer +
+        a.reviewer_title_author_edits +
+        (a.reviewer_rejection_count ?? 0)
+      const tb =
+        b.segments_recorded_as_reviewer +
+        b.reviewer_title_author_edits +
+        (b.reviewer_rejection_count ?? 0)
       if (tb !== ta) return tb - ta
-      return b.segments_recorded_as_reviewer - a.segments_recorded_as_reviewer
+      if (b.segments_recorded_as_reviewer !== a.segments_recorded_as_reviewer) {
+        return b.segments_recorded_as_reviewer - a.segments_recorded_as_reviewer
+      }
+      return (b.reviewer_rejection_count ?? 0) - (a.reviewer_rejection_count ?? 0)
     })
     return {
       labels: sorted.map((r) => annotatorDisplayName(r.user_id, annotators)),
@@ -698,6 +674,12 @@ function OverviewTab({
           label: 'Title/author updated at review',
           data: sorted.map((r) => r.reviewer_title_author_edits),
           backgroundColor: ORANGE,
+          borderRadius: 6,
+        },
+        {
+          label: 'Segment rejections logged',
+          data: sorted.map((r) => r.reviewer_rejection_count ?? 0),
+          backgroundColor: RED,
           borderRadius: 6,
         },
       ],
@@ -883,8 +865,8 @@ function OverviewTab({
             <div className="flex items-center gap-3 px-2 py-10 text-sm text-muted-foreground">
               <BarChart3 className="h-5 w-5 shrink-0 opacity-60" aria-hidden />
               <span>
-                No reviewer activity in this range: everyone has zero segments reviewed and zero
-                title/author edits.
+                No reviewer activity in this range: everyone has zero segments reviewed, zero
+                title/author edits, and zero segment rejections logged.
               </span>
             </div>
           ) : (
@@ -1017,43 +999,28 @@ function OverviewTab({
         </div>
       </div>
 
-      <MotionSection
-      >
+      <MotionSection>
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
-          List of Annotators work with rejection (consider all user here as annotators)
+          Annotator quality: rejections & reviewer corrections
         </p>
-     
-        <div
-          className="mt-5 min-h-64"
-          style={{ height: Math.min(720, Math.max(280, (annotatorRejectionRateChart?.labels.length ?? 0) * 36)) }}
-        >
-          {annotatorRejectionRateChart ? (
-            <Bar data={annotatorRejectionRateChart} options={REJECTION_RATE_HBAR_OPTIONS} />
-          ) : (
-            <div className="flex h-full min-h-48 items-center justify-center text-sm text-muted-foreground">
-              No annotators with rejection rows in this date range.
-            </div>
-          )}
-        </div>
-      </MotionSection>
-
-      <MotionSection
-      >
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
-          list of Annotators work where title/author was corrected by reviewer (consider all user here as annotators)
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          All users are treated as annotators. Bars are each user&apos;s rejection rows and reviewer
+          title/author corrections as a percentage of their segment count in this range.
         </p>
-      
         <div
-          className="mt-5 min-h-64"
+          className="mt-5 min-h-64 w-full"
           style={{
-            height: Math.min(720, Math.max(280, (annotatorReviewerTitleAuthorEditsChart?.labels.length ?? 0) * 36)),
+            height: Math.min(
+              720,
+              Math.max(280, (annotatorQualitySignalsChartData?.labels.length ?? 0) * 44),
+            ),
           }}
         >
-          {annotatorReviewerTitleAuthorEditsChart ? (
-            <Bar data={annotatorReviewerTitleAuthorEditsChart} options={REVIEWER_TITLE_AUTHOR_EDITS_HBAR_OPTIONS} />
+          {annotatorQualitySignalsChartData ? (
+            <Bar data={annotatorQualitySignalsChartData} options={ANNOTATOR_QUALITY_SIGNALS_HBAR_OPTIONS} />
           ) : (
             <div className="flex h-full min-h-48 items-center justify-center text-sm text-muted-foreground">
-              No annotators with reviewer title/author corrections in this date range.
+              No annotator performance data in this date range.
             </div>
           )}
         </div>

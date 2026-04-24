@@ -365,6 +365,13 @@ class ReviewerSegmentActivityRow(BaseModel):
             "differs from ``author`` (non-empty reviewer field required for that side)."
         ),
     )
+    reviewer_rejection_count: int = Field(
+        0,
+        description=(
+            "Count of ``segment_rejections`` rows in scope with this user as ``reviewer_id`` "
+            "(same document date filter as other dashboard aggregates)."
+        ),
+    )
 
 
 class DashboardStatsResponse(BaseModel):

@@ -650,6 +650,8 @@ export interface ReviewerSegmentActivityRow {
   segments_recorded_as_reviewer: number;
   /** Approved segments where trimmed reviewer title/author differs from title/author (same ``reviewed_by_id``). */
   reviewer_title_author_edits: number;
+  /** Rows in segment_rejections with this user as reviewer_id (same document date scope as dashboard). */
+  reviewer_rejection_count: number;
 }
 
 export interface DashboardStats {
