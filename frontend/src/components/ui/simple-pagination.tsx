@@ -7,78 +7,43 @@ import {
   PaginationNext,
 } from '@/components/ui/pagination'
 import { cn } from '@/lib/utils'
-import { useDocuments, type DocumentFilters } from '@/hooks'
-import { useSearchParams } from 'react-router-dom'
 
 export interface SimplePaginationProps {
-  
+  canGoPrev: boolean
+  canGoNext: boolean
+  onPrev: () => void
+  onNext: () => void
   label?: React.ReactNode
   /** 'left' = label left, prev/next right; 'center' = prev | label | next */
   labelPosition?: 'left' | 'center'
+  isDisabled?: boolean
   className?: string
 }
 
 function SimplePagination({
+  canGoPrev,
+  canGoNext,
+  onPrev,
+  onNext,
+  label,
   labelPosition = 'center',
+  isDisabled = false,
   className,
 }: Readonly<SimplePaginationProps>) {
-  const [searchParams,setSearchParams] = useSearchParams();
-
-  const status = searchParams.get('status') || undefined;
-  const annotator = searchParams.get('annotator') || undefined;
-  const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1', 10) || 1);
-  const debouncedTitle=searchParams.get('title') || undefined
-  const filters:DocumentFilters = React.useMemo(
-    () => ({
-      status,
-      userId: annotator,
-      title: debouncedTitle || undefined,
-      page,
-      pageSize: 20,
-      excludeOwnAssignedDocuments: true,
-    }),
-    [status, annotator, debouncedTitle, page]
-  );
-
-  const {
-    isFetching:isDisabled,
-    page: currentPage,
-    hasNextPage:canGoPrev,
-    hasPrevPage:canGoNext,
-  } = useDocuments(filters);
-
- 
-
-  
-
-  
-  const handlePageChange = React.useCallback(
-    (newPage: number) => {
-      const params = new URLSearchParams(searchParams);
-      params.set('page', String(newPage));
-      setSearchParams(params);
-    },
-    [searchParams, setSearchParams]
-  );
-
   const handlePrev = (e: React.MouseEvent) => {
     e.preventDefault()
     if (!canGoPrev || isDisabled) return
-   handlePageChange(currentPage - 1)
+    onPrev()
   }
 
   const handleNext = (e: React.MouseEvent) => {
     e.preventDefault()
     if (!canGoNext || isDisabled) return
-    handlePageChange(currentPage + 1)
+    onNext()
   }
 
   const prevDisabled = !canGoPrev || isDisabled
   const nextDisabled = !canGoNext || isDisabled
-
-
-  const label = `Page ${currentPage}`
-
 
   if (labelPosition === 'left') {
     return (
@@ -88,7 +53,7 @@ function SimplePagination({
           className
         )}
       >
-        {label && (
+        {label != null && (
           <span className="text-sm text-gray-600">{label}</span>
         )}
         <Pagination>
@@ -126,7 +91,7 @@ function SimplePagination({
         className
       )}
     >
-      <PaginationContent className="flex-1 flex flex-row justify-between items-center gap-2 w-full flex-wrap">
+      <PaginationContent className="flex-1 flex flex-row justify-between items-center gap-2 w-full flex-wrap sm:justify-center sm:gap-4">
         <PaginationItem>
           <PaginationPrevious
             href="#"
@@ -138,7 +103,11 @@ function SimplePagination({
             )}
           />
         </PaginationItem>
-        
+        {label != null && (
+          <span className="min-w-0 flex-1 text-center text-sm text-gray-600 px-1">
+            {label}
+          </span>
+        )}
         <PaginationItem>
           <PaginationNext
             href="#"
