@@ -912,7 +912,7 @@ function OverviewTab({
                   <div className="mb-4 flex items-center gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-yellow-900">
                     <span className="font-semibold animate-bounce">Warning:</span>
                     <span>
-                      All active volume batches are finished or nearly finished. Please prepare new batches for annotation and review.
+                      Please inform admin to add more batches of volume to be annotated to have a smooth workflow.
                     </span>
                   </div>
                 )}
