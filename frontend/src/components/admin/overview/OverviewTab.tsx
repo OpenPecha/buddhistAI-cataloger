@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import {
   FileText,
   Layers,
@@ -7,6 +7,7 @@ import {
   PenLine,
   PencilLine,
   BarChart3,
+  Table2,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import {
@@ -117,48 +118,92 @@ const HBAR_OPTIONS = {
   },
 } as const
 
-const ANNOTATOR_LINE_OPTIONS = {
-  responsive: true,
-  maintainAspectRatio: false,
-  interaction: {
-    mode: 'index' as const,
-    intersect: false,
-  },
-  plugins: {
-    legend: {
-      display: true,
-      position: 'top' as const,
-      labels: {
-        boxWidth: 12,
-        boxHeight: 12,
-        padding: 16,
-        font: { size: 11 },
-        color: MUTED,
-      },
-    },
-    tooltip: {
-      mode: 'index' as const,
+/** Horizontal space reserved per annotator on the workload line chart (scrolls when wider than the card). */
+const ANNOTATOR_LINE_PX_PER_LABEL = 108
+const ANNOTATOR_LINE_CHART_WIDTH_FLOOR = 680
+
+/** Per-user line chart: scales point size and tick density from annotator count and chart min width. */
+function annotatorPerUserLineOptions(
+  labelCount: number,
+  chartMinWidthPx: number,
+): ChartOptions<'line'> {
+  const pxPerCategory = labelCount > 0 ? chartMinWidthPx / labelCount : ANNOTATOR_LINE_PX_PER_LABEL
+  const roomy = pxPerCategory >= 84
+  const crowded = labelCount > 10 && !roomy
+  const dense = labelCount > 22
+  const layoutBottomPad = roomy ? 10 : crowded ? 6 : 4
+
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: 'index',
       intersect: false,
     },
-    title: { display: false },
-  },
-  scales: {
-    x: {
-      grid: { display: false },
-      ticks: {
-        font: { size: 11 },
-        color: INK,
-        maxRotation: 45,
-        minRotation: 0,
+    layout: {
+      padding: {
+        left: 4,
+        right: 10,
+        top: 6,
+        bottom: layoutBottomPad,
       },
     },
-    y: {
-      beginAtZero: true,
-      grid: { color: GRID },
-      ticks: { font: { size: 11 }, color: MUTED },
+    elements: {
+      point: {
+        radius: dense ? 0 : crowded ? 2 : 4,
+        hoverRadius: 6,
+        hitRadius: dense ? 14 : 10,
+      },
+      line: {
+        borderWidth: dense ? 1.5 : 2,
+      },
     },
-  },
-} as const
+    plugins: {
+      legend: {
+        display: true,
+        position: 'top',
+        labels: {
+          boxWidth: 12,
+          boxHeight: 12,
+          padding: dense ? 8 : 16,
+          font: { size: dense ? 10 : 11 },
+          color: MUTED,
+        },
+      },
+      tooltip: {
+        mode: 'index',
+        intersect: false,
+      },
+      title: { display: false },
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        ticks: {
+          font: { size: dense ? 9 : crowded ? 10 : 11 },
+          color: INK,
+          maxRotation: roomy ? 58 : crowded ? 72 : 45,
+          minRotation: roomy ? 40 : crowded ? 32 : 0,
+          autoSkip: !roomy,
+          ...(crowded
+            ? {
+                maxTicksLimit: Math.max(10, Math.min(24, Math.ceil(labelCount * 0.55))),
+              }
+            : {}),
+        },
+      },
+      y: {
+        beginAtZero: true,
+        grid: { color: GRID },
+        ticks: {
+          font: { size: dense ? 10 : 11 },
+          color: MUTED,
+          padding: dense ? 4 : 8,
+        },
+      },
+    },
+  }
+}
 
 /** Grouped horizontal bars: rejection rate vs reviewer title/author corrections (% of each user's segments). */
 const ANNOTATOR_QUALITY_SIGNALS_HBAR_OPTIONS: ChartOptions<'bar'> = {
@@ -174,7 +219,7 @@ const ANNOTATOR_QUALITY_SIGNALS_HBAR_OPTIONS: ChartOptions<'bar'> = {
   plugins: {
     legend: {
       display: true,
-      position: 'top',
+      position: 'bottom',
       labels: {
         boxWidth: 10,
         boxHeight: 10,
@@ -197,11 +242,15 @@ const ANNOTATOR_QUALITY_SIGNALS_HBAR_OPTIONS: ChartOptions<'bar'> = {
             if (!meta) return `Rejection : ${pct}% of segments`
             return `${meta.events.toLocaleString()} rejection  / ${meta.segments.toLocaleString()} segments (${pct}%)`
           }
-          const meta = (
-            tooltipItem.dataset as { metaEdits?: { edits: number; segments: number }[] }
-          ).metaEdits?.[i]
-          if (!meta) return `Corrections at review: ${pct}% of segments`
-          return `${meta.edits.toLocaleString()} corrected at review / ${meta.segments.toLocaleString()} segments (${pct}%)`
+          if (tooltipItem.datasetIndex === 1) {
+            const meta = (
+              tooltipItem.dataset as { metaEdits?: { edits: number; segments: number }[] }
+            ).metaEdits?.[i]
+            if (!meta) return `Corrections at review: ${pct}% of segments`
+            return `${meta.edits.toLocaleString()} corrected at review / ${meta.segments.toLocaleString()} segments (${pct}%)`
+          }
+          const count = typeof raw === 'number' ? raw.toLocaleString() : String(raw)
+          return `Total segments in range: ${count}`
         },
       },
     },
@@ -216,10 +265,39 @@ const ANNOTATOR_QUALITY_SIGNALS_HBAR_OPTIONS: ChartOptions<'bar'> = {
         color: MUTED,
         callback: (value) => `${value}%`,
       },
+      title: {
+        display: true,
+        text: 'Rate (% of own segments)',
+        color: MUTED,
+        font: { size: 10 },
+        padding: { top: 4 },
+      },
+    },
+    x1: {
+      type: 'linear',
+      position: 'top',
+      beginAtZero: true,
+      grid: { drawOnChartArea: false },
+      ticks: {
+        font: { size: 11 },
+        color: TEAL,
+        maxTicksLimit: 8,
+      },
+      title: {
+        display: true,
+        text: 'Total segments (count)',
+        color: TEAL,
+        font: { size: 10 },
+        padding: { bottom: 4 },
+      },
     },
     y: {
       grid: { display: false },
-      ticks: { font: { size: 11 }, color: INK },
+      ticks: {
+        font: { size: 11 },
+        color: INK,
+        autoSkip: false,
+      },
     },
   },
 }
@@ -399,7 +477,7 @@ function OverviewTab({
   annotators = [],
   dashboardUserFilter,
 }: OverviewTabProps) {
-
+  const [annotatorQualityView, setAnnotatorQualityView] = useState<'chart' | 'table'>('chart')
 
   const overviewBarData = useMemo(() => {
     if (!stats) return null
@@ -520,8 +598,6 @@ function OverviewTab({
           backgroundColor: 'rgba(20, 165, 178, 0.12)',
           borderWidth: 2,
           tension: 0.25,
-          pointRadius: 4,
-          pointHoverRadius: 6,
           pointBackgroundColor: TEAL,
         },
         {
@@ -531,8 +607,6 @@ function OverviewTab({
           backgroundColor: 'rgba(107, 33, 168, 0.12)',
           borderWidth: 2,
           tension: 0.25,
-          pointRadius: 4,
-          pointHoverRadius: 6,
           pointBackgroundColor: VIOLET,
         },
         {
@@ -542,8 +616,6 @@ function OverviewTab({
           backgroundColor: 'rgba(185, 28, 28, 0.12)',
           borderWidth: 2,
           tension: 0.25,
-          pointRadius: 4,
-          pointHoverRadius: 6,
           pointBackgroundColor: RED,
         },
         {
@@ -553,11 +625,8 @@ function OverviewTab({
           backgroundColor: 'rgba(15, 118, 110, 0.12)',
           borderWidth: 2,
           tension: 0.25,
-          pointRadius: 4,
-          pointHoverRadius: 6,
           pointBackgroundColor: EMERALD,
         },
-       
         {
           label: 'Rejections logged',
           data: perf.map((r) => r.reviewer_rejection_count ?? 0),
@@ -565,8 +634,6 @@ function OverviewTab({
           backgroundColor: 'rgba(180, 83, 9, 0.12)',
           borderWidth: 2,
           tension: 0.25,
-          pointRadius: 4,
-          pointHoverRadius: 6,
           pointBackgroundColor: GOLD,
         },
         {
@@ -576,15 +643,27 @@ function OverviewTab({
           backgroundColor: 'rgba(194, 65, 12, 0.12)',
           borderWidth: 2,
           tension: 0.25,
-          pointRadius: 4,
-          pointHoverRadius: 6,
           pointBackgroundColor: ORANGE,
         },
       ],
     }
   }, [stats, annotators])
 
-  const annotatorQualitySignalsChartData = useMemo(() => {
+  const annotatorWorkloadLineLayout = useMemo(() => {
+    if (!annotatorCompareData) return null
+    const n = annotatorCompareData.labels.length
+    const chartMinWidthPx = Math.max(
+      ANNOTATOR_LINE_CHART_WIDTH_FLOOR,
+      n * ANNOTATOR_LINE_PX_PER_LABEL,
+    )
+    return {
+      options: annotatorPerUserLineOptions(n, chartMinWidthPx),
+      chartMinWidthPx,
+      height: Math.min(960, Math.max(400, 300 + n * 22)),
+    }
+  }, [annotatorCompareData])
+
+  const annotatorQualitySignals = useMemo(() => {
     if (!stats) return null
     let perf = stats.annotator_performance ?? []
     if (dashboardUserFilter) {
@@ -609,11 +688,12 @@ function OverviewTab({
         if (b.rejectionPct !== a.rejectionPct) return b.rejectionPct - a.rejectionPct
         return b.editsPct - a.editsPct
       })
-    return {
+    const chartData = {
       labels: rows.map((r) => annotatorDisplayName(r.user_id, annotators)),
       datasets: [
         {
-          label: 'Rejection rows (% of segments)',
+          label: 'Rejection (% of segments)',
+          xAxisID: 'x',
           data: rows.map((r) => r.rejectionPct),
           metaReject: rows.map((r) => ({ events: r.events, segments: r.segment_count })),
           backgroundColor: RED,
@@ -621,13 +701,31 @@ function OverviewTab({
         },
         {
           label: 'Corrections at review (% of segments)',
+          xAxisID: 'x',
           data: rows.map((r) => r.editsPct),
           metaEdits: rows.map((r) => ({ edits: r.edits, segments: r.segment_count })),
           backgroundColor: INK,
           borderRadius: 6,
         },
+        {
+          label: 'Total segments (in range)',
+          xAxisID: 'x1',
+          data: rows.map((r) => r.segment_count),
+          backgroundColor: TEAL,
+          borderRadius: 6,
+        },
       ],
     }
+    const tableRows = rows.map((r) => ({
+      key: r.user_id ?? '__none__',
+      name: annotatorDisplayName(r.user_id, annotators),
+      segments: r.segment_count,
+      rejectionEvents: r.events,
+      rejectionPct: r.rejectionPct,
+      correctionEdits: r.edits,
+      correctionsPct: r.editsPct,
+    }))
+    return { chartData, tableRows }
   }, [stats, annotators, dashboardUserFilter])
 
   const reviewerActivityRows = useMemo(() => {
@@ -1105,41 +1203,142 @@ function OverviewTab({
       </div>
 
       <MotionSection>
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
-          Annotator quality: rejections & reviewer corrections
-        </p>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          All users are treated as annotators. Bars are each user&apos;s rejection rows and reviewer
-          title/author corrections as a percentage of their segment count in this range.
-        </p>
-        <div
-          className="mt-5 min-h-64 w-full"
-          style={{
-            height: Math.min(
-              720,
-              Math.max(280, (annotatorQualitySignalsChartData?.labels.length ?? 0) * 44),
-            ),
-          }}
-        >
-          {annotatorQualitySignalsChartData ? (
-            <Bar data={annotatorQualitySignalsChartData} options={ANNOTATOR_QUALITY_SIGNALS_HBAR_OPTIONS} />
-          ) : (
-            <div className="flex h-full min-h-48 items-center justify-center text-sm text-muted-foreground">
-              No annotator performance data in this date range.
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
+              Annotator quality: rejections & reviewer corrections
+            </p>
+           
+          </div>
+          {annotatorQualitySignals ? (
+            <div
+              className="flex shrink-0 rounded-lg border border-stone-200/90 bg-stone-50/90 p-0.5 shadow-sm"
+              role="tablist"
+              aria-label="Annotator quality: chart or table"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={annotatorQualityView === 'chart'}
+                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  annotatorQualityView === 'chart'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:bg-stone-100/90 hover:text-foreground'
+                }`}
+                onClick={() => setAnnotatorQualityView('chart')}
+              >
+                <BarChart3 className="h-3.5 w-3.5 opacity-90" aria-hidden />
+                Chart
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={annotatorQualityView === 'table'}
+                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                  annotatorQualityView === 'table'
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:bg-stone-100/90 hover:text-foreground'
+                }`}
+                onClick={() => setAnnotatorQualityView('table')}
+              >
+                <Table2 className="h-3.5 w-3.5 opacity-90" aria-hidden />
+                Table
+              </button>
             </div>
-          )}
+          ) : null}
         </div>
+        {annotatorQualitySignals ? (
+          annotatorQualityView === 'chart' ? (
+            <div
+              className="mt-5 min-h-64 w-full"
+              style={{
+                height: Math.min(
+                  720,
+                  Math.max(280, (annotatorQualitySignals.chartData.labels.length ?? 0) * 52),
+                ),
+              }}
+            >
+              <Bar
+                data={annotatorQualitySignals.chartData}
+                options={ANNOTATOR_QUALITY_SIGNALS_HBAR_OPTIONS}
+              />
+            </div>
+          ) : (
+            <div className="mt-5 max-h-[min(720px,70vh)] overflow-y-auto overflow-x-auto rounded-lg border border-stone-200/80 bg-white/60">
+              <table className="w-full min-w-[36rem] border-collapse text-sm">
+                <caption className="sr-only">
+                  Annotator quality: rejection events and reviewer corrections with full names
+                </caption>
+                <thead className="sticky top-0 z-[1] shadow-[0_1px_0_0_rgb(231_229_228)]">
+                  <tr className="border-b border-stone-200 bg-stone-50/95 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur-sm">
+                    <th className="px-4 py-3">Annotator</th>
+                    <th className="px-4 py-3 text-right tabular-nums">Segments</th>
+                    <th className="px-4 py-3 text-right tabular-nums">Rejection</th>
+                    <th className="px-4 py-3 text-right tabular-nums">Rejection %</th>
+                    <th className="px-4 py-3 text-right tabular-nums">Corrections at review</th>
+                    <th className="px-4 py-3 text-right tabular-nums">Corrections %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {annotatorQualitySignals.tableRows.map((row, idx) => (
+                    <tr
+                      key={`${row.key}-${idx}`}
+                      className="border-b border-stone-100 last:border-0 hover:bg-stone-50/80"
+                    >
+                      <td className="max-w-[14rem] px-4 py-2.5 font-medium leading-snug text-foreground sm:max-w-none sm:whitespace-normal">
+                        <span className="break-words">{row.name}</span>
+                      </td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                        {row.segments.toLocaleString()}
+                      </td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                        {row.rejectionEvents.toLocaleString()}
+                      </td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                        {row.rejectionPct.toFixed(1)}%
+                      </td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                        {row.correctionEdits.toLocaleString()}
+                      </td>
+                      <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                        {row.correctionsPct.toFixed(1)}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : (
+          <div className="mt-5 flex min-h-48 items-center justify-center rounded-lg border border-dashed border-stone-200/80 bg-stone-50/40 text-sm text-muted-foreground">
+            No annotator performance data in this date range.
+          </div>
+        )}
       </MotionSection>
 
-      <MotionSection
-      >
+      <MotionSection>
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Per-user workload</p>
-       
-        <div className="mt-5 h-80 min-h-64">
-          {annotatorCompareData ? (
-            <Line data={annotatorCompareData} options={ANNOTATOR_LINE_OPTIONS} />
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          The plot is intentionally wider than one screen when there are many annotators: scroll
+          sideways inside this area so each name has room. Tooltips still list every series at each
+          person.
+        </p>
+        <div className="mt-5 w-full overflow-x-auto overflow-y-visible overscroll-x-contain pb-1 [-webkit-overflow-scrolling:touch]">
+          {annotatorCompareData && annotatorWorkloadLineLayout ? (
+            <div
+              className="min-h-[22rem] w-full min-w-0"
+              style={{
+                height: annotatorWorkloadLineLayout.height,
+                minWidth: `max(100%, ${annotatorWorkloadLineLayout.chartMinWidthPx}px)`,
+              }}
+            >
+              <Line
+                data={annotatorCompareData}
+                options={annotatorWorkloadLineLayout.options}
+              />
+            </div>
           ) : (
-            <div className="flex h-full min-h-48 items-center justify-center text-sm text-muted-foreground">
+            <div className="flex min-h-48 items-center justify-center py-12 text-sm text-muted-foreground">
               No annotator activity in this date range.
             </div>
           )}
