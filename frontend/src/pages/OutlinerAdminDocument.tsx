@@ -14,13 +14,9 @@ import { SkeletonLarger } from '@/components/ui/skeleton';
 
 function OutlinerAdminDocument() {
   const navigate = useNavigate();
-  const { user: appUser } = useUser();
-
+  
   const [titleSearch, setTitleSearch] = useState('');
 
-
-
-  
 
 
   const { deleteDocument } = useDocumentActions();
@@ -36,13 +32,7 @@ function OutlinerAdminDocument() {
     deleteDocument(documentId);
   };
 
-  if (isLoading && !documents.length) {
-    return (
-      <div className="flex min-h-screen flex-1 flex-col">
-      <SkeletonLarger />
-    </div>
-    );
-  }
+ 
  
 
   return (
@@ -50,17 +40,10 @@ function OutlinerAdminDocument() {
       <DocumentsTab
         onDocumentSelect={handleDocumentSelectAction}
         onDocumentDelete={handleDocumentDelete}
-        titleSearch={titleSearch}
-        debouncedTitle={debouncedTitle}
-        onTitleSearchChange={setTitleSearch}
       />
-      {(hasPrevPage || hasNextPage) && (
         <SimplePagination
-         
-          label={`Page ${currentPage}`}
           labelPosition="left"
         />
-      )}
     </div>
   );
 }

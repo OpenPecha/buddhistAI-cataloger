@@ -19,7 +19,6 @@ export interface SimplePaginationProps {
 }
 
 function SimplePagination({
-  label,
   labelPosition = 'center',
   className,
 }: Readonly<SimplePaginationProps>) {
@@ -78,6 +77,7 @@ function SimplePagination({
   const nextDisabled = !canGoNext || isDisabled
 
 
+  const label = `Page ${currentPage}`
 
 
   if (labelPosition === 'left') {

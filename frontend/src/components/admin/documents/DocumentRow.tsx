@@ -10,12 +10,12 @@ const STATUS_LABEL: Record<string, string> = {
 
 interface DocumentRowProps {
   readonly document: Document;
-  readonly annotatorName?: string;
   readonly onSelect: (document: Document) => void;
   readonly onDelete: (documentId: string) => void;
+  readonly annotatorName?: string;
 }
 
-function DocumentRow({ document, annotatorName, onSelect, onDelete }: DocumentRowProps) {
+function DocumentRow({ document,annotatorName, onSelect, onDelete }: DocumentRowProps) {
   const statusKey = document.status || 'active';
   /** Prefer server join of rejections → segment status; fall back to rejected-status segment count on older APIs. */
   const openRejectionSegments =

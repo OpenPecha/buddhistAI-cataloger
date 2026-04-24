@@ -15,7 +15,7 @@ import {
 import DocumentRow from './DocumentRow';
 import { UserFilter } from './UserFilter';
 import DocumentStatusFilter from './DocumentStatusFilter';
-import { useDocuments, type DocumentFilters } from '@/hooks';
+import { useDocuments, useOutlinerUsers, type DocumentFilters } from '@/hooks';
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
@@ -24,9 +24,6 @@ import { useSearchParams } from 'react-router-dom';
 interface DocumentsTabProps {
   onDocumentSelect: (document: Document) => void;
   onDocumentDelete: (documentId: string) => void;
-  titleSearch: string;
-  debouncedTitle: string;
-  onTitleSearchChange: (value: string) => void;
 }
 
 function DocumentsTab({
@@ -56,6 +53,15 @@ function DocumentsTab({
     documents,
     isFetching,
   } = useDocuments(filters);
+
+  const { users: outlinerUsers } = useOutlinerUsers();
+  const annotatorIdToDisplay = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const u of outlinerUsers) {
+      m.set(u.id, u.name?.trim() || u.email || u.id);
+    }
+    return m;
+  }, [outlinerUsers]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -112,7 +118,7 @@ function DocumentsTab({
             {documents.length === 0 ? (
               <TableRow className="hover:bg-transparent">
                 <TableCell colSpan={5} className="px-6 py-8 text-center text-sm text-gray-500">
-                  {debouncedTitle.trim()
+                  {debouncedTitle?.trim()
                     ? 'No documents match your search.'
                     : 'No documents found for the selected filters.'}
                 </TableCell>
@@ -122,6 +128,11 @@ function DocumentsTab({
                 <DocumentRow
                   key={doc.id}
                   document={doc}
+                  annotatorName={
+                    doc.user_id
+                      ? (annotatorIdToDisplay.get(doc.user_id) ?? 'Unknown user')
+                      : ''
+                  }
                   onSelect={onDocumentSelect}
                   onDelete={onDocumentDelete}
                 />
