@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { AlertOctagon, Search } from 'lucide-react';
+import {  Search } from 'lucide-react';
 import type { Document } from '../shared/types';
 import type { OutlinerUser } from '../../../hooks/useOutlinerUsers';
 import { Input } from '@/components/ui/input';
@@ -16,13 +16,9 @@ import {
 
 import DocumentRow from './DocumentRow';
 import { UserFilter } from './UserFilter';
+import DocumentStatusFilter from './DocumentStatusFilter';
 
-const STATUS_OPTIONS = [
-  { value: '', label: 'All Statuses' },
-  { value: 'active', label: 'Annotating' },
-  { value: 'completed', label: 'Annotated' },
-  { value: 'approved', label: 'Reviewed' },
-] as const;
+
 
 interface DocumentsTabProps {
   documents: Document[];
@@ -61,13 +57,11 @@ function DocumentsTab({
     return map;
   }, [annotators]);
 
-  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value || undefined;
+  const handleStatusChange = (value: string) => {
     onFilterChange(value, currentAnnotator);
   };
 
   const handleAnnotatorChange = (value: string) => {
-    
     onFilterChange(currentStatus, value);
   };
 
@@ -80,21 +74,7 @@ function DocumentsTab({
 
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
-            <label htmlFor="status-filter" className="text-sm font-medium text-gray-700">
-              Status
-            </label>
-            <select
-              id="status-filter"
-              value={currentStatus || ''}
-              onChange={handleStatusChange}
-              className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-              {STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            <DocumentStatusFilter currentStatus={currentStatus || ''} handleStatusChange={handleStatusChange} />
           </div>
 
           <div className="flex items-center gap-2">
