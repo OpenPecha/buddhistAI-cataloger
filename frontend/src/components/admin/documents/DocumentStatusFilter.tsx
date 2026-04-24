@@ -5,6 +5,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useSearchParams } from "react-router-dom";
 
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Annotating' },
@@ -13,18 +14,18 @@ const STATUS_OPTIONS = [
   { value: 'approved', label: 'Reviewed' },
 ] as const;
 
-interface DocumentStatusFilterProps {
-  readonly currentStatus: string;
-  readonly handleStatusChange: (e: string) => void;
-}
 
-function DocumentStatusFilter({ currentStatus, handleStatusChange }: DocumentStatusFilterProps) {
-  const handleChange = (value: string) => {
-    if (value === 'all') {
-      handleStatusChange("");
-      return;
-    }
-    handleStatusChange(value);
+
+function DocumentStatusFilter(){
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentStatus = searchParams.get('status') || undefined;
+
+    const handleChange = (status: string) => {
+      const params = new URLSearchParams();
+      if (status === 'all') params.delete('status');
+      else params.set('status', status);
+      params.set('page', '1');
+      setSearchParams(params);
   }
   return (
 <Select value={currentStatus || ''} onValueChange={handleChange}> 

@@ -357,7 +357,7 @@ function SectionHeading({
   readonly description?: string
 }) {
   return (
-    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+    <div className="mb-6 flex flex-col gap-3  ">
       <div className="min-w-0 border-l-[3px] border-primary pl-4">
         <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary">{eyebrow}</p>
         <h3 className="mt-1.5 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
@@ -365,7 +365,7 @@ function SectionHeading({
         </h3>
       </div>
       {description ? (
-        <p className="max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-right">
+        <p className="max-w-xl text-sm leading-relaxed text-muted-foreground ">
           {description}
         </p>
       ) : null}
@@ -755,7 +755,8 @@ function OverviewTab({
       >
         <SectionHeading
           eyebrow="Volume"
-          title="Key metrics"
+          title="Key metrics for Annotators"
+          description="this data is only valid for annotator's work"
         />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
           <MetricShell accentClass="from-teal-600 to-teal-400">
@@ -1019,7 +1020,7 @@ function OverviewTab({
       <MotionSection
       >
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
-          Annotator rejection rate
+          List of Annotators work with rejection (consider all user here as annotators)
         </p>
      
         <div
@@ -1039,7 +1040,7 @@ function OverviewTab({
       <MotionSection
       >
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
-          Reviewer title/author edits by annotator
+          list of Annotators work where title/author was corrected by reviewer (consider all user here as annotators)
         </p>
       
         <div

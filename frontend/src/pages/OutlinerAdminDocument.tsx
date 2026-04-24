@@ -14,65 +14,19 @@ import { SkeletonLarger } from '@/components/ui/skeleton';
 
 function OutlinerAdminDocument() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const { user: appUser } = useUser();
 
-  const status = searchParams.get('status') || undefined;
-  const annotator = searchParams.get('annotator') || undefined;
-  const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1', 10) || 1);
-
   const [titleSearch, setTitleSearch] = useState('');
-  const [debouncedTitle, setDebouncedTitle] = useState('');
-
-  useEffect(() => {
-    const t = globalThis.setTimeout(() => setDebouncedTitle(titleSearch.trim()), 400);
-    return () => globalThis.clearTimeout(t);
-  }, [titleSearch]);
 
 
 
-  const filters: DocumentFilters = useMemo(
-    () => ({
-      status,
-      userId: annotator,
-      title: debouncedTitle || undefined,
-      page,
-      pageSize: 20,
-      excludeOwnAssignedDocuments: true,
-    }),
-    [status, annotator, debouncedTitle, page, appUser?.role]
-  );
+  
 
-  const {
-    documents,
-    isLoading,
-    isFetching,
-    page: currentPage,
-    hasNextPage,
-    hasPrevPage,
-  } = useDocuments(filters);
+
   const { deleteDocument } = useDocumentActions();
-  const { users: annotators, isLoading: annotatorsLoading } = useOutlinerUsers();
 
-  const handleFilterChange = useCallback(
-    (newStatus?: string, newAnnotator?: string) => {
-      const params = new URLSearchParams();
-      if (newStatus) params.set('status', newStatus);
-      if (newAnnotator) params.set('annotator', newAnnotator);
-      params.set('page', '1');
-      setSearchParams(params);
-    },
-    [setSearchParams]
-  );
+ 
 
-  const handlePageChange = useCallback(
-    (newPage: number) => {
-      const params = new URLSearchParams(searchParams);
-      params.set('page', String(newPage));
-      setSearchParams(params);
-    },
-    [searchParams, setSearchParams]
-  );
 
   const handleDocumentSelectAction = (document: Document) => {
     navigate(`/outliner-admin/documents/${document.id}`);
@@ -94,28 +48,17 @@ function OutlinerAdminDocument() {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4  p-4">
       <DocumentsTab
-        documents={documents}
-        isFetching={isFetching}
         onDocumentSelect={handleDocumentSelectAction}
         onDocumentDelete={handleDocumentDelete}
-        annotators={annotators}
-        annotatorsLoading={annotatorsLoading}
-        currentStatus={status}
-        currentAnnotator={annotator}
         titleSearch={titleSearch}
         debouncedTitle={debouncedTitle}
         onTitleSearchChange={setTitleSearch}
-        onFilterChange={handleFilterChange}
       />
       {(hasPrevPage || hasNextPage) && (
         <SimplePagination
-          canGoPrev={hasPrevPage}
-          canGoNext={hasNextPage}
-          onPrev={() => handlePageChange(currentPage - 1)}
-          onNext={() => handlePageChange(currentPage + 1)}
+         
           label={`Page ${currentPage}`}
           labelPosition="left"
-          isDisabled={isFetching}
         />
       )}
     </div>

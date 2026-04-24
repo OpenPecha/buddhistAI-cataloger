@@ -1,8 +1,6 @@
-import { useMemo } from 'react';
-import {  Search } from 'lucide-react';
+
 import type { Document } from '../shared/types';
-import type { OutlinerUser } from '../../../hooks/useOutlinerUsers';
-import { Input } from '@/components/ui/input';
+
 import {
   Table,
   TableBody,
@@ -17,53 +15,47 @@ import {
 import DocumentRow from './DocumentRow';
 import { UserFilter } from './UserFilter';
 import DocumentStatusFilter from './DocumentStatusFilter';
+import { useDocuments, type DocumentFilters } from '@/hooks';
+import { useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 
 
 interface DocumentsTabProps {
-  documents: Document[];
-  isFetching: boolean;
   onDocumentSelect: (document: Document) => void;
   onDocumentDelete: (documentId: string) => void;
-  annotators: OutlinerUser[];
-  annotatorsLoading: boolean;
-  currentStatus?: string;
-  currentAnnotator?: string;
   titleSearch: string;
   debouncedTitle: string;
   onTitleSearchChange: (value: string) => void;
-  onFilterChange: (status?: string, annotator?: string) => void;
 }
 
 function DocumentsTab({
-  documents,
-  isFetching,
   onDocumentSelect,
   onDocumentDelete,
-  annotators,
-  annotatorsLoading,
-  currentStatus,
-  currentAnnotator,
-  titleSearch,
-  debouncedTitle,
-  onTitleSearchChange,
-  onFilterChange,
 }: Readonly<DocumentsTabProps>) {
-  const annotatorMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const a of annotators) {
-      map.set(a.id, a.name || a.id);
-    }
-    return map;
-  }, [annotators]);
+ 
+  const [searchParams] = useSearchParams();
+  const status = searchParams.get('status') || undefined;
+  const annotator = searchParams.get('annotator') || undefined;
+  const debouncedTitle=searchParams.get('title') || undefined
+  const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1', 10) || 1);
+  const filters:DocumentFilters = useMemo(
+    () => ({
+      status,
+      userId: annotator,
+      title: debouncedTitle || undefined,
+      page,
+      pageSize: 20,
+      excludeOwnAssignedDocuments: true,
+    }),
+    [status, annotator, debouncedTitle, page]
+  );
 
-  const handleStatusChange = (value: string) => {
-    onFilterChange(value, currentAnnotator);
-  };
 
-  const handleAnnotatorChange = (value: string) => {
-    onFilterChange(currentStatus, value);
-  };
+  const {
+    documents,
+    isFetching,
+  } = useDocuments(filters);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -74,27 +66,15 @@ function DocumentsTab({
 
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
-            <DocumentStatusFilter currentStatus={currentStatus || ''} handleStatusChange={handleStatusChange} />
+            <DocumentStatusFilter  />
           </div>
 
           <div className="flex items-center gap-2">
-            <UserFilter currentAnnotator={currentAnnotator || ''} handleAnnotatorChange={handleAnnotatorChange} annotators={annotators} annotatorsLoading={annotatorsLoading} />
+            <UserFilter />
           </div>
 
           <div className="relative w-full min-w-[200px] max-w-xs sm:w-64">
-            <Search
-              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none"
-              aria-hidden
-            />
-            <Input
-              id="document-title-search"
-              type="search"
-              placeholder="Search by title…"
-              value={titleSearch}
-              onChange={(e) => onTitleSearchChange(e.target.value)}
-              className="pl-9 h-9 text-sm"
-              aria-label="Search documents by title"
-            />
+           
           </div>
         </div>
       </div>
@@ -142,7 +122,6 @@ function DocumentsTab({
                 <DocumentRow
                   key={doc.id}
                   document={doc}
-                  annotatorName={doc.user_id ? annotatorMap.get(doc.user_id) : undefined}
                   onSelect={onDocumentSelect}
                   onDelete={onDocumentDelete}
                 />

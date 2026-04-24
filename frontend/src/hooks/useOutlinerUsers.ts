@@ -7,6 +7,7 @@ export interface OutlinerUser {
   name: string | null;
   email: string;
   role?: string | null;
+  picture?: string | null;
 }
 
 /**
@@ -43,6 +44,7 @@ export function useOutlinerUsers() {
     name: u.name ?? null,
     email: u.email ?? '',
     role: u.role ?? null,
+    picture: u.picture ?? null,
   }));
 
   return {
