@@ -478,6 +478,7 @@ function OverviewTab({
   dashboardUserFilter,
 }: OverviewTabProps) {
   const [annotatorQualityView, setAnnotatorQualityView] = useState<'chart' | 'table'>('chart')
+  const [reviewerActivityView, setReviewerActivityView] = useState<'chart' | 'table'>('chart')
 
   const overviewBarData = useMemo(() => {
     if (!stats) return null
@@ -737,7 +738,7 @@ function OverviewTab({
     })
   }, [stats?.reviewer_segment_activity, annotators])
 
-  const reviewerActivityChartData = useMemo(() => {
+  const reviewerActivitySignals = useMemo(() => {
     const rows = reviewerActivityRows.filter(
       (r) =>
         r.segments_recorded_as_reviewer > 0 ||
@@ -760,7 +761,7 @@ function OverviewTab({
       }
       return (b.reviewer_rejection_count ?? 0) - (a.reviewer_rejection_count ?? 0)
     })
-    return {
+    const chartData = {
       labels: sorted.map((r) => annotatorDisplayName(r.user_id, annotators)),
       datasets: [
         {
@@ -783,6 +784,14 @@ function OverviewTab({
         },
       ],
     }
+    const tableRows = sorted.map((r) => ({
+      key: r.user_id ?? '__none__',
+      name: annotatorDisplayName(r.user_id, annotators),
+      segmentsReviewed: r.segments_recorded_as_reviewer,
+      titleAuthorEdits: r.reviewer_title_author_edits,
+      rejections: r.reviewer_rejection_count ?? 0,
+    }))
+    return { chartData, tableRows }
   }, [reviewerActivityRows, annotators])
 
   const volumeBatchSection = useMemo(() => {
@@ -1064,7 +1073,7 @@ function OverviewTab({
               <BarChart3 className="h-5 w-5 shrink-0 opacity-60" aria-hidden />
               <span>No reviewer or admin accounts found in scope.</span>
             </div>
-          ) : reviewerActivityChartData == null ? (
+          ) : reviewerActivitySignals == null ? (
             <div className="flex items-center gap-3 px-2 py-10 text-sm text-muted-foreground">
               <BarChart3 className="h-5 w-5 shrink-0 opacity-60" aria-hidden />
               <span>
@@ -1073,17 +1082,98 @@ function OverviewTab({
               </span>
             </div>
           ) : (
-            <div
-              className="min-h-64 w-full"
-              style={{
-                height: Math.min(
-                  720,
-                  Math.max(280, reviewerActivityChartData.labels.length * 44),
-                ),
-              }}
-            >
-              <Bar data={reviewerActivityChartData} options={REVIEWER_ACTIVITY_HBAR_OPTIONS} />
-            </div>
+            <>
+              <div className="mb-2 flex justify-end">
+                <div
+                  className="flex shrink-0 rounded-lg border border-stone-200/90 bg-stone-50/90 p-0.5 shadow-sm"
+                  role="tablist"
+                  aria-label="Reviewer activity: chart or table"
+                >
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={reviewerActivityView === 'chart'}
+                    className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      reviewerActivityView === 'chart'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:bg-stone-100/90 hover:text-foreground'
+                    }`}
+                    onClick={() => setReviewerActivityView('chart')}
+                  >
+                    <BarChart3 className="h-3.5 w-3.5 opacity-90" aria-hidden />
+                    Chart
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={reviewerActivityView === 'table'}
+                    className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                      reviewerActivityView === 'table'
+                        ? 'bg-primary text-primary-foreground shadow-sm'
+                        : 'text-muted-foreground hover:bg-stone-100/90 hover:text-foreground'
+                    }`}
+                    onClick={() => setReviewerActivityView('table')}
+                  >
+                    <Table2 className="h-3.5 w-3.5 opacity-90" aria-hidden />
+                    Table
+                  </button>
+                </div>
+              </div>
+              {reviewerActivityView === 'chart' ? (
+                <div
+                  className="min-h-64 w-full"
+                  style={{
+                    height: Math.min(
+                      720,
+                      Math.max(280, reviewerActivitySignals.chartData.labels.length * 44),
+                    ),
+                  }}
+                >
+                  <Bar
+                    data={reviewerActivitySignals.chartData}
+                    options={REVIEWER_ACTIVITY_HBAR_OPTIONS}
+                  />
+                </div>
+              ) : (
+                <div className="max-h-[min(720px,70vh)] overflow-y-auto overflow-x-auto rounded-lg border border-stone-200/80 bg-white/60">
+                  <table className="w-full min-w-[36rem] border-collapse text-sm">
+                    <caption className="sr-only">
+                      Reviewer segment activity with full names: segments reviewed, title or author
+                      edits at review, and segment rejections
+                    </caption>
+                    <thead className="sticky top-0 z-[1] shadow-[0_1px_0_0_rgb(231_229_228)]">
+                      <tr className="border-b border-stone-200 bg-stone-50/95 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur-sm">
+                        <th className="px-4 py-3">Reviewer</th>
+                        <th className="px-4 py-3 text-right tabular-nums">Segments reviewed</th>
+                        <th className="px-4 py-3 text-right tabular-nums">Title/author at review</th>
+                        <th className="px-4 py-3 text-right tabular-nums">Rejections</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {reviewerActivitySignals.tableRows.map((row, idx) => (
+                        <tr
+                          key={`${row.key}-${idx}`}
+                          className="border-b border-stone-100 last:border-0 hover:bg-stone-50/80"
+                        >
+                          <td className="max-w-[14rem] px-4 py-2.5 font-medium leading-snug text-foreground sm:max-w-none sm:whitespace-normal">
+                            <span className="break-words">{row.name}</span>
+                          </td>
+                          <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                            {row.segmentsReviewed.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                            {row.titleAuthorEdits.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                            {row.rejections.toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
           )}
         </div>
       </MotionSection>
