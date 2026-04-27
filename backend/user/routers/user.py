@@ -3,7 +3,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, or_
 
 from core.auth0_access_token import (
     email_from_access_token_claims,
@@ -82,9 +82,10 @@ async def get_users(
     limit: int = 100,
     role: Optional[str] = None,
     permission: Optional[str] = None,
+    search: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """Get all users with pagination, optionally filtered by role and permission."""
+    """Get all users with pagination, optionally filtered by role, permission, and name/email search."""
     query = db.query(User)
 
     if role:
@@ -92,6 +93,15 @@ async def get_users(
 
     if permission:
         query = query.filter(User.permissions.contains(permission))
+
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                User.name.ilike(term),
+                User.email.ilike(term),
+            )
+        )
 
     total = query.count()
 

@@ -57,13 +57,6 @@ const TextsPage = () => {
     setOffset((prev) => Math.max(0, prev - OFFSET_STEP));
   };
 
- 
-
-
-
-
-
-
   const clearSearch = () => {
     setFoundText(null);
     setParam({

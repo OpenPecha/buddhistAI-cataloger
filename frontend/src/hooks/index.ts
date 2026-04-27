@@ -4,6 +4,7 @@ export type { DocumentFilters } from './useOutlinerData';
 export { useDocumentActions } from './useDocumentActions';
 export { useSegmentActions } from './useSegmentActions';
 export { useUsers, useUser } from './useUserData';
+export type { UserFilters } from './useUserData';
 export { useUserActions } from './useUserActions';
 export { useOutlinerUsers } from './useOutlinerUsers';
 export type { OutlinerUser } from './useOutlinerUsers';

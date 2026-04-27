@@ -1,14 +1,26 @@
-import { useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { UsersTab } from '../components/admin';
 import { SimplePagination } from '../components/ui/simple-pagination';
-import { useUsers, useUserActions } from '../hooks';
+import { useUsers, useUserActions, type UserFilters } from '../hooks';
 import { SkeletonLarger } from '@/components/ui/skeleton';
+import { useSearchParams } from 'react-router-dom';
 
 function OutlinerAdminUsers() {
-  const [skip, setSkip] = useState(0);
-  const [roleFilter, setRoleFilter] = useState('');
-  const limit = 20;
-  const { users, total, isLoading } = useUsers({ skip, limit, role: roleFilter || undefined });
+  const [searchParams, setSearchParams] = useSearchParams();
+  const role = searchParams.get('role') || undefined;
+  const username = searchParams.get('username') || undefined;
+  const pageSize = 20;
+
+  const filters: UserFilters = useMemo(
+    () => ({
+      pageSize,
+      role,
+      username: username || undefined,
+    }),
+    [ pageSize, role, username]
+  );
+
+  const { users, total, isLoading, isFetching, hasNextPage, hasPrevPage,handleNextPage,handlePrevPage } = useUsers(filters);
   const { updateUser, deleteUser } = useUserActions();
 
   const handleUserUpdate = async (
@@ -32,44 +44,26 @@ function OutlinerAdminUsers() {
     }
   };
 
-  const handleRoleFilterChange = (role: string) => {
-    setRoleFilter(role);
-    setSkip(0);
-  };
-
-  const canGoPrev = skip > 0;
-  const canGoNext = skip + limit < total;
-  const onPrev = () => setSkip(Math.max(0, skip - limit));
-  const onNext = () => setSkip(skip + limit);
-  const rangeLabel =
-    total === 0
-      ? '0 users'
-      : `Showing ${skip + 1}-${Math.min(skip + limit, total)} of ${total} users`;
-
+ 
   if (isLoading) {
     return (
       <div className="flex min-h-screen flex-1 flex-col">
-      <SkeletonLarger />
-    </div>
+        <SkeletonLarger />
+      </div>
     );
   }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 p-4">
-      <UsersTab
-        users={users}
-        onUserUpdate={handleUserUpdate}
-        onUserDelete={handleUserDelete}
-        roleFilter={roleFilter}
-        onRoleFilterChange={handleRoleFilterChange}
-      />
-      {total > limit && (
+      <UsersTab users={users} onUserUpdate={handleUserUpdate} onUserDelete={handleUserDelete} />
+      {(hasPrevPage || hasNextPage) && (
         <SimplePagination
-          canGoPrev={canGoPrev}
-          canGoNext={canGoNext}
-          onPrev={onPrev}
-          onNext={onNext}
-          label={rangeLabel}
+          canGoPrev={hasPrevPage}
+          canGoNext={hasNextPage}
+          onPrev={handlePrevPage}
+          onNext={handleNextPage}
+          label={''}
+          isDisabled={isFetching}
         />
       )}
     </div>

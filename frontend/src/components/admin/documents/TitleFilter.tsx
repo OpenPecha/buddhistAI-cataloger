@@ -6,20 +6,19 @@ import { useDebounce } from "@uidotdev/usehooks";
 function TitleFilter() {
     const [title,setTitle] = useState('');
     const [, setParams] = useSearchParams();
-    const debounceTitleSearch = React.useCallback((value: string) => {
-        setParams(params=>{
-          params.set('title', value);
-          params.set('page', '1');
-          return params;
-        });
-    }, [setParams]);
+   
 
     
     const debouncedTitle = useDebounce(title, 1000);
 
     useEffect(() => {
-        debounceTitleSearch(debouncedTitle);
-    }, [debouncedTitle,debounceTitleSearch]);
+      setParams(params=>{
+        params.set('title', debouncedTitle);
+        params.set('page', '1');
+        return params;
+      });
+
+    }, [debouncedTitle, setParams]);
   
 
   return (

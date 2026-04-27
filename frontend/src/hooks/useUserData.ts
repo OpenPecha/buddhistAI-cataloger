@@ -1,33 +1,45 @@
 import { useQuery } from '@tanstack/react-query';
 import type { User, PaginatedUserResponse } from '../api/user';
 import { fetchWithAccessToken } from '@/lib/fetchWithAccessToken';
+import { useSearchParams } from 'react-router-dom';
 
-interface UseUsersOptions {
-  skip?: number;
-  limit?: number;
+const DEFAULT_PAGE_SIZE = 20;
+
+export interface UserFilters {
+  page?: number;
+  pageSize?: number;
+  /** Substring match on name or email (query param: search). */
+  username?: string;
   role?: string;
 }
 
 /**
- * Hook for fetching users list with pagination
+ * Hook for fetching users list with optional filters; skip/limit derived from page & pageSize.
  */
-export function useUsers(options: UseUsersOptions = {}) {
-  const { skip = 0, limit = 100, role } = options;
+export function useUsers(filters: UserFilters = {}) {
+  const { pageSize = DEFAULT_PAGE_SIZE, username, role } = filters;
 
+  const search = username?.trim() || undefined;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const page=searchParams.get('page') || '1';
+  const safePage = Math.max(1, Number.parseInt(page, 10));
+  const skip = (safePage - 1) * pageSize;
   const {
     data,
     isLoading,
+    isFetching,
     error,
-    refetch
+    refetch,
   } = useQuery<PaginatedUserResponse>({
-    queryKey: ['users', skip, limit, role],
+    queryKey: ['users', { skip, limit: pageSize, search, role }],
     queryFn: async () => {
-      const params = new URLSearchParams({ skip: String(skip), limit: String(limit) });
+      const params = new URLSearchParams({ skip: String(skip), limit: String(pageSize) });
+      if (search) params.append('search', search);
       if (role) params.append('role', role);
       const response = await fetchWithAccessToken(`/api/settings/users?${params.toString()}`, {
         headers: {
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
       });
       if (!response.ok) {
         throw new Error('Failed to fetch users');
@@ -37,12 +49,39 @@ export function useUsers(options: UseUsersOptions = {}) {
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
+  const total = data?.total ?? 0;
+  const items = data?.items ?? [];
+  const hasNextPage = skip + pageSize < total;
+  const hasPrevPage = safePage > 1;
+
+  const handleNextPage=()=>{
+    setSearchParams(params=>{
+      params.set('page', String(safePage + 1));
+      return params;
+    });
+  }
+  const handlePrevPage=()=>{
+    setSearchParams(params=>{
+      params.set('page', String(safePage - 1));
+      return params;
+    });
+  }
+
+
+
   return {
-    users: data?.items || [],
-    total: data?.total || 0,
+    users: items,
+    total,
     isLoading,
+    isFetching,
     error,
-    refetch
+    refetch,
+    page: safePage,
+    pageSize,
+    hasNextPage,
+    hasPrevPage,
+    handleNextPage,
+    handlePrevPage,
   };
 }
 
@@ -54,7 +93,7 @@ export function useUser(userId: string | undefined) {
     data: user,
     isLoading,
     error,
-    refetch
+    refetch,
   } = useQuery<User>({
     queryKey: ['user', userId],
     queryFn: async () => {
@@ -63,8 +102,8 @@ export function useUser(userId: string | undefined) {
       }
       const response = await fetchWithAccessToken(`/api/settings/users/${userId}`, {
         headers: {
-          'Content-Type': 'application/json'
-        }
+          'Content-Type': 'application/json',
+        },
       });
       if (!response.ok) {
         throw new Error('Failed to fetch user');
@@ -79,6 +118,6 @@ export function useUser(userId: string | undefined) {
     user,
     isLoading,
     error,
-    refetch
+    refetch,
   };
 }
