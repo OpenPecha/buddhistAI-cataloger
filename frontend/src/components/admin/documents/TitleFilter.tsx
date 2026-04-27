@@ -22,7 +22,6 @@ function TitleFilter() {
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setTitle(e.target.value);
-    console.log(e.target.value);
   }
   return (
     <>
