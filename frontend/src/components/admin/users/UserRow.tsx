@@ -1,4 +1,5 @@
 import type { User } from '@/api/user';
+import AvatarWrapper from '@/components/AvatarWrapper';
 
 interface UserRowProps {
   readonly user: User;
@@ -25,13 +26,9 @@ function UserRow({ user, onUpdate, onDelete }: UserRowProps) {
   return (
     <tr className="hover:bg-gray-50">
       <td className="px-6 py-4 whitespace-nowrap">
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
           {user.picture && (
-            <img
-              className="h-10 w-10 rounded-full mr-3"
-              src={user.picture}
-              alt={user.name || user.email}
-            />
+            <AvatarWrapper src={user.picture} alt={user.name || user.email} />
           )}
           <div>
             <div className="text-sm font-medium text-gray-900">

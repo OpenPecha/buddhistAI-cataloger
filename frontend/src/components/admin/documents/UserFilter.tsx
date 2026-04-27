@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import AvatarWrapper from "@/components/AvatarWrapper";
 import {
     Select,
     SelectContent,
@@ -9,7 +9,7 @@ import {
     SelectTrigger,
     SelectValue,
   } from "@/components/ui/select"
-  import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from "@/components/ui/skeleton";
 import { useOutlinerUsers } from "@/hooks";
 import { useSearchParams } from "react-router-dom";
 
@@ -21,9 +21,6 @@ export function UserFilter()
     const currentAnnotator = searchParams.get('annotator') || undefined;
 
     
-    if (isLoading) {
-      return <Skeleton/>;
-    }
 
     const handleChange = (newAnnotator: string) => {
       setSearchParams((searchParams) => {
@@ -34,17 +31,11 @@ export function UserFilter()
       });
     }
 
-    function AvatarImageWrapper({src,alt}:{src:string,alt:string}){
-      return <Avatar>
-        <AvatarImage src={src} alt={alt}/>
-        <AvatarFallback>
-          {alt?.charAt(0)}
-        </AvatarFallback>
-      </Avatar>
+   
+    if(isLoading){
+   return <Skeleton/>
     }
-
     return (
-  
   
       <Select value={currentAnnotator || ''} onValueChange={handleChange}>
         <SelectTrigger className="w-full max-w-48" >
@@ -56,7 +47,7 @@ export function UserFilter()
             <SelectLabel>Annotators</SelectLabel>
             {annotators.filter((a) => a.role === 'annotator').map((a) => (
               <SelectItem key={a.id} value={a.id}>
-                <AvatarImageWrapper src={a?.picture || ''} alt={a.name || a.id}  />
+                <AvatarWrapper src={a?.picture || ''} alt={a.name || a.id}  />
                 {a.name || a.id} ({a.email})
               </SelectItem>
             ))}
@@ -66,7 +57,7 @@ export function UserFilter()
             <SelectLabel>Reviewers</SelectLabel>
             {annotators.filter((a) => a.role === 'reviewer').map((a) => (
               <SelectItem key={a.id} value={a.id}>
-                <AvatarImageWrapper src={a?.picture || ''} alt={a.name || a.id}  />
+                <AvatarWrapper src={a?.picture || ''} alt={a.name || a.id}  />
                 {a.name || a.id} ({a.email})
               </SelectItem>
             ))}
@@ -76,7 +67,7 @@ export function UserFilter()
             <SelectLabel>Admins</SelectLabel>
             {annotators.filter((a) => a.role === 'admin').map((a) => (
               <SelectItem key={a.id} value={a.id}>
-                <AvatarImageWrapper src={a?.picture || ''} alt={a.name || a.id}  />
+                <AvatarWrapper src={a?.picture || ''} alt={a.name || a.id}  />
                 {a.name || a.id} ({a.email})
               </SelectItem>
             ))}

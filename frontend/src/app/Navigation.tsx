@@ -6,6 +6,9 @@ import { useUI } from '@/context/UIContext';
 import { Settings } from 'lucide-react';
 import { useUser } from '@/hooks/useUser';
 import { Button } from '@/components/ui/button';
+import AvatarWrapper from '@/components/AvatarWrapper';
+
+
 function Navigation() {
   const { logout, isLoading,user,isAuthenticated,loginWithRedirect } = useAuth0();
   const { brandIconUrl, primaryColor } = useUI();
@@ -131,18 +134,14 @@ function Navigation() {
               onClick={handleLogin} 
               className='cursor-pointer'
               variant="ghost">Login</Button>}
-            {isAuthenticated && <div className="relative" ref={menuRef}>
+            {isAuthenticated && user && <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors"
               >
                 <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
                   {user.picture ? (
-                    <img
-                      src={user.picture}
-                      alt={user.name || 'User'}
-                      className="w-full h-full object-cover"
-                    />
+                    <AvatarWrapper src={user.picture} alt={user?.name || user?.email || ''} />
                   ) : (
                     <span className="text-sm font-medium text-gray-600">
                       {user.name?.[0]?.toUpperCase() || 'U'}
