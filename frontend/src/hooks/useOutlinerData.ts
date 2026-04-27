@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useQuery } from '@tanstack/react-query';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { outlinerFetch } from '@/api/outliner';
 import { OUTLINER_BASE_URL } from '@/config/api';
 import type { Document, Segment, DocumentStats } from '@/features/outliner/types';
@@ -59,7 +59,7 @@ export function useDocuments(filters: DocumentFilters = {}) {
     excludeOwnAssignedDocuments = false,
   } = filters;
   const skip = (page - 1) * pageSize;
-
+  const [, setSearchParams] = useSearchParams();
   const {
     data: documents = [],
     isLoading,
@@ -99,6 +99,19 @@ export function useDocuments(filters: DocumentFilters = {}) {
   const hasNextPage = documents.length === pageSize;
   const hasPrevPage = page > 1;
 
+  const handleNextPage=()=>{
+    setSearchParams(params=>{
+      params.set('page', String(page + 1));
+      return params;
+    });
+  }
+  const handlePrevPage=()=>{
+    setSearchParams(params=>{
+      params.set('page', String(page - 1));
+      return params;
+    });
+  }
+
   return {
     documents,
     stats,
@@ -110,6 +123,8 @@ export function useDocuments(filters: DocumentFilters = {}) {
     pageSize,
     hasNextPage,
     hasPrevPage,
+    handleNextPage,
+    handlePrevPage,
   };
 }
 

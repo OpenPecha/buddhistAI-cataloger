@@ -8,7 +8,7 @@ import type { DocumentFilters } from '../hooks';
 
 function OutlinerAdminDocument() {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
 
   const status = searchParams.get('status') || undefined;
   const annotator = searchParams.get('annotator') || undefined;
@@ -26,7 +26,7 @@ function OutlinerAdminDocument() {
     [status, annotator, debouncedTitle, page]
   );
 
-  const { hasPrevPage, hasNextPage, isFetching } = useDocuments(filters);
+  const { hasPrevPage, hasNextPage, isFetching,handleNextPage,handlePrevPage } = useDocuments(filters);
 
   const { deleteDocument } = useDocumentActions();
 
@@ -41,15 +41,6 @@ function OutlinerAdminDocument() {
     deleteDocument(documentId);
   };
 
-  const handlePageChange = useCallback(
-    (newPage: number) => {
-      setSearchParams(params=>{
-        params.set('page', String(newPage));
-        return params;
-      });
-    },
-    [setSearchParams]
-  );
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4  p-4">
@@ -62,8 +53,8 @@ function OutlinerAdminDocument() {
           <SimplePagination
             canGoPrev={hasPrevPage}
             canGoNext={hasNextPage}
-            onPrev={() => handlePageChange(page - 1)}
-            onNext={() => handlePageChange(page + 1)}
+            onPrev={handlePrevPage}
+            onNext={handleNextPage}
             label={`Page ${page}`}
             labelPosition="left"
             isDisabled={isFetching}

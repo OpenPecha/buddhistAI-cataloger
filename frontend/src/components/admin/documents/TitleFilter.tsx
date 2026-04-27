@@ -18,9 +18,12 @@ function TitleFilter() {
         return params;
       });
 
-    }, [debouncedTitle, setParams]);
+    }, [debouncedTitle]);
   
-
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTitle(e.target.value);
+    console.log(e.target.value);
+  }
   return (
     <>
        <Search
@@ -32,7 +35,8 @@ function TitleFilter() {
               type="search"
               placeholder="Search by title…"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              
+              onChange={handleChange}
               className="pl-9 h-9 text-sm"
               aria-label="Search documents by title"
             />

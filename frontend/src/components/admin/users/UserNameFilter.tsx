@@ -26,7 +26,7 @@ function UserNameFilter() {
       params.set('page', '1');
       return params;
     });
-  }, [debounced, setParams]);
+  }, [debounced]);
 
   return (
     <div className="relative w-full min-w-[200px] max-w-xs sm:w-64">

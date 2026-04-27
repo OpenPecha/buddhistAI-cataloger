@@ -49,7 +49,7 @@ function DocumentsTab({
     [status, annotator, debouncedTitle, page]
   );
 
-
+  
   const {
     documents,
     isFetching,
