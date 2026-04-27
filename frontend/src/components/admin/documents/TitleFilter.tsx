@@ -5,12 +5,14 @@ import { useSearchParams } from 'react-router-dom';
 import { useDebounce } from "@uidotdev/usehooks";
 function TitleFilter() {
     const [title,setTitle] = useState('');
-    const [params, setParams] = useSearchParams();
+    const [, setParams] = useSearchParams();
     const debounceTitleSearch = React.useCallback((value: string) => {
-        params.set('title', value);
-        params.set('page', '1');
-        setParams(params);
-    }, [params, setParams]);
+        setParams(params=>{
+          params.set('title', value);
+          params.set('page', '1');
+          return params;
+        });
+    }, [setParams]);
 
     
     const debouncedTitle = useDebounce(title, 1000);

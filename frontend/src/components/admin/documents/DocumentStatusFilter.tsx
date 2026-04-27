@@ -21,11 +21,13 @@ function DocumentStatusFilter(){
   const currentStatus = searchParams.get('status') || undefined;
 
     const handleChange = (status: string) => {
-      const params = new URLSearchParams();
-      if (status === 'all') params.delete('status');
-      else params.set('status', status);
-      params.set('page', '1');
-      setSearchParams(params);
+    
+      setSearchParams(params=>{
+        if (status === 'all') params.delete('status');
+        else params.set('status', status);
+        params.set('page', '1');
+        return params;
+      });
   }
   return (
 <Select value={currentStatus || ''} onValueChange={handleChange}> 

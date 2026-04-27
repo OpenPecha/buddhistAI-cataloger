@@ -18,6 +18,7 @@ import DocumentStatusFilter from './DocumentStatusFilter';
 import { useDocuments, useOutlinerUsers, type DocumentFilters } from '@/hooks';
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import TitleFilter from './TitleFilter';
 
 
 
@@ -80,7 +81,7 @@ function DocumentsTab({
           </div>
 
           <div className="relative w-full min-w-[200px] max-w-xs sm:w-64">
-           
+            <TitleFilter />
           </div>
         </div>
       </div>

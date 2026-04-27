@@ -25,12 +25,12 @@ export function UserFilter()
     }
 
     const handleChange = (newAnnotator: string) => {
-      console.log('newAnnotator',newAnnotator);
-      const params = new URLSearchParams();
-      if (newAnnotator === 'all') params.delete('annotator');
-      else params.set('annotator', newAnnotator);
-      params.set('page', '1');
-      setSearchParams(params);
+      setSearchParams((searchParams) => {
+        if (newAnnotator === 'all') searchParams.delete('annotator');
+        else searchParams.set('annotator', newAnnotator);
+        searchParams.set('page', '1');
+        return searchParams;
+      });
     }
 
     function AvatarImage({src,alt}:{src:string,alt:string}){
