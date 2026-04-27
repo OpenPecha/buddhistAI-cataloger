@@ -43,11 +43,12 @@ function OutlinerAdminDocument() {
 
   const handlePageChange = useCallback(
     (newPage: number) => {
-      const params = new URLSearchParams(searchParams);
-      params.set('page', String(newPage));
-      setSearchParams(params);
+      setSearchParams(params=>{
+        params.set('page', String(newPage));
+        return params;
+      });
     },
-    [searchParams, setSearchParams]
+    [setSearchParams]
   );
 
   return (
