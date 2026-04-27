@@ -147,10 +147,9 @@ function BDRCPersonsPage() {
 
   const setPageOnly = useCallback(
     (nextPage: number) => {
-      setSearchParams((prev) => {
-        const next = new URLSearchParams(prev);
-        next.set(URL_KEYS.page, String(Math.max(1, nextPage)));
-        return next;
+      setSearchParams((param) => {
+        param.set(URL_KEYS.page, String(Math.max(1, nextPage)));
+        return param;
       });
     },
     [setSearchParams]
