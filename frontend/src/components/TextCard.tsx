@@ -16,7 +16,6 @@ interface TextCardProps {
   title: string;
   language: string;
   type: string;
-  isAnnotationAvailable?: boolean;
   instanceId: string;
   sourceInstanceId: string;
 }
@@ -25,7 +24,6 @@ const TextCard = ({
   title,
   language,
   type,
-  isAnnotationAvailable,
   instanceId,
   sourceInstanceId,
 }: TextCardProps) => {
@@ -33,25 +31,18 @@ const TextCard = ({
   const isAdmin=permission?.role === "admin";
   const navigate = useNavigate();
 
-  const getAlignmentInfo = (source: string, target: string) => {
-    const alignmentInfo = {
-      source: source,
-      target: target,
-    }
-    return alignmentInfo;
-  }
+ 
 
   const navigateToAlignment = (e) => {
       e.preventDefault()
       e.stopPropagation()
       const source=sourceInstanceId
       const target= instanceId
-      const alignmentInfo=getAlignmentInfo(source,target);
       let url;
-      if(type === "translation" || type === "commentary"){
-        url= alignmentLink(alignmentInfo.source, alignmentInfo.target)
+      if(type == "source"){
+        url= alignmentLink(target,source)
       }else{
-        url= alignmentLink(alignmentInfo.target, alignmentInfo.source)
+        url= alignmentLink(source,target)
       }
       navigate(url)
     }
@@ -70,12 +61,7 @@ const TextCard = ({
             }} className="  flex gap-2 font-monlam group-hover:text-blue-500 transition-smooth">
               {title}
 
-                {/* Annotation Status Column */}
-        {isAnnotationAvailable ? (
-          <CheckCircleIcon className="w-5 h-5 text-green-500" />
-        ) : (
-          <CircleXIcon className="w-5 h-5 text-red-500" />
-        )}
+      
             </div>
           
           </div>
@@ -102,13 +88,12 @@ const TextCard = ({
       <TableCell className="text-right">
         <Button 
           disabled={!isAdmin}
-          variant={!isAnnotationAvailable ? "destructive" : "outline"} 
+          variant="outline"
           className={`w-fit cursor-pointer 
-          ${!isAnnotationAvailable ? "bg-[#025388] hover:bg-[#025388]/90 text-white" : ""}
           pointer-events-auto`} 
           onClick={navigateToAlignment}
         >
-          <PermissionButton isLoading={isFetchingPermission} icon={null} text={!isAnnotationAvailable ? "Align" : "update"} />
+          <PermissionButton isLoading={isFetchingPermission} icon={null} text={"Check Alignments"} />
         </Button>
       </TableCell>
     </TableRow>

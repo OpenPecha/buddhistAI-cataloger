@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Literal, Optional, Tuple
 
 import requests
 from fastapi import HTTPException
@@ -103,3 +103,13 @@ def create_annotation_for_instance(instance_id: str, payload: Dict[str, Any]) ->
     if r.status_code not in (200, 201):
         raise HTTPException(status_code=r.status_code, detail=r.text)
     return r.json()
+
+
+
+annotationTypes = Literal["alignments", "segmentations", "paginations", "bibliographic", "durchens"]
+def delete_annotation(type: annotationTypes, annotation_id: str) -> Any:
+    url = openpecha_url(type, annotation_id)
+    r = requests.delete(url, headers=openpecha_headers(), timeout=60)
+    if r.status_code not in (200, 204):
+        raise HTTPException(status_code=r.status_code, detail=r.text)
+    return {"status": "deleted", "annotation_id": annotation_id}

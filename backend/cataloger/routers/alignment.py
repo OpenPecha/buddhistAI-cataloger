@@ -2,16 +2,20 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 
-from cataloger.controller.openpecha_api.annotations import (
-    get_annotation as openpecha_get_annotation,
-)
+
 from cataloger.controller.openpecha_api.instances import (
     get_instance as openpecha_get_instance,
-    list_related_instances as openpecha_list_related_instances,
     openpecha_get_edition_alignments,
 )
+from cataloger.controller.openpecha_api.annotations import delete_annotation as openpecha_delete_annotation
 
 router = APIRouter()
+
+
+@router.delete("/alignment/{annotation_id}")
+async def delete_alignment_annotation(annotation_id: str):
+    """Delete an alignment annotation on OpenPecha by id."""
+    return openpecha_delete_annotation("alignments", annotation_id)
 
 
 
@@ -121,34 +125,21 @@ def prepare_data(aligned_edition_id: str, root_edition_id: str) -> Dict[str, Any
         ) from e
     root_text = root_instance.get("content", "")
     aligned_text = aligned_instance.get("content", "")
+    try:         
+        alignments_annotations=  openpecha_get_edition_alignments(edition_id=aligned_edition_id)
 
-    has_alignment = False
-
-    # Step 1: Check for related instance relationship first
-    # Check if target is in source's related instances (or vice versa)
-    try:
-        alignments_annotations = openpecha_get_edition_alignments(
-            edition_id=aligned_edition_id
-        )
     except HTTPException:
         alignments_annotations = None
-    alignments_annotation={}
-    has_alignment = False
-    # alignments_annotation could be a dict with key 'alignments' which is a list of dicts
-    if alignments_annotations and len(alignments_annotations) > 0:
-        for item in alignments_annotation:
-            target_id = item.get("target_id")  # handle both possible keys
-            if target_id == root_edition_id:
-                has_alignment = True
-                break
+   
+   
    
 
 
     return {
         "source_text": aligned_text,
         "target_text": root_text,
-        "has_alignment": has_alignment,
-        "annotation": alignments_annotation,
+        "has_alignment": alignments_annotations is not None,
+        "annotation": alignments_annotations,
     }
 
 
@@ -156,25 +147,14 @@ def prepare_data(aligned_edition_id: str, root_edition_id: str) -> Dict[str, Any
 async def get_alignment(
     aligned_edition_id: str,
     root_edition_id: str
-) -> PreparedDataResponse:
+) :
   
     try:
         # Prepare data (fetch instances, annotations, etc.)
         prepared_data = prepare_data(aligned_edition_id, root_edition_id)
         
-        source_text = prepared_data["source_text"]
-        target_text = prepared_data["target_text"]
-        has_alignment = prepared_data["has_alignment"]
-        annotation_id = prepared_data.get("annotation_id")
-        annotation_data = prepared_data.get("annotation")
-       
-        return PreparedDataResponse(
-            source_text=source_text,
-            target_text=target_text,
-            has_alignment=has_alignment,
-            annotation_id=annotation_id,
-            annotation=annotation_data
-        )
+      
+        return prepared_data
     
     except HTTPException:   
         raise HTTPException(

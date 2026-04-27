@@ -81,7 +81,7 @@ function reverse_cleaned_alignments(cleanedAlignments: AlignmentData) {
     };
     
     // Check if we have numeric string indices (e.g., "0", "1", "2") or UUIDs
-    const hasNumericIndices = cleaned_targets.length > 0 && 
+    const hasNumericIndices = cleaned_targets?.length > 0 && 
         cleaned_targets[0] !== null && 
         cleaned_targets[0].index !== undefined &&
         isNumericIndex(cleaned_targets[0].index);

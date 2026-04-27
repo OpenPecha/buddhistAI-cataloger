@@ -2,22 +2,7 @@
 
 import { fetchAlignment } from "../../../api/annotation";
 import { populateMissingSpans, reverse_cleaned_alignments, addContentToAnnotations } from "./alignment_generator";
-
-// Type for alignment annotation data structure
-type AlignmentAnnotationData = {
-    type: "alignment";
-    target_annotation: Array<{
-        id?: string | null;
-        span: { start: number; end: number };
-        index?: string;
-    } | null>;
-    alignment_annotation: Array<{
-        id?: string | null;
-        span: { start: number; end: number };
-        index?: string;
-        aligned_segments?: string[];
-    } | null>;
-};
+import { normalizeAlignmentPayload } from "./normalizeAlignments";
 
 type ProgressCallback = (message: string) => void;
 
@@ -32,27 +17,47 @@ async function prepareData(
     const sourceText = preparedData.source_text;
     const annotation = preparedData.annotation;
     const has_alignment = preparedData.has_alignment;
-    const annotation_id = preparedData.annotation_id;
 
     if(has_alignment){
-        // Type assertion for annotation.data - it should be AlignmentAnnotationData
-    
-        
+        const variants = normalizeAlignmentPayload(annotation);
+        const primary =
+            variants[0]?.data ??
+            (annotation &&
+            typeof annotation === "object" &&
+            !Array.isArray(annotation) &&
+            Array.isArray((annotation as { target_annotation?: unknown }).target_annotation) &&
+            Array.isArray((annotation as { alignment_annotation?: unknown }).alignment_annotation)
+                ? {
+                      target_annotation: (annotation as { target_annotation: unknown[] }).target_annotation,
+                      alignment_annotation: (annotation as { alignment_annotation: unknown[] })
+                          .alignment_annotation,
+                  }
+                : null);
+        if (!primary) {
+            onProgress?.("Skipping alignment reconstruction (unrecognized shape)...");
+        }
+
         onProgress?.("Reconstructing alignment segments...");
-        const reconstructed_annoations=reverse_cleaned_alignments(annotation as Parameters<typeof reverse_cleaned_alignments>[0]);
-        //get th text for each alignment segment from content
-        
-        onProgress?.("Populating missing spans...");
-        const populated_annoations=populateMissingSpans(reconstructed_annoations);
-        
-        onProgress?.("Adding content to annotations...");
-        // Add content to each annotation based on spans
-        const annotationsWithContent = addContentToAnnotations(
-            populated_annoations,
-            sourceText,
-            targetText
-        );
-        
+        const reconstructed_annoations = primary
+            ? reverse_cleaned_alignments({
+                  type: "alignment",
+                  target_annotation: primary.target_annotation as Parameters<
+                      typeof reverse_cleaned_alignments
+                  >[0]["target_annotation"],
+                  alignment_annotation: primary.alignment_annotation as Parameters<
+                      typeof reverse_cleaned_alignments
+                  >[0]["alignment_annotation"],
+              })
+            : null;
+
+        if (reconstructed_annoations) {
+            onProgress?.("Populating missing spans...");
+            const populated_annoations = populateMissingSpans(reconstructed_annoations);
+
+            onProgress?.("Adding content to annotations...");
+            addContentToAnnotations(populated_annoations, sourceText, targetText);
+        }
+
         onProgress?.("Applying annotations to text...");
         
         // Extract annotation ID from preparedData response or annotation object if it exists

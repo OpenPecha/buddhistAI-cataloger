@@ -139,3 +139,25 @@ export const fetchAlignment = async (
   return await handleApiResponse(response) as PreparedDataResponse;
 };
 
+/**
+ * Delete an alignment annotation by OpenPecha annotation id.
+ */
+export const deleteAlignmentAnnotation = async (
+  annotationId: string
+): Promise<{ status: string; annotation_id: string }> => {
+  const response = await fetch(
+    `${API_URL}/aligner/alignment/${encodeURIComponent(annotationId)}`,
+    {
+      method: 'DELETE',
+      headers: {
+        accept: 'application/json',
+      },
+    }
+  );
+
+  return await handleApiResponse(response) as {
+    status: string;
+    annotation_id: string;
+  };
+};
+

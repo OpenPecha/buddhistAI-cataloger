@@ -9,7 +9,7 @@ function RelatedInstanceItem({ sourceInstanceId,relatedInstance }: { sourceInsta
     const {t} = useTranslation();
     const {data:textDetails} =useText(textId);
     const title = textDetails?.title?.bo|| textDetails?.title?.tib||textDetails?.title?.tibphono || textDetails?.title?.en || textDetails?.title?.sa || textDetails?.title?.pi || t('textInstances.untitled');
-    const type=textDetails?.translation_of ? 'translation' : textDetails?.commentary_of ? 'commentary' : 'other';
+    const type=textDetails?.translation_of ? 'translation' : textDetails?.commentary_of ? 'commentary' : 'source';
     function getEditionLink(){
       return `/texts/${textId}/editions`;
     }
@@ -22,7 +22,6 @@ function RelatedInstanceItem({ sourceInstanceId,relatedInstance }: { sourceInsta
            title={title}
            language={textDetails?.language || ''}
            type={type}
-           isAnnotationAvailable={false}
            instanceId={instanceId}
            sourceInstanceId={sourceInstanceId}
            />

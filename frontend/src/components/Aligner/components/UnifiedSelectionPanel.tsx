@@ -16,7 +16,6 @@ import {
   fetchAnnotation,
   fetchInstance,
 } from "../../../api/text";
-import { fetchRelatedInstances } from "../../../api/instances";
 import { editionIdFromRelated } from "@/utils/links";
 import {
   applySegmentation,
@@ -25,14 +24,12 @@ import {
 } from "../../../lib/annotation";
 import { reconstructSegments } from "../utils/generateAnnotation";
 import type { OpenPechaTextInstance } from "../../../types/text";
-import { prepareData } from "../utils/prepare_data";
 
 function UnifiedSelectionPanel() {
   const {
     sourceInstanceId,
     sourceTextId,
     targetInstanceId,
-    isSourceLoaded,
     isTargetLoaded,
     setSourceSelection,
     isLoadingAnnotations,
@@ -41,7 +38,6 @@ function UnifiedSelectionPanel() {
     setTargetText,
     setLoadingAnnotations,
     setAnnotationsApplied,
-    setHasAlignment,
   } = useTextSelectionStore();
 
   const [searchParams, setSearchParams] = useSearchParams();
