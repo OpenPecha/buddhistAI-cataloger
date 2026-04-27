@@ -1,3 +1,4 @@
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
     Select,
     SelectContent,
@@ -33,8 +34,13 @@ export function UserFilter()
       });
     }
 
-    function AvatarImage({src,alt}:{src:string,alt:string}){
-      return <img src={src} alt={alt} className="w-4 h-4 rounded-full" />
+    function AvatarImageWrapper({src,alt}:{src:string,alt:string}){
+      return <Avatar>
+        <AvatarImage src={src} alt={alt}/>
+        <AvatarFallback>
+          {alt?.charAt(0)}
+        </AvatarFallback>
+      </Avatar>
     }
 
     return (
@@ -50,7 +56,7 @@ export function UserFilter()
             <SelectLabel>Annotators</SelectLabel>
             {annotators.filter((a) => a.role === 'annotator').map((a) => (
               <SelectItem key={a.id} value={a.id}>
-                <AvatarImage src={a.picture} alt={a.name || a.id}  />
+                <AvatarImageWrapper src={a?.picture || ''} alt={a.name || a.id}  />
                 {a.name || a.id} ({a.email})
               </SelectItem>
             ))}
@@ -60,7 +66,7 @@ export function UserFilter()
             <SelectLabel>Reviewers</SelectLabel>
             {annotators.filter((a) => a.role === 'reviewer').map((a) => (
               <SelectItem key={a.id} value={a.id}>
-                <AvatarImage src={a.picture} alt={a.name || a.id}  />
+                <AvatarImageWrapper src={a?.picture || ''} alt={a.name || a.id}  />
                 {a.name || a.id} ({a.email})
               </SelectItem>
             ))}
@@ -70,7 +76,7 @@ export function UserFilter()
             <SelectLabel>Admins</SelectLabel>
             {annotators.filter((a) => a.role === 'admin').map((a) => (
               <SelectItem key={a.id} value={a.id}>
-                <AvatarImage src={a.picture} alt={a.name || a.id}  />
+                <AvatarImageWrapper src={a?.picture || ''} alt={a.name || a.id}  />
                 {a.name || a.id} ({a.email})
               </SelectItem>
             ))}
