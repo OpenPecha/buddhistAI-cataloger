@@ -261,10 +261,9 @@ function BDRCPage() {
 
   const setPageOnly = useCallback(
     (nextPage: number) => {
-      setSearchParams((prev) => {
-        const next = new URLSearchParams(prev);
-        next.set(URL_KEYS.page, String(Math.max(1, nextPage)));
-        return next;
+      setSearchParams((params) => {
+        params.set(URL_KEYS.page, String(Math.max(1, nextPage)));
+        return params;
       });
     },
     [setSearchParams]
