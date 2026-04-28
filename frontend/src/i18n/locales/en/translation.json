@@ -525,6 +525,8 @@
       "prevMatch": "Previous search match",
       "scrollToBottom": "Scroll segment to bottom",
       "nextMatch": "Next search match",
+      "firstMatch": "First search match",
+      "lastMatch": "Last search match",
       "subsegmentWarning": "Don't segment on text subsegments (chapters, bampo, etc.)",
       "analyzingToc": "Analyzing TOC…",
       "syncingFromServer": "Syncing with server…"

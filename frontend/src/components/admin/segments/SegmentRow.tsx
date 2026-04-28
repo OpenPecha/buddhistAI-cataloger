@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,13 +15,16 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUser } from '@/hooks/useUser';
 import { updateSegment, rejectSegment } from '@/api/outliner';
 import { toast } from 'sonner';
-import {FileText, Loader2, Undo, User, X } from 'lucide-react';
+import Highlighter from 'react-highlight-words';
+import { FileText, Loader2, Undo, User, X } from 'lucide-react';
 import type { Segment } from '../shared/types';
 import type { TextSegment } from '@/components/outliner/types';
 import type { FormDataType, Title, Author } from '@/components/outliner/AnnotationSidebar';
 import { useDocument } from '@/hooks';
 import { getLabelColor, getStatusColor } from '@/components/outliner/utils';
 import ChevronUporDown from '@/components/outliner/utils/ChevronUporDown';
+import { SegmentSearchBar } from '@/components/outliner/SegmentSearchBar';
+import { findAllOccurrences } from '@/features/outliner';
 
 interface SegmentRowProps {
   readonly segment: Segment;
@@ -71,7 +74,41 @@ function SegmentRow({
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectComment, setRejectComment] = useState('');
   const { document: selectedDocument, isLoading: isLoadingDocument } = useDocument(documentId);
- 
+  const [textSearchQuery, setTextSearchQuery] = useState('');
+  const segmentBodyTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const segmentBodyHighlightRef = useRef<HTMLDivElement>(null);
+  const hasTextSearch = Boolean(textSearchQuery.trim());
+
+  const segmentSearchMatchCount = useMemo(
+    () => findAllOccurrences(segment.text, textSearchQuery).length,
+    [segment.text, textSearchQuery]
+  );
+
+  const syncBodyHighlightScroll = useCallback(() => {
+    const ta = segmentBodyTextareaRef.current;
+    const hi = segmentBodyHighlightRef.current;
+    if (ta && hi) {
+      hi.scrollTop = ta.scrollTop;
+      hi.scrollLeft = ta.scrollLeft;
+    }
+  }, []);
+
+  /** After `scrollIntoView` on a highlight, the backdrop layer scrolls; mirror to the textarea. */
+  const syncTextareaToHighlightScroll = useCallback(() => {
+    const ta = segmentBodyTextareaRef.current;
+    const hi = segmentBodyHighlightRef.current;
+    if (ta && hi) {
+      ta.scrollTop = hi.scrollTop;
+      ta.scrollLeft = hi.scrollLeft;
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    if (isExpanded && hasTextSearch) {
+      syncBodyHighlightScroll();
+    }
+  }, [isExpanded, hasTextSearch, segment.text, textSearchQuery, syncBodyHighlightScroll]);
+
   const statusMutation = useMutation({
     mutationFn: (newStatus: 'approved' | 'unchecked' | 'checked') =>
       updateSegment(segment.id, {
@@ -293,6 +330,7 @@ function SegmentRow({
   const isSaving = statusMutation.isPending || rejectMutation.isPending || titleAuthorSaving || bdrcSaveMutation.isPending;
   return (
     <div
+      id={segment.id}
       className={`rounded-lg border-2 p-4 transition-colors ${
         isRejected
           ? 'border-red-400 bg-red-50'
@@ -342,6 +380,16 @@ function SegmentRow({
                </span>
              </div>
            )}
+            <div className="min-w-0 " onClick={(e) => e.stopPropagation()}>
+              <SegmentSearchBar
+                segmentId={segment.id}
+                query={textSearchQuery}
+                onQueryChange={setTextSearchQuery}
+                matchCount={segmentSearchMatchCount}
+                disableMatchNavigation={!isExpanded}
+                onAfterScrollToMatch={syncTextareaToHighlightScroll}
+              />
+            </div>
           </div>
 
           {segment.status === 'rejected' && segment.rejection?.reason?.trim() ? (
@@ -350,27 +398,66 @@ function SegmentRow({
               <span className="whitespace-pre-wrap">{segment.rejection.reason}</span>
             </div>
           ) : null}
-          <div>
+          <div className="space-y-2">
+           
             {isExpanded ? (
-              <Textarea
-                readOnly
-                value={segment.text}
-                aria-label="Segment text (read-only; use caret for volume image sync)"
-                spellCheck={false}
-                onSelect={reportBodyCaret}
-                onClick={reportBodyCaret}
-                onKeyUp={reportBodyCaret}
-                onFocus={reportBodyCaret}
-                onBlur={() => onSegmentBodyCaretChange?.(segment.id, null)}
-                className="min-h-[8rem] max-h-[min(24rem,50vh)] cursor-text resize-none text-sm text-gray-800 whitespace-pre-wrap overflow-y-auto font-monlam rounded-md border border-gray-200 bg-white/80 p-3 focus-visible:ring-2 focus-visible:ring-blue-500/20"
-              />
+              <div className="relative min-h-[8rem] max-h-[min(24rem,50vh)] rounded-md border border-gray-200 bg-white/80">
+                {hasTextSearch ? (
+                  <div
+                    ref={segmentBodyHighlightRef}
+                    className="pointer-events-none absolute inset-0 z-0 overflow-auto whitespace-pre-wrap break-words p-3 font-monlam text-sm leading-normal text-gray-800 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    aria-hidden
+                  >
+                    <Highlighter
+                      highlightClassName="highlighter rounded-sm bg-amber-200/90 px-0.5"
+                      searchWords={hasTextSearch ? [textSearchQuery] : []}
+                      autoEscape
+                      textToHighlight={segment.text}
+                    />
+                  </div>
+                ) : null}
+                <Textarea
+                  ref={segmentBodyTextareaRef}
+                  readOnly
+                  value={segment.text}
+                  aria-label="Segment text (read-only; use caret for volume image sync)"
+                  spellCheck={false}
+                  onSelect={reportBodyCaret}
+                  onClick={reportBodyCaret}
+                  onKeyUp={reportBodyCaret}
+                  onScroll={hasTextSearch ? syncBodyHighlightScroll : undefined}
+                  onFocus={reportBodyCaret}
+                  onBlur={() => onSegmentBodyCaretChange?.(segment.id, null)}
+                  className={
+                    'relative z-10 min-h-[8rem] max-h-[min(24rem,50vh)] w-full cursor-text resize-none text-sm whitespace-pre-wrap overflow-y-auto font-monlam rounded-md border-0 bg-transparent p-3 leading-normal focus-visible:ring-2 focus-visible:ring-blue-500/20 ' +
+                    (hasTextSearch
+                      ? 'text-transparent caret-gray-800 selection:bg-sky-200/50'
+                      : 'text-gray-800')
+                  }
+                />
+              </div>
             ) : (
               <button
                 type="button"
                 className="text-left w-full text-gray-700 font-monlam text-sm py-1 rounded px-2 -mx-2 transition-colors max-h-[100px] overflow-hidden whitespace-pre-wrap break-words [display:-webkit-box] [WebkitBoxOrient:vertical] [WebkitLineClamp:4] hover:bg-white/60"
                 onClick={toggleCollapse}
               >
-                {segment.text.length > 200 ? `${segment.text.slice(0, 200)}…` : segment.text}
+                {hasTextSearch ? (
+                  <Highlighter
+                    highlightClassName="highlighter rounded-sm bg-amber-200/90 px-0.5"
+                    searchWords={[textSearchQuery]}
+                    autoEscape
+                    textToHighlight={
+                      segment.text.length > 200
+                        ? `${segment.text.slice(0, 200)}…`
+                        : segment.text
+                    }
+                  />
+                ) : segment.text.length > 200 ? (
+                  `${segment.text.slice(0, 200)}…`
+                ) : (
+                  segment.text
+                )}
               </button>
             )}
           </div>

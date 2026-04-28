@@ -1,6 +1,13 @@
-import { memo, useCallback, useEffect, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowDownToLine, ArrowUpToLine, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  ArrowDownToLine,
+  ArrowUpToLine,
+  ChevronDown,
+  ChevronFirst,
+  ChevronLast,
+  ChevronUp,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -9,14 +16,24 @@ export const SegmentSearchBar = memo(function SegmentSearchBar({
   query,
   onQueryChange,
   matchCount,
+  onAfterScrollToMatch,
+  disableMatchNavigation,
 }: {
   segmentId: string;
   query: string;
   onQueryChange: (q: string) => void;
   matchCount: number;
+  /** Called after scrolling to a match (e.g. sync a mirrored textarea scroll in admin). */
+  onAfterScrollToMatch?: () => void;
+  /** When true, first/prev/next/last match controls are disabled (e.g. segment body collapsed). */
+  disableMatchNavigation?: boolean;
 }) {
   const { t } = useTranslation();
   const [activeMatchIndex, setActiveMatchIndex] = useState(0);
+  const activeMatchIndexRef = useRef(0);
+  useEffect(() => {
+    activeMatchIndexRef.current = activeMatchIndex;
+  }, [activeMatchIndex]);
 
   const scrollSegmentToTop = useCallback(() => {
     document.getElementById(segmentId)?.scrollIntoView({
@@ -36,43 +53,40 @@ export const SegmentSearchBar = memo(function SegmentSearchBar({
     (index: number) => {
       const root = document.getElementById(segmentId);
       const hits = root?.querySelectorAll('.highlighter');
-      hits?.[index]?.scrollIntoView({
+      const n = hits?.length ?? 0;
+      if (n === 0) return;
+      const safeIndex = Math.min(Math.max(0, index), n - 1);
+      hits?.[safeIndex]?.scrollIntoView({
         behavior: 'smooth',
         block: 'center',
       });
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          onAfterScrollToMatch?.();
+        });
+      });
     },
-    [segmentId]
+    [segmentId, onAfterScrollToMatch]
   );
 
   useEffect(() => {
+    activeMatchIndexRef.current = 0;
     setActiveMatchIndex(0);
   }, [query, matchCount]);
 
   const searched = query.trim().length > 0 && matchCount > 0;
+  const navDisabled = Boolean(disableMatchNavigation) || matchCount === 0;
 
-  const goToTop=()=>{
+  const goToTop = () => {
     scrollSegmentToTop();
-
-  }
-  const goToBottom=()=>{
+  };
+  const goToBottom = () => {
     scrollSegmentToBottom();
-  }
-  const goUp = () => {
-    setActiveMatchIndex((prev) => {
-      const next = (prev - 1 + matchCount) % matchCount;
-      requestAnimationFrame(() => scrollToMatchIndex(next));
-      return next;
-    });
-  }
- 
+  };
 
-  const goDown =() => {
-    setActiveMatchIndex((prev) => {
-      const next = (prev + 1) % matchCount;
-      requestAnimationFrame(() => scrollToMatchIndex(next));
-      return next;
-    });
-  }
+
+
+  
 
   return (
     <div className="segment-search-bar flex-1 flex flex-wrap items-center gap-1 rounded-md py-1">
@@ -82,14 +96,13 @@ export const SegmentSearchBar = memo(function SegmentSearchBar({
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
         onKeyDown={(e) => {
+          if (navDisabled) return;
           if (e.key === 'ArrowUp') {
             e.preventDefault();
             e.stopPropagation();
-            goUp();
           } else if (e.key === 'ArrowDown') {
             e.preventDefault();
             e.stopPropagation();
-            goDown();
           }
         }}
         aria-label={t('outliner.segment.searchInSegment')}
@@ -99,35 +112,7 @@ export const SegmentSearchBar = memo(function SegmentSearchBar({
           {matchCount === 0 ? '0/0' : `${activeMatchIndex + 1}/${matchCount}`}
         </span>
       )}
-      {searched && <>
-      
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className="h-8 w-8 shrink-0"
-        onClick={goUp}
-        title={t('outliner.segment.prevMatch')}
-        aria-label={
-          t('outliner.segment.prevMatch')
-        }
-      >
-        <ChevronUp className="h-4 w-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className="h-8 w-8 shrink-0"
-        onClick={goDown}
-        title={t('outliner.segment.nextMatch')}
-        aria-label={
-          t('outliner.segment.nextMatch')
-        }
-      >
-        <ChevronDown className="h-4 w-4" />
-      </Button>
-</>}
+    
       <Button
         type="button"
         variant="outline"
