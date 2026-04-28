@@ -24,5 +24,5 @@ SEGMENT_STATUS_TRANSITIONS = {
         SegmentStatus.UNCHECKED,
     },
     SegmentStatus.REJECTED: {SegmentStatus.CHECKED},
-    SegmentStatus.APPROVED: {SegmentStatus.UNCHECKED},
+    SegmentStatus.APPROVED: {SegmentStatus.UNCHECKED, SegmentStatus.CHECKED},
 }

@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import type { BubbleMenuProps } from './types';
 import { useMenuPosition } from './hooks/useMenuPosition';
 import { useSelection } from './contexts';
+import cleanTibetanText from './utils/clean_tibetan';
 
 const DEFAULT_POSITION = { x: 0, y: 0 };
 
@@ -38,7 +39,10 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({ segmentId }) => {
 
 
   const onSelect = (field: 'title' | 'author') => {
-    onBubbleMenuSelect(field, segmentId, selectedText);
+
+    const clean_selectedText = cleanTibetanText(selectedText.trim());
+
+    onBubbleMenuSelect(field, segmentId, clean_selectedText);
   };
 
   // Show menu when bubbleMenuState exists and matches this segment

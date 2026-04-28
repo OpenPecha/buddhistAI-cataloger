@@ -15,7 +15,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useUser } from '@/hooks/useUser';
 import { updateSegment, rejectSegment } from '@/api/outliner';
 import { toast } from 'sonner';
-import {FileText, Loader2, User, X } from 'lucide-react';
+import {FileText, Loader2, Undo, User, X } from 'lucide-react';
 import type { Segment } from '../shared/types';
 import type { TextSegment } from '@/components/outliner/types';
 import type { FormDataType, Title, Author } from '@/components/outliner/AnnotationSidebar';
@@ -68,7 +68,6 @@ function SegmentRow({
   const { documentId } = useParams<{ documentId: string }>();
   const queryClient = useQueryClient();
   const { user: reviewerAccount, isLoading: reviewerAccountLoading } = useUser();
-  const [isSaving, setIsSaving] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectComment, setRejectComment] = useState('');
   const { document: selectedDocument, isLoading: isLoadingDocument } = useDocument(documentId);
@@ -88,9 +87,7 @@ function SegmentRow({
       const action =
         newStatus === 'approved' ? 'approve' : newStatus === 'checked' ? 'update' : 'reset';
       toast.error(`Failed to ${action} segment: ${error.message}`);
-    },
-    onSettled: () => setIsSaving(false),
-  });
+    }  });
 
   const rejectMutation = useMutation({
     mutationFn: (comment: string) => rejectSegment(segment.id, comment),
@@ -102,12 +99,10 @@ function SegmentRow({
     },
     onError: (error: Error) => {
       toast.error(`Failed to reject segment: ${error.message}`);
-    },
-    onSettled: () => setIsSaving(false),
+    }
   });
 
   const handleSave = () => {
-    setIsSaving(true);
     statusMutation.mutate('approved');
   };
 
@@ -121,17 +116,14 @@ function SegmentRow({
       toast.error('Loading your account… try again in a moment.');
       return;
     }
-    setIsSaving(true);
     rejectMutation.mutate(trimmed);
   };
 
   const handleReset = () => {
-    setIsSaving(true);
-    statusMutation.mutate('unchecked');
+    statusMutation.mutate('checked');
   };
 
   const handleUndoReject = () => {
-    setIsSaving(true);
     statusMutation.mutate('checked');
   };
 
@@ -257,19 +249,9 @@ function SegmentRow({
     return () => clearTimeout(bdrcSaveTimeoutRef.current);
   }, [formData.title.bdrc_id]);
 
-  const handleBdrcUpdate = useCallback((field: 'title' | 'author', value: Title | Author) => {
-    setFormData(prev => {
-      if (field === 'title') return { ...prev, title: value as Title };
-      return { ...prev, author: value as Author };
-    });
-  }, []);
 
-  const resetBdrcForm = useCallback(() => {
-    setFormData({
-      title: { name: segment.title || '', bdrc_id: segment.title_bdrc_id || '' },
-      author: { id: '', name: segment.author || '', bdrc_id: segment.author_bdrc_id || '' },
-    });
-  }, [segment.title, segment.author, segment.title_bdrc_id, segment.author_bdrc_id]);
+
+
 
   const toggleCollapse = useCallback(
     (e: React.MouseEvent) => {
@@ -301,33 +283,14 @@ function SegmentRow({
     };
   }, [segment.id, onSegmentBodyCaretChange]);
 
-  const segmentAsTextSegment = useMemo<TextSegment>(() => ({
-    id: segment.id,
-    text: segment.text,
-    span_start: segment.span_start,
-    span_end: segment.span_end,
-    title: segment.title ?? undefined,
-    author: segment.author ?? undefined,
-    title_span_start: segment.title_span_start ?? undefined,
-    title_span_end: segment.title_span_end ?? undefined,
-    updated_title: segment.updated_title ?? undefined,
-    author_span_start: segment.author_span_start ?? undefined,
-    author_span_end: segment.author_span_end ?? undefined,
-    updated_author: segment.updated_author ?? undefined,
-    reviewer_title: segment.reviewer_title ?? undefined,
-    reviewer_author: segment.reviewer_author ?? undefined,
-    title_bdrc_id: segment.title_bdrc_id ?? undefined,
-    author_bdrc_id: segment.author_bdrc_id ?? undefined,
-    status: segment.status,
-    comments: segment.comments ?? [],
-    rejection: segment.rejection ?? undefined,
-  }), [segment]);
+  
 
 
 
 
   const isRejected = segment.status === 'rejected';
   const showApproveButton= selectedDocument?.status==='completed';
+  const isSaving = statusMutation.isPending || rejectMutation.isPending || titleAuthorSaving || bdrcSaveMutation.isPending;
   return (
     <div
       className={`rounded-lg border-2 p-4 transition-colors ${
@@ -563,13 +526,14 @@ function SegmentRow({
                   variant="ghost"
                   className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
                 >
-                  Reject
+                   Reject
                 </Button>
               </div>
             )}
             {segment.status === 'approved' && (
               <Button size="sm" onClick={handleReset} disabled={isSaving} variant="outline">
-                Reset
+                <Undo className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                Undo
               </Button>
             )}
             {segment.status === 'rejected' && (
