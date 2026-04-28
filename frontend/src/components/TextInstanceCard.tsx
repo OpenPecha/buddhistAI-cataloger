@@ -2,15 +2,35 @@ import React from 'react';
 import type { OpenPechaTextInstanceListItem } from '@/types/text';
 import { Link, useParams } from 'react-router-dom';
 import { editionLink } from '@/utils/links';
+import { useDeleteEdition } from '@/hooks/useTexts';
+import { toast } from 'sonner';
 
 interface TextInstanceCardProps {
   instance: OpenPechaTextInstanceListItem;
 }
 
 const TextInstanceCard: React.FC<TextInstanceCardProps> = ({ instance }) => {
+  const { text_id } = useParams();
+  const deleteMutation = useDeleteEdition();
 
-
-  const {text_id}=useParams();
+  const handleDelete = () => {
+    if (!text_id) return;
+    if (
+      !globalThis.confirm(
+        'Delete this edition? This cannot be undone.'
+      )
+    ) {
+      return;
+    }
+    deleteMutation.mutate(
+      { editionId: instance.id, textId: text_id },
+      {
+        onSuccess: () => toast.success('Edition deleted'),
+        onError: (err) =>
+          toast.error(err instanceof Error ? err.message : 'Failed to delete edition'),
+      }
+    );
+  };
 
   const getTypeColor = (type: string) => {
     if (!type) return 'bg-gray-100 text-gray-800 border-gray-200';
@@ -65,7 +85,7 @@ const TextInstanceCard: React.FC<TextInstanceCardProps> = ({ instance }) => {
           {instance.type}
         </span>
       </div>
-      <div className="flex gap-3 mt-2">
+      <div className="flex flex-wrap gap-3 mt-2 items-center">
         <Link
           to={`/texts/${text_id}/create?type=translation&edition_id=${instance.id}`}
           className="inline-flex items-center gap-1 px-3 py-1 bg-blue-50 text-blue-700 rounded-md text-sm font-medium border border-blue-100 hover:bg-blue-100 hover:text-blue-800 transition-colors"
@@ -84,6 +104,17 @@ const TextInstanceCard: React.FC<TextInstanceCardProps> = ({ instance }) => {
           </svg>
           Add commentary
         </Link>
+        <button
+          type="button"
+          onClick={handleDelete}
+          disabled={deleteMutation.isPending || !text_id}
+          className="inline-flex items-center gap-1 px-3 py-1 bg-red-50 text-red-700 rounded-md text-sm font-medium border border-red-100 hover:bg-red-100 hover:text-red-800 transition-colors disabled:opacity-50 disabled:pointer-events-none ml-auto"
+        >
+          <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
+        </button>
       </div>
     </div>
   );

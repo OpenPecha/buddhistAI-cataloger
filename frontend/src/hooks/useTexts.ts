@@ -1,6 +1,7 @@
 import {
   createText,
   createTextInstance,
+  deleteEdition,
   fetchAnnotation,
   fetchEditionSegmentations,
   fetchInstance,
@@ -115,6 +116,20 @@ export const useCreateTextInstance = () => {
     onSuccess: (_, { textId }) => {
       queryClient.invalidateQueries({ queryKey: ["textInstance", textId] });
     }
+  });
+};
+
+export const useDeleteEdition = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ editionId }: { editionId: string; textId: string }) =>
+      deleteEdition(editionId),
+    onSuccess: (_, { editionId, textId }) => {
+      queryClient.removeQueries({ queryKey: ["edition", editionId] });
+      queryClient.invalidateQueries({ queryKey: ["textInstance", textId] });
+      queryClient.invalidateQueries({ queryKey: ["relatedInstances"] });
+    },
   });
 };
 

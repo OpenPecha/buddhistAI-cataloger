@@ -368,6 +368,22 @@ export const updateInstance = async (textId: string, instanceId: string, instanc
   }
 };
 
+export const deleteEdition = async (editionId: string): Promise<void> => {
+  try {
+    const response = await fetch(`${API_URL}/editions/${editionId}`, {
+      method: 'DELETE',
+    });
+    await handleApiResponse(response, {
+      404: 'Edition not found. It may have already been deleted.',
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unable to delete edition. Please check your connection and try again.');
+  }
+};
+
 export type EditionSegmentationLineSpan = { start: number; end: number };
 
 export type EditionSegmentationSegment = { lines: EditionSegmentationLineSpan[] };

@@ -144,9 +144,7 @@ const TextListCard = ({ text }: TextListCardProps) => {
               </>
             )}
           </>
-        ) : (
-          <span className="text-gray-400">0</span>
-        )}
+        ) : null}
       </TableCell>
     </TableRow>
   );

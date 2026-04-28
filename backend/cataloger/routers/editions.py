@@ -12,6 +12,7 @@ from cataloger.controller.openpecha_api.instances import (
     post_edition_segmentations as openpecha_post_edition_segmentations,
     update_instance as openpecha_update_instance,
     update_instance_content as openpecha_update_instance_content,
+    delete_edition as openpecha_delete_edition
 )
 from cataloger.routers.text import UpdateEdition
 
@@ -79,6 +80,10 @@ async def create_edition_segmentations(
 async def get_edition_alignments(edition_id):
     return openpecha_get_edition_alignments(edition_id)    
 
+
+@router.delete("/{edition_id}", status_code=204)
+async def delete_edition(edition_id: str):
+    return openpecha_delete_edition(edition_id)
 
 @router.post("/{edition_id}/alignments", status_code=201)
 async def create_edition_alignments(

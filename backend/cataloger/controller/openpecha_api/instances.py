@@ -410,3 +410,21 @@ def list_related_instances(
         raise HTTPException(status_code=response.status_code, detail=response.text)
     data = response.json()
     return data
+
+
+def delete_edition(edition_id:str):
+    try:
+        r = requests.delete(
+            openpecha_url("editions", edition_id),
+            headers=openpecha_headers()
+        )
+        if r.status_code != 200:
+            raise HTTPException(status_code=r.status_code, detail=r.text)
+        return {"detail": "Edition deleted successfully"}
+    except HTTPException:
+        raise
+    except requests.exceptions.Timeout:
+        raise HTTPException(
+            status_code=504,
+            detail="Request to OpenPecha API timed out",
+        )

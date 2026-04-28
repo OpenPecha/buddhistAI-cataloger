@@ -4,7 +4,7 @@ import type { OpenPechaText } from "@/types/text";
 import { Button } from "@/components/ui/button";
 import { SimplePagination } from "@/components/ui/simple-pagination";
 import { useTranslation } from "react-i18next";
-import {  useNavigate } from "react-router-dom";
+import {  useNavigate, useSearchParams } from "react-router-dom";
 import TextList from "@/components/TextList";
 import TextFilter from "@/components/TextFilter";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,13 +18,13 @@ const TextsPage = () => {
   const [offset, setOffset] = useState(0);
   const LIMIT = 30; // Fixed limit of 30
   const OFFSET_STEP = 30; // Offset increment/decrement step
-  const [param, setParam] = useState({
-    title: "",
-    language: "",
-    author: "",
-    categoryId: "",
-    categoryTitle: "",
-  });
+  const [params,setParams]= useSearchParams();
+  const title = params.get("title") || "";
+  const language = params.get("language") || "";
+  const author = params.get("author") || "";
+  const categoryId = params.get("categoryId") || "";
+  const categoryTitle = params.get("categoryTitle") || "";
+  
   // Search state
   const [foundText, setFoundText] = useState<OpenPechaText | null>(null);
 
@@ -33,17 +33,15 @@ const TextsPage = () => {
   const paginationParams = useMemo(() => ({
     limit: LIMIT,
     offset: offset,
-    title: param.title.trim() || undefined,
-    language: param.language || undefined,
-    author: param.author || undefined,
-    category_id: param.categoryId.trim() || undefined,
-  }), [offset, param.title, param.language, param.author, param.type, param.categoryId]);
+    title: title.trim() || undefined,
+    language: language || undefined,
+    author: author || undefined,
+    category_id: categoryId.trim() || undefined,
+  }), [offset, title, language, author, categoryId]);
 
   const { data: texts = [], isLoading, error, refetch } = useTexts(paginationParams);
 
-  useEffect(() => {
-    setOffset(0);
-  }, [param.categoryId]);
+ 
 
 
 
@@ -70,20 +68,6 @@ const TextsPage = () => {
 
 
 
-
-
-  const clearSearch = () => {
-    setFoundText(null);
-    setParam({
-      title: "",
-      language: "",
-      author: "",
-      categoryId: "",
-      categoryTitle: "",
-    });
-    setOffset(0);
-  };
-
   
   // Determine what to display
   const displayTexts = filteredFoundText ? [filteredFoundText] : texts;
@@ -99,7 +83,7 @@ const TextsPage = () => {
 
       {/* Content */}
       <div className="space-y-4 bg-white ">
-      <TextFilter param={param} setParam={setParam} clearSearch={clearSearch}  />
+      <TextFilter  />
         
      
       
@@ -107,22 +91,6 @@ const TextsPage = () => {
         
 
         {/* Clear Search Button - Show when text is found */}
-        {filteredFoundText && (
-          <div className="bg-white rounded-lg shadow-md p-3 sm:p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">
-                {t('textsPage.showingSearchResult') || 'Showing search result'}
-              </span>
-              <Button
-                onClick={clearSearch}
-                variant="outline"
-                size="sm"
-              >
-                {t('textsPage.clearSearch') || 'Clear Search'}
-              </Button>
-            </div>
-          </div>
-        )}
         {isLoading && (
           <div className="bg-white rounded-lg shadow-md mx-1 sm:mx-0 overflow-hidden">
             <div className="p-4 border-b border-gray-200">

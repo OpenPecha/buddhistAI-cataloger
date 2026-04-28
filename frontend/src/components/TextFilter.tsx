@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { useLanguage } from '@/hooks/useEnum';
@@ -12,52 +11,78 @@ import {
 import { getLanguageLabel } from "@/utils/getLanguageLabel";
 import { Input } from './ui/input';
 import { MultilevelCategorySelector } from '@/components/MultilevelCategorySelector';
+import { Button } from './ui/button';
+import { useSearchParams } from 'react-router-dom';
 
-type Param = {
-  title: string;
-  language: string;
-  author: string;
-  categoryId: string;
-  categoryTitle: string;
-};
-
-type PropTextFilter = {
-  readonly param: Param;
-  readonly setParam: (param: Param) => void;
-  readonly clearSearch: () => void;
-};
-
-
-function TextFilter({ param, setParam, clearSearch }: PropTextFilter) {
+function TextFilter() {
+  const [params, setParams] = useSearchParams();
   const { t } = useTranslation();
-  const [textSearch, setTextSearch] = useState("");
+
+  // Manage param state influenced by URL SearchParams
+  const param = {
+    language: params.get("language") || "",
+    categoryId: params.get("categoryId") || "",
+    categoryTitle: params.get("categoryTitle") || "",
+  };
+
+  // Setters for each filter param
+  const setParam = (newParam: typeof param) => {
+    setParams(params => {
+      if ('language' in newParam) {
+        if (newParam.language) {
+          params.set("language", newParam.language);
+        } else {
+          params.delete("language");
+        }
+      }
+      if ('categoryId' in newParam) {
+        if (newParam.categoryId) {
+          params.set("categoryId", newParam.categoryId);
+        } else {
+          params.delete("categoryId");
+        }
+      }
+      if ('categoryTitle' in newParam) {
+        if (newParam.categoryTitle) {
+          params.set("categoryTitle", newParam.categoryTitle);
+        } else {
+          params.delete("categoryTitle");
+        }
+      }
+      return params;
+    });
+  };
+
+  // Search input
+  const textSearch = params.get("title") || "";
+  const setTextSearch = (value: string) => {
+    setParams(params => {
+      if (value) {
+        params.set("title", value);
+      } else {
+        params.delete("title");
+      }
+      return params;
+    });
+  };
+
+  // Language options
   const { data: LANGUAGE_OPTIONS, isLoading: isLoadingLanguageOptions } = useLanguage();
 
-  // When param.title changes externally, update input value
-  useEffect(() => {
-    setTextSearch(param.title || "");
-  }, [param.title]);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      if (param.title !== textSearch) {
-        setParam({ ...param, title: textSearch });
-      }
-    }, 300);
-    return () => clearTimeout(handler);
-    // Only responds to changes in textSearch
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [textSearch]);
-
-  const hasActiveFilters =
-    textSearch ||
-    param.language ||
-    !!param.categoryId;
-
+  // Clear all filters at once
   const handleClearAll = () => {
-    setTextSearch("");
-    clearSearch();
+    setParams(params => {
+      params.delete("title");
+      params.delete("language");
+      params.delete("categoryId");
+      params.delete("categoryTitle");
+      return params;
+    });
   };
+
+  // Checks
+  const hasActiveFilters =
+    !!textSearch || !!param.language || !!param.categoryId;
 
   return (
     <div className="space-y-3">
@@ -80,7 +105,6 @@ function TextFilter({ param, setParam, clearSearch }: PropTextFilter) {
           <Select
             value={param.language || undefined}
             onValueChange={(value) => {
-              // Use a special "all" value to clear the filter
               if (value === "all") {
                 setParam({ ...param, language: "" });
               } else {
@@ -92,9 +116,12 @@ function TextFilter({ param, setParam, clearSearch }: PropTextFilter) {
               <SelectValue placeholder={t("textForm.selectLanguage") || "Language"} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t("textForm.selectLanguage") || "All Languages"}</SelectItem>
+              <SelectItem value="all">
+                {t("textForm.selectLanguage") || "All Languages"}
+              </SelectItem>
               {!isLoadingLanguageOptions &&
-                LANGUAGE_OPTIONS?.map((lang: { code: string; name: string }) => (
+                Array.isArray(LANGUAGE_OPTIONS) &&
+                LANGUAGE_OPTIONS.map((lang: { code: string; name: string }) => (
                   <SelectItem key={lang.code} value={lang.code}>
                     {lang.name}
                   </SelectItem>
@@ -104,15 +131,16 @@ function TextFilter({ param, setParam, clearSearch }: PropTextFilter) {
         </div>
         {/* Clear All Button */}
         {hasActiveFilters && (
-          <button
-            type="button"
+          <Button
+            variant="outline"
+            size='sm'
             onClick={handleClearAll}
             className="px-4 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 text-gray-700 hover:text-gray-900 transition-colors flex items-center gap-2 whitespace-nowrap"
             title="Clear all filters"
           >
             <X className="w-4 h-4" />
             <span className="hidden sm:inline">Clear</span>
-          </button>
+          </Button>
         )}
       </div>
 
@@ -158,7 +186,7 @@ function TextFilter({ param, setParam, clearSearch }: PropTextFilter) {
               </button>
             </span>
           )}
-     
+
           {param.categoryId && (
             <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-900 rounded-md text-sm">
               {t("category.category")}: {param.categoryTitle || param.categoryId}
@@ -174,7 +202,7 @@ function TextFilter({ param, setParam, clearSearch }: PropTextFilter) {
         </div>
       )}
     </div>
-  )
+  );
 }
 
 export default TextFilter
