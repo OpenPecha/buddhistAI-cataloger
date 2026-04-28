@@ -7,7 +7,7 @@ import { useParams, Link } from "react-router-dom";
 import TextCard from "@/components/TextCard";
 import TextInstanceCard from "@/components/TextInstanceCard";
 import { BreadCrumb } from '@app';
-import type { OpenPechaTextInstanceListItem, RelatedInstance } from "@/types/text";
+import type { Contribution, OpenPechaTextInstanceListItem, RelatedInstance } from "@/types/text";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
@@ -20,7 +20,8 @@ import {
 import { Button } from "@/components/ui/button";
 import PublishOptions from "@/features/cataloger/components/PublishOptions";
 import RelatedInstanceItem from "@/features/cataloger/components/RelatedEditionItem";
-import { Plus } from "lucide-react";
+import { Plus, User } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 function TextInstances() {
   const { t } = useTranslation();
@@ -146,7 +147,6 @@ function TextInstances() {
 
   const title = text?.title?.bo || text?.title?.en || text?.title?.sa || text?.title?.pi|| t('textInstances.untitled');
 
-  const textWithoutAlignmentExists = relatedInstances.some((relatedInstance: RelatedInstance) => !relatedInstance.annotation);
 
  
   const handlePublishToWebuddhist = () => {
@@ -162,26 +162,12 @@ function TextInstances() {
 <div className="sticky top-0 bg-white z-10 flex flex-col gap-4">
 
       <div className="  flex justify-between items-center px-2 sm:px-0">
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 text-center sm:text-left break-words">{title}
-        {textWithoutAlignmentExists && (
-            <div className="flex items-center mt-5">
-                <svg className="w-5 h-5 animate-bounce text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              <div>
-                <h3 className="text-sm font-medium text-yellow-800">
-                Warning: Some texts do not have alignment.
-                </h3>
-                <p className="text-sm text-yellow-700 mt-1">
-                </p>
-              </div>
-            </div>
-        )}
-        </h2>
+        <div className="text-gray-900 text-center sm:text-left flex flex-col gap-2  ">
+          <h3 className="font-monlam text-2xl font-bold">
+          {title} 
+          </h3>
+        </div>
+   
       
           <div className="flex items-center gap-2">
             
@@ -277,6 +263,7 @@ function TextInstances() {
                 </div>
               ) : (
                 <div className="px-2 sm:px-0">
+                  <h4 className="font-monlam-2 text-lg font-bold underline underline-offset-4 ">Related Texts</h4>
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -299,6 +286,8 @@ function TextInstances() {
           )}
         </div>
       )}
+        <Contributors contributors={text?.contributions} />
+
     </div>
   );
 }
@@ -310,3 +299,25 @@ export default TextInstances;
 
 
 
+function Contributors({ contributors }: { contributors: Contribution[] }) {
+ if(!contributors || contributors.length===0) return null
+
+ return (
+  <>
+      <h4 className="font-monlam-2 text-lg font-bold underline underline-offset-4 ">Contributors</h4>
+    <div className="flex items-center gap-2 font-monlam-2 text-sm ">
+      {contributors.map((contribution: Contribution) => (
+        
+        <span key={contribution.person_id} className="flex items-center gap-2 font-monlam text-base">
+     <User className="w-4 h-4" />
+     
+          {contribution.person_name?.bo || contribution.person_name?.en || contribution.person_name?.sa || contribution.person_name?.pi} 
+          <Badge className="capitalize font-mono">
+            {contribution.role}
+            </Badge>
+          </span>
+      ))}
+    </div>
+      </>
+  );
+}

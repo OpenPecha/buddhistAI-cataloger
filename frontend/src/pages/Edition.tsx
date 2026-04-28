@@ -1,4 +1,4 @@
-import { useInstance } from '@/hooks/useTexts';
+import { useEdition } from '@/hooks/useTexts';
 import { useParams } from 'react-router-dom';
 import InstanceCard from '../components/InstanceCard';
 import { BreadCrumb } from '@app';
@@ -13,7 +13,7 @@ function Edition() {
     isLoading,
     error,
     refetch
-  } = useInstance(edition_id || '');
+  } = useEdition(edition_id || '');
 
   if (isLoading) {
     return (

@@ -115,7 +115,7 @@ export const useTextInstances = (textId: string | null) => {
 /**
  * Hook for fetching a specific instance
  */
-export const useInstance = (instanceId: string | null) => {
+export const useEdition = (instanceId: string | null) => {
   return useQuery({
     queryKey: textKeys.edition(instanceId || "instanceId"),
     queryFn: () => instanceId ? fetchInstance(instanceId) : null,
@@ -153,7 +153,7 @@ export const useTextFromInstance = (
   instanceId: string | null,
   options: TextRetrievalOptions = {}
 ) => {
-  const { data: instanceData, isLoading: isLoadingInstance } = useInstance(instanceId);
+  const { data: instanceData, isLoading: isLoadingInstance } = useEdition(instanceId);
   
   // Get segmentation annotation ID from instance
   const segmentationAnnotationId = instanceData?.annotations && typeof instanceData.annotations === 'object' 

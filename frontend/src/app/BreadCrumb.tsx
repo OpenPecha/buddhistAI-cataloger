@@ -10,6 +10,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { useTranslation } from 'react-i18next';
+import { useEdition, useText } from '@/hooks/useTexts';
 
 interface BreadcrumbItemType {
   label: string;
@@ -28,8 +29,6 @@ interface BreadCrumbProps {
 const BreadCrumb: React.FC<BreadCrumbProps> = ({
   items,
   className = '',
-  textname,
-  instancename,
   personname,
 }) => {
   const { t, i18n } = useTranslation();
@@ -37,6 +36,13 @@ const BreadCrumb: React.FC<BreadCrumbProps> = ({
   const params = useParams();
   const currentLanguage = i18n.language;
   const isTibetan = currentLanguage === 'bo';
+  const text_id = params.text_id;
+  const edition_id = params.edition_id;
+  const { data: text, isFetched: isTextFetched } = useText(text_id || '');
+  const { data: edition, isFetched: isEditionFetched } = useEdition(edition_id || '');
+  const textname = text?.title.tib || text?.title.bo || text?.title.en || "Content";
+
+  const editiontype=edition?.metadata.type;
 
   const generateBreadcrumbs = (): BreadcrumbItemType[] => {
     const pathSegments = location.pathname.split('/').filter(Boolean);
@@ -49,19 +55,19 @@ const BreadCrumb: React.FC<BreadCrumbProps> = ({
         icon: <Book className="w-4 h-4" />,
       });
 
-      if (params.text_id && textname) {
+      if (textname && text_id) {
         breadcrumbs.push({
           label: textname,
           href: `/texts/${params.text_id}/editions`,
         });
-        if (pathSegments.includes('editions')) {
-          if (params.edition_id && instancename) {
-            breadcrumbs.push({
-              label: instancename,
-              icon: <FileText className="w-4 h-4" />,
-            });
-          }
-        }
+      
+      }
+      if (params.edition_id &&editiontype) {
+        breadcrumbs.push({
+          label: editiontype,
+          icon: <FileText className="w-4 h-4" />,
+        });
+     
       }
     } else if (pathSegments.includes('persons') && personname) {
       breadcrumbs.push({

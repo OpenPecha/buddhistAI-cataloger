@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTexts, useInstance, useTextInstances } from '@/hooks/useTextData';
+import { useTexts, useEdition, useTextInstances } from '@/hooks/useTextData';
 import { useTextSelectionStore } from '../../../stores/textSelectionStore';
 import { PlusCircle, RotateCcw } from 'lucide-react';
 import { CATALOGER_URL } from '@/config';
@@ -21,7 +21,7 @@ function SourceSelectionPanel() {
   // React Query hooks
   const { data: availableTexts = [], isLoading: isLoadingTexts, error: textsError } = useTexts();
   const { data: instancesData, isLoading: isLoadingInstances, error: instancesError } = useTextInstances(selectedTextId);
-  const { isLoading: isLoadingInstance, error: instanceError } = useInstance(selectedInstanceId);
+  const { isLoading: isLoadingInstance, error: instanceError } = useEdition(selectedInstanceId);
   
   // Available instances for source editor
   const availableInstances = React.useMemo(() => {

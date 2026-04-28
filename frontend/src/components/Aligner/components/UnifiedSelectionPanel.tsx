@@ -1,5 +1,5 @@
 import React, { useCallback } from "react";
-import { useInstance, useTextInstances, useTextTitleSearch } from "../../../hooks/useTextData";
+import { useEdition, useTextInstances, useTextTitleSearch } from "../../../hooks/useTextData";
 import { useTextSelectionStore } from "../../../stores/textSelectionStore";
 import { useSearchParams } from "react-router-dom";
 import { CATALOGER_URL } from "../../../config";
@@ -89,7 +89,7 @@ function UnifiedSelectionPanel() {
     data: instanceData,
     isLoading: isLoadingInstance,
     error: instanceError,
-  } = useInstance(selectedInstanceId);
+  } = useEdition(selectedInstanceId);
 
   // React Query hooks for target
   const { data: relatedInstances = [] } = useRelatedInstances(sourceInstanceId);

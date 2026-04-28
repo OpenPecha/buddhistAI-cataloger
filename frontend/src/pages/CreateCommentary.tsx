@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { useBdrcSearch } from '@/hooks/useBdrcSearch';
 import { MultilevelCategorySelector } from '@/components/MultilevelCategorySelector';
 import type { Person } from '@/types/person';
-import { useInstance, useText } from '@/hooks/useTexts';
+import { useEdition, useText } from '@/hooks/useTexts';
 import type { LicenseType, OpenPechaTextInstance } from '@/types/text';
 import { useBibliography } from '@/context/BibliographyContext';
 import { useBibliographyAPI } from '@/hooks/useBibliographyAPI';
@@ -34,7 +34,7 @@ const CreateCommentary = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Fetch instance data
-  const { data: instance, isLoading: instanceLoading } = useInstance(edition_id || '');
+  const { data: instance, isLoading: instanceLoading } = useEdition(edition_id || '');
   const { data: text,isFetched: isTextFetched } = useText(text_id || '');
   const text_title = text?.title.tib || text?.title.bo || text?.title.en || "Content";
   // Form state

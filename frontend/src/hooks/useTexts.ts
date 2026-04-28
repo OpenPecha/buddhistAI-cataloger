@@ -61,7 +61,7 @@ export const useTextInstance = (id: string) => {
   });
 };
 
-export const useInstance = (id: string) => {
+export const useEdition = (id: string) => {
   return useQuery({
     queryKey: ["edition", id],
     queryFn: () => fetchInstance(id),

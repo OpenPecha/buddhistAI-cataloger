@@ -5,7 +5,7 @@ import { AlertCircle, X,  FileText, Code, ArrowLeft, Loader2 } from "lucide-reac
 import type { InstanceCreationFormRef } from "@/components/InstanceCreationForm";
 import {
   useText,
-  useInstance,
+  useEdition,
   useAnnnotation,
   usePostEditionSegmentations,
   useUpdateEditionContent,
@@ -73,7 +73,7 @@ const UpdateAnnotation = () => {
 
   // Fetch text and instance data
   const { data: text, isLoading: textLoading ,isRefetching: textRefetching} = useText(text_id || "");
-  const { data: instance, isLoading: instanceLoading ,isRefetching: instanceRefetching} = useInstance(edition_id || "");
+  const { data: instance, isLoading: instanceLoading ,isRefetching: instanceRefetching} = useEdition(edition_id || "");
 
 
   // Find segmentation annotation ID from instance.annotations array

@@ -9,7 +9,7 @@ import { calculateAnnotations } from '@/utils/annotationCalculator';
 import { useTranslation } from 'react-i18next';
 import { useBdrcSearch } from '@/hooks/useBdrcSearch';
 import type { Person } from '@/types/person';
-import { useInstance, useText } from '@/hooks/useTexts';
+import { useEdition, useText } from '@/hooks/useTexts';
 import type { LicenseType } from '@/types/text';
 import { useBibliography } from '@/context/BibliographyContext';
 import { useBibliographyAPI } from '@/hooks/useBibliographyAPI';
@@ -31,7 +31,7 @@ const CreateTranslation = () => {
   const { user } = useAuth0();
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Fetch instance data
-  const { data: instance, isLoading: instanceLoading } = useInstance(edition_id || '');
+  const { data: instance, isLoading: instanceLoading } = useEdition(edition_id || '');
 
   // Form state
   const [language, setLanguage] = useState('');

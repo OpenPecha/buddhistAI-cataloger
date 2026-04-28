@@ -118,7 +118,7 @@ function TargetSelectionPanel() {
 
   
   // React Query hooks - Disabled automatic instance fetching
-  // const { data: instanceData, isLoading: isLoadingInstance, error: instanceError } = useInstance(selectedInstanceId);
+  // const { data: instanceData, isLoading: isLoadingInstance, error: instanceError } = useEdition(selectedInstanceId);
   
   // Get related instances based on source selection
   const { data: relatedInstances = [], isLoading: isLoadingRelatedInstances, error: relatedInstancesError } = useRelatedInstances(
