@@ -28,6 +28,7 @@ def latest_rejection_row_per_segment_subquery(db: Session):
         db.query(
             SegmentRejection.segment_id.label("segment_id"),
             SegmentRejection.resolved.label("resolved"),
+            SegmentRejection.created_at.label("latest_rejection_at"),
             rn,
         ).subquery()
     )

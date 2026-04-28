@@ -346,6 +346,12 @@ class AnnotatorPerformanceRow(BaseModel):
             "Approved segments on this user's documents where reviewer set title or author at approval"
         ),
     )
+    segments_approved: int = Field(
+        0,
+        description=(
+            "Segments with status approved on this user's documents (same document date scope as segment_count)"
+        ),
+    )
 
 
 class VolumeBatchStatusCounts(BaseModel):

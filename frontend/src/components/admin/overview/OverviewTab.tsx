@@ -58,6 +58,13 @@ const EMERALD = '#0f766e'
 const VIOLET = '#6b21a8'
 const RED = '#b91c1c'
 const ORANGE = '#c2410c'
+/** Dark blue for approved (reviewed) segment counts on the quality chart. */
+const BLUE_DARK = '#1e3a8a'
+
+/** Horizontal space per annotator on the quality vertical bar chart (scrolls when wider than the card). */
+const ANNOTATOR_QUALITY_VBAR_PX_PER_USER = 56
+const ANNOTATOR_QUALITY_VBAR_MIN_WIDTH = 640
+const ANNOTATOR_QUALITY_VBAR_HEIGHT = 420
 
 const CHART_OPTIONS = {
   responsive: true,
@@ -205,25 +212,28 @@ function annotatorPerUserLineOptions(
   }
 }
 
-/** Grouped horizontal bars: rejection rate vs reviewer title/author corrections (% of each user's segments). */
-const ANNOTATOR_QUALITY_SIGNALS_HBAR_OPTIONS: ChartOptions<'bar'> = {
-  indexAxis: 'y',
+/** Grouped vertical bars: annotators on X, rates (left Y) and counts (right Y); scroll horizontally when many users. */
+const ANNOTATOR_QUALITY_SIGNALS_VBAR_OPTIONS: ChartOptions<'bar'> = {
   responsive: true,
   maintainAspectRatio: false,
+  interaction: {
+    mode: 'index',
+    intersect: false,
+  },
   datasets: {
     bar: {
-      categoryPercentage: 0.72,
-      barPercentage: 0.88,
+      categoryPercentage: 0.68,
+      barPercentage: 0.72,
     },
   },
   plugins: {
     legend: {
       display: true,
-      position: 'bottom',
+      position: 'top',
       labels: {
         boxWidth: 10,
         boxHeight: 10,
-        padding: 14,
+        padding: 12,
         font: { size: 11 },
         color: MUTED,
       },
@@ -233,32 +243,52 @@ const ANNOTATOR_QUALITY_SIGNALS_HBAR_OPTIONS: ChartOptions<'bar'> = {
       callbacks: {
         label: (tooltipItem: TooltipItem<'bar'>) => {
           const i = tooltipItem.dataIndex
-          const raw = tooltipItem.parsed.x
+          const raw = tooltipItem.parsed.y
           const pct = typeof raw === 'number' ? raw.toFixed(1) : String(raw)
           if (tooltipItem.datasetIndex === 0) {
             const meta = (
-              tooltipItem.dataset as { metaReject?: { events: number; segments: number }[] }
+              tooltipItem.dataset as { metaReject?: { events: number; approved: number }[] }
             ).metaReject?.[i]
-            if (!meta) return `Rejection : ${pct}% of segments`
-            return `${meta.events.toLocaleString()} rejection  / ${meta.segments.toLocaleString()} segments (${pct}%)`
+            if (!meta) return `Rejection: ${pct}% of approved`
+            return `${meta.events.toLocaleString()} rejections / ${meta.approved.toLocaleString()} approved (${pct}%)`
           }
           if (tooltipItem.datasetIndex === 1) {
             const meta = (
-              tooltipItem.dataset as { metaEdits?: { edits: number; segments: number }[] }
+              tooltipItem.dataset as { metaEdits?: { edits: number; approved: number }[] }
             ).metaEdits?.[i]
-            if (!meta) return `Corrections at review: ${pct}% of segments`
-            return `${meta.edits.toLocaleString()} corrected at review / ${meta.segments.toLocaleString()} segments (${pct}%)`
+            if (!meta) return `Corrections at review: ${pct}% of approved`
+            return `${meta.edits.toLocaleString()} corrections / ${meta.approved.toLocaleString()} approved (${pct}%)`
           }
           const count = typeof raw === 'number' ? raw.toLocaleString() : String(raw)
-          return `Total segments in range: ${count}`
+          if (tooltipItem.datasetIndex === 2) {
+            return `Total segments in range: ${count}`
+          }
+          return `Approved (reviewed): ${count}`
         },
       },
     },
   },
   scales: {
     x: {
+      grid: { display: false },
+      ticks: {
+        font: { size: 10 },
+        color: INK,
+        maxRotation: 48,
+        minRotation: 24,
+        autoSkip: false,
+      },
+      title: {
+        display: true,
+        text: 'Annotator',
+        color: MUTED,
+        font: { size: 10 },
+        padding: { top: 6 },
+      },
+    },
+    y: {
+      position: 'left',
       beginAtZero: true,
-      suggestedMax: 100,
       grid: { color: GRID },
       ticks: {
         font: { size: 11 },
@@ -267,36 +297,28 @@ const ANNOTATOR_QUALITY_SIGNALS_HBAR_OPTIONS: ChartOptions<'bar'> = {
       },
       title: {
         display: true,
-        text: 'Rate (% of own segments)',
+        text: 'Rate (% of approved segments)',
         color: MUTED,
-        font: { size: 10 },
-        padding: { top: 4 },
-      },
-    },
-    x1: {
-      type: 'linear',
-      position: 'top',
-      beginAtZero: true,
-      grid: { drawOnChartArea: false },
-      ticks: {
-        font: { size: 11 },
-        color: TEAL,
-        maxTicksLimit: 8,
-      },
-      title: {
-        display: true,
-        text: 'Total segments (count)',
-        color: TEAL,
         font: { size: 10 },
         padding: { bottom: 4 },
       },
     },
-    y: {
-      grid: { display: false },
+    y1: {
+      type: 'linear',
+      position: 'right',
+      beginAtZero: true,
+      grid: { drawOnChartArea: false },
       ticks: {
         font: { size: 11 },
-        color: INK,
-        autoSkip: false,
+        color: MUTED,
+        maxTicksLimit: 9,
+      },
+      title: {
+        display: true,
+        text: 'Segment counts',
+        color: MUTED,
+        font: { size: 10 },
+        padding: { bottom: 4 },
       },
     },
   },
@@ -675,12 +697,12 @@ function OverviewTab({
       .map((r) => {
         const events = r.rejection_event_count ?? 0
         const edits = r.segments_reviewer_corrected_title_or_author ?? 0
+        const approved = r.segments_approved ?? 0
         const rejectionPct =
-          r.rejection_events_pct_of_segments ??
-          (r.segment_count > 0 ? Math.round((events / r.segment_count) * 1000) / 10 : 0)
+          approved > 0 ? Math.round((events / approved) * 1000) / 10 : 0
         const editsPct =
-          r.segment_count > 0 ? Math.round((edits / r.segment_count) * 1000) / 10 : 0
-        return { ...r, events, edits, rejectionPct, editsPct }
+          approved > 0 ? Math.round((edits / approved) * 1000) / 10 : 0
+        return { ...r, events, edits, approved, rejectionPct, editsPct }
       })
       .sort((a, b) => {
         const ta = a.events + a.edits
@@ -693,26 +715,33 @@ function OverviewTab({
       labels: rows.map((r) => annotatorDisplayName(r.user_id, annotators)),
       datasets: [
         {
-          label: 'Rejection (% of segments)',
-          xAxisID: 'x',
+          label: 'Rejection (% of approved)',
+          yAxisID: 'y',
           data: rows.map((r) => r.rejectionPct),
-          metaReject: rows.map((r) => ({ events: r.events, segments: r.segment_count })),
+          metaReject: rows.map((r) => ({ events: r.events, approved: r.approved })),
           backgroundColor: RED,
           borderRadius: 6,
         },
         {
-          label: 'Corrections at review (% of segments)',
-          xAxisID: 'x',
+          label: 'Corrections at review (% of approved)',
+          yAxisID: 'y',
           data: rows.map((r) => r.editsPct),
-          metaEdits: rows.map((r) => ({ edits: r.edits, segments: r.segment_count })),
+          metaEdits: rows.map((r) => ({ edits: r.edits, approved: r.approved })),
           backgroundColor: INK,
           borderRadius: 6,
         },
         {
           label: 'Total segments (in range)',
-          xAxisID: 'x1',
+          yAxisID: 'y1',
           data: rows.map((r) => r.segment_count),
           backgroundColor: TEAL,
+          borderRadius: 6,
+        },
+        {
+          label: 'Approved (reviewed)',
+          yAxisID: 'y1',
+          data: rows.map((r) => r.approved),
+          backgroundColor: BLUE_DARK,
           borderRadius: 6,
         },
       ],
@@ -721,6 +750,7 @@ function OverviewTab({
       key: r.user_id ?? '__none__',
       name: annotatorDisplayName(r.user_id, annotators),
       segments: r.segment_count,
+      segmentsApproved: r.approved,
       rejectionEvents: r.events,
       rejectionPct: r.rejectionPct,
       correctionEdits: r.edits,
@@ -728,6 +758,18 @@ function OverviewTab({
     }))
     return { chartData, tableRows }
   }, [stats, annotators, dashboardUserFilter])
+
+  const annotatorQualityVBarLayout = useMemo(() => {
+    if (!annotatorQualitySignals) return null
+    const n = annotatorQualitySignals.chartData.labels.length
+    return {
+      chartMinWidthPx: Math.max(
+        ANNOTATOR_QUALITY_VBAR_MIN_WIDTH,
+        n * ANNOTATOR_QUALITY_VBAR_PX_PER_USER,
+      ),
+      height: ANNOTATOR_QUALITY_VBAR_HEIGHT,
+    }
+  }, [annotatorQualitySignals])
 
   const reviewerActivityRows = useMemo(() => {
     const raw = stats?.reviewer_segment_activity ?? []
@@ -1298,75 +1340,96 @@ function OverviewTab({
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
               Annotator quality: rejections & reviewer corrections
             </p>
-           
+            {annotatorQualitySignals && annotatorQualitySignals.tableRows.length > 1 ? (
+              <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+                All annotators in one view; scroll sideways to compare. Left axis: rejection and
+                correction rates as a percent of approved segments; right axis: segment counts.
+              </p>
+            ) : null}
           </div>
           {annotatorQualitySignals ? (
-            <div
-              className="flex shrink-0 rounded-lg border border-stone-200/90 bg-stone-50/90 p-0.5 shadow-sm"
-              role="tablist"
-              aria-label="Annotator quality: chart or table"
-            >
-              <button
-                type="button"
-                role="tab"
-                aria-selected={annotatorQualityView === 'chart'}
-                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  annotatorQualityView === 'chart'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:bg-stone-100/90 hover:text-foreground'
-                }`}
-                onClick={() => setAnnotatorQualityView('chart')}
+            <div className="flex w-full shrink-0 flex-col items-stretch gap-2 sm:w-auto sm:items-end">
+              <div
+                className="flex shrink-0 rounded-lg border border-stone-200/90 bg-stone-50/90 p-0.5 shadow-sm"
+                role="tablist"
+                aria-label="Annotator quality: chart or table"
               >
-                <BarChart3 className="h-3.5 w-3.5 opacity-90" aria-hidden />
-                Chart
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={annotatorQualityView === 'table'}
-                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  annotatorQualityView === 'table'
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:bg-stone-100/90 hover:text-foreground'
-                }`}
-                onClick={() => setAnnotatorQualityView('table')}
-              >
-                <Table2 className="h-3.5 w-3.5 opacity-90" aria-hidden />
-                Table
-              </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={annotatorQualityView === 'chart'}
+                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    annotatorQualityView === 'chart'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:bg-stone-100/90 hover:text-foreground'
+                  }`}
+                  onClick={() => setAnnotatorQualityView('chart')}
+                >
+                  <BarChart3 className="h-3.5 w-3.5 opacity-90" aria-hidden />
+                  Chart
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={annotatorQualityView === 'table'}
+                  className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    annotatorQualityView === 'table'
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'text-muted-foreground hover:bg-stone-100/90 hover:text-foreground'
+                  }`}
+                  onClick={() => setAnnotatorQualityView('table')}
+                >
+                  <Table2 className="h-3.5 w-3.5 opacity-90" aria-hidden />
+                  Table
+                </button>
+              </div>
             </div>
           ) : null}
         </div>
         {annotatorQualitySignals ? (
-          annotatorQualityView === 'chart' ? (
-            <div
-              className="mt-5 min-h-64 w-full"
-              style={{
-                height: Math.min(
-                  720,
-                  Math.max(280, (annotatorQualitySignals.chartData.labels.length ?? 0) * 52),
-                ),
-              }}
-            >
-              <Bar
-                data={annotatorQualitySignals.chartData}
-                options={ANNOTATOR_QUALITY_SIGNALS_HBAR_OPTIONS}
-              />
+          annotatorQualityView === 'chart' && annotatorQualityVBarLayout ? (
+            <div className="mt-5 w-full overflow-x-auto overflow-y-visible overscroll-x-contain pb-1 [-webkit-overflow-scrolling:touch]">
+              <div
+                className="min-h-[22rem] w-full min-w-0"
+                style={{
+                  height: annotatorQualityVBarLayout.height,
+                  minWidth: `max(100%, ${annotatorQualityVBarLayout.chartMinWidthPx}px)`,
+                }}
+              >
+                <Bar
+                  data={annotatorQualitySignals.chartData}
+                  options={ANNOTATOR_QUALITY_SIGNALS_VBAR_OPTIONS}
+                />
+              </div>
             </div>
-          ) : (
+          ) : annotatorQualityView === 'table' ? (
             <div className="mt-5 max-h-[min(720px,70vh)] overflow-y-auto overflow-x-auto rounded-lg border border-stone-200/80 bg-white/60">
               <table className="w-full min-w-[36rem] border-collapse text-sm">
                 <caption className="sr-only">
-                  Annotator quality: rejection events and reviewer corrections with full names
+                  Annotator quality: Rejection % and Corrections % use approved segment count as
+                  denominator. Full names and counts.
                 </caption>
                 <thead className="sticky top-0 z-[1] shadow-[0_1px_0_0_rgb(231_229_228)]">
                   <tr className="border-b border-stone-200 bg-stone-50/95 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur-sm">
                     <th className="px-4 py-3">Annotator</th>
                     <th className="px-4 py-3 text-right tabular-nums">Segments</th>
+                    <th className="px-4 py-3 text-right tabular-nums" style={{ color: BLUE_DARK }}>
+                      Approved
+                    </th>
                     <th className="px-4 py-3 text-right tabular-nums">Rejection</th>
-                    <th className="px-4 py-3 text-right tabular-nums">Rejection %</th>
+                    <th
+                      className="px-4 py-3 text-right tabular-nums"
+                      title="Percent of approved segments in range (rejection events ÷ approved)"
+                    >
+                      Rejection %
+                    </th>
                     <th className="px-4 py-3 text-right tabular-nums">Corrections at review</th>
-                    <th className="px-4 py-3 text-right tabular-nums">Corrections %</th>
+                    <th
+                      className="px-4 py-3 text-right tabular-nums"
+                      title="Percent of approved segments in range (corrections ÷ approved)"
+                    >
+                      Corrections %
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1380,6 +1443,12 @@ function OverviewTab({
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
                         {row.segments.toLocaleString()}
+                      </td>
+                      <td
+                        className="px-4 py-2.5 text-right tabular-nums font-medium"
+                        style={{ color: BLUE_DARK }}
+                      >
+                        {row.segmentsApproved.toLocaleString()}
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
                         {row.rejectionEvents.toLocaleString()}
@@ -1398,7 +1467,7 @@ function OverviewTab({
                 </tbody>
               </table>
             </div>
-          )
+          ) : null
         ) : (
           <div className="mt-5 flex min-h-48 items-center justify-center rounded-lg border border-dashed border-stone-200/80 bg-stone-50/40 text-sm text-muted-foreground">
             No annotator performance data in this date range.

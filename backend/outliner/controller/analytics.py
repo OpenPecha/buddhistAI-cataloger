@@ -13,8 +13,12 @@ def get_annotator_performance_breakdown(
     end_date: Optional[datetime] = None,
 ) -> List[Dict[str, Any]]:
     """
-    Per-annotator metrics for documents in the date range (ignores user_id filter).
-    Scoped by document.created_at. user_id None = unassigned documents.
+    Per-annotator metrics for documents whose ``created_at`` falls in the date range.
+
+    When dates are set, outcome metrics (rejections, approvals, review activity, corrections)
+    are restricted to segment/rejection timestamps inside the same window so the range is not
+    ignored for segment-level counts. Total ``segment_count`` remains all segments on those
+    documents (not time-sliced).
     """
     return outliner_repo.get_annotator_performance_breakdown(
         db, start_date=start_date, end_date=end_date

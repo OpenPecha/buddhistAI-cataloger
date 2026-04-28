@@ -14,6 +14,69 @@ from outliner.repository.segment_rejection import latest_rejection_row_per_segme
 _REVIEWER_WORK_STATS_ROLES = frozenset({"reviewer", "admin"})
 
 
+def _segment_review_activity_time():
+    """When review landed (approved/checked); ``updated_at`` fallback for legacy rows."""
+    return func.coalesce(OutlinerSegment.reviewed_at, OutlinerSegment.updated_at)
+
+
+def _append_segment_activity_date_window(
+    clauses: List[Any],
+    start_date: Optional[datetime],
+    end_date: Optional[datetime],
+) -> None:
+    """Restrict rows to review/approval activity inside the dashboard date range."""
+    if start_date is None and end_date is None:
+        return
+    t = _segment_review_activity_time()
+    if start_date is not None:
+        clauses.append(t >= start_date)
+    if end_date is not None:
+        clauses.append(t <= end_date)
+
+
+def _append_rejection_event_date_window(
+    clauses: List[Any],
+    start_date: Optional[datetime],
+    end_date: Optional[datetime],
+) -> None:
+    if start_date is None and end_date is None:
+        return
+    if start_date is not None:
+        clauses.append(SegmentRejection.created_at >= start_date)
+    if end_date is not None:
+        clauses.append(SegmentRejection.created_at <= end_date)
+
+
+def _append_latest_rejection_date_window(
+    clauses: List[Any],
+    latest_rej_sq: Any,
+    start_date: Optional[datetime],
+    end_date: Optional[datetime],
+) -> None:
+    """Latest unresolved rejection must have been filed in the dashboard window."""
+    if start_date is None and end_date is None:
+        return
+    if start_date is not None:
+        clauses.append(latest_rej_sq.c.latest_rejection_at >= start_date)
+    if end_date is not None:
+        clauses.append(latest_rej_sq.c.latest_rejection_at <= end_date)
+
+
+def _apply_segment_activity_window_to_query(
+    q: Any,
+    start_date: Optional[datetime],
+    end_date: Optional[datetime],
+) -> Any:
+    if start_date is None and end_date is None:
+        return q
+    t = _segment_review_activity_time()
+    if start_date is not None:
+        q = q.filter(t >= start_date)
+    if end_date is not None:
+        q = q.filter(t <= end_date)
+    return q
+
+
 def _is_reviewer_or_admin_role(role: Optional[str]) -> bool:
     """Same normalization as ``outliner.deps.user_may_record_segment_reviewed_by`` role check."""
     norm = (role or "user").strip().lower()
@@ -28,18 +91,14 @@ def get_reviewer_segment_activity(
     """
     Per-reviewer counts for segments, scoped to non-deleted documents.
 
-    When ``start_date`` / ``end_date`` are set, only documents whose ``created_at`` falls in
-    that range are included (same as dashboard ``segments_recorded_as_reviewer`` / annotator
-    performance breakdown).
+    Documents are limited by ``created_at`` when dates are set. Segment/rejection metrics are
+    further limited to activity in that window (see annotator performance breakdown).
 
-    ``segments_recorded_as_reviewer``: checked/approved segments where ``reviewed_by_id`` is set
-    (reviewer/admin who moved the segment into review).
+    ``segments_recorded_as_reviewer``: checked/approved segments where ``reviewed_by_id`` is set.
 
-    ``reviewer_title_author_edits``: approved segments with reviewer title/author that actually
-    differ from ``title`` / ``author`` (trimmed), same ``reviewed_by_id`` (best-effort attribution).
+    ``reviewer_title_author_edits``: approved segments with real title/author corrections.
 
-    ``reviewer_rejection_count``: rows in ``segment_rejections`` with ``reviewer_id`` set, on
-    segments in scoped documents (same join and document date filter as annotator performance).
+    ``reviewer_rejection_count``: rejection rows filed in range (when dates set).
     """
     doc_filters = [
         (OutlinerDocument.status != "deleted") | (OutlinerDocument.status.is_(None))
@@ -55,14 +114,16 @@ def get_reviewer_segment_activity(
         OutlinerSegment.status == "approved",
     )
 
+    recorded_clauses: List[Any] = [
+        doc_scope,
+        reviewed_when,
+        OutlinerSegment.reviewed_by_id.isnot(None),
+    ]
+    _append_segment_activity_date_window(recorded_clauses, start_date, end_date)
     recorded_rows = (
         db.query(OutlinerSegment.reviewed_by_id, func.count(OutlinerSegment.id))
         .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
-        .filter(
-            doc_scope,
-            reviewed_when,
-            OutlinerSegment.reviewed_by_id.isnot(None),
-        )
+        .filter(and_(*recorded_clauses))
         .group_by(OutlinerSegment.reviewed_by_id)
         .all()
     )
@@ -88,15 +149,17 @@ def get_reviewer_segment_activity(
         func.length(ra_trim) > 0,
         ra_trim != au_trim,
     )
+    corr_clauses: List[Any] = [
+        doc_scope,
+        OutlinerSegment.status == "approved",
+        OutlinerSegment.reviewed_by_id.isnot(None),
+        or_(title_is_real_correction, author_is_real_correction),
+    ]
+    _append_segment_activity_date_window(corr_clauses, start_date, end_date)
     correction_rows = (
         db.query(OutlinerSegment.reviewed_by_id, func.count(OutlinerSegment.id))
         .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
-        .filter(
-            doc_scope,
-            OutlinerSegment.status == "approved",
-            OutlinerSegment.reviewed_by_id.isnot(None),
-            or_(title_is_real_correction, author_is_real_correction),
-        )
+        .filter(and_(*corr_clauses))
         .group_by(OutlinerSegment.reviewed_by_id)
         .all()
     )
@@ -104,11 +167,13 @@ def get_reviewer_segment_activity(
         str(rid): int(cnt) for rid, cnt in correction_rows if rid is not None
     }
 
+    rr_clauses: List[Any] = [doc_scope, SegmentRejection.reviewer_id.isnot(None)]
+    _append_rejection_event_date_window(rr_clauses, start_date, end_date)
     reviewer_rej_rows = (
         db.query(SegmentRejection.reviewer_id, func.count(SegmentRejection.id))
         .join(OutlinerSegment, SegmentRejection.segment_id == OutlinerSegment.id)
         .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
-        .filter(doc_scope, SegmentRejection.reviewer_id.isnot(None))
+        .filter(and_(*rr_clauses))
         .group_by(SegmentRejection.reviewer_id)
         .all()
     )
@@ -199,21 +264,32 @@ def get_annotator_performance_breakdown(
         .group_by(OutlinerDocument.user_id)
         .all()
     )
+    approved_seg_clauses: List[Any] = [
+        doc_scope,
+        OutlinerSegment.status == "approved",
+    ]
+    _append_segment_activity_date_window(approved_seg_clauses, start_date, end_date)
+    approved_seg_rows = (
+        db.query(OutlinerDocument.user_id, func.count(OutlinerSegment.id))
+        .join(OutlinerSegment, OutlinerSegment.document_id == OutlinerDocument.id)
+        .filter(and_(*approved_seg_clauses))
+        .group_by(OutlinerDocument.user_id)
+        .all()
+    )
     latest_rej_sq = latest_rejection_row_per_segment_subquery(db)
+    rej_join: List[Any] = [
+        OutlinerSegment.id == latest_rej_sq.c.segment_id,
+        latest_rej_sq.c.rn == 1,
+        or_(
+            latest_rej_sq.c.resolved.is_(False),
+            latest_rej_sq.c.resolved.is_(None),
+        ),
+    ]
+    _append_latest_rejection_date_window(rej_join, latest_rej_sq, start_date, end_date)
     rej_rows = (
         db.query(OutlinerDocument.user_id, func.count(OutlinerSegment.id))
         .join(OutlinerSegment, OutlinerSegment.document_id == OutlinerDocument.id)
-        .join(
-            latest_rej_sq,
-            and_(
-                OutlinerSegment.id == latest_rej_sq.c.segment_id,
-                latest_rej_sq.c.rn == 1,
-                or_(
-                    latest_rej_sq.c.resolved.is_(False),
-                    latest_rej_sq.c.resolved.is_(None),
-                ),
-            ),
-        )
+        .join(latest_rej_sq, and_(*rej_join))
         .filter(doc_scope)
         .filter(OutlinerSegment.status == "rejected")
         .group_by(OutlinerDocument.user_id)
@@ -225,36 +301,42 @@ def get_annotator_performance_breakdown(
         OutlinerSegment.status == "approved",
     )
 
+    review_clauses: List[Any] = [
+        doc_scope,
+        OutlinerSegment.reviewed_by_id.isnot(None),
+        reviewed_when,
+    ]
+    _append_segment_activity_date_window(review_clauses, start_date, end_date)
     review_rows = (
         db.query(OutlinerSegment.reviewed_by_id, func.count(OutlinerSegment.id))
         .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
-        .filter(
-            doc_scope,
-            OutlinerSegment.reviewed_by_id.isnot(None),
-            reviewed_when,
-        )
+        .filter(and_(*review_clauses))
         .group_by(OutlinerSegment.reviewed_by_id)
         .all()
     )
 
+    self_clauses: List[Any] = [
+        doc_scope,
+        OutlinerSegment.reviewed_by_id.isnot(None),
+        OutlinerDocument.user_id == OutlinerSegment.reviewed_by_id,
+        reviewed_when,
+    ]
+    _append_segment_activity_date_window(self_clauses, start_date, end_date)
     self_review_rows = (
         db.query(OutlinerSegment.reviewed_by_id, func.count(OutlinerSegment.id))
         .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
-        .filter(
-            doc_scope,
-            OutlinerSegment.reviewed_by_id.isnot(None),
-            OutlinerDocument.user_id == OutlinerSegment.reviewed_by_id,
-            reviewed_when,
-        )
+        .filter(and_(*self_clauses))
         .group_by(OutlinerSegment.reviewed_by_id)
         .all()
     )
 
+    reviewer_rej_clauses: List[Any] = [doc_scope, SegmentRejection.reviewer_id.isnot(None)]
+    _append_rejection_event_date_window(reviewer_rej_clauses, start_date, end_date)
     reviewer_rej_rows = (
         db.query(SegmentRejection.reviewer_id, func.count(SegmentRejection.id))
         .join(OutlinerSegment, SegmentRejection.segment_id == OutlinerSegment.id)
         .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
-        .filter(doc_scope, SegmentRejection.reviewer_id.isnot(None))
+        .filter(and_(*reviewer_rej_clauses))
         .group_by(SegmentRejection.reviewer_id)
         .all()
     )
@@ -263,27 +345,31 @@ def get_annotator_performance_breakdown(
         SegmentRejection.user_id,
         OutlinerDocument.user_id,
     )
+    rej_ev_clauses: List[Any] = [doc_scope]
+    _append_rejection_event_date_window(rej_ev_clauses, start_date, end_date)
     rejection_event_rows = (
         db.query(annotator_for_rejection_events, func.count(SegmentRejection.id))
         .select_from(SegmentRejection)
         .join(OutlinerSegment, SegmentRejection.segment_id == OutlinerSegment.id)
         .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
-        .filter(doc_scope)
+        .filter(and_(*rej_ev_clauses))
         .group_by(annotator_for_rejection_events)
         .all()
     )
 
+    rta_clauses: List[Any] = [
+        doc_scope,
+        OutlinerSegment.status == "approved",
+        or_(
+            OutlinerSegment.reviewer_title.isnot(None),
+            OutlinerSegment.reviewer_author.isnot(None),
+        ),
+    ]
+    _append_segment_activity_date_window(rta_clauses, start_date, end_date)
     reviewer_title_author_edit_rows = (
         db.query(OutlinerDocument.user_id, func.count(OutlinerSegment.id))
         .join(OutlinerSegment, OutlinerSegment.document_id == OutlinerDocument.id)
-        .filter(
-            doc_scope,
-            OutlinerSegment.status == "approved",
-            or_(
-                OutlinerSegment.reviewer_title.isnot(None),
-                OutlinerSegment.reviewer_author.isnot(None),
-            ),
-        )
+        .filter(and_(*rta_clauses))
         .group_by(OutlinerDocument.user_id)
         .all()
     )
@@ -299,6 +385,7 @@ def get_annotator_performance_breakdown(
             "segments_self_reviewed": 0,
             "reviewer_rejection_count": 0,
             "segments_reviewer_corrected_title_or_author": 0,
+            "segments_approved": 0,
         }
 
     by_user: Dict[Any, Dict[str, int]] = {}
@@ -309,6 +396,9 @@ def get_annotator_performance_breakdown(
         by_user.setdefault(uid, _default_row())
         by_user[uid]["segment_count"] = int(seg_cnt)
         by_user[uid]["segments_with_title_or_author"] = int(titled or 0)
+    for uid, appr_cnt in approved_seg_rows:
+        by_user.setdefault(uid, _default_row())
+        by_user[uid]["segments_approved"] = int(appr_cnt)
     for uid, rej_cnt in rej_rows:
         by_user.setdefault(uid, _default_row())
         by_user[uid]["rejection_count"] = int(rej_cnt)
@@ -353,6 +443,7 @@ def get_annotator_performance_breakdown(
                 "segments_reviewer_corrected_title_or_author": m[
                     "segments_reviewer_corrected_title_or_author"
                 ],
+                "segments_approved": m["segments_approved"],
             }
         )
     rows.sort(
@@ -413,14 +504,22 @@ def get_dashboard_stats(
     )
 
     reviewed_segments = (
-        seg_base.filter(has_title_or_author, segment_reviewed_when)
+        _apply_segment_activity_window_to_query(
+            seg_base.filter(has_title_or_author, segment_reviewed_when),
+            start_date,
+            end_date,
+        )
         .with_entities(func.count(OutlinerSegment.id))
         .scalar()
         or 0
     )
 
     annotated_segments = (
-        seg_base.filter(has_title_or_author, segment_pending_review_when)
+        _apply_segment_activity_window_to_query(
+            seg_base.filter(has_title_or_author, segment_pending_review_when),
+            start_date,
+            end_date,
+        )
         .with_entities(func.count(OutlinerSegment.id))
         .scalar()
         or 0
@@ -448,18 +547,17 @@ def get_dashboard_stats(
     )
 
     latest_rej_sq = latest_rejection_row_per_segment_subquery(db)
+    dash_rej_join: List[Any] = [
+        OutlinerSegment.id == latest_rej_sq.c.segment_id,
+        latest_rej_sq.c.rn == 1,
+        or_(
+            latest_rej_sq.c.resolved.is_(False),
+            latest_rej_sq.c.resolved.is_(None),
+        ),
+    ]
+    _append_latest_rejection_date_window(dash_rej_join, latest_rej_sq, start_date, end_date)
     rejection_count = (
-        seg_base.join(
-            latest_rej_sq,
-            and_(
-                OutlinerSegment.id == latest_rej_sq.c.segment_id,
-                latest_rej_sq.c.rn == 1,
-                or_(
-                    latest_rej_sq.c.resolved.is_(False),
-                    latest_rej_sq.c.resolved.is_(None),
-                ),
-            ),
-        )
+        seg_base.join(latest_rej_sq, and_(*dash_rej_join))
         .filter(OutlinerSegment.status == "rejected")
         .with_entities(func.count(OutlinerSegment.id))
         .scalar()
@@ -553,12 +651,16 @@ def get_dashboard_stats(
     )
 
     segments_reviewer_corrected_title_or_author = (
-        seg_base.filter(
-            OutlinerSegment.status == "approved",
-            or_(
-                OutlinerSegment.reviewer_title.isnot(None),
-                OutlinerSegment.reviewer_author.isnot(None),
+        _apply_segment_activity_window_to_query(
+            seg_base.filter(
+                OutlinerSegment.status == "approved",
+                or_(
+                    OutlinerSegment.reviewer_title.isnot(None),
+                    OutlinerSegment.reviewer_author.isnot(None),
+                ),
             ),
+            start_date,
+            end_date,
         )
         .with_entities(func.count(OutlinerSegment.id))
         .scalar()

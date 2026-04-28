@@ -641,6 +641,8 @@ export interface AnnotatorPerformanceRow {
   reviewer_rejection_count?: number;
   /** Approved segments on this user's documents where reviewer set title or author at approval */
   segments_reviewer_corrected_title_or_author?: number;
+  /** Segments with status approved on this user's documents (dashboard date scope) */
+  segments_approved?: number;
 }
 
 /** Per volume batch from BEC OT API ``/stats/volume-batches`` (batch id is the object key). */
