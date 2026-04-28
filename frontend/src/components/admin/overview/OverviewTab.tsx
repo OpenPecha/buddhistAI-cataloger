@@ -45,6 +45,8 @@ interface OverviewTabProps {
   readonly annotators?: ReadonlyArray<{ id: string; name: string | null; role?: string | null }>
   /** When set, top self-reviewers list is limited to this user (matches scoped dashboard totals). */
   readonly dashboardUserFilter?: string
+  /** HTML date inputs from the admin dashboard; reviewer activity uses the same API date scope. */
+  readonly dashboardDateRange?: { readonly start: string; readonly end: string }
 }
 
 /** Aligned with tailwind.css Tibetan-inspired admin tokens (burgundy / gold / teal). */
@@ -61,10 +63,14 @@ const ORANGE = '#c2410c'
 /** Dark blue for approved (reviewed) segment counts on the quality chart. */
 const BLUE_DARK = '#1e3a8a'
 
-/** Horizontal space per annotator on the quality vertical bar chart (scrolls when wider than the card). */
+/** Horizontal space per person on the quality & reviewer vertical bar charts (scroll when wider than the card). */
 const ANNOTATOR_QUALITY_VBAR_PX_PER_USER = 56
 const ANNOTATOR_QUALITY_VBAR_MIN_WIDTH = 640
 const ANNOTATOR_QUALITY_VBAR_HEIGHT = 420
+
+const REVIEWER_ACTIVITY_VBAR_PX_PER_USER = ANNOTATOR_QUALITY_VBAR_PX_PER_USER
+const REVIEWER_ACTIVITY_VBAR_MIN_WIDTH = ANNOTATOR_QUALITY_VBAR_MIN_WIDTH
+const REVIEWER_ACTIVITY_VBAR_HEIGHT = ANNOTATOR_QUALITY_VBAR_HEIGHT
 
 const CHART_OPTIONS = {
   responsive: true,
@@ -324,15 +330,18 @@ const ANNOTATOR_QUALITY_SIGNALS_VBAR_OPTIONS: ChartOptions<'bar'> = {
   },
 }
 
-/** Grouped horizontal bars: per-reviewer segment counts (raw numbers, not %). */
-const REVIEWER_ACTIVITY_HBAR_OPTIONS: ChartOptions<'bar'> = {
-  indexAxis: 'y',
+/** Grouped vertical bars: reviewers on X (names read horizontally along the bottom), counts on Y (same layout as annotator quality). */
+const REVIEWER_ACTIVITY_VBAR_OPTIONS: ChartOptions<'bar'> = {
   responsive: true,
   maintainAspectRatio: false,
+  interaction: {
+    mode: 'index',
+    intersect: false,
+  },
   datasets: {
     bar: {
-      categoryPercentage: 0.72,
-      barPercentage: 0.88,
+      categoryPercentage: 0.68,
+      barPercentage: 0.72,
     },
   },
   plugins: {
@@ -342,7 +351,7 @@ const REVIEWER_ACTIVITY_HBAR_OPTIONS: ChartOptions<'bar'> = {
       labels: {
         boxWidth: 10,
         boxHeight: 10,
-        padding: 14,
+        padding: 12,
         font: { size: 11 },
         color: MUTED,
       },
@@ -351,13 +360,36 @@ const REVIEWER_ACTIVITY_HBAR_OPTIONS: ChartOptions<'bar'> = {
   },
   scales: {
     x: {
-      beginAtZero: true,
-      grid: { color: GRID },
-      ticks: { font: { size: 11 }, color: MUTED },
+      grid: { display: false },
+      ticks: {
+        font: { size: 10 },
+        color: INK,
+        maxRotation: 48,
+        minRotation: 24,
+        autoSkip: false,
+      },
+      title: {
+        display: true,
+        text: 'Reviewer',
+        color: MUTED,
+        font: { size: 10 },
+        padding: { top: 6 },
+      },
     },
     y: {
-      grid: { display: false },
-      ticks: { font: { size: 11 }, color: INK },
+      beginAtZero: true,
+      grid: { color: GRID },
+      ticks: {
+        font: { size: 11 },
+        color: MUTED,
+      },
+      title: {
+        display: true,
+        text: 'Count',
+        color: MUTED,
+        font: { size: 10 },
+        padding: { bottom: 4 },
+      },
     },
   },
 }
@@ -493,11 +525,19 @@ function annotatorDisplayName(
   return n || userId
 }
 
+function formatReviewerActivityDateHint(
+  range: { readonly start: string; readonly end: string } | undefined,
+): string | undefined {
+  if (range == null || range.start === '' || range.end === '') return undefined
+  return `Same scope as dashboard filters: documents created ${range.start}–${range.end}; segment review and rejection timestamps fall in that range.`
+}
+
 function OverviewTab({
   stats,
   isLoading,
   annotators = [],
   dashboardUserFilter,
+  dashboardDateRange,
 }: OverviewTabProps) {
   const [annotatorQualityView, setAnnotatorQualityView] = useState<'chart' | 'table'>('chart')
   const [reviewerActivityView, setReviewerActivityView] = useState<'chart' | 'table'>('chart')
@@ -780,6 +820,22 @@ function OverviewTab({
     })
   }, [stats?.reviewer_segment_activity, annotators])
 
+  const reviewerActivityScopeHint = useMemo(
+    () => formatReviewerActivityDateHint(dashboardDateRange),
+    [dashboardDateRange],
+  )
+
+  const reviewerActivityEmptyRangeSuffix = useMemo(() => {
+    if (
+      dashboardDateRange == null ||
+      dashboardDateRange.start === '' ||
+      dashboardDateRange.end === ''
+    ) {
+      return ''
+    }
+    return ` (${dashboardDateRange.start}–${dashboardDateRange.end})`
+  }, [dashboardDateRange])
+
   const reviewerActivitySignals = useMemo(() => {
     const rows = reviewerActivityRows.filter(
       (r) =>
@@ -835,6 +891,18 @@ function OverviewTab({
     }))
     return { chartData, tableRows }
   }, [reviewerActivityRows, annotators])
+
+  const reviewerActivityVBarLayout = useMemo(() => {
+    if (!reviewerActivitySignals) return null
+    const n = reviewerActivitySignals.chartData.labels.length
+    return {
+      chartMinWidthPx: Math.max(
+        REVIEWER_ACTIVITY_VBAR_MIN_WIDTH,
+        n * REVIEWER_ACTIVITY_VBAR_PX_PER_USER,
+      ),
+      height: REVIEWER_ACTIVITY_VBAR_HEIGHT,
+    }
+  }, [reviewerActivitySignals])
 
   const volumeBatchSection = useMemo(() => {
     const raw = stats?.volume_batch_stats
@@ -1107,8 +1175,18 @@ function OverviewTab({
       </MotionSection>
 
       <MotionSection>
-        <SectionHeading eyebrow="People" title="Reviewers & segment activity" />
-        
+        <SectionHeading
+          eyebrow="People"
+          title="Reviewers & segment activity"
+          description={reviewerActivityScopeHint}
+        />
+        {reviewerActivitySignals != null &&
+        reviewerActivitySignals.chartData.labels.length > 1 ? (
+          <p className="-mt-2 mb-4 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+            All reviewers in one view; scroll sideways to compare. Names along the bottom; count
+            scale on the vertical axis.
+          </p>
+        ) : null}
         <div className="mt-6 rounded-lg border border-stone-200/80 bg-white/60 px-3 pb-3 pt-2 sm:px-5">
           {reviewerActivityRows.length === 0 ? (
             <div className="flex items-center gap-3 px-2 py-10 text-sm text-muted-foreground">
@@ -1119,7 +1197,8 @@ function OverviewTab({
             <div className="flex items-center gap-3 px-2 py-10 text-sm text-muted-foreground">
               <BarChart3 className="h-5 w-5 shrink-0 opacity-60" aria-hidden />
               <span>
-                No reviewer activity in this range: everyone has zero segments reviewed, zero
+                No reviewer activity for the selected dashboard range
+                {reviewerActivityEmptyRangeSuffix}: everyone has zero segments reviewed, zero
                 title/author edits, and zero segment rejections logged.
               </span>
             </div>
@@ -1161,27 +1240,31 @@ function OverviewTab({
                   </button>
                 </div>
               </div>
-              {reviewerActivityView === 'chart' ? (
-                <div
-                  className="min-h-64 w-full"
-                  style={{
-                    height: Math.min(
-                      720,
-                      Math.max(280, reviewerActivitySignals.chartData.labels.length * 44),
-                    ),
-                  }}
-                >
-                  <Bar
-                    data={reviewerActivitySignals.chartData}
-                    options={REVIEWER_ACTIVITY_HBAR_OPTIONS}
-                  />
+              {reviewerActivityView === 'chart' && reviewerActivityVBarLayout ? (
+                <div className="w-full overflow-x-auto overflow-y-visible overscroll-x-contain pb-1 [-webkit-overflow-scrolling:touch]">
+                  <div
+                    className="min-h-[22rem] w-full min-w-0"
+                    style={{
+                      height: reviewerActivityVBarLayout.height,
+                      minWidth: `max(100%, ${reviewerActivityVBarLayout.chartMinWidthPx}px)`,
+                    }}
+                  >
+                    <Bar
+                      data={reviewerActivitySignals.chartData}
+                      options={REVIEWER_ACTIVITY_VBAR_OPTIONS}
+                    />
+                  </div>
                 </div>
-              ) : (
+              ) : null}
+              {reviewerActivityView === 'table' ? (
                 <div className="max-h-[min(720px,70vh)] overflow-y-auto overflow-x-auto rounded-lg border border-stone-200/80 bg-white/60">
                   <table className="w-full min-w-[36rem] border-collapse text-sm">
                     <caption className="sr-only">
                       Reviewer segment activity with full names: segments reviewed, title or author
                       edits at review, and segment rejections
+                      {reviewerActivityEmptyRangeSuffix
+                        ? `. Period${reviewerActivityEmptyRangeSuffix}.`
+                        : ''}
                     </caption>
                     <thead className="sticky top-0 z-[1] shadow-[0_1px_0_0_rgb(231_229_228)]">
                       <tr className="border-b border-stone-200 bg-stone-50/95 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur-sm">
@@ -1214,7 +1297,7 @@ function OverviewTab({
                     </tbody>
                   </table>
                 </div>
-              )}
+              ) : null}
             </>
           )}
         </div>

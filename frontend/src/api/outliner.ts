@@ -653,7 +653,7 @@ export interface VolumeBatchStatusCounts {
   active: number;
 }
 
-/** Per reviewer/admin user; scoped to dashboard document filter and date range. */
+/** Per reviewer/admin user; same document + date scope as dashboard stats (including optional annotator filter). */
 export interface ReviewerSegmentActivityRow {
   user_id: string;
   /** Checked/approved segments where this user is recorded as ``reviewed_by_id``. */
@@ -699,7 +699,7 @@ export interface DashboardStats {
   annotation_coverage_pct: number;
   /** Per-annotator breakdown (same date range as dashboard; not scoped by user filter). */
   annotator_performance?: AnnotatorPerformanceRow[];
-  /** Reviewer/admin roster with segment activity in current dashboard scope. */
+  /** Reviewer/admin roster; document + date + optional user filter, same as other dashboard metrics. */
   reviewer_segment_activity?: ReviewerSegmentActivityRow[];
   /**
    * Per batch ID from BEC OT API; not scoped by dashboard date or annotator filters.

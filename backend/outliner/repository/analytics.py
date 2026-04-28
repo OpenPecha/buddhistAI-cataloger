@@ -87,11 +87,13 @@ def get_reviewer_segment_activity(
     db: Session,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
+    user_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """
     Per-reviewer counts for segments, scoped to non-deleted documents.
 
-    Documents are limited by ``created_at`` when dates are set. Segment/rejection metrics are
+    Documents use the same filters as dashboard stats: ``created_at`` when dates are set, and
+    optional ``user_id`` (annotator) to match the document dropdown. Segment/rejection metrics are
     further limited to activity in that window (see annotator performance breakdown).
 
     ``segments_recorded_as_reviewer``: checked/approved segments where ``reviewed_by_id`` is set.
@@ -107,6 +109,8 @@ def get_reviewer_segment_activity(
         doc_filters.append(OutlinerDocument.created_at >= start_date)
     if end_date:
         doc_filters.append(OutlinerDocument.created_at <= end_date)
+    if user_id:
+        doc_filters.append(OutlinerDocument.user_id == user_id)
     doc_scope = and_(*doc_filters)
 
     reviewed_when = or_(
@@ -680,7 +684,7 @@ def get_dashboard_stats(
     )
 
     reviewer_segment_activity = get_reviewer_segment_activity(
-        db, start_date=start_date, end_date=end_date
+        db, start_date=start_date, end_date=end_date, user_id=user_id
     )
 
     volume_batch_stats = fetch_volume_batch_stats()

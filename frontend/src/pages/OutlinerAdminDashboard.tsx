@@ -17,9 +17,22 @@ function getDefaultDateRange() {
 
 function OutlinerAdminDashboard() {
   const defaultRange = useMemo(() => getDefaultDateRange(), []);
-  const [searchParams] = useSearchParams();
-  const [startDate, setStartDate] = useState(defaultRange.start);
-  const [endDate, setEndDate] = useState(defaultRange.end);
+  const [searchParams,setSearchParams] = useSearchParams();
+  const startDate = searchParams.get('startDate') || defaultRange.start;
+  const endDate = searchParams.get('endDate') || defaultRange.end;
+
+  function setStartDate(date: string) {
+    setSearchParams(params => {
+      params.set('startDate', date);
+      return params;
+    });
+  }
+  function setEndDate(date: string) {
+    setSearchParams(params => {
+    params.set('endDate', date);
+    return params;
+  });
+}
 
   const selectedUserId = searchParams.get('annotator') || undefined;
 
@@ -69,6 +82,7 @@ function OutlinerAdminDashboard() {
         isLoading={isLoading}
         annotators={outlinerUsers}
         dashboardUserFilter={selectedUserId || undefined}
+        dashboardDateRange={{ start: startDate, end: endDate }}
       />
     </div>
   );
