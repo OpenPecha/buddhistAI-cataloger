@@ -1,21 +1,30 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { OverviewTab } from '../components/admin';
 import { SkeletonLarger } from '@/components/ui/skeleton';
-import { useDashboardStats, useOutlinerUsers } from '../hooks';
+import { useDashboardStats, useOutlinerUsers, type DashboardStatsFilters } from '../hooks';
 import { UserFilter } from '@/components/admin/documents/UserFilter';
 import { useSearchParams } from 'react-router-dom';
 import { getDefaultDateRange } from '@/components/admin/documents/utils';
 import DateRangeFilter from '@/components/admin/documents/DateRangeFilter';
+import { Button } from '@/components/ui/button';
+
+
 
 
 
 function OutlinerAdminDashboard() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const selectedUserId = searchParams.get('annotator') || undefined;
   const defaultRange = useMemo(() => getDefaultDateRange(), []);
   const startDate = searchParams.get('startDate') || defaultRange.start;
   const endDate = searchParams.get('endDate') || defaultRange.end;
+  const dataParse=(date:string)=>new Date(date).toISOString().split('T')[0]
 
+  const initialFilters: DashboardStatsFilters = {
+    userId: selectedUserId || undefined,
+    startDate: startDate ? dataParse(startDate) : undefined,
+    endDate: endDate ? dataParse(endDate) : undefined,
+  };
   const { users: outlinerUsers } = useOutlinerUsers();
 
   const { stats, isLoading } = useDashboardStats({
@@ -24,6 +33,39 @@ function OutlinerAdminDashboard() {
     endDate: endDate ? `${endDate}T23:59:59` : undefined,
   });
 
+  
+  const [filters, setFilters] = useState<DashboardStatsFilters>(initialFilters)
+
+  const startDateParsed = dataParse(filters.startDate||"")
+  const endDateParsed = dataParse(filters.endDate||"")
+  const applyFilters = () => {
+    
+    setSearchParams(params => {
+      params.set('annotator', filters.userId || '');
+      if (filters.userId === 'all') params.delete('annotator');
+      params.set(
+        'startDate',
+        startDateParsed
+
+      );
+      params.set(
+        'endDate',
+        endDateParsed
+      );
+      params.set('page', '1');
+      return params;
+    });
+  }
+  const checkApplyButtonDisabled = () => {
+    if (
+      filters.userId !== initialFilters.userId ||
+      startDateParsed !== initialFilters.startDate ||
+      endDateParsed !== initialFilters.endDate
+    ) {
+      return false;
+    }
+    return true;
+  };
   if (isLoading && !stats) {
     return (
       <div className="flex min-h-screen flex-1 flex-col">
@@ -35,10 +77,9 @@ function OutlinerAdminDashboard() {
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4">
       <div className="mb-4 flex flex-wrap items-center justify-end gap-3 bg-gray-50/80">
         <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Filters</span>
-        <UserFilter  />
-        <DateRangeFilter />
-       
-       
+        <UserFilter  onChange={(userId) => setFilters({...filters, userId})}/>
+        <DateRangeFilter onUpdateStartDate={(startDate) => setFilters({...filters, startDate})} onUpdateEndDate={(endDate) => setFilters({...filters, endDate})}/>
+        <Button disabled={checkApplyButtonDisabled()} onClick={applyFilters}>Apply Filters</Button>
       </div>
 
       <OverviewTab

@@ -11,24 +11,22 @@ import {
   } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton";
 import { useOutlinerUsers } from "@/hooks";
+import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
-export function UserFilter()
+export function UserFilter({onChange}: {onChange: (userId: string) => void})
 {
   const [searchParams, setSearchParams] = useSearchParams();
   const { users: annotators, isLoading } = useOutlinerUsers();
 
-    const currentAnnotator = searchParams.get('annotator') || undefined;
-
+    const currentAnnotator_param = searchParams.get('annotator') || undefined;
+  const [currentAnnotator, setCurrentAnnotator] = useState(currentAnnotator_param);
     
 
     const handleChange = (newAnnotator: string) => {
-      setSearchParams((searchParams) => {
-        if (newAnnotator === 'all') searchParams.delete('annotator');
-        else searchParams.set('annotator', newAnnotator);
-        searchParams.set('page', '1');
-        return searchParams;
-      });
+      setCurrentAnnotator(newAnnotator);
+      onChange(newAnnotator);
+   
     }
 
    
