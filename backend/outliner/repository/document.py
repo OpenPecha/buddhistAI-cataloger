@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import and_, exists, func, not_, or_,select
+from sqlalchemy import and_, case, exists, func, not_, or_, select
 from sqlalchemy.orm import Session
 
 from user.models.user import User
@@ -305,65 +305,51 @@ def list_completed_document_ids_all_segments_checked(
 
 
 def allow_user_to_assign_volume(db: Session, user_id: str) -> bool:
- 
     allowed_doc_statuses = ("skipped", "completed", "approved", "deleted")
+    incomplete_segment_exists = select(OutlinerSegment.id).where(
+        OutlinerSegment.document_id == OutlinerDocument.id,
+        OutlinerSegment.status.in_(("rejected", "unchecked")),
+    ).exists()
 
-    has_any_docs = exists(
-        select(1).select_from(OutlinerDocument).where(OutlinerDocument.user_id == user_id)
-    )
-    has_active = exists(
-        select(1)
-        .select_from(OutlinerDocument)
-        .where(
-            OutlinerDocument.user_id == user_id,
-            OutlinerDocument.status == "active",
-        )
-    )
-    has_bad_doc_status = exists(
-        select(1)
-        .select_from(OutlinerDocument)
-        .where(
-            OutlinerDocument.user_id == user_id,
-            or_(
-                OutlinerDocument.status.is_(None),
-                OutlinerDocument.status.notin_(allowed_doc_statuses),
-            ),
-        )
-    )
-    has_rejected_segment = exists(
-        select(1)
-        .select_from(OutlinerSegment)
-        .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
-        .where(
-            OutlinerDocument.user_id == user_id,
-            OutlinerSegment.status == "rejected",
-        )
-    )
-    has_incomplete_on_finished = exists(
-        select(1)
-        .select_from(OutlinerSegment)
-        .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
-        .where(
-            OutlinerDocument.user_id == user_id,
-            OutlinerDocument.status.in_(("completed", "approved")),
-            or_(
-                OutlinerSegment.status.is_(None),
-                OutlinerSegment.status.notin_(("checked", "approved")),
-            ),
-        )
-    )
+    row = db.execute(
+        select(
+            func.count(OutlinerDocument.id).label("doc_count"),
+            func.max(
+                case((OutlinerDocument.status == "active", 1), else_=0)
+            ).label("has_active"),
+            func.max(
+                case(
+                    (
+                        or_(
+                            OutlinerDocument.status.is_(None),
+                            OutlinerDocument.status.notin_(allowed_doc_statuses),
+                        ),
+                        1,
+                    ),
+                    else_=0,
+                )
+            ).label("has_bad_status"),
+            func.max(
+                case(
+                    (
+                        and_(
+                            OutlinerDocument.status == "completed",
+                            incomplete_segment_exists,
+                        ),
+                        1,
+                    ),
+                    else_=0,
+                )
+            ).label("has_incomplete_on_completed"),
+        ).where(OutlinerDocument.user_id == user_id)
+    ).one()
 
-    stmt = select(
-        has_any_docs,
-        has_active,
-        has_bad_doc_status,
-        has_rejected_segment,
-        has_incomplete_on_finished,
-    )
-    has_any, active, bad_status, rejected, incomplete_finished = db.execute(stmt).one()
-    if not has_any:
+    if row.doc_count == 0:
         return True
-    return not (active or bad_status or rejected or incomplete_finished)
+
+    return not bool(
+        row.has_active or row.has_bad_status or row.has_incomplete_on_completed
+    )
 
 
 
