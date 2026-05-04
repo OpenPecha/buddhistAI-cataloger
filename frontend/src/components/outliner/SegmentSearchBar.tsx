@@ -18,6 +18,8 @@ export const SegmentSearchBar = memo(function SegmentSearchBar({
   matchCount,
   onAfterScrollToMatch,
   disableMatchNavigation,
+  /** When the body uses a nested scroll layer (e.g. reviewer highlight div behind a textarea), use this instead of `scrollIntoView` on `#segmentId` (which scrolls the wrong ancestor). */
+  scrollBodyMatchIntoView,
 }: {
   segmentId: string;
   query: string;
@@ -27,6 +29,7 @@ export const SegmentSearchBar = memo(function SegmentSearchBar({
   onAfterScrollToMatch?: () => void;
   /** When true, first/prev/next/last match controls are disabled (e.g. segment body collapsed). */
   disableMatchNavigation?: boolean;
+  scrollBodyMatchIntoView?: (matchIndex: number) => void;
 }) {
   const { t } = useTranslation();
   const [activeMatchIndex, setActiveMatchIndex] = useState(0);
@@ -51,6 +54,15 @@ export const SegmentSearchBar = memo(function SegmentSearchBar({
 
   const scrollToMatchIndex = useCallback(
     (index: number) => {
+      if (scrollBodyMatchIntoView) {
+        scrollBodyMatchIntoView(index);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            onAfterScrollToMatch?.();
+          });
+        });
+        return;
+      }
       const root = document.getElementById(segmentId);
       const hits = root?.querySelectorAll('.highlighter');
       const n = hits?.length ?? 0;
@@ -66,7 +78,7 @@ export const SegmentSearchBar = memo(function SegmentSearchBar({
         });
       });
     },
-    [segmentId, onAfterScrollToMatch]
+    [segmentId, onAfterScrollToMatch, scrollBodyMatchIntoView]
   );
 
   useEffect(() => {
@@ -74,8 +86,34 @@ export const SegmentSearchBar = memo(function SegmentSearchBar({
     setActiveMatchIndex(0);
   }, [query, matchCount]);
 
-  const searched = query.trim().length > 0 && matchCount > 0;
   const navDisabled = Boolean(disableMatchNavigation) || matchCount === 0;
+
+  const goToFirst = useCallback(() => {
+    if (navDisabled || matchCount === 0) return;
+    setActiveMatchIndex(0);
+    scrollToMatchIndex(0);
+  }, [navDisabled, matchCount, scrollToMatchIndex]);
+
+  const goToPrev = useCallback(() => {
+    if (navDisabled || matchCount === 0) return;
+    const next = Math.max(0, activeMatchIndexRef.current - 1);
+    setActiveMatchIndex(next);
+    scrollToMatchIndex(next);
+  }, [navDisabled, matchCount, scrollToMatchIndex]);
+
+  const goToNext = useCallback(() => {
+    if (navDisabled || matchCount === 0) return;
+    const next = Math.min(matchCount - 1, activeMatchIndexRef.current + 1);
+    setActiveMatchIndex(next);
+    scrollToMatchIndex(next);
+  }, [navDisabled, matchCount, scrollToMatchIndex]);
+
+  const goToLast = useCallback(() => {
+    if (navDisabled || matchCount === 0) return;
+    const last = matchCount - 1;
+    setActiveMatchIndex(last);
+    scrollToMatchIndex(last);
+  }, [navDisabled, matchCount, scrollToMatchIndex]);
 
   const goToTop = () => {
     scrollSegmentToTop();
@@ -83,10 +121,6 @@ export const SegmentSearchBar = memo(function SegmentSearchBar({
   const goToBottom = () => {
     scrollSegmentToBottom();
   };
-
-
-
-  
 
   return (
     <div className="segment-search-bar flex-1 flex flex-wrap items-center gap-1 rounded-md py-1">
@@ -100,9 +134,11 @@ export const SegmentSearchBar = memo(function SegmentSearchBar({
           if (e.key === 'ArrowUp') {
             e.preventDefault();
             e.stopPropagation();
+            goToPrev();
           } else if (e.key === 'ArrowDown') {
             e.preventDefault();
             e.stopPropagation();
+            goToNext();
           }
         }}
         aria-label={t('outliner.segment.searchInSegment')}
@@ -112,7 +148,56 @@ export const SegmentSearchBar = memo(function SegmentSearchBar({
           {matchCount === 0 ? '0/0' : `${activeMatchIndex + 1}/${matchCount}`}
         </span>
       )}
-    
+
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="h-8 w-8 shrink-0"
+        disabled={navDisabled}
+        onClick={goToFirst}
+        title={t('outliner.segment.firstMatch')}
+        aria-label={t('outliner.segment.firstMatch')}
+      >
+        <ChevronFirst className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="h-8 w-8 shrink-0"
+        disabled={navDisabled}
+        onClick={goToPrev}
+        title={t('outliner.segment.prevMatch')}
+        aria-label={t('outliner.segment.prevMatch')}
+      >
+        <ChevronUp className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="h-8 w-8 shrink-0"
+        disabled={navDisabled}
+        onClick={goToNext}
+        title={t('outliner.segment.nextMatch')}
+        aria-label={t('outliner.segment.nextMatch')}
+      >
+        <ChevronDown className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="h-8 w-8 shrink-0"
+        disabled={navDisabled}
+        onClick={goToLast}
+        title={t('outliner.segment.lastMatch')}
+        aria-label={t('outliner.segment.lastMatch')}
+      >
+        <ChevronLast className="h-4 w-4" />
+      </Button>
+
       <Button
         type="button"
         variant="outline"

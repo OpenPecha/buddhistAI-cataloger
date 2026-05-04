@@ -103,6 +103,33 @@ function SegmentRow({
     }
   }, []);
 
+  /**
+   * Reviewer body stacks a highlight layer and a textarea. `scrollIntoView` on `.highlighter` scrolls
+   * outer page/list containers instead of the highlight `div`, so match navigation must set scrollTop here.
+   */
+  const scrollBodyMatchIntoView = useCallback((matchIndex: number) => {
+    const hi = segmentBodyHighlightRef.current;
+    const ta = segmentBodyTextareaRef.current;
+    if (!hi || !ta) return;
+    const hits = hi.querySelectorAll('.highlighter');
+    if (hits.length === 0) return;
+    const safeIndex = Math.min(Math.max(0, matchIndex), hits.length - 1);
+    const el = hits[safeIndex];
+    if (!(el instanceof HTMLElement)) return;
+
+    const containerRect = hi.getBoundingClientRect();
+    const elRect = el.getBoundingClientRect();
+    const deltaTop = elRect.top - containerRect.top;
+    const targetScrollTop =
+      hi.scrollTop + deltaTop - hi.clientHeight / 2 + elRect.height / 2;
+    const maxScroll = Math.max(0, hi.scrollHeight - hi.clientHeight);
+    const clamped = Math.max(0, Math.min(targetScrollTop, maxScroll));
+
+    hi.scrollTop = clamped;
+    ta.scrollTop = clamped;
+    ta.scrollLeft = hi.scrollLeft;
+  }, []);
+
   useLayoutEffect(() => {
     if (isExpanded && hasTextSearch) {
       syncBodyHighlightScroll();
@@ -388,6 +415,7 @@ function SegmentRow({
                 matchCount={segmentSearchMatchCount}
                 disableMatchNavigation={!isExpanded}
                 onAfterScrollToMatch={syncTextareaToHighlightScroll}
+                scrollBodyMatchIntoView={scrollBodyMatchIntoView}
               />
             </div>
           </div>

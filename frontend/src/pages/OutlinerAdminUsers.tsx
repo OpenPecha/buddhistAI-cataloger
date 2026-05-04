@@ -45,17 +45,10 @@ function OutlinerAdminUsers() {
   };
 
  
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen flex-1 flex-col">
-        <SkeletonLarger />
-      </div>
-    );
-  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 p-4">
-      <UsersTab users={users} onUserUpdate={handleUserUpdate} onUserDelete={handleUserDelete} />
+      <UsersTab users={users} onUserUpdate={handleUserUpdate} onUserDelete={handleUserDelete} isLoading={isLoading} />
       {(hasPrevPage || hasNextPage) && (
         <SimplePagination
           canGoPrev={hasPrevPage}

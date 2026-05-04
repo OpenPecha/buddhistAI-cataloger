@@ -10,14 +10,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { SkeletonLarger } from '@/components/ui/skeleton';
 
 interface UsersTabProps {
+  isLoading: boolean;
   users: User[];
   onUserUpdate: (userId: string, userData: { role?: string; permissions?: string[] }) => void;
   onUserDelete: (userId: string) => void;
 }
 
 function UsersTab({
+  isLoading,
   users,
   onUserUpdate,
   onUserDelete,
@@ -38,6 +41,9 @@ function UsersTab({
           </div>
         </div>
       </div>
+      {isLoading ? (
+          <SkeletonLarger />
+      ) : (   
       <div className="relative min-h-0 flex-1 overflow-auto [scrollbar-gutter:stable] rounded-md border border-gray-200 bg-white">
         <Table
           wrapperClassName="min-w-0 overflow-visible"
@@ -82,6 +88,7 @@ function UsersTab({
           </TableBody>
         </Table>
       </div>
+      )}
     </div>
   );
 }

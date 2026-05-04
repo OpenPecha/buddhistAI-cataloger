@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -15,7 +16,6 @@ from user.models.user import User
 
 OUTLINER_PERMISSION = "outliner"
 _ALLOWED_OUTLINER_ROLES = frozenset({"admin", "reviewer", "annotator"})
-
 _outliner_bearer = HTTPBearer(auto_error=False)
 
 
@@ -66,21 +66,56 @@ def require_outliner_access(
     return user
 
 
-def user_may_record_segment_reviewed_by(user: User) -> bool:
+
+def is_user_admin_or_reviewer(user: User) -> bool:
     """Only reviewer/admin attribution updates reviewed_by_id on segments."""
     role = (user.role or "user").strip().lower()
     return role in ("reviewer", "admin")
 
 
-def apply_authenticated_segment_reviewer(patch: dict, user: User) -> None:
-    """Strip client reviewer_id; set from token only for reviewer/admin when status is checked/approved."""
+def can_user_reject_segment(
+    user: User,
+    document_owner_ids: Sequence[str | None],
+) -> None:
+    """Rejections require reviewer or admin; document owners cannot reject their own work."""
+    if not is_user_admin_or_reviewer(user):
+        raise HTTPException(
+            status_code=403,
+            detail="Only reviewers and administrators can reject segments",
+        )
+    for owner_id in document_owner_ids:
+        if owner_id is not None and owner_id == user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="You cannot reject segments on your own documents",
+            )
+
+
+def apply_authenticated_segment_reviewer(
+    patch: dict,
+    user: User,
+    *,
+    document_owner_id: str | None = None,
+) -> None:
+    """Strip client reviewer_id; set from token only for reviewer/admin when status is checked/approved.
+
+    When ``document_owner_id`` is the same as ``user.id``, do not inject reviewer attribution so users
+    cannot record themselves as reviewer on their own documents.
+    """
     patch.pop("reviewer_id", None)
-    if patch.get("status") in ("checked", "approved") and user_may_record_segment_reviewed_by(user):
+    if document_owner_id is not None and document_owner_id == user.id:
+        return
+    if patch.get("status") in ("checked", "approved") and is_user_admin_or_reviewer(user):
         patch["reviewer_id"] = user.id
 
 
-def apply_authenticated_segment_reviewer_bulk(updates: list[dict] | None, user: User) -> None:
+def apply_authenticated_segment_reviewer_bulk(
+    updates: list[dict] | None,
+    user: User,
+    *,
+    document_owner_id: str | None = None,
+) -> None:
     if not updates:
         return
     for row in updates:
-        apply_authenticated_segment_reviewer(row, user)
+        apply_authenticated_segment_reviewer(row, user, document_owner_id=document_owner_id)

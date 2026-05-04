@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from user.models.user import User
 
-from outliner.bec_otapi_client import fetch_volume_batch_stats
+from outliner.utils.bec_client.api import fetch_volume_batch_stats
 from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentRejection
 from outliner.repository.segment_rejection import latest_rejection_row_per_segment_subquery
 
@@ -78,7 +78,7 @@ def _apply_segment_activity_window_to_query(
 
 
 def _is_reviewer_or_admin_role(role: Optional[str]) -> bool:
-    """Same normalization as ``outliner.deps.user_may_record_segment_reviewed_by`` role check."""
+    """Same normalization as ``outliner.deps.is_user_admin_or_reviewer`` role check."""
     norm = (role or "user").strip().lower()
     return norm in _REVIEWER_WORK_STATS_ROLES
 

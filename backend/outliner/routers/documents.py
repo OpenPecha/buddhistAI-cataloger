@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from core.database import get_db
+from outliner.repository.document import fetch_document_by_id
 from outliner.controller.outliner import (
     approve_document as approve_document_ctrl,
     bulk_segment_operations as bulk_segment_operations_ctrl,
@@ -120,7 +121,6 @@ async def get_document(
 ):
     """Get a document by ID with all its segments (full metadata)."""
     document = get_document_ctrl(db, document_id, include_segments)
-
     # If segments are requested but none exist, create a single segment covering the entire document
     if include_segments:
         segments_exist = (
@@ -328,7 +328,11 @@ async def bulk_segment_operations(
     This is optimized for performance by batching all operations together.
     """
     create_data = [seg.dict() for seg in operations.create] if operations.create else None
-    apply_authenticated_segment_reviewer_bulk(operations.update, current_user)
+    doc = fetch_document_by_id(db, document_id)
+    doc_owner = doc.user_id if doc else None
+    apply_authenticated_segment_reviewer_bulk(
+        operations.update, current_user, document_owner_id=doc_owner
+    )
     result_segments = bulk_segment_operations_ctrl(
         db=db,
         document_id=document_id,

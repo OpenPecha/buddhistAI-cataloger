@@ -6,8 +6,8 @@ from ai_text_outline import extract_toc_indices
 
 from core.database import get_db
 from outliner.controller.outliner import (
-    get_document as get_document_ctrl,
-    replace_document_segments_and_ai_toc as replace_document_segments_and_ai_toc_ctrl,
+    get_document,
+    replace_segments_and_toc,
 )
 
 from .helpers import spans_from_toc_indices
@@ -22,7 +22,7 @@ async def ai_outline(
     db: Session = Depends(get_db),
 ):
     """Split document text into segments using TOC character indices from ai_text_outline."""
-    document = get_document_ctrl(db, document_id, include_segments=False)
+    document = get_document(db, document_id, include_segments=False)
     result = extract_toc_indices(text=document.content)
 
     indices = result["breakpoints"]
@@ -32,7 +32,7 @@ async def ai_outline(
         {"segment_index": i, "span_start": start, "span_end": end}
         for i, (start, end) in enumerate(spans)
     ]
-    document, segment_payload = replace_document_segments_and_ai_toc_ctrl(
+    document, segment_payload = replace_segments_and_toc(
         db, document_id, segments_data, toc
     )
     segments_resp = [

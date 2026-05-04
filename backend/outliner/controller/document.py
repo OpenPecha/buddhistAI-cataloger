@@ -15,7 +15,7 @@ from outliner.utils.outliner_utils import (
 )
 from outliner.controller.segment import (
     _segment_orms_from_bulk_data,
-    segment_orm_to_document_response_dict,
+    segment_to_response_dict ,
 )
 
 
@@ -343,7 +343,7 @@ def list_completed_document_ids_all_segments_checked(
         db, only_document_ids=only_document_ids
     )
 
-def replace_document_segments_and_ai_toc(
+def replace_segments_and_toc (
     db: Session,
     document_id: str,
     segments_data: List[Dict[str, Any]],
@@ -359,7 +359,7 @@ def replace_document_segments_and_ai_toc(
 
     normalized = normalize_ai_toc_for_storage(toc_entries)
     db_segments = _segment_orms_from_bulk_data(document_id, document.content, segments_data)
-    segment_payload = [segment_orm_to_document_response_dict(s) for s in db_segments]
+    segment_payload = [segment_to_response_dict (s) for s in db_segments]
     outliner_repo.replace_segments_and_ai_toc(db, document, db_segments, normalized)
     return document, segment_payload
 

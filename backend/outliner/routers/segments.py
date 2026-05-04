@@ -23,9 +23,13 @@ from outliner.controller.outliner import (
 )
 from outliner.deps import (
     apply_authenticated_segment_reviewer,
-    apply_authenticated_segment_reviewer_bulk,
-    user_may_record_segment_reviewed_by,
+    can_user_reject_segment,
+    is_user_admin_or_reviewer,
     require_outliner_access,
+)
+from outliner.repository.segment import (
+    get_document_user_id_for_segment,
+    map_segment_ids_to_document_user_ids,
 )
 from user.models.user import User
 
@@ -82,7 +86,10 @@ async def update_segment(
     - After: 1 SELECT (segment) + 1 UPDATE (segment) + 1 UPDATE (doc, if annotation changed)
     """
     patch = segment_update.model_dump(exclude_unset=True)
-    apply_authenticated_segment_reviewer(patch, current_user)
+    doc_owner = get_document_user_id_for_segment(db, segment_id)
+    apply_authenticated_segment_reviewer(
+        patch, current_user, document_owner_id=doc_owner
+    )
     segment = update_segment_ctrl(db, segment_id, patch)
     return {"message": "segment updated", "id": segment.id}
 
@@ -95,7 +102,11 @@ async def update_segments_bulk(
 ):
     """Update multiple segments at once"""
     segment_updates = [seg.model_dump(exclude_unset=True) for seg in updates.segments]
-    apply_authenticated_segment_reviewer_bulk(segment_updates, current_user)
+    owner_by_segment = map_segment_ids_to_document_user_ids(db, list(updates.segment_ids))
+    for row, seg_id in zip(segment_updates, updates.segment_ids, strict=True):
+        apply_authenticated_segment_reviewer(
+            row, current_user, document_owner_id=owner_by_segment.get(seg_id)
+        )
     updated_segments = update_segments_bulk_ctrl(db, segment_updates, updates.segment_ids)
     content = (
         document_plain_content(db, updated_segments[0].document_id)
@@ -217,9 +228,13 @@ async def update_segment_status(
 ):
     """Update segment status (checked/unchecked)"""
     st = (status_update.status or "").strip().lower()
+    doc_owner = get_document_user_id_for_segment(db, segment_id)
+    self_owned = doc_owner is not None and doc_owner == current_user.id
     reviewer_id = (
         current_user.id
-        if user_may_record_segment_reviewed_by(current_user) and st in ("checked", "approved")
+        if is_user_admin_or_reviewer(current_user)
+        and st in ("checked", "approved")
+        and not self_owned
         else None
     )
     return update_segment_status_ctrl(
@@ -238,6 +253,8 @@ async def reject_segment(
     current_user: User = Depends(require_outliner_access),
 ):
     """Reject a checked segment"""
+    doc_owner = get_document_user_id_for_segment(db, segment_id)
+    can_user_reject_segment(current_user, [doc_owner])
     segment = reject_segment_ctrl(db, segment_id, current_user.id, body.comment)
     return build_segment_response(
         segment,
@@ -253,6 +270,8 @@ async def reject_segments_bulk(
     current_user: User = Depends(require_outliner_access),
 ):
     """Reject multiple checked segments at once"""
+    owner_by_segment = map_segment_ids_to_document_user_ids(db, list(request.segment_ids))
+    can_user_reject_segment(current_user, list(owner_by_segment.values()))
     segments = reject_segments_bulk_ctrl(
         db, request.segment_ids, current_user.id, request.comment
     )
