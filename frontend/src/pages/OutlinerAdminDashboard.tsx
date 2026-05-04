@@ -66,13 +66,6 @@ function OutlinerAdminDashboard() {
     }
     return true;
   };
-  if (isLoading && !stats) {
-    return (
-      <div className="flex min-h-screen flex-1 flex-col">
-        <SkeletonLarger />
-      </div>
-    );
-  }
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4">
       <div className="mb-4 flex flex-wrap items-center justify-end gap-3 bg-gray-50/80">
@@ -82,6 +75,9 @@ function OutlinerAdminDashboard() {
         <Button disabled={checkApplyButtonDisabled()} onClick={applyFilters}>Apply Filters</Button>
       </div>
 
+        {isLoading && 
+        <SkeletonLarger />
+        }
       <OverviewTab
         stats={stats ?? null}
         isLoading={isLoading}
