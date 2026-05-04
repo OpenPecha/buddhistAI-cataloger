@@ -77,7 +77,7 @@ function OutlinerAdminDashboard() {
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4">
       <div className="mb-4 flex flex-wrap items-center justify-end gap-3 bg-gray-50/80">
         <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">Filters</span>
-        <UserFilter  onChange={(userId) => setFilters({...filters, userId})}/>
+        <UserFilter value={filters.userId || 'all'} onChange={(userId) => setFilters({...filters, userId})}/>
         <DateRangeFilter onUpdateStartDate={(startDate) => setFilters({...filters, startDate})} onUpdateEndDate={(endDate) => setFilters({...filters, endDate})}/>
         <Button disabled={checkApplyButtonDisabled()} onClick={applyFilters}>Apply Filters</Button>
       </div>

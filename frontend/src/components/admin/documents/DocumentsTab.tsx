@@ -16,9 +16,10 @@ import DocumentRow from './DocumentRow';
 import { UserFilter } from './UserFilter';
 import DocumentStatusFilter from './DocumentStatusFilter';
 import { useDocuments, useOutlinerUsers, type DocumentFilters } from '@/hooks';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import TitleFilter from './TitleFilter';
+import { Button } from '@/components/ui/button';
 
 
 
@@ -32,11 +33,21 @@ function DocumentsTab({
   onDocumentDelete,
 }: Readonly<DocumentsTabProps>) {
  
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const status = searchParams.get('status') || undefined;
   const annotator = searchParams.get('annotator') || undefined;
   const debouncedTitle=searchParams.get('title') || undefined
   const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1', 10) || 1);
+
+  const [draftStatus, setDraftStatus] = useState(status ?? 'all');
+  const [draftAnnotator, setDraftAnnotator] = useState(annotator ?? 'all');
+  const [draftTitle, setDraftTitle] = useState(debouncedTitle ?? '');
+
+  useEffect(() => {
+    setDraftStatus(status ?? 'all');
+    setDraftAnnotator(annotator ?? 'all');
+    setDraftTitle(debouncedTitle ?? '');
+  }, [status, annotator, debouncedTitle]);
   const filters:DocumentFilters = useMemo(
     () => ({
       status,
@@ -54,6 +65,27 @@ function DocumentsTab({
     documents,
     isFetching,
   } = useDocuments(filters);
+
+  const applyFilters = () => {
+    setSearchParams((params) => {
+      if (draftStatus === 'all') params.delete('status');
+      else params.set('status', draftStatus);
+
+      if (draftAnnotator === 'all') params.delete('annotator');
+      else params.set('annotator', draftAnnotator);
+
+      const trimmedTitle = draftTitle.trim();
+      if (trimmedTitle) params.set('title', trimmedTitle);
+      else params.delete('title');
+
+      params.set('page', '1');
+      return params;
+    });
+  };
+  const isApplyDisabled =
+    draftStatus === (status ?? 'all') &&
+    draftAnnotator === (annotator ?? 'all') &&
+    draftTitle.trim() === (debouncedTitle ?? '').trim();
 
   const { users: outlinerUsers } = useOutlinerUsers();
   const annotatorIdToDisplay = useMemo(() => {
@@ -73,16 +105,17 @@ function DocumentsTab({
 
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
-            <DocumentStatusFilter  />
+            <DocumentStatusFilter value={draftStatus} onChange={setDraftStatus} />
           </div>
 
           <div className="flex items-center gap-2">
-            <UserFilter />
+            <UserFilter value={draftAnnotator} onChange={setDraftAnnotator} />
           </div>
 
           <div className="relative w-full min-w-[200px] max-w-xs sm:w-64">
-            <TitleFilter />
+            <TitleFilter value={draftTitle} onChange={setDraftTitle} />
           </div>
+          <Button disabled={isApplyDisabled} onClick={applyFilters}>Apply Filters</Button>
         </div>
       </div>
 

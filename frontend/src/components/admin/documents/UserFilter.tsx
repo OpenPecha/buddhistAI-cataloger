@@ -11,20 +11,21 @@ import {
   } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton";
 import { useOutlinerUsers } from "@/hooks";
-import { useState } from "react";
-import { useSearchParams } from "react-router-dom";
 
-export function UserFilter({onChange}: {onChange: (userId: string) => void})
+type UserFilterProps = Readonly<{
+  value: string;
+  onChange: (userId: string) => void;
+}>;
+
+export function UserFilter({
+  value,
+  onChange,
+}: UserFilterProps)
 {
-  const [searchParams, setSearchParams] = useSearchParams();
   const { users: annotators, isLoading } = useOutlinerUsers();
-
-    const currentAnnotator_param = searchParams.get('annotator') || undefined;
-  const [currentAnnotator, setCurrentAnnotator] = useState(currentAnnotator_param);
     
 
     const handleChange = (newAnnotator: string) => {
-      setCurrentAnnotator(newAnnotator);
       onChange(newAnnotator);
    
     }
@@ -35,7 +36,7 @@ export function UserFilter({onChange}: {onChange: (userId: string) => void})
     }
     return (
   
-      <Select value={currentAnnotator || ''} onValueChange={handleChange}>
+      <Select value={value} onValueChange={handleChange}>
         <SelectTrigger className="w-full max-w-48" >
           <SelectValue placeholder="Select a person" />
         </SelectTrigger>

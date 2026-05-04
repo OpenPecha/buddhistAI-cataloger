@@ -11,6 +11,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { SkeletonLarger } from '@/components/ui/skeleton';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 interface UsersTabProps {
   isLoading: boolean;
@@ -25,6 +28,34 @@ function UsersTab({
   onUserUpdate,
   onUserDelete,
 }: Readonly<UsersTabProps>) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const role = searchParams.get('role') || 'all';
+  const username = searchParams.get('username') || '';
+  const [draftRole, setDraftRole] = useState(role);
+  const [draftUsername, setDraftUsername] = useState(username);
+
+  useEffect(() => {
+    setDraftRole(role);
+    setDraftUsername(username);
+  }, [role, username]);
+
+  const applyFilters = () => {
+    setSearchParams((params) => {
+      if (draftRole === 'all') params.delete('role');
+      else params.set('role', draftRole);
+
+      const trimmedName = draftUsername.trim();
+      if (trimmedName) params.set('username', trimmedName);
+      else params.delete('username');
+
+      params.set('page', '1');
+      return params;
+    });
+  };
+  const isApplyDisabled =
+    draftRole === role &&
+    draftUsername.trim() === username.trim();
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="shrink-0 flex flex-wrap items-center justify-between gap-4 pb-4">
@@ -34,11 +65,12 @@ function UsersTab({
         </div>
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
-            <UserNameFilter />
+            <UserNameFilter value={draftUsername} onChange={setDraftUsername} />
           </div>
           <div className="flex items-center gap-2">
-            <UserRoleFilter />
+            <UserRoleFilter value={draftRole} onChange={setDraftRole} />
           </div>
+          <Button disabled={isApplyDisabled} onClick={applyFilters}>Apply Filters</Button>
         </div>
       </div>
       {isLoading ? (

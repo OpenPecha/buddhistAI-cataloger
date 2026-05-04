@@ -5,7 +5,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useSearchParams } from 'react-router-dom';
 
 const ROLES = [
   { value: 'annotator', label: 'Annotator' },
@@ -13,21 +12,18 @@ const ROLES = [
   { value: 'admin', label: 'Admin' },
 ] as const;
 
-function UserRoleFilter() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const current = searchParams.get('role') || 'all';
+type UserRoleFilterProps = Readonly<{
+  value: string;
+  onChange: (role: string) => void;
+}>;
 
-  const handleChange = (role: string) => {
-    setSearchParams((params) => {
-      if (role === 'all') params.delete('role');
-      else params.set('role', role);
-      params.set('page', '1');
-      return params;
-    });
-  };
+function UserRoleFilter({
+  value,
+  onChange,
+}: UserRoleFilterProps) {
 
   return (
-    <Select value={current} onValueChange={handleChange}>
+    <Select value={value} onValueChange={onChange}>
       <SelectTrigger className="w-full max-w-48">
         <SelectValue placeholder="All roles" />
       </SelectTrigger>

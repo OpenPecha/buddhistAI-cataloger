@@ -1,28 +1,15 @@
-import React, { useEffect, useState } from 'react'
 import { Input } from '@/components/ui/input';
 import {  Search } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
-import { useDebounce } from "@uidotdev/usehooks";
-function TitleFilter() {
-    const [title,setTitle] = useState('');
-    const [, setParams] = useSearchParams();
-   
 
-    
-    const debouncedTitle = useDebounce(title, 1000);
+type TitleFilterProps = Readonly<{
+  value: string;
+  onChange: (title: string) => void;
+}>;
 
-    useEffect(() => {
-      setParams(params=>{
-        params.set('title', debouncedTitle);
-        params.set('page', '1');
-        return params;
-      });
-
-    }, [debouncedTitle]);
-  
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTitle(e.target.value);
-  }
+function TitleFilter({
+  value,
+  onChange,
+}: TitleFilterProps) {
   return (
     <>
        <Search
@@ -33,9 +20,9 @@ function TitleFilter() {
               id="document-title-search"
               type="search"
               placeholder="Search by title…"
-              value={title}
+              value={value}
               
-              onChange={handleChange}
+              onChange={(e) => onChange(e.target.value)}
               className="pl-9 h-9 text-sm"
               aria-label="Search documents by title"
             />

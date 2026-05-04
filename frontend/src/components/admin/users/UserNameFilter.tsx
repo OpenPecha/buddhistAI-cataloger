@@ -1,32 +1,15 @@
-import { useEffect, useState } from 'react';
-import { useDebounce } from '@uidotdev/usehooks';
-import { useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
-function UserNameFilter() {
-  const [searchParams, setParams] = useSearchParams();
-  const [name, setName] = useState(() => searchParams.get('username') || '');
+type UserNameFilterProps = Readonly<{
+  value: string;
+  onChange: (name: string) => void;
+}>;
 
-  const debounced = useDebounce(name, 500);
-
-  
-  useEffect(() => {
-    const trimmed = debounced.trim();
-    setParams((params) => {
-      const inUrl = (params.get('username') || '').trim();
-      if (trimmed === inUrl) {
-        return params;
-      }
-      if (trimmed) {
-        params.set('username', trimmed);
-      } else {
-        params.delete('username');
-      }
-      params.set('page', '1');
-      return params;
-    });
-  }, [debounced]);
+function UserNameFilter({
+  value,
+  onChange,
+}: UserNameFilterProps) {
 
   return (
     <div className="relative w-full min-w-[200px] max-w-xs sm:w-64">
@@ -38,8 +21,8 @@ function UserNameFilter() {
         id="user-name-search"
         type="search"
         placeholder="Search by name or email…"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         className="h-9 pl-9 text-sm"
         aria-label="Search users by name or email"
       />
