@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import and_, exists, func, not_, or_
+from sqlalchemy import and_, exists, func, not_, or_,select
 from sqlalchemy.orm import Session
 
 from user.models.user import User
@@ -305,63 +305,66 @@ def list_completed_document_ids_all_segments_checked(
 
 
 def allow_user_to_assign_volume(db: Session, user_id: str) -> bool:
-    """
-    Returns True when the user may request a new volume assignment.
-
-    Rules (documents are those with ``user_id`` set to this user):
-    - If the user has no such documents, they are allowed.
-    - No document may have status ``active``.
-    - Every document must have status one of: skipped, completed, approved, deleted
-      (including non-null; unknown or null status blocks assignment).
-    - If any segment on any of those documents is ``rejected``, assignment is blocked.
-    - For documents with status ``completed`` or ``approved``, every segment must be
-      ``checked`` or ``approved``. Skipped or deleted documents do not require that
-      segment-level completion check.
-    """
+ 
     allowed_doc_statuses = ("skipped", "completed", "approved", "deleted")
 
-    has_any = (
-        db.query(OutlinerDocument.id)
-        .filter(OutlinerDocument.user_id == user_id)
-        .first()
+    has_any_docs = exists(
+        select(1).select_from(OutlinerDocument).where(OutlinerDocument.user_id == user_id)
     )
-    if has_any is None:
-        return True
-
-    if (
-        db.query(OutlinerDocument.id)
-        .filter(OutlinerDocument.user_id == user_id, OutlinerDocument.status == "active")
-        .first()
-    ):
-        return False
-
-    bad_doc_status = (
-        db.query(OutlinerDocument.id)
-        .filter(
+    has_active = exists(
+        select(1)
+        .select_from(OutlinerDocument)
+        .where(
+            OutlinerDocument.user_id == user_id,
+            OutlinerDocument.status == "active",
+        )
+    )
+    has_bad_doc_status = exists(
+        select(1)
+        .select_from(OutlinerDocument)
+        .where(
             OutlinerDocument.user_id == user_id,
             or_(
                 OutlinerDocument.status.is_(None),
                 OutlinerDocument.status.notin_(allowed_doc_statuses),
             ),
         )
-        .first()
     )
-    if bad_doc_status is not None:
-        return False
-
-
-    # Fix: consider a segment incomplete if its status is 'rejected' or 'unchecked'
-    incomplete_on_finished = (
-        db.query(OutlinerSegment.id)
+    has_rejected_segment = exists(
+        select(1)
+        .select_from(OutlinerSegment)
         .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
-        .filter(
+        .where(
             OutlinerDocument.user_id == user_id,
-            OutlinerDocument.status=="completed",
-            OutlinerSegment.status.in_(("rejected", "unchecked")),
+            OutlinerSegment.status == "rejected",
         )
-        .first()
     )
-    return incomplete_on_finished is None
+    has_incomplete_on_finished = exists(
+        select(1)
+        .select_from(OutlinerSegment)
+        .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
+        .where(
+            OutlinerDocument.user_id == user_id,
+            OutlinerDocument.status.in_(("completed", "approved")),
+            or_(
+                OutlinerSegment.status.is_(None),
+                OutlinerSegment.status.notin_(("checked", "approved")),
+            ),
+        )
+    )
+
+    stmt = select(
+        has_any_docs,
+        has_active,
+        has_bad_doc_status,
+        has_rejected_segment,
+        has_incomplete_on_finished,
+    )
+    has_any, active, bad_status, rejected, incomplete_finished = db.execute(stmt).one()
+    if not has_any:
+        return True
+    return not (active or bad_status or rejected or incomplete_finished)
+
 
 
 def map_document_id_to_filename(
