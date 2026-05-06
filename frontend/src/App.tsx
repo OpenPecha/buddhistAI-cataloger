@@ -6,6 +6,7 @@ import { Navigation, ProtectedRoute } from '@app';
 import OutlinerAdminLayout from './features/outliner/components/OutlinerAdminLayout';
 import LogoutPage from './pages/LogoutPage';
 import useEnsureUserExists from './hooks/useEnsureUserExists';
+import PostHogPageViewTracker from './PostHogPageViewTracker';
 
 // Lazy load page components
 const TextsPage = lazy(() => import('./pages/Text'));
@@ -63,7 +64,8 @@ function App() {
     <div className="h-screen overflow-auto  text-xl z-10"
       >
 
-        
+<PostHogPageViewTracker />
+
       {!isLoginPage && <Navigation/>}
         <Suspense fallback={
           <div className="flex items-center justify-center min-h-screen">

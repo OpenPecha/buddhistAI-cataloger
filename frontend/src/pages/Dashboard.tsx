@@ -219,6 +219,8 @@ const OutlinerUpload: React.FC = () => {
                 {documents.map((doc) => {
                   const isDeleted = doc.status === 'deleted';
                   const isActive=doc.status==='active'||doc.status==='completed';
+                  const isSkipped = doc.status === 'skipped';
+                  const isAnnotated=doc.status==='completed';
                   const checked_percentage = (doc.checked_segments || 0) / (doc.total_segments || 1) * 100;
                   const utcDate = new Date(doc.updated_at);
                   const timestamp = new Date(utcDate.getTime() + (5 * 60 + 30) * 60 * 1000);
@@ -231,22 +233,19 @@ const OutlinerUpload: React.FC = () => {
                         handleDocumentClick(doc.id);
                       }
                     }}
+                    style={{
+                      backgroundColor: isSkipped ? 'lightgray' : isAnnotated ? 'lightgreen' : 'transparent',
+                    }}
                     className={`${isDeleted ||
-                      !isActive ? 'opacity-60' : 'cursor-pointer hover:bg-gray-50'} transition-colors`}
+                      !isActive ? 'opacity-60' : 'cursor-pointer hover:bg-gray-50'} transition-colors `}
                   >
                     <TableCell>
-                      <div className="flex flex-col gap-2">
+                      <div className="flex flex-col gap-2 ">
                         <div className="flex items-center gap-3">
                           <FileText className="w-5 h-5 shrink-0 text-blue-600" />
                           <div className="font-medium flex min-w-0 flex-col text-gray-900">
                             {doc.filename}
-                            <span className="text-xs text-gray-500">
-                              {doc.status==='completed'&&"annotated"}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                              {doc.status==='skipped'&&"skipped"}
-                            </span>
-                            
+                          
                           </div>
                           {doc.rejected_segment && (
                             <div className="flex items-start gap-2">
