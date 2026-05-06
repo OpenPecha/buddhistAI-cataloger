@@ -228,7 +228,6 @@ const OutlinerUpload: React.FC = () => {
                   <TableRow
                     key={doc.id}
                     onClick={() => {
-
                       if (!isDeleted && isActive)  {
                         handleDocumentClick(doc.id);
                       }

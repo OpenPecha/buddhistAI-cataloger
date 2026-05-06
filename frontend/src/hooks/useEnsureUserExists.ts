@@ -1,6 +1,7 @@
 import { useAuth0 } from '@auth0/auth0-react';
 import { useEffect } from 'react'
 import { getCurrentUser, createUser } from '@/api/settings';
+import posthog from 'posthog-js';
 
 function useEnsureUserExists() {
     const { isAuthenticated, user, isLoading } = useAuth0();
@@ -10,7 +11,11 @@ function useEnsureUserExists() {
             try {
               // Check if user exists in database
               const existingUser = await getCurrentUser();
-              
+              posthog.identify(user.email, {
+                email: user.email,
+                name: user.name || null,
+                picture: user.picture || null,
+              })
               // If user doesn't exist, create them
               if (!existingUser && user.sub) {
                 await createUser({
