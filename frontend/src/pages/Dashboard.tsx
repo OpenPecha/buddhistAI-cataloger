@@ -275,7 +275,18 @@ const OutlinerUpload: React.FC = () => {
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-2">
                           <BarChart3 className="w-4 h-4 text-gray-400" />
-                          <span className="font-medium text-sm">Checked: {doc.checked_segments || 0} / {doc.total_segments}</span>
+                          <span
+                            className="font-medium text-sm"
+                            style={{
+                              color:
+                                (doc.checked_segments || 0) !== doc.total_segments
+                                  ? 'red'
+                                  : 'black',
+                            }}
+                          >
+                            Checked: {doc.checked_segments || 0} / {doc.total_segments}
+                          </span>
+                     
                         </div>
                         
                         <div className='flex gap-2 items-center'>
