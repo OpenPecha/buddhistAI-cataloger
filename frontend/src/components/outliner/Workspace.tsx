@@ -35,7 +35,7 @@ export const Workspace: React.FC<{ listRef: React.RefObject<ListImperativeAPI | 
     defaultRowHeight: 50,
   })
 
-  const [tocPanelVisible, setTocPanelVisible] = useState(true)
+  const [tocPanelVisible, setTocPanelVisible] = useState(false)
   const toggleTocPanel = useCallback(() => {
     setTocPanelVisible((v) => !v)
   }, [])

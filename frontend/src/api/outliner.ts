@@ -722,6 +722,25 @@ export const getDashboardStats = async (
   return handleApiResponse(response);
 };
 
+/** GET/PUT …/dashboard/active-batch — admin-selected BEC volume batch. */
+export interface ActiveBatchState {
+  batch_id: number | null;
+}
+
+export const getActiveBatch = async (): Promise<ActiveBatchState> => {
+  const response = await outlinerFetch(`${OUTLINER_BASE_URL}/dashboard/active-batch`);
+  return handleApiResponse(response);
+};
+
+export const updateActiveBatch = async (body: ActiveBatchState): Promise<ActiveBatchState> => {
+  const response = await outlinerFetch(`${OUTLINER_BASE_URL}/dashboard/active-batch`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', accept: 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return handleApiResponse(response);
+};
+
 // ==================== AI Endpoints ====================
 
 /** Result of POST …/documents/:id/ai/outline — same shape as a full document with segments. */

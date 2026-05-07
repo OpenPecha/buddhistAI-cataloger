@@ -26,6 +26,7 @@ import type { ChartOptions, TooltipItem } from 'chart.js'
 import { Bar, Doughnut, Line } from 'react-chartjs-2'
 import StatsCard from '../shared/StatsCard'
 import type { DashboardStats, VolumeBatchStatusCounts } from '@/api/outliner'
+import { useActiveBatch } from '@/hooks'
 
 ChartJS.register(
   CategoryScale,
@@ -541,6 +542,8 @@ function OverviewTab({
 }: OverviewTabProps) {
   const [annotatorQualityView, setAnnotatorQualityView] = useState<'chart' | 'table'>('chart')
   const [reviewerActivityView, setReviewerActivityView] = useState<'chart' | 'table'>('chart')
+  const { data: activeBatchData, setActiveBatch, isUpdating: activeBatchUpdating } = useActiveBatch()
+  const activeBatchId = activeBatchData?.batch_id ?? null
 
   const overviewBarData = useMemo(() => {
     if (!stats) return null
@@ -1136,6 +1139,9 @@ function OverviewTab({
                 <table className="w-full min-w-[32rem] border-collapse text-sm">
                   <thead>
                     <tr className="border-b border-stone-200 bg-stone-50/90 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      <th className="w-10 px-2 py-3 text-center font-normal normal-case tracking-normal">
+                        <span className="sr-only">Set as active batch</span>
+                      </th>
                       <th className="px-4 py-3">Batch ID</th>
                       <th className="px-4 py-3 text-right tabular-nums">Available</th>
                       <th className="px-4 py-3 text-right tabular-nums">Annotating+skipped</th>
@@ -1144,28 +1150,52 @@ function OverviewTab({
                     </tr>
                   </thead>
                   <tbody>
-                    {volumeBatchSection.rows.map((row) => (
-                      <tr
-                        key={row.batchId}
-                        className="border-b border-stone-100 last:border-0 hover:bg-stone-50/80"
-                      >
-                        <td className="px-4 py-2.5 font-medium text-foreground">{row.batchId}</td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
-                          {row.active.toLocaleString()}
-                        </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
-                          {row.in_progress.toLocaleString()}
-                        </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
-                          {row.in_review.toLocaleString()}
-                        </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
-                          {row.reviewed.toLocaleString()}
-                        </td>
-                       
-                       
-                      </tr>
-                    ))}
+                    {volumeBatchSection.rows.map((row) => {
+                      const batchNum = Number(row.batchId)
+                      const batchIdNumeric = !Number.isNaN(batchNum)
+                      const isActiveRow =
+                        activeBatchId !== null && batchIdNumeric && activeBatchId === batchNum
+                      return (
+                        <tr
+                          key={row.batchId}
+                          className="border-b border-stone-100 last:border-0 hover:bg-stone-50/80"
+                        >
+                          <td className="px-2 py-2.5 text-center align-middle">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 cursor-pointer rounded border-stone-300 text-primary accent-primary disabled:cursor-not-allowed disabled:opacity-50"
+                              checked={isActiveRow}
+                              disabled={!batchIdNumeric || activeBatchUpdating}
+                              onChange={(e) => {
+                                if (!confirm("Are you sure you want to set this batch as active?")) return
+                                if (!batchIdNumeric) return
+                                void setActiveBatch({
+                                  batch_id: e.target.checked ? batchNum : null,
+                                })
+                              }}
+                              aria-label={
+                                isActiveRow
+                                  ? `Clear active batch (currently ${row.batchId})`
+                                  : `Set batch ${row.batchId} as active`
+                              }
+                            />
+                          </td>
+                          <td className="px-4 py-2.5 font-medium text-foreground">{row.batchId}</td>
+                          <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                            {row.active.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                            {row.in_progress.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                            {row.in_review.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                            {row.reviewed.toLocaleString()}
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </>

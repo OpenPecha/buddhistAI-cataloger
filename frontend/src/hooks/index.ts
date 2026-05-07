@@ -10,3 +10,4 @@ export { useOutlinerUsers } from './useOutlinerUsers';
 export type { OutlinerUser } from './useOutlinerUsers';
 export { useDashboardStats } from './useDashboardStats';
 export type { DashboardStatsFilters } from './useDashboardStats';
+export { useActiveBatch } from './useActiveBatch';
