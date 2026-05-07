@@ -1,6 +1,6 @@
 import sys
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI,Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 import uvicorn
@@ -60,7 +60,23 @@ class PayloadSizeIncrease(BaseHTTPMiddleware):
 
 app.add_middleware(PayloadSizeIncrease)
 # Add this middleware BEFORE CORS middleware
+@app.middleware("http")
+async def add_utf8_charset(request, call_next):
+    response: Response = await call_next(request)
 
+    content_type = response.headers.get("content-type", "")
+
+    # Only apply to text-like responses
+    if (
+        content_type.startswith("application/json")
+        or content_type.startswith("text/")
+        or content_type.startswith("application/xml")
+        or content_type.startswith("application/javascript")
+    ):
+        if "charset=" not in content_type.lower():
+            response.headers["content-type"] = f"{content_type}; charset=utf-8"
+
+    return response
 
 # CORS middleware
 app.add_middleware(

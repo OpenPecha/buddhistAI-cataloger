@@ -173,6 +173,7 @@ async def get_document(
 @router.get(
     "/documents/{document_id}/workspace",
     response_model=DocumentWorkspaceResponse,
+    
 )
 async def get_document_workspace(
     document_id: str,
@@ -185,6 +186,7 @@ async def get_document_workspace(
     Segments are read only from outliner_segments for this document.
     """
     document = get_document_for_workspace_ctrl(db, document_id, include_segments)
+    print(document.content)
 
     if include_segments:
         segments_exist = (
