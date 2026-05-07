@@ -30,7 +30,7 @@ function DocumentStatusFilter({
   <SelectValue placeholder="Select Status" />
 </SelectTrigger>
 <SelectContent>
-<SelectItem value="all">All</SelectItem>
+<SelectItem value="all">All Status</SelectItem>
     {STATUS_OPTIONS.map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>
                   {opt.label}

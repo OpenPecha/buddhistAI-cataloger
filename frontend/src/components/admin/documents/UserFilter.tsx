@@ -41,7 +41,7 @@ export function UserFilter({
           <SelectValue placeholder="Select a person" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All</SelectItem>
+          <SelectItem value="all">All Users</SelectItem>
           <SelectGroup>
             <SelectLabel>Annotators</SelectLabel>
             {annotators.filter((a) => a.role === 'annotator').map((a) => (
