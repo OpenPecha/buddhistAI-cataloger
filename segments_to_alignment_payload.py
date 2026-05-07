@@ -229,7 +229,6 @@ def _run_tests() -> None:
     assert r["alignment_annotation"][0]["alignment_index"] == [0]
     _assert_no_degenerate(r)
 
-    print("segments_to_alignment_payload: all tests passed.")
 
 
 if __name__ == "__main__":
