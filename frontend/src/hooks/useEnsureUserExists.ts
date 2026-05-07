@@ -10,18 +10,17 @@ function useEnsureUserExists() {
           if (isAuthenticated && user?.email && !isLoading) {
             try {
               // Check if user exists in database
-              const existingUser = await getCurrentUser();
-              posthog.identify(user.email, {
-                email: user.email,
-                name: user.name || null,
-                picture: user.picture || null,
-              })
+              let existingUser = await getCurrentUser();
+              
               // If user doesn't exist, create them
               if (!existingUser && user.sub) {
-                await createUser({
+                existingUser = await createUser({
                   name: user.name || null,
                   picture: user.picture || null,
                 });
+              }
+              if (existingUser) {
+                posthog.identify(existingUser.email, existingUser);
               }
             } catch (error) {
               console.error('Error ensuring user exists:', error);
