@@ -457,7 +457,7 @@ function SegmentRow({
                   onFocus={reportBodyCaret}
                   onBlur={() => onSegmentBodyCaretChange?.(segment.id, null)}
                   className={
-                    'relative z-10 min-h-[8rem] max-h-[min(24rem,50vh)] w-full cursor-text resize-none text-sm whitespace-pre-wrap overflow-y-auto font-monlam rounded-md border-0 bg-transparent p-3 leading-normal focus-visible:ring-2 focus-visible:ring-blue-500/20 ' +
+                    'relative z-10  min-h-[8rem] max-h-[min(24rem,50vh)] w-full cursor-text resize-none text-sm whitespace-pre-wrap overflow-y-auto font-monlam rounded-md border-0 bg-transparent p-3 leading-normal focus-visible:ring-2 focus-visible:ring-blue-500/20 ' +
                     (hasTextSearch
                       ? 'text-transparent caret-gray-800 selection:bg-sky-200/50'
                       : 'text-gray-800')

@@ -12,6 +12,8 @@ import SubmitToReview from './SubmitToReview';
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
 import { useActions } from './contexts';
 
+import InstructionsDrawer from './Instructions';
+
 interface WorkspaceHeaderConfig {
   segmentsCount: number;
   checkedSegmentsCount: number;
@@ -72,125 +74,135 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
   });
 
   const handleSkip = useCallback(() => {
-    const isConfirm = window.confirm(t('outliner.workspace.confirmSkip'));
+    const isConfirm = globalThis.confirm(t('outliner.workspace.confirmSkip'));
       if (skipMutation.isPending||!isConfirm) return;
       skipMutation.mutate();
     
   }, [skipMutation, t]);
 
+ 
+
   const notSavedCount = segmentsCount - checkedSegmentsCount;
   const submitDisabled = checked_percentage < 100 || rejectedSegmentsCount > 0;
   const disableAIButton = isLoadingOrSaving || aiTextEndingLoading || !documentId ;
-  return (
-    <div className="bg-white border-b py-2 border-gray-200 px-6  flex items-center justify-between">
-      <div>
-        <div className="flex items-center gap-2">
-          {isLoadingOrSaving && (
-            <span className="text-sm text-gray-600">{t('outliner.workspace.saving')}</span>
-          )}
-        </div>
-        <div className="text-sm text-gray-600">
-          <Progress value={checked_percentage} title={t('outliner.workspace.savedSegmentsTitle', { count: checkedSegmentsCount })} className="w-40"/>
-          {rejectedSegmentsCount > 0 && (
-            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
-              {t('outliner.workspace.revisionBadge', { count: rejectedSegmentsCount })}
-            </span>
-          )}
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          onClick={onAIDetectTextEndings}
-          disabled={disableAIButton}
-          title={t('outliner.workspace.aiOutlineTitle')}
-          className="flex items-center gap-2"
-        >
-          {aiTextEndingLoading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              {t('outliner.workspace.detecting')}
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4"/>
-            </>
-          )}
-        </Button>
-        {aiTextEndingLoading && (
-          <Button
-            variant="outline"
-            onClick={onAITextEndingStop}
-            className="px-3 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
-            title={t('outliner.workspace.stopDetection')}
-          >
-            <Square className="w-4 h-4" />
-          </Button>
-        )}
-        {hasPreviousSegments && !aiTextEndingLoading && (
-          <Button
-            variant="outline"
-            onClick={onUndoTextEndingDetection}
-            className="border-orange-300 text-orange-600 hover:bg-orange-50 hover:border-orange-400"
-            title={t('outliner.workspace.undoAiTitle')}
-          >
-            {t('outliner.workspace.undo')}
-          </Button>
-        )}
+  let submitDisabledReason: string | undefined;
+  if (rejectedSegmentsCount > 0) {
+    submitDisabledReason = t('outliner.workspace.revisionBadge', { count: rejectedSegmentsCount });
+  } else if (checked_percentage < 100) {
+    submitDisabledReason = t('outliner.workspace.submitNotSaved', { count: notSavedCount });
+  }
 
-         {segmentsCount > 0 && (
-          <Menu
-            onResetSegments={onResetSegments}
-            isAllExpanded={isAllSegmentsExpanded}
-            onToggleExpandAll={toggleExpandAllSegments}
-          />
-        )}
-         {segmentsCount > 0 && (
-          <SubmitToReview
-            disabled={submitDisabled}
-            disabledReason={
-              rejectedSegmentsCount > 0
-                ? t('outliner.workspace.revisionBadge', { count: rejectedSegmentsCount })
-                : checked_percentage < 100
-                  ? t('outliner.workspace.submitNotSaved', { count: notSavedCount })
-                  : undefined
-            }
-          />
-        )}
+  let skipButtonLabel = t('outliner.workspace.skip');
+  if (documentStatus === 'skipped') {
+    skipButtonLabel = t('outliner.workspace.skipped');
+  } else if (skipMutation.isPending) {
+    skipButtonLabel = t('outliner.workspace.skipping');
+  }
+  return (
+    <>
+      <div className="bg-white border-b py-2 border-gray-200 px-6  flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            {isLoadingOrSaving && (
+              <span className="text-sm text-gray-600">{t('outliner.workspace.saving')}</span>
+            )}
+          </div>
+          <div className="text-sm text-gray-600">
+            <Progress value={checked_percentage} title={t('outliner.workspace.savedSegmentsTitle', { count: checkedSegmentsCount })} className="w-40"/>
+            {rejectedSegmentsCount > 0 && (
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+                {t('outliner.workspace.revisionBadge', { count: rejectedSegmentsCount })}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+        <InstructionsDrawer/>
+          <Button
+            variant="outline"
+            onClick={onAIDetectTextEndings}
+            disabled={disableAIButton}
+            title={t('outliner.workspace.aiOutlineTitle')}
+            className="flex items-center gap-2"
+          >
+            {aiTextEndingLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {t('outliner.workspace.detecting')}
+              </>
+            ) : (
+              <Sparkles className="w-4 h-4"/>
+            )}
+          </Button>
+          {aiTextEndingLoading && (
+            <Button
+              variant="outline"
+              onClick={onAITextEndingStop}
+              className="px-3 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+              title={t('outliner.workspace.stopDetection')}
+            >
+              <Square className="w-4 h-4" />
+            </Button>
+          )}
+          {hasPreviousSegments && !aiTextEndingLoading && (
+            <Button
+              variant="outline"
+              onClick={onUndoTextEndingDetection}
+              className="border-orange-300 text-orange-600 hover:bg-orange-50 hover:border-orange-400"
+              title={t('outliner.workspace.undoAiTitle')}
+            >
+              {t('outliner.workspace.undo')}
+            </Button>
+          )}
+
+          {segmentsCount > 0 && (
+            <Menu
+              onResetSegments={onResetSegments}
+              isAllExpanded={isAllSegmentsExpanded}
+              onToggleExpandAll={toggleExpandAllSegments}
+            />
+          )}
+          {segmentsCount > 0 && (
+            <SubmitToReview
+              disabled={submitDisabled}
+              disabledReason={submitDisabledReason}
+            />
+          )}
           <Button
           variant="outline"
           onClick={handleSkip}
           disabled={!submitDisabled|| isLoadingOrSaving || skipMutation.isPending || !documentId || documentStatus==='skipped'}
         >
-          {documentStatus==='skipped' ? t('outliner.workspace.skipped') : skipMutation.isPending ? t('outliner.workspace.skipping') : t('outliner.workspace.skip')}
+          {skipButtonLabel}
         </Button>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className="shrink-0 gap-1.5 px-2"
-          onClick={tocPanel.onToggle}
-          aria-pressed={tocPanel.visible}
-          aria-label={
-            tocPanel.visible
-              ? t('outliner.workspace.hideSidePanel')
-              : t('outliner.workspace.showSidePanel')
-          }
-          title={
-            tocPanel.visible
-              ? t('outliner.workspace.hideSidePanel')
-              : t('outliner.workspace.showSidePanel')
-          }
-        >
-          {tocPanel.visible ? (
-            <PanelRightClose className="h-4 w-4" aria-hidden />
-          ) : (
-            <PanelRightOpen className="h-4 w-4" aria-hidden />
-          )}
-        </Button>
-      
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="shrink-0 gap-1.5 px-2"
+            onClick={tocPanel.onToggle}
+            aria-pressed={tocPanel.visible}
+            aria-label={
+              tocPanel.visible
+                ? t('outliner.workspace.hideSidePanel')
+                : t('outliner.workspace.showSidePanel')
+            }
+            title={
+              tocPanel.visible
+                ? t('outliner.workspace.hideSidePanel')
+                : t('outliner.workspace.showSidePanel')
+            }
+          >
+            {tocPanel.visible ? (
+              <PanelRightClose className="h-4 w-4" aria-hidden />
+            ) : (
+              <PanelRightOpen className="h-4 w-4" aria-hidden />
+            )}
+          </Button>
+        </div>
       </div>
-    </div>
+    
+    </>
   );
 };
 
@@ -227,3 +239,5 @@ function Menu({
     </DropdownMenu>
   );
 }
+
+
