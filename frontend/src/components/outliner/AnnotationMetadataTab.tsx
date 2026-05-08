@@ -101,21 +101,15 @@ export function AnnotationMetadataTab() {
           onQueryChange={setActiveSegmentSearchQuery}
           matchCount={segmentSearchMatchCount}
         />
-         {activeSegment.status !== 'checked' && isTextSegment && (
-            <AISuggestionsBox
-              loading={aiSuggestionsControls.aiLoading}
-              onDetect={() => void aiSuggestionsControls.onAIDetect()}
-              onStop={aiSuggestionsControls.onAIStop}
-            />
-          )}
+       
        
       </div>
-          
+     
 
         {isTextSegment ? (
           <div className="relative flex flex-col gap-4">
-            <TitleField />
-            <AuthorField />
+                        <TitleField />
+                        <AuthorField />
           </div>
         ) : null}
         <div className="shrink-0 flex gap-2 bg-white pt-3 mt-2 border-t border-gray-100">

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, Activity } from 'react'
+import React, { useRef, useState, Activity } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   List,
@@ -9,7 +9,7 @@ import {
 import { SplitPane, Pane } from 'react-split-pane'
 import { SegmentItemMemo as SegmentItem } from './SegmentItem'
 import { WorkspaceHeader } from './WorkspaceHeader'
-import { useDocument, useSelection, useActions } from './contexts'
+import { useDocument, useSelection } from './contexts'
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument'
 import type { TextSegment } from './types'
 import TocViewer from './TOCViewer'
@@ -18,14 +18,9 @@ export const Workspace: React.FC<{ listRef: React.RefObject<ListImperativeAPI | 
   listRef,
 }) => {
   const { t } = useTranslation()
-  const { segments, aiTextEndingLoading } = useDocument()
+  const { segments} = useDocument()
   const { onTextSelection } = useSelection()
-  const {
-    onAIDetectTextEndings,
-    onAITextEndingStop,
-    onUndoTextEndingDetection,
-    onResetSegments,
-  } = useActions()
+
   const { isLoading: isLoadingDocument } = useOutlinerDocument()
   const containerRef = useRef<HTMLDivElement>(null)
   const parentContainerRef = useRef<HTMLDivElement>(null)
@@ -35,12 +30,8 @@ export const Workspace: React.FC<{ listRef: React.RefObject<ListImperativeAPI | 
     defaultRowHeight: 50,
   })
 
-  const [tocPanelVisible, setTocPanelVisible] = useState(false)
-  const toggleTocPanel = useCallback(() => {
-    setTocPanelVisible((v) => !v)
-  }, [])
+  const [showToc, setShowToc] = useState<boolean>(false)
 
-  const showTocColumn = tocPanelVisible
 
   const mainColumn = (
     <div
@@ -48,22 +39,7 @@ export const Workspace: React.FC<{ listRef: React.RefObject<ListImperativeAPI | 
       className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
     >
       <WorkspaceHeader
-        headerConfig={{
-          segmentsCount: segments.length,
-          checkedSegmentsCount: segments.filter(
-            (segment) => segment.status === 'checked' || segment.status === 'approved'
-          ).length,
-          rejectedSegmentsCount: segments.filter((segment) => segment.status === 'rejected').length,
-          aiTextEndingLoading,
-          hasPreviousSegments: false,
-        }}
-        actions={{
-          onAIDetectTextEndings,
-          onAITextEndingStop,
-          onUndoTextEndingDetection,
-          onResetSegments,
-        }}
-        tocPanel={{ visible: tocPanelVisible, onToggle: toggleTocPanel }}
+        tocPanel={{ visible: showToc, onToggle:()=>setShowToc(v=>!v) }}
       />
       {isLoadingDocument && (
         <div className="flex shrink-0 items-center justify-center py-12">
@@ -102,7 +78,7 @@ export const Workspace: React.FC<{ listRef: React.RefObject<ListImperativeAPI | 
     </div>
   )
 
-  const bottomPane = showTocColumn ? (
+  const bottomPane = showToc ? (
     <SplitPane
       direction="horizontal"
       className="outliner-split-pane h-full min-h-0"

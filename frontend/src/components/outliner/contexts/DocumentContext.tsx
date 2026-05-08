@@ -4,6 +4,10 @@ import type { TextSegment } from '../types'
 interface DocumentContextValue {
   textContent: string
   segments: TextSegment[]
+  checkedSegmentsCount: number
+  checked_percentage: number
+  rejectedSegmentsCount: number
+  segmentsCount: number
   activeSegmentId: string | null
   /** Current Title field value in the sidebar for the active segment (may differ from saved segment.title until Save). */
   sidebarTitleDraft: string

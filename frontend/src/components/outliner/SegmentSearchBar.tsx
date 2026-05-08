@@ -123,107 +123,109 @@ export const SegmentSearchBar = memo(function SegmentSearchBar({
   };
 
   return (
-    <div className="segment-search-bar flex-1 flex flex-wrap items-center gap-1 rounded-md py-1">
-      <Input
-        className="h-8 min-w-0 flex-1 text-xs sm:max-w-[14rem]"
-        placeholder={t('outliner.segment.searchPlaceholder')}
-        value={query}
-        onChange={(e) => onQueryChange(e.target.value)}
-        onKeyDown={(e) => {
-          if (navDisabled) return;
-          if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            e.stopPropagation();
-            goToPrev();
-          } else if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            e.stopPropagation();
-            goToNext();
-          }
-        }}
-        aria-label={t('outliner.segment.searchInSegment')}
-      />
-      {query.trim().length > 0 && (
-        <span className="text-[10px] text-muted-foreground tabular-nums whitespace-nowrap px-0.5">
-          {matchCount === 0 ? '0/0' : `${activeMatchIndex + 1}/${matchCount}`}
-        </span>
-      )}
-
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className="h-8 w-8 shrink-0"
-        disabled={navDisabled}
-        onClick={goToFirst}
-        title={t('outliner.segment.firstMatch')}
-        aria-label={t('outliner.segment.firstMatch')}
-      >
-        <ChevronFirst className="h-4 w-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className="h-8 w-8 shrink-0"
-        disabled={navDisabled}
-        onClick={goToPrev}
-        title={t('outliner.segment.prevMatch')}
-        aria-label={t('outliner.segment.prevMatch')}
-      >
-        <ChevronUp className="h-4 w-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className="h-8 w-8 shrink-0"
-        disabled={navDisabled}
-        onClick={goToNext}
-        title={t('outliner.segment.nextMatch')}
-        aria-label={t('outliner.segment.nextMatch')}
-      >
-        <ChevronDown className="h-4 w-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className="h-8 w-8 shrink-0"
-        disabled={navDisabled}
-        onClick={goToLast}
-        title={t('outliner.segment.lastMatch')}
-        aria-label={t('outliner.segment.lastMatch')}
-      >
-        <ChevronLast className="h-4 w-4" />
-      </Button>
-
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className="h-8 w-8 shrink-0"
-        onClick={goToTop}
-        title={t('outliner.segment.scrollToTop')}
-        aria-label={
-           t('outliner.segment.scrollToTop') 
-        }
-      >
-        <ArrowUpToLine className="h-4 w-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        className="h-8 w-8 shrink-0"
-        onClick={goToBottom}
-        title={t('outliner.segment.scrollToBottom')}
-        aria-label={
-           t('outliner.segment.scrollToBottom') 
-        }
-      >
-        <ArrowDownToLine className="h-4 w-4" />
-      </Button>
+    <div className="segment-search-bar flex flex-1 flex-col gap-2 rounded-md border bg-muted/20 p-1 sm:flex-row sm:flex-wrap sm:items-center">
+      <div className="flex w-full items-center gap-2 sm:min-w-56 sm:flex-1">
+        <Input
+          className="h-8 min-w-0 flex-1 bg-background text-xs"
+          placeholder={t('outliner.segment.searchPlaceholder')}
+          value={query}
+          onChange={(e) => onQueryChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (navDisabled) return;
+            if (e.key === 'ArrowUp') {
+              e.preventDefault();
+              e.stopPropagation();
+              goToPrev();
+            } else if (e.key === 'ArrowDown') {
+              e.preventDefault();
+              e.stopPropagation();
+              goToNext();
+            }
+          }}
+          aria-label={t('outliner.segment.searchInSegment')}
+        />
+        {query.trim().length > 0 && (
+          <span className="rounded bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
+            {matchCount === 0 ? '0/0' : `${activeMatchIndex + 1}/${matchCount}`}
+          </span>
+        )}
+      </div>
+      <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
+        <div className="flex items-center rounded-md border bg-background p-0.5">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 shrink-0"
+          disabled={navDisabled}
+          onClick={goToFirst}
+          title={t('outliner.segment.firstMatch')}
+          aria-label={t('outliner.segment.firstMatch')}
+        >
+          <ChevronFirst className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 shrink-0"
+          disabled={navDisabled}
+          onClick={goToPrev}
+          title={t('outliner.segment.prevMatch')}
+          aria-label={t('outliner.segment.prevMatch')}
+        >
+          <ChevronUp className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 shrink-0"
+          disabled={navDisabled}
+          onClick={goToNext}
+          title={t('outliner.segment.nextMatch')}
+          aria-label={t('outliner.segment.nextMatch')}
+        >
+          <ChevronDown className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 shrink-0"
+          disabled={navDisabled}
+          onClick={goToLast}
+          title={t('outliner.segment.lastMatch')}
+          aria-label={t('outliner.segment.lastMatch')}
+        >
+          <ChevronLast className="h-4 w-4" />
+        </Button>
+        </div>
+        <div className="flex items-center rounded-md border bg-background p-0.5">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 shrink-0"
+          onClick={goToTop}
+          title={t('outliner.segment.scrollToTop')}
+          aria-label={t('outliner.segment.scrollToTop')}
+        >
+          <ArrowUpToLine className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 shrink-0"
+          onClick={goToBottom}
+          title={t('outliner.segment.scrollToBottom')}
+          aria-label={t('outliner.segment.scrollToBottom')}
+        >
+          <ArrowDownToLine className="h-4 w-4" />
+        </Button>
+        </div>
+      </div>
 
     </div>
   );

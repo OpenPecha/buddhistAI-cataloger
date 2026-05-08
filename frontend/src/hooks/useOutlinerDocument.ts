@@ -664,6 +664,8 @@ export const useOutlinerDocument = (options?: UseOutlinerDocumentOptions) => {
     updateSegmentLoading: updateSegmentMutation.isPending,
     isRefetching: isRefetchingQuery,
     isResetting: resetSegmentsMutation.isPending,
+
+    isBusy:isLoadingQuery || isLoadingDocument || isRefetchingQuery || isSaving || resetSegmentsMutation.isPending,
     // Actions
     createDocument: handleCreateDocument,
     updateSegment: handleUpdateSegment,

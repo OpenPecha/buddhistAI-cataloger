@@ -16,7 +16,6 @@ import {
   type AnnotationSidebarTab,
 } from '@/components/outliner/AnnotationSidebar';
 import { Workspace } from '@/components/outliner/Workspace';
-import { OutlinerProvider } from '@/components/outliner/OutlinerContext'
 import {
   DocumentProvider,
   SelectionProvider,
@@ -803,12 +802,22 @@ const OutlinerWorkspace: React.FC = () => {
       </div>
     );
   }
+  const segmentsCount = currentSegments.length;
+  const checkedSegmentsCount = currentSegments.filter(
+    (segment) => segment.status === 'checked' || segment.status === 'approved'
+  ).length
+  const checked_percentage = segmentsCount > 0 ? (checkedSegmentsCount / segmentsCount) * 100 : 0;
+  const rejectedSegmentsCount = currentSegments.filter((segment) => segment.status === 'rejected').length
 
   return (
     <DocumentProvider
       value={{
         textContent: currentTextContent,
         segments: currentSegments,
+        checkedSegmentsCount,
+        checked_percentage,
+        rejectedSegmentsCount,
+        segmentsCount,
         activeSegmentId,
         sidebarTitleDraft,
         activeSegmentSearchQuery,
@@ -851,71 +860,41 @@ const OutlinerWorkspace: React.FC = () => {
               onResetSegments: resetSegmentsBackend,
             }}
           >
-            <OutlinerProvider
-              value={{
-                textContent: currentTextContent,
-                segments: currentSegments,
-                activeSegmentId,
-                bubbleMenuState,
-                cursorPosition,
-                aiTextEndingLoading: aiTextEndings.isLoading,
-                segmentLoadingStates: segmentLoadingStates || new Map(),
-                onFileUpload: () => {},
-                onFileUploadToBackend: undefined,
-                isUploading: isLoadingDocument || isSaving,
-                onTextSelection: handleTextSelection,
-                onSegmentClick: handleSegmentClick,
-                onCursorChange: handleCursorChange,
-                onActivate: handleActivateSegment,
-                onInput: handleContentEditableInput,
-                onKeyDown: handleContentEditableKeyDown,
-                onAttachParent: handleAttachParent,
-                onMergeWithPrevious: handleMergeWithPrevious,
-                onBubbleMenuSelect: handleBubbleMenuSelect,
-                onSplitSegment: handleSplitSegment,
-                onAIDetectTextEndings: handleAIDetectTextEndings,
-                onAITextEndingStop: handleAITextEndingStop,
-                onUndoTextEndingDetection: handleUndoTextEndingDetection,
-                onSegmentStatusUpdate: handleSegmentStatusUpdate,
-                onResetSegments: resetSegmentsBackend,
-              }}
-            >
-              <div className="flex flex-col bg-gray-50" style={{ height: 'calc(100vh - 4rem)' }}>
-                {/* Main Content */}
-                <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-                  <SplitPane
-                    direction="horizontal"
-                    className="outliner-split-pane min-h-0 min-w-0 flex-1"
-                    dividerSize={8}
-                  >
-                    <Pane defaultSize={384} minSize={240} maxSize="55%">
-                      <AnnotationSidebar
-                        ref={annotationSidebarRef}
-                        listRef={listRef}
-                        activeSegment={activeSegment}
-                        documentId={documentId || undefined}
-                        segments={currentSegments}
-                        onSegmentClick={handleSegmentClick}
-                        onTitleDraftChange={setSidebarTitleDraft}
-                        sidebarActiveTab={annotationSidebarTab}
-                        onSidebarActiveTabChange={setAnnotationSidebarTab}
-                      />
-                    </Pane>
-                    <Pane minSize={320}>
-                      <Workspace listRef={listRef} />
-                    </Pane>
-                  </SplitPane>
-                </div>
-
-                {/* Unsaved Changes Dialog */}
-                <UnsavedChangesDialog
-                  open={unsavedChangesDialog.open}
-                  onSave={handleUnsavedChangesSave}
-                  onDiscard={handleUnsavedChangesDiscard}
-                  onCancel={handleUnsavedChangesCancel}
-                />
+            <div className="flex flex-col bg-gray-50" style={{ height: 'calc(100vh - 4rem)' }}>
+              {/* Main Content */}
+              <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
+                <SplitPane
+                  direction="horizontal"
+                  className="outliner-split-pane min-h-0 min-w-0 flex-1"
+                  dividerSize={8}
+                >
+                  <Pane defaultSize={384} minSize={240} maxSize="55%">
+                    <AnnotationSidebar
+                      ref={annotationSidebarRef}
+                      listRef={listRef}
+                      activeSegment={activeSegment}
+                      documentId={documentId || undefined}
+                      segments={currentSegments}
+                      onSegmentClick={handleSegmentClick}
+                      onTitleDraftChange={setSidebarTitleDraft}
+                      sidebarActiveTab={annotationSidebarTab}
+                      onSidebarActiveTabChange={setAnnotationSidebarTab}
+                    />
+                  </Pane>
+                  <Pane minSize={320}>
+                    <Workspace listRef={listRef} />
+                  </Pane>
+                </SplitPane>
               </div>
-            </OutlinerProvider>
+
+              {/* Unsaved Changes Dialog */}
+              <UnsavedChangesDialog
+                open={unsavedChangesDialog.open}
+                onSave={handleUnsavedChangesSave}
+                onDiscard={handleUnsavedChangesDiscard}
+                onCancel={handleUnsavedChangesCancel}
+              />
+            </div>
           </ActionsProvider>
         </CursorProvider>
       </SelectionProvider>

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAnnotationMetadata } from '../contexts/AnnotationMetadataContext';
+import { AISuggestionsBox } from '../AISuggestionsBox';
 
 export interface TitleFieldRef {
   setValueWithoutUpdate: (value: string) => void;
@@ -87,6 +88,13 @@ export const TitleField = forwardRef<TitleFieldRef, TitleFieldProps>(function Ti
           >
             {t('outliner.titleField.reconstructedCheckbox')}
           </Label>
+          {activeSegment.status !== 'checked' && (
+            <AISuggestionsBox
+              loading={aiSuggestionsControls.aiLoading}
+              onDetect={() => void aiSuggestionsControls.onAIDetect()}
+              onStop={aiSuggestionsControls.onAIStop}
+            />
+          )}
         </div>
       </div>
       <Input
