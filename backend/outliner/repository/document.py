@@ -27,6 +27,8 @@ def list_documents(
     skip: int = 0,
     limit: int = 100,
     include_deleted: bool = False,
+    include_approved: bool = False,
+    include_skipped: bool = False,
     title: Optional[str] = None,
     exclude_document_user_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
@@ -55,6 +57,10 @@ def list_documents(
         query = query.filter(
             (OutlinerDocument.status != "deleted") | (OutlinerDocument.status.is_(None))
         )
+    if not include_approved:
+        query = query.filter(OutlinerDocument.status != "approved")
+    if not include_skipped:
+        query = query.filter(OutlinerDocument.status != "skipped")
 
     documents = query.order_by(OutlinerDocument.updated_at.desc()).offset(skip).limit(limit).all()
     doc_ids = [d.id for d in documents]

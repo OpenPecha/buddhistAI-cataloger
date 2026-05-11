@@ -23,6 +23,7 @@ import { Input } from '@/components/ui/input';
 import { useUser } from '@/hooks/useUser';
 import { Progress } from '@/components/ui/progress';
 import { formatDistanceToNow } from 'date-fns';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const OutlinerUpload: React.FC = () => {
   const {user}= useUser();
@@ -35,6 +36,7 @@ const OutlinerUpload: React.FC = () => {
   const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1', 10) || 1);
   const [titleSearch, setTitleSearch] = useState('');
   const [debouncedTitle, setDebouncedTitle] = useState('');
+  const [includeStatuses, setIncludeStatuses] = useState<string[]>([]);
   const LIMIT = 10;
   const skip = (page - 1) * LIMIT;
 
@@ -70,9 +72,17 @@ const OutlinerUpload: React.FC = () => {
   );
 
   const { data: documents = [], isLoading: isLoadingDocuments } = useQuery<OutlinerDocumentListItem[]>({
-    queryKey: ['outliner-documents', userId, page, LIMIT, debouncedTitle],
+    queryKey: ['outliner-documents', userId, page, LIMIT, debouncedTitle, includeStatuses],
     queryFn: () =>
-      listOutlinerDocuments(userId, skip, LIMIT, false, debouncedTitle || undefined),
+      listOutlinerDocuments(
+        userId,
+        skip,
+        LIMIT,
+        false,
+        debouncedTitle || undefined,
+        includeStatuses.includes('approved'),
+        includeStatuses.includes('skipped')
+      ),
     enabled: !!userId,
     staleTime: 0,
   });
@@ -151,6 +161,47 @@ const OutlinerUpload: React.FC = () => {
                 aria-label="Search documents by title"
               />
             </div>
+            <div className="mt-3 max-w-md">
+              <p className="mb-1 block text-sm font-medium text-gray-700">
+                Include statuses
+              </p>
+              <div className="flex items-center gap-4 rounded-md border border-input bg-background px-3 py-2 text-sm">
+                <label htmlFor="include-approved" className="flex items-center gap-2 text-gray-700">
+                  <Checkbox
+                    id="include-approved"
+                    checked={includeStatuses.includes('approved')}
+                    onCheckedChange={(checked) => {
+                      const isChecked = checked === true;
+                      setIncludeStatuses((prev) => {
+                        const hasValue = prev.includes('approved');
+                        if (isChecked && !hasValue) return [...prev, 'approved'];
+                        if (!isChecked && hasValue) return prev.filter((value) => value !== 'approved');
+                        return prev;
+                      });
+                    }}
+                    aria-label="Include approved documents"
+                  />
+                  Approved
+                </label>
+                <label htmlFor="include-skipped" className="flex items-center gap-2 text-gray-700">
+                  <Checkbox
+                    id="include-skipped"
+                    checked={includeStatuses.includes('skipped')}
+                    onCheckedChange={(checked) => {
+                      const isChecked = checked === true;
+                      setIncludeStatuses((prev) => {
+                        const hasValue = prev.includes('skipped');
+                        if (isChecked && !hasValue) return [...prev, 'skipped'];
+                        if (!isChecked && hasValue) return prev.filter((value) => value !== 'skipped');
+                        return prev;
+                      });
+                    }}
+                    aria-label="Include skipped documents"
+                  />
+                  Skipped
+                </label>
+              </div>
+            </div>
           </div>
           <div className="flex shrink-0 items-center gap-3">
        
@@ -224,6 +275,20 @@ const OutlinerUpload: React.FC = () => {
                   const checked_percentage = (doc.checked_segments || 0) / (doc.total_segments || 1) * 100;
                   const utcDate = new Date(doc.updated_at);
                   const timestamp = new Date(utcDate.getTime() + (5 * 60 + 30) * 60 * 1000);
+
+                  const Icon=(status:string)=>{
+                    switch(status){
+                      case 'completed':
+                        return <CheckCircle2 className="w-5 h-5 shrink-0 text-green-600" />;
+                      case 'skipped':
+                        return <FileText className="w-5 h-5 shrink-0 text-blue-600" />;
+                      case 'approved':
+                        return <CheckCircle2 className="w-5 h-5 shrink-0 text-blue-600" />;
+                      default:
+                        return <FileText className="w-5 h-5 shrink-0 text-blue-600" />;
+                    }
+                  }
+
                   return (
                   <TableRow
                     key={doc.id}
@@ -232,16 +297,14 @@ const OutlinerUpload: React.FC = () => {
                         handleDocumentClick(doc.id);
                       }
                     }}
-                    style={{
-                      backgroundColor: isSkipped ? 'lightgray' : isAnnotated ? 'lightgreen' : 'transparent',
-                    }}
+                   
                     className={`${isDeleted ||
                       !isActive ? 'opacity-60' : 'cursor-pointer hover:bg-gray-50'} transition-colors `}
                   >
                     <TableCell>
                       <div className="flex flex-col gap-2 ">
                         <div className="flex items-center gap-3">
-                          <FileText className="w-5 h-5 shrink-0 text-blue-600" />
+                          {Icon(doc.status || '')}
                           <div className="font-medium flex min-w-0 flex-col text-gray-900">
                             {doc.filename}
                           

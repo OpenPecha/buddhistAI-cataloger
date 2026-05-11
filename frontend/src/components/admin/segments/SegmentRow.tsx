@@ -353,6 +353,7 @@ function SegmentRow({
 
 
   const isRejected = segment.status === 'rejected';
+  const isApproved = segment.status === 'approved';
   const showApproveButton= selectedDocument?.status==='completed';
   const isSaving = statusMutation.isPending || rejectMutation.isPending || titleAuthorSaving || bdrcSaveMutation.isPending;
   return (
@@ -361,7 +362,7 @@ function SegmentRow({
       className={`rounded-lg border-2 p-4 transition-colors ${
         isRejected
           ? 'border-red-400 bg-red-50'
-          : segment.status === 'approved'
+          : isApproved
             ? 'border-blue-300 bg-blue-50/40'
             : 'border-gray-200 bg-gray-50 hover:border-gray-300 hover:bg-gray-100/80'
       }`}
@@ -420,7 +421,7 @@ function SegmentRow({
             </div>
           </div>
 
-          {segment.status === 'rejected' && segment.rejection?.reason?.trim() ? (
+          {isRejected && segment.rejection?.reason?.trim() ? (
             <div className="rounded-md border border-red-200 bg-red-100/60 px-3 py-2 text-sm text-red-900">
               <span className="font-semibold text-red-800">Rejection note: </span>
               <span className="whitespace-pre-wrap">{segment.rejection.reason}</span>
@@ -481,11 +482,8 @@ function SegmentRow({
                         : segment.text
                     }
                   />
-                ) : segment.text.length > 200 ? (
-                  `${segment.text.slice(0, 200)}…`
-                ) : (
-                  segment.text
-                )}
+                ) :`${segment?.text?.slice(0, 200)}…`
+              }
               </button>
             )}
           </div>

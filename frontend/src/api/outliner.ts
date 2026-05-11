@@ -297,13 +297,17 @@ export const listOutlinerDocuments = async (
   skip: number = 0,
   limit: number = 100,
   include_deleted: boolean = false,
-  title?: string
+  title?: string,
+  include_approved: boolean = false,
+  include_skipped: boolean = false
 ): Promise<OutlinerDocumentListItem[]> => {
   const params = new URLSearchParams();
   if (user_id) params.append('user_id', user_id);
   params.append('skip', skip.toString());
   params.append('limit', limit.toString());
   params.append('include_deleted', include_deleted.toString());
+  params.append('include_approved', include_approved.toString());
+  params.append('include_skipped', include_skipped.toString());
   if (title?.trim()) params.append('title', title.trim());
 
   const response = await outlinerFetch(`${OUTLINER_BASE_URL}/documents?${params.toString()}`);

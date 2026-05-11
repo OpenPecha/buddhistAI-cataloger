@@ -40,6 +40,8 @@ def list_documents(
     skip: int = 0,
     limit: int = 100,
     include_deleted: bool = False,
+    include_approved: bool = False,
+    include_skipped: bool = False,
     title: Optional[str] = None,
     exclude_document_user_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
@@ -63,6 +65,8 @@ def list_documents(
         skip=skip,
         limit=limit,
         include_deleted=include_deleted,
+        include_approved=include_approved,
+        include_skipped=include_skipped,
         title=title,
         exclude_document_user_id=exclude_document_user_id,
     )

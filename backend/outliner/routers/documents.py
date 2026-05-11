@@ -80,27 +80,11 @@ async def list_documents(
     skip: int = 0,
     limit: int = 100,
     include_deleted: bool = False,
+    include_approved: bool = False,
+    include_skipped: bool = False,
     db: Session = Depends(get_db),
 ):
-    """
-    List all outliner documents, optionally filtered by user, status, title search, and deletion status.
 
-    Each item may include `rejected_segment` when the document is ``approved`` or ``completed`` and
-    at least one segment is still ``rejected``: the newest unresolved rejection
-    (message, document_id, segment_id, reviewer_user).
-
-    ``rejection_resolved`` is true for ``approved``/``completed`` documents where some segment is
-    ``checked``, its latest rejection was by a reviewer, and that rejection row is resolved
-    (annotator addressed the rejection).
-
-    Args:
-        user_id: Filter documents by user ID (annotator)
-        status: Filter by document status (active, completed, approved)
-        title: Search string matched against document filename (display title in list views)
-        skip: Number of documents to skip (pagination)
-        limit: Maximum number of documents to return
-        include_deleted: If False (default), exclude deleted documents. If True, include all documents.
-    """
     result = list_documents_ctrl(
         db=db,
         user_id=user_id,
@@ -108,6 +92,8 @@ async def list_documents(
         skip=skip,
         limit=limit,
         include_deleted=include_deleted,
+        include_approved=include_approved,
+        include_skipped=include_skipped,
         title=title,
     )
     return result
