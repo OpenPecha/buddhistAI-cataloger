@@ -48,7 +48,9 @@ const OutlineSegmentRow = memo(function OutlineSegmentRow({
   const preview =
     seg.title ? seg.title : seg.text.length > 80 ? `${seg.text.slice(0, 80)}...` : seg.text;
   const showMetaRow = Boolean(seg.label || seg.title || seg.author);
-
+  const isApproved = seg.status === 'approved'
+  const isChecked = seg.status === 'checked'
+  const isRejected = seg.status === 'rejected'
   return (
     <button
       type="button"
@@ -60,11 +62,11 @@ const OutlineSegmentRow = memo(function OutlineSegmentRow({
       <div className="flex items-start gap-2">
         <span
           className={`shrink-0 text-xs font-medium mt-0.5 w-6 h-6 rounded-full flex items-center justify-center ${
-            seg.status === 'approved'
+            isApproved
               ? 'bg-blue-600 text-white'
-              : seg.status === 'checked'
+              : isChecked
                 ? 'bg-green-600 text-white'
-                : seg.status === 'rejected'
+                : isRejected
                   ? 'bg-red-600 text-white'
                   : 'bg-gray-200 text-gray-600'
           }`}
@@ -76,7 +78,7 @@ const OutlineSegmentRow = memo(function OutlineSegmentRow({
           <p
             className={`text-sm leading-snug font-monlam ${
               isActive ? 'text-blue-900' : 'text-gray-700'
-            } ${seg.status === 'checked' ? 'opacity-50' : ''}`}
+            } ${isApproved ? 'opacity-50' : ''}`}
           >
             {preview}
           </p>
