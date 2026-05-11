@@ -42,4 +42,5 @@ from outliner.repository.segment_queries import (
     map_segment_ids_to_document_user_ids,
     max_segment_index,
     segment_list_for_document,
+    segments_by_document_id,
 )

@@ -60,7 +60,8 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
     toggleSegmentExpanded,
   } = useActions()
 
-  const isChecked = segment.status === 'checked' || segment.status === 'approved'
+  const isChecked = segment.status === 'checked' 
+  const isApproved = segment.status === 'approved'
   const isRejected = segment.status === 'rejected'
   const rejectionReviewerPicture =
     segment.rejection?.reviewer?.picture?.trim() || ''
@@ -83,7 +84,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
   
 
   return (
-    <div className="relative">
+    <div className="relative" >
      
       {/* Attach Parent Button and Collapse All Button - only for first segment */}
       {isFirstSegment && (
@@ -135,7 +136,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
         role="button"
         tabIndex={0}
         className={`mb-4 p-4 rounded-lg border-2 cursor-pointer transition-all relative ${
-          isChecked ? 'opacity-50' : 'opacity-100'
+          isApproved ? 'opacity-50' : 'opacity-100'
         } ${
           isRejected
             ? 'border-red-400 bg-red-50'
@@ -228,7 +229,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
                 ? 'bg-red-500 text-white'
                 : isChecked 
                   ? 'bg-green-600 text-white' 
-                  : 'bg-gray-200 text-gray-600'
+                  : isApproved ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
             }`}>
               {index + 1}
             </div>
@@ -247,7 +248,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
               </span>
             )}
           </div>
-          <div className={`flex-1 relative ${isChecked && !isRejected ? 'pointer-events-none' : ''}`}>
+          <div className={`flex-1 relative ${isApproved && !isRejected ? 'pointer-events-none' : ''}`}>
           <div className='absolute right-2'>
 
           <AlertMessage

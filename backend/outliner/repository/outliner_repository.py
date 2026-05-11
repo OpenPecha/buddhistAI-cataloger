@@ -28,6 +28,7 @@ from outliner.repository.document import (
     allow_user_to_assign_volume,
 )
 from outliner.repository.segment import (
+    segments_by_document_id,
     add_segment,
     add_segment_flush,
     run_bulk_segment_ops,

@@ -55,11 +55,6 @@ export function AnnotationMetadataTab() {
     }
   }, [documentId]);
 
-  // Auto title/author detection only when the user selects the Metadata tab (not while on Outlines),
-  // and only if both fields are still empty. Deferred so bubble-menu fills and segment form reset run first.
-  //
-  // Only set `wasMetadataTabSelectedRef` after confirming `justEntered`; reset it in cleanup so React Strict
-  // Mode's double effect run does not leave the ref true with a cleared timeout (which would skip AI entirely).
   useEffect(() => {
     if (!isMetadataTabSelected) {
       wasMetadataTabSelectedRef.current = false;

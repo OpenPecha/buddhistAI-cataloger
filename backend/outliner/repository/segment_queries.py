@@ -148,6 +148,9 @@ def segment_list_for_document(db: Session, document_id: str) -> List[dict]:
     return segment_list
 
 
+def segments_by_document_id(db: Session, document_id: str) -> List[OutlinerSegment]:
+    return db.query(OutlinerSegment).filter(OutlinerSegment.document_id == document_id).all()
+
 def list_segments(db: Session, document_id: str) -> List[OutlinerSegment]:
     return (
         db.query(OutlinerSegment)

@@ -313,17 +313,17 @@ def get_document_progress(db: Session, document_id: str) -> Dict[str, Any]:
 
 
 def reset_segments(db: Session, document_id: str) -> None:
+    # check if the document has any approved segments
+    segments = outliner_repo.segments_by_document_id(db,document_id=document_id)
+    for segment in segments:
+        if segment.status == "approved":
+            raise HTTPException(status_code=400, detail="Document has approved segments")
     """Delete all segments for a document"""
     if not outliner_repo.reset_segments(db, document_id):
         raise HTTPException(status_code=404, detail="Document not found")
 
 def get_assign_volume_eligibility(db: Session, user_id: str) -> Dict[str, bool]:
-    """
-    Whether the current user may request a new volume assignment: no active documents,
-    every assigned document is skipped/completed/approved/deleted, no rejected segments
-    on any of their documents, and completed/approved documents have only checked or
-    approved segments.
-    """
+   
     allowed = outliner_repo.allow_user_to_assign_volume(db, user_id)
     return {"allowed": allowed}
 
@@ -332,13 +332,7 @@ def list_completed_document_ids_all_segments_checked(
     db: Session,
     only_document_ids: Optional[List[str]] = None,
 ) -> List[str]:
-    """
-    Documents with status `completed`, a non-empty BDRC volume id (`filename`),
-    at least one segment, and every segment with status `checked`.
 
-    If `only_document_ids` is not None, restrict to that set (after normalization in the caller).
-    Empty `only_document_ids` yields no candidates.
-    """
     return outliner_repo.list_completed_document_ids_all_segments_checked(
         db, only_document_ids=only_document_ids
     )
@@ -349,10 +343,7 @@ def replace_segments_and_toc (
     segments_data: List[Dict[str, Any]],
     toc_entries: Any,
 ) -> Tuple[OutlinerDocument, List[Dict[str, Any]]]:
-    """
-    Delete all segments, insert new ones, and update AI TOC in a single transaction.
-    Avoids multiple commits and a full document re-fetch after outline generation.
-    """
+
     document = get_document_with_cache(db, document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
