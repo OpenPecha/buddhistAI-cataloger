@@ -105,10 +105,11 @@ def get_reviewer_segment_activity(
     doc_filters = [
         (OutlinerDocument.status != "deleted") | (OutlinerDocument.status.is_(None))
     ]
+    segment_activity_t = _segment_review_activity_time()
     if start_date:
-        doc_filters.append(OutlinerDocument.created_at >= start_date)
+        doc_filters.append(segment_activity_t >= start_date)
     if end_date:
-        doc_filters.append(OutlinerDocument.created_at <= end_date)
+        doc_filters.append(segment_activity_t <= end_date)
     if user_id:
         doc_filters.append(OutlinerDocument.user_id == user_id)
     doc_scope = and_(*doc_filters)
