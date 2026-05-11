@@ -1,10 +1,13 @@
 """Split and merge segment controller logic."""
+import logging
+import threading
 import uuid
 from typing import List, Optional
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from core.database import SessionLocal
 from outliner.models.outliner import OutlinerSegment, SegmentLabels
 from outliner.repository import outliner_repository as outliner_repo
 from outliner.utils.segment_title_author_auto import apply_split_auto_title_author_parallel
@@ -15,6 +18,33 @@ from outliner.utils.outliner_utils import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
+def _apply_split_auto_title_author_background(
+    segment_id: str,
+    new_segment_id: str,
+    text_before: str,
+    text_after: str,
+) -> None:
+    """Run split AI enrichment off request path with its own DB session."""
+    db = SessionLocal()
+    try:
+        segment = outliner_repo.get_segment_by_pk(db, segment_id)
+        new_segment = outliner_repo.get_segment_by_pk(db, new_segment_id)
+        if not segment or not new_segment:
+            return
+        apply_split_auto_title_author_parallel(segment, new_segment, text_before, text_after)
+        segment.update_annotation_status()
+        new_segment.update_annotation_status()
+        outliner_repo.commit_session(db)
+    except Exception:
+        logger.exception("background split auto title/author failed")
+        db.rollback()
+    finally:
+        db.close()
+
+
 def split_segment(
     db: Session,
     segment_id: str,
@@ -23,12 +53,12 @@ def split_segment(
 ) -> List[OutlinerSegment]:
     """Split a segment at a given position"""
     segment = outliner_repo.get_segment_by_pk(db, segment_id)
+    document = get_document_with_cache(db, document_id)
 
     if not segment:
         if not document_id:
             raise HTTPException(status_code=404, detail="Segment not found")
 
-        document = get_document_with_cache(db, document_id)
         if not document:
             raise HTTPException(status_code=404, detail="Document not found")
 
@@ -54,10 +84,9 @@ def split_segment(
         segment.update_annotation_status()
         outliner_repo.add_segment_flush(db, segment)
 
-    doc_for_body = get_document_with_cache(db, segment.document_id)
-    if not doc_for_body:
+    if not document:
         raise HTTPException(status_code=404, detail="Document not found")
-    content = doc_for_body.content or ""
+    content = document.content or ""
     body = segment_body_from_document(content, segment.span_start, segment.span_end)
 
     if split_position <= 0 or split_position >= len(body):
@@ -100,10 +129,14 @@ def split_segment(
     )
 
     outliner_repo.add_segment(db, new_segment)
-    apply_split_auto_title_author_parallel(segment, new_segment, text_before, text_after)
     segment.update_annotation_status()
     new_segment.update_annotation_status()
     outliner_repo.commit_session(db)
+    threading.Thread(
+        target=_apply_split_auto_title_author_background,
+        args=(segment.id, new_segment.id, text_before, text_after),
+        daemon=True,
+    ).start()
 
     return [segment, new_segment]
 
