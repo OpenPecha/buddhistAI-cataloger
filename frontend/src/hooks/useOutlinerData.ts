@@ -41,6 +41,8 @@ export interface DocumentFilters {
   title?: string;
   page?: number;
   pageSize?: number;
+  includeApproved?: boolean;
+  includeSkipped?: boolean;
   /** Admin reviewer queue: omit documents assigned to the reviewer (document user_id). */
   excludeOwnAssignedDocuments?: boolean;
 }
@@ -56,6 +58,8 @@ export function useDocuments(filters: DocumentFilters = {}) {
     title,
     page = 1,
     pageSize = DEFAULT_PAGE_SIZE,
+    includeApproved = false,
+    includeSkipped = false,
     excludeOwnAssignedDocuments = false,
   } = filters;
   const skip = (page - 1) * pageSize;
@@ -69,7 +73,7 @@ export function useDocuments(filters: DocumentFilters = {}) {
   } = useQuery<Document[]>({
     queryKey: [
       'outliner-admin-documents',
-      { status, userId, title, skip, limit: pageSize, excludeOwnAssignedDocuments },
+      { status, userId, title, skip, limit: pageSize, includeApproved, includeSkipped, excludeOwnAssignedDocuments },
     ],
     queryFn: async () => {
       const token = await getAccessTokenSilently();
@@ -78,6 +82,8 @@ export function useDocuments(filters: DocumentFilters = {}) {
       if (userId) params.append('user_id', userId);
       if (title?.trim()) params.append('title', title.trim());
       if (excludeOwnAssignedDocuments) params.append('exclude_own_assigned', 'true');
+      params.append('include_approved', String(includeApproved));
+      params.append('include_skipped', String(includeSkipped));
       params.set('skip', String(skip));
       params.set('limit', String(pageSize));
       const url = `${OUTLINER_BASE_URL}/documents?${params.toString()}`;

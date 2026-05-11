@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DocumentsTab } from '../components/admin';
 import { SimplePagination } from '../components/ui/simple-pagination';
@@ -13,6 +13,8 @@ function OutlinerAdminDocument() {
   const status = searchParams.get('status') || undefined;
   const annotator = searchParams.get('annotator') || undefined;
   const debouncedTitle = searchParams.get('title') || undefined;
+  const includeApproved = searchParams.get('include_approved') === 'true';
+  const includeSkipped = searchParams.get('include_skipped') === 'true';
   const page = Math.max(1, Number.parseInt(searchParams.get('page') || '1', 10) || 1);
   const filters: DocumentFilters = useMemo(
     () => ({
@@ -21,9 +23,11 @@ function OutlinerAdminDocument() {
       title: debouncedTitle || undefined,
       page,
       pageSize: 20,
+      includeApproved,
+      includeSkipped,
       excludeOwnAssignedDocuments: true,
     }),
-    [status, annotator, debouncedTitle, page]
+    [status, annotator, debouncedTitle, page, includeApproved, includeSkipped]
   );
 
   const { hasPrevPage, hasNextPage, isFetching,handleNextPage,handlePrevPage } = useDocuments(filters);

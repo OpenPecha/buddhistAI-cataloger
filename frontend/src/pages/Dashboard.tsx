@@ -270,8 +270,6 @@ const OutlinerUpload: React.FC = () => {
                 {documents.map((doc) => {
                   const isDeleted = doc.status === 'deleted';
                   const isActive=doc.status==='active'||doc.status==='completed';
-                  const isSkipped = doc.status === 'skipped';
-                  const isAnnotated=doc.status==='completed';
                   const checked_percentage = (doc.checked_segments || 0) / (doc.total_segments || 1) * 100;
                   const utcDate = new Date(doc.updated_at);
                   const timestamp = new Date(utcDate.getTime() + (5 * 60 + 30) * 60 * 1000);
