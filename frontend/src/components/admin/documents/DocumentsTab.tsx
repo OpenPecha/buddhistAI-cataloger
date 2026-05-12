@@ -103,14 +103,9 @@ function DocumentsTab({
     draftIncludeSkipped === includeSkipped;
 
   const { users: outlinerUsers } = useOutlinerUsers();
-  const annotatorIdToDisplay = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const u of outlinerUsers) {
-      m.set(u.id, u.name?.trim() || u.email || u.id);
-    }
-    return m;
-  }, [outlinerUsers]);
-
+  const getAnnotator = (userId: string) => {
+    return outlinerUsers.find((user) => user.id === userId) || null;
+  };
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="shrink-0  pb-4 flex flex-wrap items-center justify-between gap-4">
@@ -196,11 +191,7 @@ function DocumentsTab({
                 <DocumentRow
                   key={doc.id}
                   document={doc}
-                  annotatorName={
-                    doc.user_id
-                      ? (annotatorIdToDisplay.get(doc.user_id) ?? 'Unknown user')
-                      : ''
-                  }
+                  annotator={getAnnotator(doc?.user_id ?? '')}
                   onSelect={onDocumentSelect}
                   onDelete={onDocumentDelete}
                 />

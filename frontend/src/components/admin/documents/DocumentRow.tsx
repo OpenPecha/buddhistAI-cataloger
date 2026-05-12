@@ -1,5 +1,9 @@
+import type { User } from '@/api/user';
 import type { Document } from '../shared/types';
 import { TableCell, TableRow } from '@/components/ui/table';
+import { getStatusBadgeClass, STATUS_COLORS, STATUS_DIVIDER_COLORS } from './utils';
+import { ArrowRight, MessageCircle } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
 const STATUS_LABEL: Record<string, string> = {
   active: 'Annotating',
@@ -12,10 +16,10 @@ interface DocumentRowProps {
   readonly document: Document;
   readonly onSelect: (document: Document) => void;
   readonly onDelete: (documentId: string) => void;
-  readonly annotatorName?: string;
+  readonly annotator?: User;
 }
 
-function DocumentRow({ document,annotatorName, onSelect, onDelete }: DocumentRowProps) {
+function DocumentRow({ document,annotator, onSelect, onDelete }: DocumentRowProps) {
   const statusKey = document.status || 'active';
   /** Prefer server join of rejections → segment status; fall back to rejected-status segment count on older APIs. */
   const openRejectionSegments =
@@ -46,42 +50,25 @@ function DocumentRow({ document,annotatorName, onSelect, onDelete }: DocumentRow
         : 'Rejection comments on segments in this document';
   return (
     <TableRow className="hover:bg-gray-50">
-      <TableCell className="px-6 py-4 whitespace-nowrap">
+      <TableCell className="px-6 py-4 whitespace-nowrap flex items-center gap-2">
+   <div className="flex flex-col gap-1">
+
         <div className="text-sm font-medium text-gray-900">
           {document.filename || `Document ${document.id.slice(0, 8)}`}
         </div>
-        <div className="text-sm text-gray-500">
-        {annotatorName}
+        <div className="text-sm text-gray-500 flex items-center gap-2">
+          <img src={annotator?.picture} alt={annotator?.name || annotator?.email} className="w-4 h-4 rounded-full" />
+        {annotator?.name}
         </div>
+   </div>
       </TableCell>
       <TableCell className="px-6 py-4 whitespace-nowrap align-middle">
         <div className="flex items-center gap-4">
           <span
-            className={`inline-flex items-center gap-1 px-2.5 py-1 text-sm font-semibold rounded-full transition-colors
-              ${
-                statusKey === 'completed'
-                  ? 'bg-green-50 text-green-700 border border-green-200'
-                  : statusKey === 'approved'
-                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                  : statusKey === 'rejected'
-                  ? 'bg-red-50 text-red-700 border border-red-200'
-                  : 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-              }
-            `}
+            className={`inline-flex items-center gap-1 px-2.5 py-1 text-sm font-semibold rounded-full transition-colors border ${getStatusBadgeClass(statusKey)}`}
             title={STATUS_LABEL[statusKey] || statusKey}
           >
-            <span className="w-2 h-2 rounded-full mr-2"
-              style={{
-                background:
-                  statusKey === 'completed'
-                    ? '#22c55e'
-                    : statusKey === 'approved'
-                    ? '#3b82f6'
-                    : statusKey === 'rejected'
-                    ? '#ef4444'
-                    : '#facc15',
-                display: 'inline-block'
-              }}
+            <span className={`w-2 h-2 rounded-full mr-2 animate-pulse ${STATUS_DIVIDER_COLORS[statusKey]}`}
             ></span>
             {STATUS_LABEL[statusKey] || statusKey}
           </span>
@@ -89,27 +76,32 @@ function DocumentRow({ document,annotatorName, onSelect, onDelete }: DocumentRow
             className={`inline-flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full ${badgeClass}`}
             title={badgeTitle}
           >
-            <svg className={`w-3 h-3 shrink-0 ${iconClass}`} fill="currentColor" viewBox="0 0 20 20">
-              <path d="M8.257 3.099c.366-.756 1.42-.756 1.786 0l7.451 15.396A1 1 0 0 1 16.584 20H3.416a1 1 0 0 1-.91-1.505L8.257 3.1zM11 14a1 1 0 1 0-2 0 1 1 0 0 0 2 0zm-1-5a1 1 0 0 0-.993.883L9 10v2a1 1 0 0 0 1.993.117L11 12v-2a1 1 0 0 0-1-1z" />
-            </svg>
+           <MessageCircle className={`w-3 h-3 animate-bounce shrink-0 ${iconClass}`}/>
             {commentCount}
           </span>}
         </div>
       </TableCell>
       <TableCell
-        className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+        className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-900"
         title="Checked or approved segments / total segments"
       >
-        {(document.checked_segments ?? 0)}/{document.total_segments}
+        <Progress value={(document.checked_segments ?? 0)/(document.total_segments ?? 0)*100}  title={`${document.checked_segments ?? 0}/${document.total_segments ?? 0}`}/>
+        <span className="text-xs text-gray-600 font-medium ml-2 whitespace-nowrap">
+            {(document.checked_segments ?? 0)}/{document.total_segments}
+          </span>
       </TableCell>
      
       <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium">
         <button
           onClick={() => onSelect(document)}
-          className="text-blue-600 hover:text-blue-900 mr-4"
+          className="group text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-md px-2 py-1 cursor-pointer flex items-center gap-2"
         >
-          View Segments
+          Review
+          <ArrowRight
+            className="w-3 h-3 shrink-0 opacity-0 translate-x-[-8px] group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200"
+          />
         </button>
+  
       </TableCell>
     </TableRow>
   );
