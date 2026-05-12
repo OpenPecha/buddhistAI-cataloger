@@ -279,6 +279,15 @@ class DocumentListResponse(BaseModel):
         from_attributes = True
 
 
+class RandomReviewedDocumentIdsResponse(BaseModel):
+    """Up to five random documents whose workflow status is approved (reviewed)."""
+
+    document_ids: List[str] = Field(
+        ...,
+        description="Document primary keys; may be fewer than five if not enough approved documents exist.",
+    )
+
+
 class BulkSegmentUpdate(BaseModel):
     segments: List[SegmentUpdate] = Field(..., description="List of segment updates with segment IDs")
     segment_ids: List[str] = Field(..., description="Corresponding segment IDs for each update")

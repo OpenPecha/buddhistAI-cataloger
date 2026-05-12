@@ -10,11 +10,9 @@ import {
 import type { Document, Segment } from '../shared/types';
 import SegmentRow from './SegmentRow';
 import { Button } from '@/components/ui/button';
-import { outlinerFetch, resetSegments, updateDocumentStatus } from '@/api/outliner';
-import { OUTLINER_BASE_URL } from '@/config/api';
+import { approveOutlinerDocument, resetSegments, updateDocumentStatus } from '@/api/outliner';
 import { VolumeImagePanelCore } from '@/components/outliner/ImageWrapper';
-import { useParams } from 'react-router-dom';
-import { useAuth0 } from '@auth0/auth0-react';
+import {  useNavigate, useParams } from 'react-router-dom';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -73,11 +71,10 @@ function SegmentsTab({
   onToggleExpansion,
 }: SegmentsTabProps) {
   const { t } = useTranslation();
-  const [isApproving, setIsApproving] = useState(false);
+  const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<SegmentStatusFilter>('all');
   const [imagesPanelVisible, setImagesPanelVisible] = useState(false);
   const { documentId } = useParams<{ documentId: string }>();
-  const { getAccessTokenSilently } = useAuth0();
   const queryClient = useQueryClient();
   const filteredSegments = useMemo(() => {
     if (statusFilter === 'all') return segments;
@@ -144,41 +141,30 @@ function SegmentsTab({
     return null;
   }, [filteredSegments, expandedSegments, segmentBodyCaret]);
 
-  
+  const approveDocumentMutation = useMutation({
+    mutationFn: async () => {
+      if (!documentId) throw new Error('Document ID is required');
+      return approveOutlinerDocument(documentId);
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] }),
+        queryClient.invalidateQueries({ queryKey: ['outliner-admin-documents'] }),
+      ]);
+      navigate(`/outliner-admin/documents`);
+      toast.success('Document approved successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to approve document');
+    },
+  });
 
-  const handleApproveAll = async () => {
+  const handleApproveAll = () => {
     if (!documentId) {
       toast.error('Document ID is required');
       return;
     }
-
-    setIsApproving(true);
-    try {
-      const token = await getAccessTokenSilently();
-      const response = await outlinerFetch(`${OUTLINER_BASE_URL}/documents/${documentId}/approve`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || errorData.message || 'Failed to approve document');
-      }
-
-      await response.json();
-      toast.success('Document approved successfully');
-
-      queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] });
-      queryClient.invalidateQueries({ queryKey: ['outliner-admin-documents'] });
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to approve document';
-      toast.error(errorMessage);
-    } finally {
-      setIsApproving(false);
-    }
+    approveDocumentMutation.mutate();
   };
 
   const undoSkippedMutation = useMutation({
@@ -322,7 +308,11 @@ function SegmentsTab({
               <Button
                 size="sm"
                 onClick={handleApproveAll}
-                disabled={isApproving || !documentId || statusCounts.approved < segments.length}
+                disabled={
+                  approveDocumentMutation.isPending ||
+                  !documentId ||
+                  statusCounts.approved < segments.length
+                }
                 className="cursor-pointer shrink-0"
                 title={
                   statusCounts.approved < segments.length
@@ -330,7 +320,7 @@ function SegmentsTab({
                     : 'Approve document'
                 }
               >
-                {isApproving ? 'Approving...' : 'Submit'}
+                {approveDocumentMutation.isPending ? 'Approving...' : 'Submit'}
               </Button>
             </div>
           </div>

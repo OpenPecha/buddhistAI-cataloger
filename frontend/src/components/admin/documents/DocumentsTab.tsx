@@ -158,7 +158,7 @@ function DocumentsTab({
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <label htmlFor="admin-include-approved" className="flex items-center gap-2 text-sm text-gray-700">
-                  <span>Approved</span>
+                  <span>Reviewed</span>
                   <Switch
                     id="admin-include-approved"
                     checked={draftIncludeApproved}

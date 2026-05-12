@@ -315,6 +315,16 @@ export const listOutlinerDocuments = async (
   return handleApiResponse(response);
 };
 
+/** GET …/documents/random-reviewed-ids — up to five random approved (reviewed) document ids. */
+export interface RandomReviewedDocumentIdsResponse {
+  document_ids: string[];
+}
+
+export const getRandomReviewedDocumentIds = async (): Promise<RandomReviewedDocumentIdsResponse> => {
+  const response = await outlinerFetch(`${OUTLINER_BASE_URL}/documents/random-reviewed-ids`);
+  return handleApiResponse(response);
+};
+
 export const updateOutlinerDocumentContent = async (
   documentId: string,
   content: string
@@ -547,6 +557,19 @@ export const updateDocumentStatus = async (
     body: JSON.stringify({ status }),
   });
 
+  return handleApiResponse(response);
+};
+
+/** Reviewer: approve document (all segments must be approved). */
+export const approveOutlinerDocument = async (
+  documentId: string
+): Promise<unknown> => {
+  const response = await outlinerFetch(`${OUTLINER_BASE_URL}/documents/${documentId}/approve`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
   return handleApiResponse(response);
 };
 

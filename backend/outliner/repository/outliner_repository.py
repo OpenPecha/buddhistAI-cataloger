@@ -16,6 +16,7 @@ from outliner.repository.document import (
     fetch_document_workspace_row,
     fetch_documents_by_ids,
     fetch_random_completed_unassigned_document,
+    fetch_random_reviewed_document_ids,
     get_document_progress,
     increment_document_submit_count,
     insert_document,

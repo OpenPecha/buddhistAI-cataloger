@@ -7,6 +7,7 @@ import OutlinerAdminLayout from './features/outliner/components/OutlinerAdminLay
 import LogoutPage from './pages/LogoutPage';
 import useEnsureUserExists from './hooks/useEnsureUserExists';
 import PostHogPageViewTracker from './PostHogPageViewTracker';
+import ViewOnly from './pages/ViewOnly';
 
 // Lazy load page components
 const TextsPage = lazy(() => import('./pages/Text'));
@@ -185,6 +186,10 @@ function App() {
                 <OutlinerAdminBDRCPersonsLazy />
               </OutlinerAdminLayout>
             </ProtectedRoute>
+          } />
+
+          <Route path="/outliner/documents/view" element={
+                <ViewOnly />
           } />
         </Routes>
         </Suspense>

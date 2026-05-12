@@ -362,6 +362,13 @@ def list_completed_document_ids_all_segments_checked(
         db, only_document_ids=only_document_ids
     )
 
+
+def random_reviewed_document_ids(db: Session, limit: int = 5) -> Dict[str, List[str]]:
+    """Random document ids with status approved (see POST …/approve)."""
+    ids = outliner_repo.fetch_random_reviewed_document_ids(db, limit=limit)
+    return {"document_ids": ids}
+
+
 def replace_segments_and_toc (
     db: Session,
     document_id: str,

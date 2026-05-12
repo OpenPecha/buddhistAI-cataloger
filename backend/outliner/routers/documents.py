@@ -21,6 +21,7 @@ from outliner.controller.outliner import (
     get_document_progress as get_document_progress_ctrl,
     list_documents as list_documents_ctrl,
     list_segments as list_segments_ctrl,
+    random_reviewed_document_ids as random_reviewed_document_ids_ctrl,
     reset_segments as reset_segments_ctrl,
     submit_document_to_bdrc_in_review as submit_document_to_bdrc_in_review_ctrl,
     update_document_content as update_document_content_ctrl,
@@ -45,6 +46,7 @@ from .schemas import (
     DocumentCreate,
     DocumentListResponse,
     DocumentResponse,
+    RandomReviewedDocumentIdsResponse,
     DocumentStatusUpdate,
     DocumentWorkspaceResponse,
     SegmentCreate,
@@ -100,6 +102,15 @@ async def list_documents(
         title=title,
     )
     return result
+
+
+@router.get(
+    "/documents/random-reviewed-ids",
+    response_model=RandomReviewedDocumentIdsResponse,
+)
+async def random_reviewed_document_ids(db: Session = Depends(get_db)):
+    """Return up to five random document ids whose status is approved (fully reviewed)."""
+    return random_reviewed_document_ids_ctrl(db, limit=5)
 
 
 @router.get("/documents/{document_id}", response_model=DocumentResponse)

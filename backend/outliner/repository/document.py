@@ -219,6 +219,18 @@ def fetch_random_completed_unassigned_document(
     )
 
 
+def fetch_random_reviewed_document_ids(db: Session, limit: int = 5) -> List[str]:
+    """Return up to ``limit`` random document ids with status ``approved`` (fully reviewed)."""
+    rows = (
+        db.query(OutlinerDocument.id)
+        .filter(OutlinerDocument.status == "approved")
+        .order_by(func.random())
+        .limit(limit)
+        .all()
+    )
+    return [row[0] for row in rows]
+
+
 def increment_document_submit_count(db: Session, document_id: str) -> None:
     """Bump review submit counter when admin approves the full document (POST .../approve)."""
     document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
