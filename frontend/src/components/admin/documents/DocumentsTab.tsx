@@ -85,13 +85,8 @@ function DocumentsTab({
     setSearchParams((params) => {
       if (draftStatus === 'all') params.delete('status');
       else params.set('status', draftStatus);
-
       if (draftAnnotator === 'all') params.delete('annotator');
       else params.set('annotator', draftAnnotator);
-
-      if (draftMyReviews && currentUser?.id) params.set('reviewer', currentUser.id);
-      else params.delete('reviewer');
-
       const trimmedTitle = draftTitle.trim();
       if (trimmedTitle) params.set('title', trimmedTitle);
       else params.delete('title');

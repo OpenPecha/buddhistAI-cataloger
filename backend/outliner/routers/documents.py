@@ -109,7 +109,7 @@ async def list_documents(
     response_model=RandomReviewedDocumentIdsResponse,
 )
 async def random_reviewed_document_ids(db: Session = Depends(get_db)):
-    """Return up to five random document ids whose status is approved (fully reviewed)."""
+    """Return up to five random approved documents, each with id and filename."""
     return random_reviewed_document_ids_ctrl(db, limit=5)
 
 

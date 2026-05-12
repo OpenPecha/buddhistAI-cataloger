@@ -189,7 +189,9 @@ function App() {
           } />
 
           <Route path="/outliner/documents/view" element={
+            <ProtectedRoute>
                 <ViewOnly />
+                </ProtectedRoute>
           } />
         </Routes>
         </Suspense>

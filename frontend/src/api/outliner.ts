@@ -315,9 +315,14 @@ export const listOutlinerDocuments = async (
   return handleApiResponse(response);
 };
 
-/** GET …/documents/random-reviewed-ids — up to five random approved (reviewed) document ids. */
+/** GET …/documents/random-reviewed-ids — up to five random approved documents (id + filename). */
+export interface RandomReviewedDocumentSummary {
+  id: string;
+  filename: string | null;
+}
+
 export interface RandomReviewedDocumentIdsResponse {
-  document_ids: string[];
+  documents: RandomReviewedDocumentSummary[];
 }
 
 export const getRandomReviewedDocumentIds = async (): Promise<RandomReviewedDocumentIdsResponse> => {

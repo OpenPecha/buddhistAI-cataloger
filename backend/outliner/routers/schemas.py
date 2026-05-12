@@ -279,12 +279,19 @@ class DocumentListResponse(BaseModel):
         from_attributes = True
 
 
+class RandomReviewedDocumentSummary(BaseModel):
+    """One random approved document with id and optional stored filename."""
+
+    id: str = Field(..., description="Document primary key")
+    filename: Optional[str] = Field(None, description="Stored filename when present")
+
+
 class RandomReviewedDocumentIdsResponse(BaseModel):
     """Up to five random documents whose workflow status is approved (reviewed)."""
 
-    document_ids: List[str] = Field(
+    documents: List[RandomReviewedDocumentSummary] = Field(
         ...,
-        description="Document primary keys; may be fewer than five if not enough approved documents exist.",
+        description="Id and filename for each document; may be fewer than five if not enough approved documents exist.",
     )
 
 

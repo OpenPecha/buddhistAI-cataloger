@@ -2,7 +2,7 @@
 import json
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import and_, case, exists, func, not_, or_, select
 from sqlalchemy.orm import Session
@@ -219,16 +219,18 @@ def fetch_random_completed_unassigned_document(
     )
 
 
-def fetch_random_reviewed_document_ids(db: Session, limit: int = 5) -> List[str]:
-    """Return up to ``limit`` random document ids with status ``approved`` (fully reviewed)."""
+def fetch_random_reviewed_document_ids(
+    db: Session, limit: int = 5
+) -> List[Tuple[str, Optional[str]]]:
+    """Return up to ``limit`` random (id, filename) pairs with status ``approved`` (fully reviewed)."""
     rows = (
-        db.query(OutlinerDocument.id)
+        db.query(OutlinerDocument.id, OutlinerDocument.filename)
         .filter(OutlinerDocument.status == "approved")
         .order_by(func.random())
         .limit(limit)
         .all()
     )
-    return [row[0] for row in rows]
+    return [(row[0], row[1]) for row in rows]
 
 
 def increment_document_submit_count(db: Session, document_id: str) -> None:
