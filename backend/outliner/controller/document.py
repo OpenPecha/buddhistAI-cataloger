@@ -36,6 +36,7 @@ def create_document(
 def list_documents(
     db: Session,
     user_id: Optional[str] = None,
+    reviewer_id: Optional[str] = None,
     status: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
@@ -61,6 +62,7 @@ def list_documents(
     return outliner_repo.list_documents(
         db,
         user_id=user_id,
+        reviewer_id=reviewer_id,
         status=status,
         skip=skip,
         limit=limit,
@@ -306,6 +308,25 @@ def update_document_status(
     outliner_repo.set_document_status_and_refresh(db, document, status)
 
     return {"message": "Document status updated", "document_id": document_id, "status": status}
+
+
+def assign_reviewr(
+    db: Session,
+    reviewer_id: str,
+) -> Dict[str, str]:
+    document = outliner_repo.fetch_random_completed_unassigned_document(db)
+    if not document:
+        raise HTTPException(
+            status_code=404,
+            detail="No completed unassigned document available",
+        )
+
+    outliner_repo.set_document_reviewer_and_refresh(db, document, reviewer_id)
+    return {
+        "message": "Reviewer assigned",
+        "document_id": document.id,
+        "reviewer_id": reviewer_id,
+    }
 
 
 def get_document_progress(db: Session, document_id: str) -> Dict[str, Any]:

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DocumentsTab } from '../components/admin';
 import { SimplePagination } from '../components/ui/simple-pagination';
 import type { Document } from '../components/admin/shared/types';
-import { useDocuments, useDocumentActions } from '../hooks';
+import { useDocuments } from '../hooks';
 import type { DocumentFilters } from '../hooks';
 
 function OutlinerAdminDocument() {
@@ -12,6 +12,7 @@ function OutlinerAdminDocument() {
 
   const status = searchParams.get('status') || undefined;
   const annotator = searchParams.get('annotator') || undefined;
+  const reviewer = searchParams.get('reviewer') || undefined;
   const debouncedTitle = searchParams.get('title') || undefined;
   const includeApproved = searchParams.get('include_approved') === 'true';
   const includeSkipped = searchParams.get('include_skipped') === 'true';
@@ -20,6 +21,7 @@ function OutlinerAdminDocument() {
     () => ({
       status,
       userId: annotator,
+      reviewerId: reviewer,
       title: debouncedTitle || undefined,
       page,
       pageSize: 20,
@@ -27,22 +29,13 @@ function OutlinerAdminDocument() {
       includeSkipped,
       excludeOwnAssignedDocuments: true,
     }),
-    [status, annotator, debouncedTitle, page, includeApproved, includeSkipped]
+    [status, annotator, reviewer, debouncedTitle, page, includeApproved, includeSkipped]
   );
 
   const { hasPrevPage, hasNextPage, isFetching,handleNextPage,handlePrevPage } = useDocuments(filters);
 
-  const { deleteDocument } = useDocumentActions();
-
- 
-
-
   const handleDocumentSelectAction = (document: Document) => {
     navigate(`/outliner-admin/documents/${document.id}`);
-  };
-
-  const handleDocumentDelete = (documentId: string) => {
-    deleteDocument(documentId);
   };
 
 
@@ -50,7 +43,6 @@ function OutlinerAdminDocument() {
     <div className="flex min-h-0 flex-1 flex-col gap-4  p-4">
       <DocumentsTab
         onDocumentSelect={handleDocumentSelectAction}
-        onDocumentDelete={handleDocumentDelete}
       />
       {(hasPrevPage || hasNextPage) && (
         <div className="shrink-0">

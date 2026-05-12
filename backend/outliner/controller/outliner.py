@@ -22,6 +22,7 @@ from outliner.controller.comments import (
 )
 from outliner.controller.common import none_check
 from outliner.controller.document import (
+    assign_reviewr,
     ai_toc_db_value_to_api_items,
     create_document,
     delete_document,

@@ -378,7 +378,7 @@ function SegmentRow({
             <ChevronUporDown isExpanded={isExpanded} />
           </button>
           {listIndex != null && (
-            <>
+            <div className='relative'>
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
                getStatusColor(segment.status)
@@ -386,8 +386,11 @@ function SegmentRow({
             >
               {listIndex}
             </div>
+            <div className='transform rotate-270 absolute top-20 left-[-20px]'>
+
             <StatusBadge status={segment.status} rejection={segment.rejection} />
-              </>
+             </div>
+              </div>
           )}
         </div>
 
@@ -399,7 +402,7 @@ function SegmentRow({
              <div className="inline-flex  items-center gap-1 mt-2 mb-1">
                <span
                  className={
-                   "px-2 text-sm font-bold py-0.5 rounded-full  " +
+                   "px-2 text-sm font-semibold py-0.5 rounded-full  " +
                    getLabelColor(segment.label)
                  }
                  title={`Label: ${segment.label}`}
@@ -730,7 +733,7 @@ function StatusBadge({ status, rejection }: { status: Status, rejection: Rejecti
       className="inline-block rounded-full bg-blue-100 text-blue-800 px-2 py-1 text-xs font-semibold"
       title="Segment approved"
       >
-        Approved
+        Reviewed
       </span>
     ) : status === 'rejected' ? (
       <span
@@ -749,7 +752,7 @@ function StatusBadge({ status, rejection }: { status: Status, rejection: Rejecti
       }
       title={status === 'checked' ? 'Segment done' : 'Segment in progress'}
       >
-        {status === 'checked' ? 'Done' : 'Under Process'}
+        {status === 'checked' ? 'Annotated' : 'Annotating'}
       </span>
     )}
     </>

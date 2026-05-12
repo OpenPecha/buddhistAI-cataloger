@@ -195,6 +195,7 @@ class DocumentResponse(BaseModel):
     content: str = ""
     filename: Optional[str] = None
     user_id: Optional[str] = None
+    reviewer_id: Optional[str] = None
     status: Optional[str] = None  # active, completed, deleted, approved, rejected
     is_supplied_title: Optional[bool] = None
     submit_count: Optional[int] = None  # admin review submits (POST .../approve)
@@ -244,6 +245,7 @@ class DocumentListResponse(BaseModel):
     id: str
     filename: Optional[str] = None
     user_id: Optional[str] = None
+    reviewer_id: Optional[str] = None
     total_segments: int
     annotated_segments: int
     rejection_count: int = 0  # Segments with status rejected in this document

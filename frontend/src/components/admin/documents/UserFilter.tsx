@@ -38,7 +38,7 @@ export function UserFilter({
   
       <Select value={value} onValueChange={handleChange}>
         <SelectTrigger className="w-full max-w-48" >
-          <SelectValue placeholder="Select a person" />
+          <SelectValue placeholder="Select owner" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Users</SelectItem>

@@ -65,6 +65,7 @@ export interface OutlinerDocumentListItem {
   id: string;
   filename?: string | null;
   user_id?: string | null;
+  reviewer_id?: string | null;
   total_segments: number;
   annotated_segments: number;
   progress_percentage: number;

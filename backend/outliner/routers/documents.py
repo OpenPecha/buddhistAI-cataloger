@@ -9,6 +9,7 @@ from core.database import get_db
 from outliner.repository.document import fetch_document_by_id
 from outliner.controller.outliner import (
     approve_document as approve_document_ctrl,
+    assign_reviewr as assign_reviewr_ctrl,
     bulk_segment_operations as bulk_segment_operations_ctrl,
     create_document as create_document_ctrl,
     create_segment as create_segment_ctrl,
@@ -72,6 +73,7 @@ async def create_document(
 @router.get("/documents", response_model=List[DocumentListResponse])
 async def list_documents(
     user_id: Optional[str] = None,
+    reviewer_id: Optional[str] = None,
     status: Optional[str] = None,
     title: Optional[str] = Query(
         None,
@@ -88,6 +90,7 @@ async def list_documents(
     result = list_documents_ctrl(
         db=db,
         user_id=user_id,
+        reviewer_id=reviewer_id,
         status=status,
         skip=skip,
         limit=limit,
@@ -391,3 +394,15 @@ async def approve_document(
 ):
     """Approve all segments for a document"""
     return await approve_document_ctrl(db, document_id)
+
+
+@router.post("/documents/assign_reviewr")
+async def assign_reviewr(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
+):
+    """Assign one random completed unassigned document to the clicking reviewer/admin user."""
+    return assign_reviewr_ctrl(
+        db=db,
+        reviewer_id=current_user.id,
+    )

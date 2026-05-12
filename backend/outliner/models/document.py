@@ -39,3 +39,4 @@ class OutlinerDocument(Base):
         cascade="all, delete-orphan",
         order_by="OutlinerSegment.segment_index",
     )
+    reviewer_id: Mapped[str | None] = mapped_column(String, ForeignKey("users.id"), nullable=True, index=True)

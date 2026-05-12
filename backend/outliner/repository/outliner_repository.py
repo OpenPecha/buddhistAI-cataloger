@@ -15,6 +15,7 @@ from outliner.repository.document import (
     fetch_document_by_id,
     fetch_document_workspace_row,
     fetch_documents_by_ids,
+    fetch_random_completed_unassigned_document,
     get_document_progress,
     increment_document_submit_count,
     insert_document,
@@ -24,6 +25,7 @@ from outliner.repository.document import (
     replace_segments_and_ai_toc,
     reset_segments,
     set_document_status_and_refresh,
+    set_document_reviewer_and_refresh,
     update_document_content,
     allow_user_to_assign_volume,
 )

@@ -23,6 +23,7 @@ from outliner.repository.segment_rejection import (
 def list_documents(
     db: Session,
     user_id: Optional[str] = None,
+    reviewer_id: Optional[str] = None,
     status: Optional[str] = None,
     skip: int = 0,
     limit: int = 100,
@@ -35,6 +36,8 @@ def list_documents(
     query = db.query(OutlinerDocument)
     if user_id:
         query = query.filter(OutlinerDocument.user_id == user_id)
+    if reviewer_id:
+        query = query.filter(OutlinerDocument.reviewer_id == reviewer_id)
 
     if exclude_document_user_id:
         query = query.filter(
@@ -94,6 +97,7 @@ def list_documents(
                 "id": doc.id,
                 "filename": doc.filename,
                 "user_id": doc.user_id,
+                "reviewer_id": doc.reviewer_id,
                 "checked_segments": checked,
                 "unchecked_segments": unchecked,
                 "total_segments": total,
@@ -190,6 +194,29 @@ def set_document_status_and_refresh(
     document.updated_at = datetime.utcnow()
     db.commit()
     db.refresh(document)
+
+
+def set_document_reviewer_and_refresh(
+    db: Session, document: OutlinerDocument, reviewer_id: str
+) -> None:
+    document.reviewer_id = reviewer_id
+    document.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(document)
+
+
+def fetch_random_completed_unassigned_document(
+    db: Session,
+) -> Optional[OutlinerDocument]:
+    return (
+        db.query(OutlinerDocument)
+        .filter(
+            OutlinerDocument.status == "completed",
+            OutlinerDocument.reviewer_id.is_(None),
+        )
+        .order_by(func.random())
+        .first()
+    )
 
 
 def increment_document_submit_count(db: Session, document_id: str) -> None:

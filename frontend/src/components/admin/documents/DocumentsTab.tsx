@@ -21,22 +21,31 @@ import { useSearchParams } from 'react-router-dom';
 import TitleFilter from './TitleFilter';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useUser } from '@/hooks/useUser';
+import { useAuth0 } from '@auth0/auth0-react';
+import { outlinerFetch } from '@/api/outliner';
+import { OUTLINER_BASE_URL } from '@/config/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { Switch } from '@/components/ui/switch';
+import SelfRviewedToggle from './SelfRviewedToggle';
 
 
 
 interface DocumentsTabProps {
   onDocumentSelect: (document: Document) => void;
-  onDocumentDelete: (documentId: string) => void;
 }
 
 function DocumentsTab({
   onDocumentSelect,
-  onDocumentDelete,
 }: Readonly<DocumentsTabProps>) {
+  const queryClient = useQueryClient();
+  const { user: currentUser } = useUser();
+  const { getAccessTokenSilently } = useAuth0();
  
   const [searchParams, setSearchParams] = useSearchParams();
   const status = searchParams.get('status') || undefined;
   const annotator = searchParams.get('annotator') || undefined;
+  const reviewer = searchParams.get('reviewer') || undefined;
   const debouncedTitle=searchParams.get('title') || undefined
   const includeApproved = searchParams.get('include_approved') === 'true';
   const includeSkipped = searchParams.get('include_skipped') === 'true';
@@ -44,21 +53,18 @@ function DocumentsTab({
 
   const [draftStatus, setDraftStatus] = useState(status ?? 'all');
   const [draftAnnotator, setDraftAnnotator] = useState(annotator ?? 'all');
+  const [draftMyReviews, setDraftMyReviews] = useState(
+    !!currentUser?.id && reviewer === currentUser.id
+  );
   const [draftTitle, setDraftTitle] = useState(debouncedTitle ?? '');
   const [draftIncludeApproved, setDraftIncludeApproved] = useState(includeApproved);
   const [draftIncludeSkipped, setDraftIncludeSkipped] = useState(includeSkipped);
 
-  useEffect(() => {
-    setDraftStatus(status ?? 'all');
-    setDraftAnnotator(annotator ?? 'all');
-    setDraftTitle(debouncedTitle ?? '');
-    setDraftIncludeApproved(includeApproved);
-    setDraftIncludeSkipped(includeSkipped);
-  }, [status, annotator, debouncedTitle, includeApproved, includeSkipped]);
   const filters:DocumentFilters = useMemo(
     () => ({
       status,
       userId: annotator,
+      reviewerId: reviewer,
       title: debouncedTitle || undefined,
       page,
       pageSize: 20,
@@ -66,7 +72,7 @@ function DocumentsTab({
       includeSkipped,
       excludeOwnAssignedDocuments: true,
     }),
-    [status, annotator, debouncedTitle, page, includeApproved, includeSkipped]
+    [status, annotator, reviewer, debouncedTitle, page, includeApproved, includeSkipped]
   );
 
   
@@ -83,6 +89,9 @@ function DocumentsTab({
       if (draftAnnotator === 'all') params.delete('annotator');
       else params.set('annotator', draftAnnotator);
 
+      if (draftMyReviews && currentUser?.id) params.set('reviewer', currentUser.id);
+      else params.delete('reviewer');
+
       const trimmedTitle = draftTitle.trim();
       if (trimmedTitle) params.set('title', trimmedTitle);
       else params.delete('title');
@@ -98,19 +107,38 @@ function DocumentsTab({
   const isApplyDisabled =
     draftStatus === (status ?? 'all') &&
     draftAnnotator === (annotator ?? 'all') &&
+    draftMyReviews === (!!currentUser?.id && reviewer === currentUser.id) &&
     draftTitle.trim() === (debouncedTitle ?? '').trim() &&
     draftIncludeApproved === includeApproved &&
     draftIncludeSkipped === includeSkipped;
 
   const { users: outlinerUsers } = useOutlinerUsers();
+  const assignReviewer = async () => {
+    const token = await getAccessTokenSilently();
+    const response = await outlinerFetch(`${OUTLINER_BASE_URL}/documents/assign_reviewr`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!response.ok) {
+      throw new Error('Failed to assign reviewer');
+    }
+    queryClient.invalidateQueries({ queryKey: ['outliner-admin-documents'] });
+  };
+
   const getAnnotator = (userId: string) => {
-    return outlinerUsers.find((user) => user.id === userId) || null;
+    return outlinerUsers.find((user) => user.id === userId);
   };
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="shrink-0  pb-4 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h3 className="text-xl font-semibold text-gray-900">Document Management</h3>
+        <div className='flex items-center gap-2'>
+          <h3 className="text-xl font-semibold text-gray-900">Document Management </h3>
+          <SelfRviewedToggle/>
+         
+      
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
@@ -120,30 +148,41 @@ function DocumentsTab({
 
           <div className="flex items-center gap-2">
             <UserFilter value={draftAnnotator} onChange={setDraftAnnotator} />
+            
           </div>
 
           <div className="relative w-full min-w-[200px] max-w-xs sm:w-64">
             <TitleFilter value={draftTitle} onChange={setDraftTitle} />
           </div>
           <div className="flex items-center gap-3 rounded-md border border-input bg-background px-3 py-2">
-            <span className='text-sm text-gray-700'>include statuses</span>
-            <label htmlFor="admin-include-approved" className="flex items-center gap-2 text-sm text-gray-700">
-              <Checkbox
-                id="admin-include-approved"
-                checked={draftIncludeApproved}
-                onCheckedChange={(checked) => setDraftIncludeApproved(checked === true)}
-              />
-              Approved
-            </label>
-            <label htmlFor="admin-include-skipped" className="flex items-center gap-2 text-sm text-gray-700">
-              <Checkbox
-                id="admin-include-skipped"
-                checked={draftIncludeSkipped}
-                onCheckedChange={(checked) => setDraftIncludeSkipped(checked === true)}
-              />
-              Skipped
-            </label>
+            <span className='text-sm text-gray-700 border-r border-gray-200 pr-2'>Status</span>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <label htmlFor="admin-include-approved" className="flex items-center gap-2 text-sm text-gray-700">
+                  <span>Approved</span>
+                  <Switch
+                    id="admin-include-approved"
+                    checked={draftIncludeApproved}
+                    onCheckedChange={(checked) => setDraftIncludeApproved(checked === true)}
+                  />
+                </label>
+              </div>
+              <div className="flex items-center gap-2">
+                <label htmlFor="admin-include-skipped" className="flex items-center gap-2 text-sm text-gray-700">
+                  <span>Skipped</span>
+                  <Switch
+                    id="admin-include-skipped"
+                    checked={draftIncludeSkipped}
+                    onCheckedChange={(checked) => setDraftIncludeSkipped(checked === true)}
+                  />
+                </label>
+              </div>
+            </div>
+     
+            
           </div>
+          <Button onClick={assignReviewer}>Assign me</Button>
+          
           <Button disabled={isApplyDisabled} onClick={applyFilters}>Apply Filters</Button>
         </div>
       </div>
@@ -192,8 +231,8 @@ function DocumentsTab({
                   key={doc.id}
                   document={doc}
                   annotator={getAnnotator(doc?.user_id ?? '')}
+                  canReview={!!currentUser?.id && doc.reviewer_id === currentUser.id}
                   onSelect={onDocumentSelect}
-                  onDelete={onDocumentDelete}
                 />
               ))
             )}

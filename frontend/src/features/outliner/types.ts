@@ -81,6 +81,7 @@ export interface Document {
   content: string
   filename?: string | null
   user_id?: string | null
+  reviewer_id?: string | null
   total_segments: number
   annotated_segments: number
   /** Segments with status checked or approved (same as annotator dashboard list). */

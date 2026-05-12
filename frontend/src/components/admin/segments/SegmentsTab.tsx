@@ -75,7 +75,7 @@ function SegmentsTab({
   const { t } = useTranslation();
   const [isApproving, setIsApproving] = useState(false);
   const [statusFilter, setStatusFilter] = useState<SegmentStatusFilter>('all');
-  const [imagesPanelVisible, setImagesPanelVisible] = useState(true);
+  const [imagesPanelVisible, setImagesPanelVisible] = useState(false);
   const { documentId } = useParams<{ documentId: string }>();
   const { getAccessTokenSilently } = useAuth0();
   const queryClient = useQueryClient();
@@ -236,18 +236,19 @@ function SegmentsTab({
   const segmentsPanel =
     !loadingSegments && selectedDocument && segments.length > 0 ? (
       <>
-        <header className="shrink-0 flex flex-col gap-4 pb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <header className="shrink-0 flex flex-col gap-4 pb-4 p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 ">
             <h2 className="text-base font-semibold text-gray-900 truncate">
               {selectedDocument.filename || `Document ${selectedDocument.id.slice(0, 8)}`}
             </h2>
-            <div className="flex items-center gap-3 flex-wrap text-xs px-6">
-              <span className="text-gray-500">Approved: <span className="font-medium text-gray-700">{statusCounts.approved}</span></span>
-              <span className="text-red-600">Rejected: <span className="font-medium">{statusCounts.rejected}</span></span>
-              <span className="text-green-600">Done: <span className="font-medium">{statusCounts.checked}</span></span>
-              <span className="text-amber-600">Under Process: <span className="font-medium">{statusCounts.unchecked}</span></span>
-              <span className="text-blue-600">Review submits: <span className="font-medium">{selectedDocument.submit_count ?? 0}</span></span>
+            <div className="flex gap-2 text-xs px-2 flex-wrap">
+              <span className="inline-block px-2 py-1 rounded bg-gray-100 text-gray-700">Reviewed: {statusCounts.approved}</span>
+              <span className="inline-block px-2 py-1 rounded bg-red-100 text-red-700">Rejected: {statusCounts.rejected}</span>
+              <span className="inline-block px-2 py-1 rounded bg-green-100 text-green-700">Annotated: {statusCounts.checked}</span>
+              <span className="inline-block px-2 py-1 rounded bg-amber-100 text-amber-700">Annotating: {statusCounts.unchecked}</span>
+              <span className="inline-block px-2 py-1 rounded bg-blue-100 text-blue-700">Submits: {selectedDocument.submit_count ?? 0}</span>
             </div>
+       
           </div>
           <div className="flex items-center justify-between gap-3">
             <select
@@ -256,9 +257,9 @@ function SegmentsTab({
               className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white hover:border-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">All ({segments.length})</option>
-              <option value="unchecked">Under Process ({statusCounts.unchecked})</option>
-              <option value="checked">Done ({statusCounts.checked})</option>
-              <option value="approved">Approved ({statusCounts.approved})</option>
+              <option value="unchecked">Annotating ({statusCounts.unchecked})</option>
+              <option value="checked">Annotated({statusCounts.checked})</option>
+              <option value="approved">Reviewed ({statusCounts.approved})</option>
               <option value="rejected">Rejected ({statusCounts.rejected})</option>
             </select>
             <div className="flex items-center gap-2">

@@ -1,9 +1,9 @@
-import type { User } from '@/api/user';
 import type { Document } from '../shared/types';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { getStatusBadgeClass, STATUS_COLORS, STATUS_DIVIDER_COLORS } from './utils';
+import { getStatusBadgeClass, STATUS_DIVIDER_COLORS } from './utils';
 import { ArrowRight, MessageCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import type { OutlinerUser } from '@/hooks';
 
 const STATUS_LABEL: Record<string, string> = {
   active: 'Annotating',
@@ -15,11 +15,11 @@ const STATUS_LABEL: Record<string, string> = {
 interface DocumentRowProps {
   readonly document: Document;
   readonly onSelect: (document: Document) => void;
-  readonly onDelete: (documentId: string) => void;
-  readonly annotator?: User;
+  readonly canReview: boolean;
+  readonly annotator?: OutlinerUser;
 }
 
-function DocumentRow({ document,annotator, onSelect, onDelete }: DocumentRowProps) {
+function DocumentRow({ document,annotator, onSelect, canReview }: DocumentRowProps) {
   const statusKey = document.status || 'active';
   /** Prefer server join of rejections → segment status; fall back to rejected-status segment count on older APIs. */
   const openRejectionSegments =
@@ -57,7 +57,11 @@ function DocumentRow({ document,annotator, onSelect, onDelete }: DocumentRowProp
           {document.filename || `Document ${document.id.slice(0, 8)}`}
         </div>
         <div className="text-sm text-gray-500 flex items-center gap-2">
-          <img src={annotator?.picture} alt={annotator?.name || annotator?.email} className="w-4 h-4 rounded-full" />
+          <img
+            src={annotator?.picture ?? undefined}
+            alt={annotator?.name ?? annotator?.email ?? 'Annotator'}
+            className="w-4 h-4 rounded-full"
+          />
         {annotator?.name}
         </div>
    </div>
@@ -92,15 +96,19 @@ function DocumentRow({ document,annotator, onSelect, onDelete }: DocumentRowProp
       </TableCell>
      
       <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-        <button
-          onClick={() => onSelect(document)}
-          className="group text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-md px-2 py-1 cursor-pointer flex items-center gap-2"
-        >
-          Review
-          <ArrowRight
-            className="w-3 h-3 shrink-0 opacity-0 translate-x-[-8px] group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200"
-          />
-        </button>
+        {canReview ? (
+          <button
+            onClick={() => onSelect(document)}
+            className="group text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-md px-2 py-1 cursor-pointer flex items-center gap-2"
+          >
+            Review
+            <ArrowRight
+              className="w-3 h-3 shrink-0 opacity-0 translate-x-[-8px] group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200"
+            />
+          </button>
+        ) : (
+          <span className="text-gray-400">-</span>
+        )}
   
       </TableCell>
     </TableRow>

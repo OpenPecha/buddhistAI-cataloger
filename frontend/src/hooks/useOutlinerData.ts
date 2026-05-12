@@ -38,6 +38,7 @@ const DEFAULT_PAGE_SIZE = 20
 export interface DocumentFilters {
   status?: string;
   userId?: string;
+  reviewerId?: string;
   title?: string;
   page?: number;
   pageSize?: number;
@@ -55,6 +56,7 @@ export function useDocuments(filters: DocumentFilters = {}) {
   const {
     status,
     userId,
+    reviewerId,
     title,
     page = 1,
     pageSize = DEFAULT_PAGE_SIZE,
@@ -73,13 +75,14 @@ export function useDocuments(filters: DocumentFilters = {}) {
   } = useQuery<Document[]>({
     queryKey: [
       'outliner-admin-documents',
-      { status, userId, title, skip, limit: pageSize, includeApproved, includeSkipped, excludeOwnAssignedDocuments },
+      { status, userId, reviewerId, title, skip, limit: pageSize, includeApproved, includeSkipped, excludeOwnAssignedDocuments },
     ],
     queryFn: async () => {
       const token = await getAccessTokenSilently();
       const params = new URLSearchParams();
       if (status) params.append('status', status);
       if (userId) params.append('user_id', userId);
+      if (reviewerId) params.append('reviewer_id', reviewerId);
       if (title?.trim()) params.append('title', title.trim());
       if (excludeOwnAssignedDocuments) params.append('exclude_own_assigned', 'true');
       params.append('include_approved', String(includeApproved));
