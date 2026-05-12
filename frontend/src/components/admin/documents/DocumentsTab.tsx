@@ -107,7 +107,6 @@ function DocumentsTab({
   const isApplyDisabled =
     draftStatus === (status ?? 'all') &&
     draftAnnotator === (annotator ?? 'all') &&
-    draftMyReviews === (!!currentUser?.id && reviewer === currentUser.id) &&
     draftTitle.trim() === (debouncedTitle ?? '').trim() &&
     draftIncludeApproved === includeApproved &&
     draftIncludeSkipped === includeSkipped;
