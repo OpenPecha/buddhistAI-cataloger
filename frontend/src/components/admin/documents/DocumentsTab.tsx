@@ -28,6 +28,7 @@ import { OUTLINER_BASE_URL } from '@/config/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { Switch } from '@/components/ui/switch';
 import SelfRviewedToggle from './SelfRviewedToggle';
+import { PlusIcon } from 'lucide-react';
 
 
 
@@ -131,7 +132,8 @@ function DocumentsTab({
         <div className='flex items-center gap-2'>
           <h3 className="text-xl font-semibold text-gray-900">Document Management </h3>
           <SelfRviewedToggle/>
-          <Button onClick={assignReviewer}>Assign me</Button>         
+          <Button variant='outline' size='sm' onClick={assignReviewer} className='hover:bg-primary/10 group hover:text-primary cursor-pointer'>
+            <PlusIcon className='w-4 h-4 group-hover:animate-spin' />Assign me</Button>         
         </div>
 
         <div className="flex flex-wrap items-center gap-4">

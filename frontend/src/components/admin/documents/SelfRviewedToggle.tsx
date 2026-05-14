@@ -17,10 +17,11 @@ function SelfRviewedToggle() {
         }
     }, [])
   return (
-    <div>
-       <label htmlFor="admin-my-reviews" className="flex items-center gap-2 text-sm text-gray-700">
+    <div className='border border-gray-200 rounded-md p-2'>
+       <label htmlFor="admin-my-reviews" className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
             <Switch
               id="admin-my-reviews"
+              className='cursor-pointer'
               checked={reviewer === currentUser?.id}
               onCheckedChange={(checked) => setReviewer(checked === true ? currentUser?.id : '')}
               disabled={!currentUser?.id}
