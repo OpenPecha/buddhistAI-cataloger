@@ -322,6 +322,10 @@ class DocumentStatusUpdate(BaseModel):
     status: str
 
 
+class DocumentAssigneeUpdate(BaseModel):
+    user_id: str = Field(..., min_length=1)
+
+
 class SegmentStatusUpdate(BaseModel):
     status: str
 

@@ -17,6 +17,7 @@ from outliner.controller.segment import (
     _segment_orms_from_bulk_data,
     segment_to_response_dict ,
 )
+from user.models.user import User
 
 
 
@@ -308,6 +309,31 @@ def update_document_status(
     outliner_repo.set_document_status_and_refresh(db, document, status)
 
     return {"message": "Document status updated", "document_id": document_id, "status": status}
+
+
+def update_document_assignee(
+    db: Session,
+    document_id: str,
+    user_id: str,
+) -> Dict[str, str]:
+    document = outliner_repo.fetch_document_by_id(db, document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    clean_user_id = user_id.strip()
+    if not clean_user_id:
+        raise HTTPException(status_code=400, detail="User ID is required")
+
+    user_exists = db.query(User.id).filter(User.id == clean_user_id).first()
+    if not user_exists:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    outliner_repo.set_document_user_and_refresh(db, document, clean_user_id)
+    return {
+        "message": "Document assignee updated",
+        "document_id": document_id,
+        "user_id": clean_user_id,
+    }
 
 
 def assign_reviewr(

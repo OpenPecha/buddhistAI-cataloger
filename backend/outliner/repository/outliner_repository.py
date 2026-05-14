@@ -29,6 +29,7 @@ from outliner.repository.document import (
     set_document_reviewer_and_refresh,
     update_document_content,
     allow_user_to_assign_volume,
+    set_document_user_and_refresh
 )
 from outliner.repository.segment import (
     segments_by_document_id,

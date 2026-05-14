@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from core.database import get_db
@@ -24,12 +24,14 @@ from outliner.controller.outliner import (
     random_reviewed_document_ids as random_reviewed_document_ids_ctrl,
     reset_segments as reset_segments_ctrl,
     submit_document_to_bdrc_in_review as submit_document_to_bdrc_in_review_ctrl,
+    update_document_assignee as update_document_assignee_ctrl,
     update_document_content as update_document_content_ctrl,
     update_document_status as update_document_status_ctrl,
     ai_toc_db_value_to_api_items,
 )
 from outliner.deps import (
     apply_authenticated_segment_reviewer_bulk,
+    is_user_admin_or_reviewer,
     require_outliner_access,
 )
 from user.models.user import User
@@ -46,6 +48,7 @@ from .schemas import (
     DocumentCreate,
     DocumentListResponse,
     DocumentResponse,
+    DocumentAssigneeUpdate,
     RandomReviewedDocumentIdsResponse,
     DocumentStatusUpdate,
     DocumentWorkspaceResponse,
@@ -377,6 +380,33 @@ async def update_document_status(
         document_id=document_id,
         status=status_update.status,
         user_id=current_user.id,
+    )
+
+
+@router.put(
+    "/documents/{document_id}/assignee",
+    responses={
+        403: {
+            "description": "Only reviewers and administrators can reassign documents"
+        }
+    },
+)
+async def update_document_assignee(
+    document_id: str,
+    assignee_update: DocumentAssigneeUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
+):
+    """Reassign a document to another outliner reviewer/admin/annotator user."""
+    if not is_user_admin_or_reviewer(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="Only reviewers and administrators can reassign documents",
+        )
+    return update_document_assignee_ctrl(
+        db=db,
+        document_id=document_id,
+        user_id=assignee_update.user_id,
     )
 
 

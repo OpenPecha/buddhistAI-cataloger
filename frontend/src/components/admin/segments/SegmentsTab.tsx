@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SplitPane, Pane } from 'react-split-pane';
 import { EllipsisVertical, PanelRightClose, PanelRightOpen, Undo } from 'lucide-react';
@@ -10,7 +10,13 @@ import {
 import type { Document, Segment } from '../shared/types';
 import SegmentRow from './SegmentRow';
 import { Button } from '@/components/ui/button';
-import { approveOutlinerDocument, resetSegments, updateDocumentStatus } from '@/api/outliner';
+import {
+  approveOutlinerDocument,
+  resetSegments,
+  updateDocumentAssignee,
+  updateDocumentStatus,
+} from '@/api/outliner';
+import { searchUsers } from '@/api/user';
 import { VolumeImagePanelCore } from '@/components/outliner/ImageWrapper';
 import {  useNavigate, useParams } from 'react-router-dom';
 import {
@@ -19,7 +25,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 type SegmentStatusFilter = 'all' | 'unchecked' | 'checked' | 'approved' | 'rejected';
@@ -74,6 +88,8 @@ function SegmentsTab({
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<SegmentStatusFilter>('all');
   const [imagesPanelVisible, setImagesPanelVisible] = useState(false);
+  const [isReassignDialogOpen, setIsReassignDialogOpen] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
   const { documentId } = useParams<{ documentId: string }>();
   const queryClient = useQueryClient();
   const filteredSegments = useMemo(() => {
@@ -201,6 +217,47 @@ function SegmentsTab({
     },
   });
 
+  const reassignDocumentMutation = useMutation({
+    mutationFn: async ({
+      userId,
+      userLabel,
+    }: {
+      userId: string;
+      userLabel: string;
+    }) => {
+      if (!documentId) throw new Error('Document ID is required');
+      await updateDocumentAssignee(documentId, userId);
+      return { userLabel };
+    },
+    onSuccess: async ({ userLabel }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] }),
+        queryClient.invalidateQueries({ queryKey: ['outliner-admin-documents'] }),
+      ]);
+      setIsReassignDialogOpen(false);
+      setUserSearch('');
+      toast.success(`Document assigned to ${userLabel}`);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to reassign document');
+    },
+  });
+
+  const {
+    data: assigneeSearchResults,
+    isLoading: isLoadingAssigneeSearch,
+    error: assigneeSearchError,
+  } = useQuery({
+    queryKey: ['outliner-document-assignee-search', userSearch.trim()],
+    queryFn: () =>
+      searchUsers(userSearch, {
+        limit: 20,
+        permission: 'outliner',
+      }),
+    enabled: isReassignDialogOpen,
+    staleTime: 60 * 1000,
+  });
+
   const handleResetAllSegments = () => {
     if (!documentId) {
       toast.error('Document ID is required');
@@ -218,6 +275,68 @@ function SegmentsTab({
     }
     resetAllSegmentsMutation.mutate();
   };
+
+  const handleReassignDialogChange = (open: boolean) => {
+    setIsReassignDialogOpen(open);
+    if (!open && !reassignDocumentMutation.isPending) {
+      setUserSearch('');
+    }
+  };
+
+  const assigneeCandidates = assigneeSearchResults?.items ?? [];
+  const emptyAssigneeMessage = userSearch.trim()
+    ? 'No matching users found.'
+    : 'No users available.';
+  let assigneeResultsContent: ReactNode;
+
+  if (isLoadingAssigneeSearch) {
+    assigneeResultsContent = (
+      <div className="px-3 py-6 text-sm text-gray-500">Loading users...</div>
+    );
+  } else if (assigneeCandidates.length === 0) {
+    assigneeResultsContent = (
+      <div className="px-3 py-6 text-sm text-gray-500">{emptyAssigneeMessage}</div>
+    );
+  } else {
+    assigneeResultsContent = assigneeCandidates.map((user) => {
+      const isCurrentAssignee = user.id === selectedDocument?.user_id;
+      const userLabel = user.name?.trim() || user.email;
+
+      return (
+        <button
+          key={user.id}
+          type="button"
+          onClick={() =>
+            reassignDocumentMutation.mutate({
+              userId: user.id,
+              userLabel,
+            })
+          }
+          disabled={reassignDocumentMutation.isPending || isCurrentAssignee}
+          className="flex w-full items-center justify-between gap-3 border-b border-gray-100 px-3 py-3 text-left last:border-b-0 hover:bg-gray-50 disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400"
+        >
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-gray-900">
+              {user.name || 'Unnamed user'}
+            </p>
+            <p className="truncate text-xs text-gray-500">{user.email}</p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {user.role ? (
+              <span className="rounded bg-gray-100 px-2 py-1 text-xs text-gray-600">
+                {user.role}
+              </span>
+            ) : null}
+            {isCurrentAssignee ? (
+              <span className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-700">
+                Current
+              </span>
+            ) : null}
+          </div>
+        </button>
+      );
+    });
+  }
 
   const segmentsPanel =
     !loadingSegments && selectedDocument && segments.length > 0 ? (
@@ -289,8 +408,12 @@ function SegmentsTab({
                     variant="outline"
                     size="sm"
                     className="shrink-0 px-2"
-                    disabled={resetAllSegmentsMutation.isPending || !documentId}
-                    aria-label={t('outliner.workspace.resetAllSegments')}
+                    disabled={
+                      resetAllSegmentsMutation.isPending ||
+                      reassignDocumentMutation.isPending ||
+                      !documentId
+                    }
+                    aria-label="Document actions"
                   >
                     <EllipsisVertical className="h-4 w-4" aria-hidden />
                   </Button>
@@ -302,6 +425,12 @@ function SegmentsTab({
                   >
                     <Undo className="h-4 w-4" aria-hidden />
                     {t('outliner.workspace.resetAllSegments')}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setIsReassignDialogOpen(true)}
+                    disabled={!documentId || reassignDocumentMutation.isPending}
+                  >
+                    Reassign document
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -390,7 +519,35 @@ function SegmentsTab({
         </SplitPane>
       )}
 
-   
+      <Dialog open={isReassignDialogOpen} onOpenChange={handleReassignDialogChange}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Reassign document</DialogTitle>
+            <DialogDescription>
+              Search for a user with outliner access, then click a result to assign this
+              document.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <Input
+              value={userSearch}
+              onChange={(event) => setUserSearch(event.target.value)}
+              placeholder="Search by name or email"
+              disabled={reassignDocumentMutation.isPending}
+              autoFocus
+            />
+
+            <div className="max-h-80 overflow-y-auto rounded-md border border-gray-200">
+              {assigneeResultsContent}
+            </div>
+
+            {assigneeSearchError instanceof Error ? (
+              <p className="text-sm text-red-600">{assigneeSearchError.message}</p>
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

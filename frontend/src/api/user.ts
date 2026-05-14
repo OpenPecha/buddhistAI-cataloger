@@ -52,6 +52,27 @@ export const listUsers = async (
   return handleApiResponse(response);
 };
 
+export interface SearchUsersOptions {
+  limit?: number;
+  role?: string;
+  permission?: string;
+}
+
+export const searchUsers = async (
+  search: string,
+  options: SearchUsersOptions = {}
+): Promise<PaginatedUserResponse> => {
+  const params = new URLSearchParams();
+  params.append('skip', '0');
+  params.append('limit', String(options.limit ?? 20));
+  if (options.role) params.append('role', options.role);
+  if (options.permission) params.append('permission', options.permission);
+  if (search.trim()) params.append('search', search.trim());
+
+  const response = await fetchWithAccessToken(`${API_URL}/settings/users?${params.toString()}`);
+  return handleApiResponse(response);
+};
+
 export const getUser = async (userId: string): Promise<User> => {
   const response = await fetchWithAccessToken(`${API_URL}/settings/users/${userId}`);
   return handleApiResponse(response);

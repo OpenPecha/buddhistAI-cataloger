@@ -196,6 +196,15 @@ def set_document_status_and_refresh(
     db.refresh(document)
 
 
+def set_document_user_and_refresh(
+    db: Session, document: OutlinerDocument, user_id: str
+) -> None:
+    document.user_id = user_id
+    document.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(document)
+
+
 def set_document_reviewer_and_refresh(
     db: Session, document: OutlinerDocument, reviewer_id: str
 ) -> None:

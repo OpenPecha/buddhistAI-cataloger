@@ -565,6 +565,21 @@ export const updateDocumentStatus = async (
   return handleApiResponse(response);
 };
 
+export const updateDocumentAssignee = async (
+  documentId: string,
+  userId: string
+): Promise<{ message: string; document_id: string; user_id: string }> => {
+  const response = await outlinerFetch(`${OUTLINER_BASE_URL}/documents/${documentId}/assignee`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ user_id: userId }),
+  });
+
+  return handleApiResponse(response);
+};
+
 /** Reviewer: approve document (all segments must be approved). */
 export const approveOutlinerDocument = async (
   documentId: string
