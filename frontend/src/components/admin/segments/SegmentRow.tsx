@@ -394,7 +394,7 @@ function SegmentRow({
           )}
         </div>
 
-        <div className="flex-1 min-w-0 space-y-3">
+        <div className="flex-1 min-w-0 space-y-3 font-monlam-2">
           <div className="flex flex-wrap justify-between items-center gap-2 pb-2 border-b border-gray-200">
           
           
@@ -502,9 +502,9 @@ function SegmentRow({
             {
             segment.label==='TEXT' && (
               <>
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1 ">
               <span className="text-xs font-medium text-gray-500 flex gap-1 items-center">
-                <FileText className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                <FileText className="w-5 h-5 shrink-0" aria-hidden />
                 {titleEditOpen ? (
                   <Input
                     autoFocus
@@ -538,7 +538,7 @@ function SegmentRow({
                     disabled={titleAuthorSaving}
                     title="Annotator title; click to edit reviewer suggestion only"
                   >
-                    <span className="block">
+                    <span className="block text-xl">
                       {segment.title?.trim() ? segment.title : '— No annotator title —'}
                     </span>
                     {segment.reviewer_title != null ? (
@@ -557,7 +557,7 @@ function SegmentRow({
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-gray-500 flex gap-1 items-center">
-                <User className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                <User className="w-5 h-5 shrink-0" aria-hidden />
                 {authorEditOpen ? (
                   <Input
                     autoFocus
@@ -591,7 +591,7 @@ function SegmentRow({
                     disabled={titleAuthorSaving}
                     title="Annotator author; click to edit reviewer suggestion only"
                   >
-                    <span className="block">
+                    <span className="block text-xl">
                       {segment.author?.trim() ? segment.author : '— No annotator author —'}
                     </span>
                     {segment.reviewer_author != null ? (
