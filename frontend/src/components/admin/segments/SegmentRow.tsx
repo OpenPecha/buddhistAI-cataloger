@@ -16,7 +16,7 @@ import { useUser } from '@/hooks/useUser';
 import { updateSegment, rejectSegment } from '@/api/outliner';
 import { toast } from 'sonner';
 import Highlighter from 'react-highlight-words';
-import { FileText, Loader2, Undo, User, X } from 'lucide-react';
+import { Check, FileText, Loader2, Undo, User, X } from 'lucide-react';
 import type { Segment } from '../shared/types';
 import type { TextSegment } from '@/components/outliner/types';
 import type { FormDataType, Title, Author } from '@/components/outliner/AnnotationSidebar';
@@ -629,20 +629,22 @@ function SegmentRow({
           <div className="flex flex-wrap gap-2 pt-1 justify-between" onClick={(e) => e.stopPropagation()}>
             {segment.status === 'checked' && showApproveButton && (
               <div className='flex gap-2'>
-                <Button size="xs" onClick={handleSave} disabled={isSaving} variant="outline">
-                  {isSaving ? 'Saving...' : 'Approve'}
+                <Button size="sm" onClick={handleSave} disabled={isSaving} variant="outline" className='cursor-pointer hover:bg-blue-50 hover:border-blue-400'>
+                  {isSaving ? <Loader2 className='w-3.5 h-3.5 animate-spin shrink-0' aria-hidden /> : <Check className='w-3.5 h-3.5 shrink-0' aria-hidden />}
+                  Approve
                 </Button>
                 <Button
-                  size="xs"
+                  size="sm"
                   onClick={() => {
                     setRejectComment('');
                     setRejectDialogOpen(true);
                   }}
                   disabled={isSaving}
                   variant="ghost"
-                  className="border-red-300 text-red-600 hover:bg-red-50 hover:border-red-400"
+                  className="border-red-300 cursor-pointer text-red-600 hover:bg-red-50 hover:border-red-400"
                 >
-                   Reject
+                  <X className='w-3.5 h-3.5 shrink-0' aria-hidden />
+                  Reject
                 </Button>
               </div>
             )}
