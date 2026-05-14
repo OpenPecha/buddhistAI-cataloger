@@ -225,7 +225,7 @@ function DocumentsTab({
                   key={doc.id}
                   document={doc}
                   annotator={getAnnotator(doc?.user_id ?? '')}
-                  canReview={!!currentUser?.id && doc.reviewer_id === currentUser.id}
+                  canReview={!!currentUser?.id && doc.reviewer_id === currentUser.id && (doc.status === 'completed' || doc.status === 'approved')}
                   onSelect={onDocumentSelect}
                 />
               ))
