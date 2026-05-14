@@ -430,7 +430,7 @@ function SegmentsTab({
                     onClick={() => setIsReassignDialogOpen(true)}
                     disabled={!documentId || reassignDocumentMutation.isPending}
                   >
-                    Reassign document
+                    Re-assign document
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

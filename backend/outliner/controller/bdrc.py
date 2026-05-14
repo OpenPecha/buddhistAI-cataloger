@@ -102,8 +102,8 @@ async def _push_document_segments_to_bdrc(
     for segment in db_segments:
         segment_start = int(segment.span_start)
         segment_end = int(segment.span_end)
-        segment_title = segment.title or ""
-        segment_author = segment.author
+        segment_title = segment.reviewer_title or segment.title or ""
+        segment_author = segment.reviewer_author or segment.author or ""
         mw_id = f'{volume["mw_id"]}_{segment.id}'
         wa_id = segment.title_bdrc_id or ''
         segment_inputs.append(SegmentInput(
