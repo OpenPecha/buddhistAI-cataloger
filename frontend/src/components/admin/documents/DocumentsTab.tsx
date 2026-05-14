@@ -131,8 +131,7 @@ function DocumentsTab({
         <div className='flex items-center gap-2'>
           <h3 className="text-xl font-semibold text-gray-900">Document Management </h3>
           <SelfRviewedToggle/>
-         
-      
+          <Button onClick={assignReviewer}>Assign me</Button>         
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
@@ -175,7 +174,6 @@ function DocumentsTab({
      
             
           </div>
-          <Button onClick={assignReviewer}>Assign me</Button>
           
           <Button disabled={isApplyDisabled} onClick={applyFilters}>Apply Filters</Button>
         </div>
