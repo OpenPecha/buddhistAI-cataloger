@@ -24,6 +24,7 @@ from outliner.controller.outliner import (
 )
 from outliner.deps import (
     apply_authenticated_segment_reviewer,
+    assert_assigned_document_participant,
     assert_assigned_document_reviewer,
     can_user_reject_segment,
     enforce_segment_review_patch_authorization,
@@ -267,7 +268,9 @@ async def update_segment_status(
     doc_owner, doc_reviewer = get_document_review_context_for_segment(db, segment_id)
     self_owned = doc_owner is not None and doc_owner == current_user.id
     if not self_owned:
-        assert_assigned_document_reviewer(doc_reviewer, current_user)
+        assert_assigned_document_participant(
+            doc_owner, doc_reviewer, current_user
+        )
     reviewer_id = (
         current_user.id
         if is_user_admin_or_reviewer(current_user)

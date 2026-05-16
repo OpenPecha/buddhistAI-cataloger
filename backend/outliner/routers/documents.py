@@ -32,6 +32,8 @@ from outliner.controller.outliner import (
 )
 from outliner.deps import (
     apply_authenticated_segment_reviewer_bulk,
+    assert_assigned_document_annotator,
+    assert_assigned_document_participant,
     assert_assigned_document_reviewer,
     enforce_segment_review_patch_authorization,
     is_user_admin_or_reviewer,
@@ -360,7 +362,9 @@ async def reset_segments(
     doc = fetch_document_by_id(db, document_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    assert_assigned_document_reviewer(doc.reviewer_id, current_user)
+    assert_assigned_document_participant(
+        doc.user_id, doc.reviewer_id, current_user
+    )
     reset_segments_ctrl(db, document_id)
     return None
 
@@ -381,8 +385,15 @@ async def update_document_status(
     doc = fetch_document_by_id(db, document_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    if doc.user_id != current_user.id:
+    st = (status_update.status or "").strip().lower()
+    if st == "completed":
+        assert_assigned_document_annotator(doc.user_id, current_user)
+    elif st == "approved":
         assert_assigned_document_reviewer(doc.reviewer_id, current_user)
+    else:
+        assert_assigned_document_participant(
+            doc.user_id, doc.reviewer_id, current_user
+        )
     return update_document_status_ctrl(
         db=db,
         document_id=document_id,
@@ -435,8 +446,13 @@ async def get_document_progress(
 async def submit_document_to_bdrc_in_review(
     document_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     """Push outline to BDRC with status in_review and set document status to completed."""
+    doc = fetch_document_by_id(db, document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    assert_assigned_document_annotator(doc.user_id, current_user)
     return await submit_document_to_bdrc_in_review_ctrl(db, document_id)
 
 
