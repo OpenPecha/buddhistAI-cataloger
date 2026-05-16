@@ -12,6 +12,7 @@ import SegmentRow from './SegmentRow';
 import { Button } from '@/components/ui/button';
 import {
   approveOutlinerDocument,
+  assignDocumentReviewer,
   resetSegments,
   updateDocumentAssignee,
   updateDocumentStatus,
@@ -35,6 +36,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useUser } from '@/hooks/useUser';
 
 type SegmentStatusFilter = 'all' | 'unchecked' | 'checked' | 'approved' | 'rejected';
 
@@ -46,12 +48,14 @@ function AdminDocumentSegmentRow({
   onToggleExpansion,
   documentFilename,
   onSegmentBodyCaretChange,
+  canEditReview,
 }: RowComponentProps<{
   segments: Segment[];
   expandedSegments: Set<string>;
   onToggleExpansion: (segmentId: string) => void;
   documentFilename?: string | null;
   onSegmentBodyCaretChange?: (segmentId: string, offset: number | null) => void;
+  canEditReview: boolean;
 }>) {
   const segment = segments[index];
   if (!segment) return null;
@@ -64,6 +68,7 @@ function AdminDocumentSegmentRow({
         documentFilename={documentFilename}
         listIndex={index + 1}
         onSegmentBodyCaretChange={onSegmentBodyCaretChange}
+        canEditReview={canEditReview}
       />
     </div>
   );
@@ -92,6 +97,13 @@ function SegmentsTab({
   const [userSearch, setUserSearch] = useState('');
   const { documentId } = useParams<{ documentId: string }>();
   const queryClient = useQueryClient();
+  const { user: currentUser } = useUser();
+  const canEditReview =
+    !!currentUser?.id && selectedDocument?.reviewer_id === currentUser.id;
+  const isAdminOrReviewer =
+    currentUser?.role === 'admin' || currentUser?.role === 'reviewer';
+  const canClaimReview =
+    isAdminOrReviewer && !selectedDocument?.reviewer_id && !!documentId;
   const filteredSegments = useMemo(() => {
     if (statusFilter === 'all') return segments;
     return segments.filter(s => (s.status ?? 'unchecked') === statusFilter);
@@ -182,6 +194,23 @@ function SegmentsTab({
     }
     approveDocumentMutation.mutate();
   };
+
+  const claimReviewerMutation = useMutation({
+    mutationFn: async () => {
+      if (!documentId) throw new Error('Document ID is required');
+      return assignDocumentReviewer(documentId);
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] }),
+        queryClient.invalidateQueries({ queryKey: ['outliner-admin-documents'] }),
+      ]);
+      toast.success('You are now the assigned reviewer for this document');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to claim review');
+    },
+  });
 
   const undoSkippedMutation = useMutation({
     mutationFn: async () => {
@@ -355,6 +384,27 @@ function SegmentsTab({
             </div>
        
           </div>
+          {!canEditReview && (
+            <div className="text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 flex flex-wrap items-center justify-between gap-2">
+              <p>
+                {canClaimReview
+                  ? 'View only — no reviewer is assigned yet.'
+                  : 'View only — you are not the assigned reviewer for this document.'}
+              </p>
+              {/* {canClaimReview && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0 border-amber-300 bg-white hover:bg-amber-100"
+                  disabled={claimReviewerMutation.isPending}
+                  onClick={() => claimReviewerMutation.mutate()}
+                >
+                  {claimReviewerMutation.isPending ? 'Claiming…' : 'Claim review'}
+                </Button>
+              )} */}
+            </div>
+          )}
           <div className="flex items-center justify-between gap-3">
             <select
               value={statusFilter}
@@ -372,7 +422,7 @@ function SegmentsTab({
                 <Button
                   variant="outline"
                   onClick={() => undoSkippedMutation.mutate()}
-                  disabled={undoSkippedMutation.isPending || !documentId}
+                  disabled={undoSkippedMutation.isPending || !documentId || !canEditReview}
                 >
                   {undoSkippedMutation.isPending ? 'Restoring...' : 'Undo skipped'}
                 </Button>
@@ -411,7 +461,8 @@ function SegmentsTab({
                     disabled={
                       resetAllSegmentsMutation.isPending ||
                       reassignDocumentMutation.isPending ||
-                      !documentId
+                      !documentId ||
+                      !canEditReview
                     }
                     aria-label="Document actions"
                   >
@@ -440,6 +491,7 @@ function SegmentsTab({
                 disabled={
                   approveDocumentMutation.isPending ||
                   !documentId ||
+                  !canEditReview ||
                   statusCounts.approved < segments.length
                 }
                 className="cursor-pointer shrink-0"
@@ -468,6 +520,7 @@ function SegmentsTab({
                 onToggleExpansion,
                 documentFilename: selectedDocument.filename,
                 onSegmentBodyCaretChange: handleSegmentBodyCaretChange,
+                canEditReview,
               }}
             />
           </div>

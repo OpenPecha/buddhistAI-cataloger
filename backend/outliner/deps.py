@@ -109,6 +109,37 @@ def apply_authenticated_segment_reviewer(
         patch["reviewer_id"] = user.id
 
 
+def assert_assigned_document_reviewer(
+    document_reviewer_id: str | None,
+    user: User,
+) -> None:
+    """Admin review mutations require ``outliner_documents.reviewer_id`` to match the caller."""
+    if document_reviewer_id is None or document_reviewer_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Only the assigned reviewer can modify this document",
+        )
+
+
+def enforce_segment_review_patch_authorization(
+    patch: dict,
+    user: User,
+    *,
+    document_owner_id: str | None,
+    document_reviewer_id: str | None,
+) -> None:
+    """Block reviewer workflow fields unless the caller owns the doc (annotator) or is assigned reviewer."""
+    review_keys = {"reviewer_title", "reviewer_author"}
+    if patch.keys() & review_keys:
+        assert_assigned_document_reviewer(document_reviewer_id, user)
+
+    if document_owner_id is not None and document_owner_id == user.id:
+        return
+
+    if "status" in patch or "title_bdrc_id" in patch or "author_bdrc_id" in patch:
+        assert_assigned_document_reviewer(document_reviewer_id, user)
+
+
 def apply_authenticated_segment_reviewer_bulk(
     updates: list[dict] | None,
     user: User,

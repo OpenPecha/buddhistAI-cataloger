@@ -181,6 +181,15 @@ def fetch_document_by_id(db: Session, document_id: str) -> Optional[OutlinerDocu
     return db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
 
 
+def fetch_document_reviewer_id(db: Session, document_id: str) -> Optional[str]:
+    """Read ``reviewer_id`` directly from DB (avoids stale ORM state on cached document loads)."""
+    return (
+        db.query(OutlinerDocument.reviewer_id)
+        .filter(OutlinerDocument.id == document_id)
+        .scalar()
+    )
+
+
 def fetch_documents_by_ids(
     db: Session, document_ids: List[str]
 ) -> List[OutlinerDocument]:

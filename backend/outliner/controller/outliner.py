@@ -22,6 +22,7 @@ from outliner.controller.comments import (
 )
 from outliner.controller.common import none_check
 from outliner.controller.document import (
+    assign_document_reviewer,
     assign_reviewr,
     ai_toc_db_value_to_api_items,
     create_document,
@@ -46,6 +47,7 @@ from outliner.controller.rejection import (
     latest_rejection_reason_for_orm_segment,
     latest_rejection_resolved_for_orm_segment,
     latest_rejection_reviewer_for_orm_segment,
+    list_segment_rejections,
     reject_segment,
     reject_segments_bulk,
     update_segment_with_rejection_fields,

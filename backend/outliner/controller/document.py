@@ -355,6 +355,30 @@ def assign_reviewr(
     }
 
 
+def assign_document_reviewer(
+    db: Session,
+    document_id: str,
+    reviewer_id: str,
+) -> Dict[str, str]:
+    """Assign the current user as reviewer on a specific document (if unassigned)."""
+    document = outliner_repo.fetch_document_by_id(db, document_id)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if document.reviewer_id and document.reviewer_id != reviewer_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Document is already assigned to another reviewer",
+        )
+
+    outliner_repo.set_document_reviewer_and_refresh(db, document, reviewer_id)
+    return {
+        "message": "Reviewer assigned",
+        "document_id": document_id,
+        "reviewer_id": reviewer_id,
+    }
+
+
 def get_document_progress(db: Session, document_id: str) -> Dict[str, Any]:
     """Get progress statistics for a document"""
     data = outliner_repo.get_document_progress(db, document_id)

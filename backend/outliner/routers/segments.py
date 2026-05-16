@@ -12,6 +12,7 @@ from outliner.controller.outliner import (
     delete_segment_comment as delete_segment_comment_ctrl,
     get_segment as get_segment_ctrl,
     get_segment_comments as get_segment_comments_ctrl,
+    list_segment_rejections as list_segment_rejections_ctrl,
     merge_segments as merge_segments_ctrl,
     reject_segment as reject_segment_ctrl,
     reject_segments_bulk as reject_segments_bulk_ctrl,
@@ -23,11 +24,14 @@ from outliner.controller.outliner import (
 )
 from outliner.deps import (
     apply_authenticated_segment_reviewer,
+    assert_assigned_document_reviewer,
     can_user_reject_segment,
+    enforce_segment_review_patch_authorization,
     is_user_admin_or_reviewer,
     require_outliner_access,
 )
 from outliner.repository.segment import (
+    get_document_review_context_for_segment,
     get_document_user_id_for_segment,
     map_segment_ids_to_document_user_ids,
 )
@@ -42,6 +46,8 @@ from .schemas import (
     CommentUpdate,
     MergeSegmentsRequest,
     RejectSegmentRequest,
+    SegmentRejectionHistoryItem,
+    SegmentRejectionHistoryResponse,
     SegmentResponse,
     SegmentStatusUpdate,
     SegmentUpdate,
@@ -62,6 +68,22 @@ async def get_segment(
         segment,
         db,
         document_content=document_plain_content(db, segment.document_id),
+    )
+
+
+@router.get(
+    "/segments/{segment_id}/rejections",
+    response_model=SegmentRejectionHistoryResponse,
+)
+async def list_segment_rejections(
+    segment_id: str,
+    db: Session = Depends(get_db),
+    _current_user: User = Depends(require_outliner_access),
+):
+    """All rejection events for a segment (newest first)."""
+    rows = list_segment_rejections_ctrl(db, segment_id)
+    return SegmentRejectionHistoryResponse(
+        items=[SegmentRejectionHistoryItem.model_validate(r) for r in rows]
     )
 
 
@@ -86,7 +108,13 @@ async def update_segment(
     - After: 1 SELECT (segment) + 1 UPDATE (segment) + 1 UPDATE (doc, if annotation changed)
     """
     patch = segment_update.model_dump(exclude_unset=True)
-    doc_owner = get_document_user_id_for_segment(db, segment_id)
+    doc_owner, doc_reviewer = get_document_review_context_for_segment(db, segment_id)
+    enforce_segment_review_patch_authorization(
+        patch,
+        current_user,
+        document_owner_id=doc_owner,
+        document_reviewer_id=doc_reviewer,
+    )
     apply_authenticated_segment_reviewer(
         patch, current_user, document_owner_id=doc_owner
     )
@@ -104,8 +132,16 @@ async def update_segments_bulk(
     segment_updates = [seg.model_dump(exclude_unset=True) for seg in updates.segments]
     owner_by_segment = map_segment_ids_to_document_user_ids(db, list(updates.segment_ids))
     for row, seg_id in zip(segment_updates, updates.segment_ids, strict=True):
+        doc_owner = owner_by_segment.get(seg_id)
+        _, doc_reviewer = get_document_review_context_for_segment(db, seg_id)
+        enforce_segment_review_patch_authorization(
+            row,
+            current_user,
+            document_owner_id=doc_owner,
+            document_reviewer_id=doc_reviewer,
+        )
         apply_authenticated_segment_reviewer(
-            row, current_user, document_owner_id=owner_by_segment.get(seg_id)
+            row, current_user, document_owner_id=doc_owner
         )
     updated_segments = update_segments_bulk_ctrl(db, segment_updates, updates.segment_ids)
     content = (
@@ -228,8 +264,10 @@ async def update_segment_status(
 ):
     """Update segment status (checked/unchecked)"""
     st = (status_update.status or "").strip().lower()
-    doc_owner = get_document_user_id_for_segment(db, segment_id)
+    doc_owner, doc_reviewer = get_document_review_context_for_segment(db, segment_id)
     self_owned = doc_owner is not None and doc_owner == current_user.id
+    if not self_owned:
+        assert_assigned_document_reviewer(doc_reviewer, current_user)
     reviewer_id = (
         current_user.id
         if is_user_admin_or_reviewer(current_user)
@@ -253,7 +291,8 @@ async def reject_segment(
     current_user: User = Depends(require_outliner_access),
 ):
     """Reject a checked segment"""
-    doc_owner = get_document_user_id_for_segment(db, segment_id)
+    doc_owner, doc_reviewer = get_document_review_context_for_segment(db, segment_id)
+    assert_assigned_document_reviewer(doc_reviewer, current_user)
     can_user_reject_segment(current_user, [doc_owner])
     segment = reject_segment_ctrl(db, segment_id, current_user.id, body.comment)
     return build_segment_response(
@@ -271,6 +310,9 @@ async def reject_segments_bulk(
 ):
     """Reject multiple checked segments at once"""
     owner_by_segment = map_segment_ids_to_document_user_ids(db, list(request.segment_ids))
+    for seg_id in request.segment_ids:
+        _, doc_reviewer = get_document_review_context_for_segment(db, seg_id)
+        assert_assigned_document_reviewer(doc_reviewer, current_user)
     can_user_reject_segment(current_user, list(owner_by_segment.values()))
     segments = reject_segments_bulk_ctrl(
         db, request.segment_ids, current_user.id, request.comment

@@ -110,6 +110,19 @@ export interface SegmentRejection {
   resolved?: boolean | null;
 }
 
+/** One historical rejection row (GET …/segments/:id/rejections). */
+export interface SegmentRejectionHistoryItem {
+  id: string;
+  created_at: string;
+  reason?: string | null;
+  resolved?: boolean | null;
+  reviewer?: SegmentRejectionReviewer | null;
+}
+
+export interface SegmentRejectionHistoryResponse {
+  items: SegmentRejectionHistoryItem[];
+}
+
 export interface OutlinerSegment {
   id: string;
   /** Resolved client-side from document.content + spans when omitted by API */
@@ -565,6 +578,16 @@ export const updateDocumentStatus = async (
   return handleApiResponse(response);
 };
 
+export const assignDocumentReviewer = async (
+  documentId: string
+): Promise<{ message: string; document_id: string; reviewer_id: string }> => {
+  const response = await outlinerFetch(
+    `${OUTLINER_BASE_URL}/documents/${documentId}/assign-reviewer`,
+    { method: 'POST' }
+  );
+  return handleApiResponse(response);
+};
+
 export const updateDocumentAssignee = async (
   documentId: string,
   userId: string
@@ -613,6 +636,15 @@ export const rejectSegment = async (
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ comment }),
   });
+  return handleApiResponse(response);
+};
+
+export const getSegmentRejectionHistory = async (
+  segmentId: string
+): Promise<SegmentRejectionHistoryResponse> => {
+  const response = await outlinerFetch(
+    `${OUTLINER_BASE_URL}/segments/${segmentId}/rejections`
+  );
   return handleApiResponse(response);
 };
 

@@ -188,6 +188,25 @@ def get_document_user_id_for_segment(db: Session, segment_id: str) -> Optional[s
     return str(uid) if uid is not None else None
 
 
+def get_document_review_context_for_segment(
+    db: Session, segment_id: str
+) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    """Return document owner and assigned reviewer ids for a segment, or ``(None, None)``."""
+    row = (
+        db.query(OutlinerDocument.user_id, OutlinerDocument.reviewer_id)
+        .join(OutlinerSegment, OutlinerSegment.document_id == OutlinerDocument.id)
+        .filter(OutlinerSegment.id == segment_id)
+        .first()
+    )
+    if not row:
+        return None, None
+    owner_id, reviewer_id = row[0], row[1]
+    return (
+        str(owner_id) if owner_id is not None else None,
+        str(reviewer_id) if reviewer_id is not None else None,
+    )
+
+
 def map_segment_ids_to_document_user_ids(
     db: Session, segment_ids: List[str]
 ) -> Dict[str, Optional[str]]:

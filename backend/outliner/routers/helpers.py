@@ -13,13 +13,41 @@ from outliner.controller.outliner import (
 )
 from outliner.utils.outliner_utils import get_comments_list, segment_body_from_document
 
+from outliner.models.outliner import OutlinerDocument
+
 from .schemas import (
     CommentResponse,
+    DocumentResponse,
     SegmentRejectionReviewer,
     SegmentRejectionSummary,
     SegmentResponse,
     SegmentResponseDocument,
 )
+
+
+def build_document_response(
+    document: OutlinerDocument,
+    segments: List[SegmentResponseDocument],
+    *,
+    reviewer_id: Optional[str] = None,
+) -> DocumentResponse:
+    """Build GET document payload; pass ``reviewer_id`` when read outside the ORM instance."""
+    resolved_reviewer_id = (
+        reviewer_id if reviewer_id is not None else document.reviewer_id
+    )
+    return DocumentResponse(
+        id=document.id,
+        content=document.content,
+        filename=document.filename,
+        user_id=document.user_id,
+        reviewer_id=resolved_reviewer_id,
+        status=getattr(document, "status", None),
+        created_at=document.created_at,
+        updated_at=document.updated_at,
+        is_supplied_title=getattr(document, "is_supplied_title", None),
+        submit_count=getattr(document, "submit_count", None),
+        segments=segments,
+    )
 
 
 def segment_list_row_to_document_segment(row: dict) -> SegmentResponseDocument:

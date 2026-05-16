@@ -348,3 +348,45 @@ def get_segment_rejection_count(db: Session, segment_id: str) -> int:
     return db.query(func.count(SegmentRejection.id)).filter(
         SegmentRejection.segment_id == segment_id
     ).scalar() or 0
+
+
+def list_rejections_for_segment(db: Session, segment_id: str) -> List[Dict[str, Any]]:
+    """All rejection rows for a segment, newest first."""
+    rows = (
+        db.query(
+            SegmentRejection.id,
+            SegmentRejection.created_at,
+            SegmentRejection.rejection_reason,
+            SegmentRejection.resolved,
+            SegmentRejection.reviewer_id,
+            User.name,
+            User.picture,
+        )
+        .outerjoin(User, User.id == SegmentRejection.reviewer_id)
+        .filter(SegmentRejection.segment_id == segment_id)
+        .order_by(SegmentRejection.created_at.desc())
+        .all()
+    )
+    out: List[Dict[str, Any]] = []
+    for rid, created_at, reason, resolved, reviewer_id, name, picture in rows:
+        reviewer_payload = None
+        if reviewer_id:
+            pic = picture
+            if pic is not None:
+                pic = str(pic).strip() or None
+            reviewer_payload = {
+                "user_id": reviewer_id,
+                "name": name,
+                "picture": pic,
+            }
+        reason_text = (reason or "").strip() or None
+        out.append(
+            {
+                "id": rid,
+                "created_at": created_at,
+                "reason": reason_text,
+                "resolved": resolved,
+                "reviewer": reviewer_payload,
+            }
+        )
+    return out

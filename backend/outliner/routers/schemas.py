@@ -41,6 +41,29 @@ class SegmentRejectionSummary(BaseModel):
         return {k: v for k, v in data.items() if v is not None}
 
 
+class SegmentRejectionHistoryItem(BaseModel):
+    """One row from segment_rejections (admin rejection history modal)."""
+
+    id: str
+    created_at: datetime
+    reason: Optional[str] = None
+    resolved: Optional[bool] = None
+    reviewer: Optional[SegmentRejectionReviewer] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+    @model_serializer(mode="wrap")
+    def _serialize_omit_nulls(self, serializer):
+        data = serializer(self)
+        if not isinstance(data, dict):
+            return data
+        return {k: v for k, v in data.items() if v is not None}
+
+
+class SegmentRejectionHistoryResponse(BaseModel):
+    items: List[SegmentRejectionHistoryItem] = Field(default_factory=list)
+
+
 class SegmentCreate(BaseModel):
     text: Optional[str] = None  # Optional - will be extracted from document if not provided
     segment_index: int

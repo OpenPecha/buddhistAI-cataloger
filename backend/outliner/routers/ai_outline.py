@@ -46,6 +46,7 @@ async def ai_outline(
         content=document.content,
         filename=document.filename,
         user_id=document.user_id,
+        reviewer_id=document.reviewer_id,
         status=getattr(document, "status", None),
         created_at=document.created_at,
         updated_at=document.updated_at,

@@ -6,9 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from core.database import get_db
-from outliner.repository.document import fetch_document_by_id
+from outliner.repository.document import fetch_document_by_id, fetch_document_reviewer_id
 from outliner.controller.outliner import (
     approve_document as approve_document_ctrl,
+    assign_document_reviewer as assign_document_reviewer_ctrl,
     assign_reviewr as assign_reviewr_ctrl,
     bulk_segment_operations as bulk_segment_operations_ctrl,
     create_document as create_document_ctrl,
@@ -31,12 +32,15 @@ from outliner.controller.outliner import (
 )
 from outliner.deps import (
     apply_authenticated_segment_reviewer_bulk,
+    assert_assigned_document_reviewer,
+    enforce_segment_review_patch_authorization,
     is_user_admin_or_reviewer,
     require_outliner_access,
 )
 from user.models.user import User
 
 from .helpers import (
+    build_document_response,
     build_segment_response,
     document_plain_content,
     segment_list_row_to_document_segment,
@@ -143,34 +147,15 @@ async def get_document(
             )
             document = get_document_ctrl(db, document_id, include_segments)
 
+    reviewer_id = fetch_document_reviewer_id(db, document_id)
     if include_segments and hasattr(document, "segment_list") and document.segment_list:
         segments_resp = [
             segment_list_row_to_document_segment(s) for s in document.segment_list
         ]
-        return DocumentResponse(
-            id=document.id,
-            content=document.content,
-            filename=document.filename,
-            user_id=document.user_id,
-            status=getattr(document, "status", None),
-            created_at=document.created_at,
-            updated_at=document.updated_at,
-            is_supplied_title=getattr(document, "is_supplied_title", None),
-            submit_count=getattr(document, "submit_count", None),
-            segments=segments_resp,
+        return build_document_response(
+            document, segments_resp, reviewer_id=reviewer_id
         )
-    return DocumentResponse(
-        id=document.id,
-        content=document.content,
-        filename=document.filename,
-        user_id=document.user_id,
-        status=getattr(document, "status", None),
-        created_at=document.created_at,
-        updated_at=document.updated_at,
-        is_supplied_title=getattr(document, "is_supplied_title", None),
-        submit_count=getattr(document, "submit_count", None),
-        segments=[],
-    )
+    return build_document_response(document, [], reviewer_id=reviewer_id)
 
 
 @router.get(
@@ -333,7 +318,20 @@ async def bulk_segment_operations(
     """
     create_data = [seg.dict() for seg in operations.create] if operations.create else None
     doc = fetch_document_by_id(db, document_id)
-    doc_owner = doc.user_id if doc else None
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    doc_owner = doc.user_id
+    doc_reviewer = doc.reviewer_id
+    if operations.update:
+        for row in operations.update:
+            if not isinstance(row, dict):
+                continue
+            enforce_segment_review_patch_authorization(
+                row,
+                current_user,
+                document_owner_id=doc_owner,
+                document_reviewer_id=doc_reviewer,
+            )
     apply_authenticated_segment_reviewer_bulk(
         operations.update, current_user, document_owner_id=doc_owner
     )
@@ -356,8 +354,13 @@ async def bulk_segment_operations(
 async def reset_segments(
     document_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     """Delete all segments for a document"""
+    doc = fetch_document_by_id(db, document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    assert_assigned_document_reviewer(doc.reviewer_id, current_user)
     reset_segments_ctrl(db, document_id)
     return None
 
@@ -375,6 +378,11 @@ async def update_document_status(
     When restoring a deleted document (changing status from 'deleted' to 'active'),
     ownership is verified against the authenticated user.
     """
+    doc = fetch_document_by_id(db, document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    if doc.user_id != current_user.id:
+        assert_assigned_document_reviewer(doc.reviewer_id, current_user)
     return update_document_status_ctrl(
         db=db,
         document_id=document_id,
@@ -403,6 +411,10 @@ async def update_document_assignee(
             status_code=403,
             detail="Only reviewers and administrators can reassign documents",
         )
+    doc = fetch_document_by_id(db, document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    assert_assigned_document_reviewer(doc.reviewer_id, current_user)
     return update_document_assignee_ctrl(
         db=db,
         document_id=document_id,
@@ -432,8 +444,13 @@ async def submit_document_to_bdrc_in_review(
 async def approve_document(
     document_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     """Approve all segments for a document"""
+    doc = fetch_document_by_id(db, document_id)
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    assert_assigned_document_reviewer(doc.reviewer_id, current_user)
     return await approve_document_ctrl(db, document_id)
 
 
@@ -445,5 +462,24 @@ async def assign_reviewr(
     """Assign one random completed unassigned document to the clicking reviewer/admin user."""
     return assign_reviewr_ctrl(
         db=db,
+        reviewer_id=current_user.id,
+    )
+
+
+@router.post("/documents/{document_id}/assign-reviewer")
+async def assign_document_reviewer(
+    document_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
+):
+    """Assign the current user as reviewer on this document when it has no reviewer yet."""
+    if not is_user_admin_or_reviewer(current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="Only reviewers and administrators can claim document reviews",
+        )
+    return assign_document_reviewer_ctrl(
+        db=db,
+        document_id=document_id,
         reviewer_id=current_user.id,
     )

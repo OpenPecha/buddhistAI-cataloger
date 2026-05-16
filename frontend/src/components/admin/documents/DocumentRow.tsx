@@ -15,11 +15,14 @@ const STATUS_LABEL: Record<string, string> = {
 interface DocumentRowProps {
   readonly document: Document;
   readonly onSelect: (document: Document) => void;
-  readonly canReview: boolean;
   readonly annotator?: OutlinerUser;
+  readonly currentUserId?: string;
 }
 
-function DocumentRow({ document,annotator, onSelect, canReview }: DocumentRowProps) {
+function DocumentRow({ document, annotator, onSelect, currentUserId }: DocumentRowProps) {
+  const isAssignedReviewer =
+    !!currentUserId && document.reviewer_id === currentUserId;
+  const actionLabel = isAssignedReviewer ? 'Review' : 'View';
   const statusKey = document.status || 'active';
   /** Prefer server join of rejections → segment status; fall back to rejected-status segment count on older APIs. */
   const openRejectionSegments =
@@ -96,20 +99,21 @@ function DocumentRow({ document,annotator, onSelect, canReview }: DocumentRowPro
       </TableCell>
      
       <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-        {canReview ? (
-          <button
-            onClick={() => onSelect(document)}
-            className="group text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-md px-2 py-1 cursor-pointer flex items-center gap-2"
-          >
-            Review
-            <ArrowRight
-              className="w-3 h-3 shrink-0 opacity-0 translate-x-[-8px] group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200"
-            />
-          </button>
-        ) : (
-          <span className="text-gray-400">-</span>
-        )}
-  
+        <button
+          type="button"
+          onClick={() => onSelect(document)}
+          title={
+            isAssignedReviewer
+              ? 'You are the assigned reviewer'
+              : 'View only — not assigned as reviewer'
+          }
+          className="group text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-md px-2 py-1 cursor-pointer flex items-center gap-2"
+        >
+          {actionLabel}
+          <ArrowRight
+            className="w-3 h-3 shrink-0 opacity-0 translate-x-[-8px] group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200"
+          />
+        </button>
       </TableCell>
     </TableRow>
   );

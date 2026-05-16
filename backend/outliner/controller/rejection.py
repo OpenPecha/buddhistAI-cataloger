@@ -83,3 +83,11 @@ def reject_segments_bulk(
 def get_segment_rejection_count(db: Session, segment_id: str) -> int:
     """Get the number of times a segment has been rejected"""
     return outliner_repo.get_segment_rejection_count(db, segment_id)
+
+
+def list_segment_rejections(db: Session, segment_id: str) -> List[Dict[str, Any]]:
+    """Full rejection history for a segment (newest first)."""
+    segment = outliner_repo.get_segment_plain(db, segment_id)
+    if not segment:
+        raise HTTPException(status_code=404, detail="Segment not found")
+    return outliner_repo.list_rejections_for_segment(db, segment_id)

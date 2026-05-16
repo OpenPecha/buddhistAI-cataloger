@@ -25,7 +25,7 @@ import { useUser } from '@/hooks/useUser';
 import { useAuth0 } from '@auth0/auth0-react';
 import { outlinerFetch } from '@/api/outliner';
 import { OUTLINER_BASE_URL } from '@/config/api';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Switch } from '@/components/ui/switch';
 import SelfRviewedToggle from './SelfRviewedToggle';
 import { PlusIcon } from 'lucide-react';
@@ -108,20 +108,28 @@ function DocumentsTab({
     draftIncludeSkipped === includeSkipped;
 
   const { users: outlinerUsers } = useOutlinerUsers();
-  const assignReviewer = async () => {
-    const token = await getAccessTokenSilently();
-    const response = await outlinerFetch(`${OUTLINER_BASE_URL}/documents/assign_reviewr`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-    if (!response.ok) {
-      throw new Error('Failed to assign reviewer');
-    }
-    queryClient.invalidateQueries({ queryKey: ['outliner-admin-documents'] });
-  };
+
+  const assignReviewerMutation = useMutation({
+    mutationFn: async () => {
+      const token = await getAccessTokenSilently();
+      const response = await outlinerFetch(`${OUTLINER_BASE_URL}/documents/assign_reviewr`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) {
+        throw new Error('Failed to assign reviewer');
+      }
+      return response;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['outliner-admin-documents'] });
+    },
+  });
+
+  const assignReviewer = () => assignReviewerMutation.mutate();
 
   const getAnnotator = (userId: string) => {
     return outlinerUsers.find((user) => user.id === userId);
@@ -132,8 +140,8 @@ function DocumentsTab({
         <div className='flex items-center gap-2'>
           <h3 className="text-xl font-semibold text-gray-900">Document Management </h3>
           <SelfRviewedToggle/>
-          <Button variant='outline' size='sm' onClick={assignReviewer} className='hover:bg-primary/10 group hover:text-primary cursor-pointer'>
-            <PlusIcon className='w-4 h-4 group-hover:animate-spin' />Assign me</Button>         
+          <Button disabled={assignReviewerMutation.isPending} variant='outline' size='sm' onClick={assignReviewer} className='hover:bg-primary/10 group hover:text-primary cursor-pointer'>
+            {assignReviewerMutation.isPending ? 'Assigning...' : 'Assign me'}</Button>         
         </div>
 
         <div className="flex flex-wrap items-center gap-4">
@@ -225,7 +233,7 @@ function DocumentsTab({
                   key={doc.id}
                   document={doc}
                   annotator={getAnnotator(doc?.user_id ?? '')}
-                  canReview={!!currentUser?.id && doc.reviewer_id === currentUser.id && (doc.status === 'completed' || doc.status === 'approved')}
+                  currentUserId={currentUser?.id}
                   onSelect={onDocumentSelect}
                 />
               ))

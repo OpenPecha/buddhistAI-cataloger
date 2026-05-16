@@ -11,12 +11,19 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useParams } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useUser } from '@/hooks/useUser';
-import { updateSegment, rejectSegment } from '@/api/outliner';
+import {
+  getSegmentRejectionHistory,
+  rejectSegment,
+  updateSegment,
+  type OutlineSegmentStatus,
+  type SegmentRejection,
+} from '@/api/outliner';
 import { toast } from 'sonner';
 import Highlighter from 'react-highlight-words';
-import { Check, FileText, Loader2, Undo, User, X } from 'lucide-react';
+import { format } from 'date-fns';
+import { Check, FileText, History, Loader2, Undo, User, X } from 'lucide-react';
 import type { Segment } from '../shared/types';
 import type { TextSegment } from '@/components/outliner/types';
 import type { FormDataType, Title, Author } from '@/components/outliner/AnnotationSidebar';
@@ -38,6 +45,8 @@ interface SegmentRowProps {
    * Pass `offset: null` when this row no longer contributes (blur, collapse, unmount).
    */
   readonly onSegmentBodyCaretChange?: (segmentId: string, offset: number | null) => void;
+  /** When false, segment review actions and title/author edits are read-only. */
+  readonly canEditReview?: boolean;
 }
 
 /** null = no reviewer suggestion in DB; '' = explicit empty; else trimmed text. */
@@ -67,12 +76,15 @@ function SegmentRow({
   documentFilename,
   listIndex,
   onSegmentBodyCaretChange,
+  canEditReview = false,
 }: SegmentRowProps) {
   const { documentId } = useParams<{ documentId: string }>();
   const queryClient = useQueryClient();
   const { user: reviewerAccount, isLoading: reviewerAccountLoading } = useUser();
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectComment, setRejectComment] = useState('');
+  const [rejectionHistoryOpen, setRejectionHistoryOpen] = useState(false);
+  const rejectionCount = segment.rejection?.count ?? 0;
   const { document: selectedDocument, isLoading: isLoadingDocument } = useDocument(documentId);
   const [textSearchQuery, setTextSearchQuery] = useState('');
   const segmentBodyTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -153,10 +165,21 @@ function SegmentRow({
       toast.error(`Failed to ${action} segment: ${error.message}`);
     }  });
 
+  const {
+    data: rejectionHistory,
+    isLoading: rejectionHistoryLoading,
+    error: rejectionHistoryError,
+  } = useQuery({
+    queryKey: ['segment-rejection-history', segment.id],
+    queryFn: () => getSegmentRejectionHistory(segment.id),
+    enabled: rejectionHistoryOpen && rejectionCount > 0,
+  });
+
   const rejectMutation = useMutation({
     mutationFn: (comment: string) => rejectSegment(segment.id, comment),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] });
+      queryClient.invalidateQueries({ queryKey: ['segment-rejection-history', segment.id] });
       toast.success('Segment rejected');
       setRejectDialogOpen(false);
       setRejectComment('');
@@ -301,6 +324,7 @@ function SegmentRow({
   bdrcSaveMutationRef.current = bdrcSaveMutation;
 
   useEffect(() => {
+    if (!canEditReview) return;
     const currentBdrcId = formData.title.bdrc_id;
     if (currentBdrcId === initialBdrcIdRef.current) return;
 
@@ -311,7 +335,7 @@ function SegmentRow({
     }, 1000);
 
     return () => clearTimeout(bdrcSaveTimeoutRef.current);
-  }, [formData.title.bdrc_id]);
+  }, [formData.title.bdrc_id, canEditReview]);
 
 
 
@@ -505,7 +529,7 @@ function SegmentRow({
             <div className="flex flex-col gap-1 ">
               <span className="text-xs font-medium text-gray-500 flex gap-1 items-center">
                 <FileText className="w-5 h-5 shrink-0" aria-hidden />
-                {titleEditOpen ? (
+                {titleEditOpen && canEditReview ? (
                   <Input
                     autoFocus
                     value={titleInput}
@@ -525,7 +549,7 @@ function SegmentRow({
                     className="h-8 text-sm font-monlam max-w-full"
                     placeholder="Reviewer suggestion (annotator title unchanged until they apply)"
                   />
-                ) : (
+                ) : canEditReview ? (
                   <button
                     type="button"
                     className="text-left font-medium text-gray-900 font-monlam rounded px-1 py-0.5 -mx-1 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
@@ -552,13 +576,25 @@ function SegmentRow({
                       </span>
                     )}
                   </button>
+                ) : (
+                  <div className="text-left font-medium text-gray-900 font-monlam px-1 py-0.5">
+                    <span className="block text-xl">
+                      {segment.title?.trim() ? segment.title : '— No annotator title —'}
+                    </span>
+                    {segment.reviewer_title != null ? (
+                      <span className="block text-xs font-normal text-sky-800 mt-0.5">
+                        Suggestion:{' '}
+                        {segment.reviewer_title.trim() ? segment.reviewer_title : '— Empty —'}
+                      </span>
+                    ) : null}
+                  </div>
                 )}
               </span>
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-gray-500 flex gap-1 items-center">
                 <User className="w-5 h-5 shrink-0" aria-hidden />
-                {authorEditOpen ? (
+                {authorEditOpen && canEditReview ? (
                   <Input
                     autoFocus
                     value={authorInput}
@@ -578,7 +614,7 @@ function SegmentRow({
                     className="h-8 text-sm font-monlam max-w-full"
                     placeholder="Reviewer suggestion (annotator author unchanged until they apply)"
                   />
-                ) : (
+                ) : canEditReview ? (
                   <button
                     type="button"
                     className="text-left text-gray-700 text-sm font-monlam rounded px-1 py-0.5 -mx-1 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
@@ -605,6 +641,18 @@ function SegmentRow({
                       </span>
                     )}
                   </button>
+                ) : (
+                  <div className="text-left text-gray-700 text-sm font-monlam px-1 py-0.5">
+                    <span className="block text-xl">
+                      {segment.author?.trim() ? segment.author : '— No annotator author —'}
+                    </span>
+                    {segment.reviewer_author != null ? (
+                      <span className="block text-xs font-normal text-sky-800 mt-0.5">
+                        Suggestion:{' '}
+                        {segment.reviewer_author.trim() ? segment.reviewer_author : '— Empty —'}
+                      </span>
+                    ) : null}
+                  </div>
                 )}
               </span>
             </div>
@@ -627,7 +675,8 @@ function SegmentRow({
           </div>
 
           <div className="flex flex-wrap gap-2 pt-1 justify-between" onClick={(e) => e.stopPropagation()}>
-            {segment.status === 'checked' && showApproveButton && (
+           
+            {canEditReview && segment.status === 'checked' && showApproveButton && (
               <div className='flex gap-2'>
                 <Button size="sm" onClick={handleSave} disabled={isSaving} variant="outline" className='cursor-pointer hover:bg-blue-50 hover:border-blue-400'>
                   {isSaving ? <Loader2 className='w-3.5 h-3.5 animate-spin shrink-0' aria-hidden /> : <Check className='w-3.5 h-3.5 shrink-0' aria-hidden />}
@@ -648,18 +697,19 @@ function SegmentRow({
                 </Button>
               </div>
             )}
-            {segment.status === 'approved' && (
+            {canEditReview && segment.status === 'approved' && (
               <Button size="sm" onClick={handleReset} disabled={isSaving} variant="outline">
                 <Undo className="w-3.5 h-3.5 shrink-0" aria-hidden />
                 Undo
               </Button>
             )}
-            {segment.status === 'rejected' && (
+            {canEditReview && segment.status === 'rejected' && (
               <Button size="sm" onClick={handleUndoReject} disabled={isSaving} variant="outline">
                 Undo reject 
               </Button>
             )}
-            {(segment.reviewer_title != null || segment.reviewer_author != null) && (
+            {canEditReview &&
+              (segment.reviewer_title != null || segment.reviewer_author != null) && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -674,9 +724,88 @@ function SegmentRow({
                 <X className="text-red-500 w-3.5 h-3.5 shrink-0" aria-hidden />Clear suggestions
                 </Button>
             )}
+             {rejectionCount > 0 && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="gap-1.5 border-red-200 text-red-800 hover:bg-red-50"
+                onClick={() => setRejectionHistoryOpen(true)}
+              >
+                <History className="h-3.5 w-3.5 shrink-0" aria-hidden />
+               
+                {rejectionCount > 1 ? ` (${rejectionCount})` : ''}
+              </Button>
+            )}
           </div>
         </div>
       </div>
+
+      <Dialog open={rejectionHistoryOpen} onOpenChange={setRejectionHistoryOpen}>
+        <DialogContent
+          className="sm:max-w-lg max-h-[min(85vh,32rem)] flex flex-col"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <DialogHeader>
+            <DialogTitle>History</DialogTitle>
+            <DialogDescription>
+              {rejectionCount === 1
+                ? 'One rejection recorded for this segment.'
+                : `${rejectionCount} rejections recorded for this segment (newest first).`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto space-y-3 pr-1">
+            {rejectionHistoryLoading ? (
+              <div className="flex items-center justify-center gap-2 py-8 text-sm text-gray-500">
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                Loading history…
+              </div>
+            ) : rejectionHistoryError instanceof Error ? (
+              <p className="text-sm text-red-600 py-4">{rejectionHistoryError.message}</p>
+            ) : (rejectionHistory?.items.length ?? 0) === 0 ? (
+              <p className="text-sm text-gray-500 py-4">No rejection records found.</p>
+            ) : (
+              rejectionHistory?.items.map((item) => {
+                const when = item.created_at
+                  ? format(new Date(item.created_at), 'PPp')
+                  : 'Unknown date';
+                const reviewerName =
+                  item.reviewer?.name?.trim() || 'Unknown reviewer';
+                const reviewerPicture = item.reviewer?.picture;
+                return (
+                  <article
+                    key={item.id}
+                    className={`rounded-md border px-3 py-2.5 text-sm `}
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+                      <time className="text-xs font-medium text-gray-600" dateTime={item.created_at}>
+                        {when}
+                      </time>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                   
+                        {item.resolved ? (
+                          <span className="rounded bg-green-100 px-1.5 py-0.5 text-[10px] font-semibold text-green-800">
+                            Resolved
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-1 flex items-center gap-1"><img src={reviewerPicture ?? ''} alt={reviewerName} className="w-4 h-4 rounded-full" /> {reviewerName}</p>
+                    <p className="whitespace-pre-wrap text-gray-900">
+                      {item.reason?.trim() ? item.reason : '— No comment provided —'}
+                    </p>
+                  </article>
+                );
+              })
+            )}
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setRejectionHistoryOpen(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
         <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
@@ -727,7 +856,13 @@ export default SegmentRow;
 
 
 
-function StatusBadge({ status, rejection }: { status: Status, rejection: Rejection | null }) {
+function StatusBadge({
+  status,
+  rejection,
+}: {
+  status?: OutlineSegmentStatus | string | null;
+  rejection?: SegmentRejection | null;
+}) {
   return (
     <>
     {status === 'approved' ? (
