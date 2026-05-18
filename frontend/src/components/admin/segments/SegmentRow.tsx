@@ -32,6 +32,7 @@ import { getLabelColor, getStatusColor } from '@/components/outliner/utils';
 import ChevronUporDown from '@/components/outliner/utils/ChevronUporDown';
 import { SegmentSearchBar } from '@/components/outliner/SegmentSearchBar';
 import { findAllOccurrences } from '@/features/outliner';
+import { Badge } from '@/components/ui/badge';
 
 interface SegmentRowProps {
   readonly segment: Segment;
@@ -249,10 +250,12 @@ function SegmentRow({
   });
 
   const commitTitle = useCallback(() => {
+    const original= segment.title;
     const next = storedReviewerTitleNorm(titleInput);
     const prev = storedReviewerTitleNorm(segment.reviewer_title);
     setTitleEditOpen(false);
-    if (next === prev) return;
+    if (original?.trim() === next?.trim()) return;
+    if (next === null || next === undefined || next === '' || next === prev || next?.trim() ==='') return;
     patchTitleOrAuthor({ reviewer_title: next });
   }, [titleInput, segment.reviewer_title, patchTitleOrAuthor]);
 
@@ -526,9 +529,10 @@ function SegmentRow({
             {
             segment.label==='TEXT' && (
               <>
-            <div className="flex flex-col gap-1 ">
+            <div className="flex gap-1 ">
               <span className="text-xs font-medium text-gray-500 flex gap-1 items-center">
-                <FileText className="w-5 h-5 shrink-0" aria-hidden />
+                <FileText className="w-5 h-5 shrink-0" aria-hidden /> 
+
                 {titleEditOpen && canEditReview ? (
                   <Input
                     autoFocus
@@ -590,6 +594,12 @@ function SegmentRow({
                   </div>
                 )}
               </span>
+              {segment.is_supplied_title && (
+                <span className="h-min inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-300 mt-1">
+                  Supplied title
+                </span>
+              )}
+         
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-gray-500 flex gap-1 items-center">
