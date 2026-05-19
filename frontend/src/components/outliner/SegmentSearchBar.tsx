@@ -20,6 +20,8 @@ export const SegmentSearchBar = memo(function SegmentSearchBar({
   disableMatchNavigation,
   /** When the body uses a nested scroll layer (e.g. reviewer highlight div behind a textarea), use this instead of `scrollIntoView` on `#segmentId` (which scrolls the wrong ancestor). */
   scrollBodyMatchIntoView,
+  /** When set, top/bottom buttons scroll the inner body (textarea + highlight layer) instead of the segment card. */
+  scrollBodyToEdge,
 }: {
   segmentId: string;
   query: string;
@@ -30,6 +32,7 @@ export const SegmentSearchBar = memo(function SegmentSearchBar({
   /** When true, first/prev/next/last match controls are disabled (e.g. segment body collapsed). */
   disableMatchNavigation?: boolean;
   scrollBodyMatchIntoView?: (matchIndex: number) => void;
+  scrollBodyToEdge?: (edge: 'top' | 'bottom') => void;
 }) {
   const { t } = useTranslation();
   const [activeMatchIndex, setActiveMatchIndex] = useState(0);
@@ -116,10 +119,18 @@ export const SegmentSearchBar = memo(function SegmentSearchBar({
   }, [navDisabled, matchCount, scrollToMatchIndex]);
 
   const goToTop = () => {
-    scrollSegmentToTop();
+    if (scrollBodyToEdge) {
+      scrollBodyToEdge('top');
+    } else {
+      scrollSegmentToTop();
+    }
   };
   const goToBottom = () => {
-    scrollSegmentToBottom();
+    if (scrollBodyToEdge) {
+      scrollBodyToEdge('bottom');
+    } else {
+      scrollSegmentToBottom();
+    }
   };
 
   return (

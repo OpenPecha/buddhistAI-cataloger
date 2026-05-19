@@ -143,6 +143,19 @@ function SegmentRow({
     ta.scrollLeft = hi.scrollLeft;
   }, []);
 
+  const scrollBodyToEdge = useCallback((edge: 'top' | 'bottom') => {
+    const ta = segmentBodyTextareaRef.current;
+    if (!ta) return;
+    const hi = segmentBodyHighlightRef.current;
+    const scrollEl = hi ?? ta;
+    const maxScroll = Math.max(0, scrollEl.scrollHeight - scrollEl.clientHeight);
+    const top = edge === 'top' ? 0 : maxScroll;
+    if (hi) {
+      hi.scrollTop = top;
+    }
+    ta.scrollTop = top;
+  }, []);
+
   useLayoutEffect(() => {
     if (isExpanded && hasTextSearch) {
       syncBodyHighlightScroll();
@@ -447,6 +460,7 @@ function SegmentRow({
                 disableMatchNavigation={!isExpanded}
                 onAfterScrollToMatch={syncTextareaToHighlightScroll}
                 scrollBodyMatchIntoView={scrollBodyMatchIntoView}
+                scrollBodyToEdge={scrollBodyToEdge}
               />
             </div>
           </div>
