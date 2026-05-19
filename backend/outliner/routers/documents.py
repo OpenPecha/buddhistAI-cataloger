@@ -21,6 +21,7 @@ from outliner.controller.outliner import (
     get_document_for_workspace as get_document_for_workspace_ctrl,
     get_document_progress as get_document_progress_ctrl,
     list_documents as list_documents_ctrl,
+    list_my_reviewed_segments_grouped as list_my_reviewed_segments_grouped_ctrl,
     list_segments as list_segments_ctrl,
     random_reviewed_document_ids as random_reviewed_document_ids_ctrl,
     reset_segments as reset_segments_ctrl,
@@ -53,6 +54,7 @@ from .schemas import (
     BulkSegmentOperationsRequest,
     DocumentCreate,
     DocumentListResponse,
+    MyReviewedSegmentsResponse,
     DocumentResponse,
     DocumentAssigneeUpdate,
     RandomReviewedDocumentIdsResponse,
@@ -120,6 +122,22 @@ async def list_documents(
 async def random_reviewed_document_ids(db: Session = Depends(get_db)):
     """Return up to five random approved documents, each with id and filename."""
     return random_reviewed_document_ids_ctrl(db, limit=5)
+
+
+@router.get(
+    "/documents/my-reviewed-segments",
+    response_model=MyReviewedSegmentsResponse,
+)
+async def my_reviewed_segments(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(30, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
+):
+    """Approved segments where the current user is ``reviewed_by_id``, grouped by document."""
+    return list_my_reviewed_segments_grouped_ctrl(
+        db, current_user.id, page=page, page_size=page_size
+    )
 
 
 @router.get("/documents/{document_id}", response_model=DocumentResponse)

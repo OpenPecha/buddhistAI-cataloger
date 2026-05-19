@@ -1,5 +1,5 @@
 """Read/query helpers for outliner_segment rows."""
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import Session, joinedload
@@ -325,3 +325,57 @@ def count_non_approved_segments(db: Session, document_id: str) -> int:
         .scalar()
         or 0
     )
+
+
+def list_my_reviewed_approved_counts_by_document(
+    db: Session,
+    reviewer_id: str,
+    skip: int = 0,
+    limit: int = 30,
+) -> Tuple[List[Dict], int, int]:
+    """
+    Approved segments where ``reviewed_by_id`` matches, aggregated per document.
+
+    Returns ``(page_groups, total_document_groups, total_approved_segments)``.
+    """
+    filters = (
+        OutlinerSegment.reviewed_by_id == reviewer_id,
+        OutlinerSegment.status == "approved",
+    )
+    grouped = (
+        db.query(
+            OutlinerSegment.document_id,
+            OutlinerDocument.filename,
+            func.count(OutlinerSegment.id).label("approved_count"),
+        )
+        .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
+        .filter(*filters)
+        .group_by(OutlinerSegment.document_id, OutlinerDocument.filename)
+    )
+    total_groups = (
+        db.query(func.count(func.distinct(OutlinerSegment.document_id)))
+        .filter(*filters)
+        .scalar()
+        or 0
+    )
+    total_approved = (
+        db.query(func.count(OutlinerSegment.id))
+        .filter(*filters)
+        .scalar()
+        or 0
+    )
+    rows = (
+        grouped.order_by(OutlinerDocument.filename)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    groups = [
+        {
+            "document_id": row.document_id,
+            "filename": (row.filename or "").strip() or "(untitled)",
+            "approved_count": int(row.approved_count),
+        }
+        for row in rows
+    ]
+    return groups, total_groups, int(total_approved)

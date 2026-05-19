@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DocumentsTab } from '../components/admin';
+import MyReviewedSegmentsFab from '../components/admin/documents/MyReviewedSegmentsFab';
 import { SimplePagination } from '../components/ui/simple-pagination';
 import type { Document } from '../components/admin/shared/types';
 import { useDocuments } from '../hooks';
@@ -44,6 +45,7 @@ function OutlinerAdminDocument() {
       <DocumentsTab
         onDocumentSelect={handleDocumentSelectAction}
       />
+      <MyReviewedSegmentsFab />
       {(hasPrevPage || hasNextPage) && (
         <div className="shrink-0">
           <SimplePagination

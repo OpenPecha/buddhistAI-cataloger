@@ -264,6 +264,23 @@ class RejectedSegmentListNotice(BaseModel):
     reviewer_user: Optional[RejectedSegmentReviewerUser] = None
 
 
+class MyReviewedSegmentsDocumentGroup(BaseModel):
+    document_id: str
+    filename: str
+    approved_count: int = Field(
+        description="Segments with status approved where this user is ``reviewed_by_id``.",
+    )
+
+
+class MyReviewedSegmentsResponse(BaseModel):
+    groups: List[MyReviewedSegmentsDocumentGroup] = Field(default_factory=list)
+    total_approved_segments: int = 0
+    total_groups: int = 0
+    page: int = 1
+    page_size: int = 30
+    has_next: bool = False
+
+
 class DocumentListResponse(BaseModel):
     id: str
     filename: Optional[str] = None

@@ -40,6 +40,7 @@ from outliner.repository.segment_queries import (
     get_segment_plain,
     get_segment_with_rejections,
     list_segments,
+    list_my_reviewed_approved_counts_by_document,
     map_segment_ids_to_document_user_ids,
     max_segment_index,
     segment_list_for_document,

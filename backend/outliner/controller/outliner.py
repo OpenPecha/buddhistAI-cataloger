@@ -34,6 +34,7 @@ from outliner.controller.document import (
     get_document_progress,
     list_completed_document_ids_all_segments_checked,
     list_documents,
+    list_my_reviewed_segments_grouped,
     normalize_ai_toc_for_storage,
     random_reviewed_document_ids,
     replace_segments_and_toc ,

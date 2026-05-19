@@ -59,6 +59,7 @@ from outliner.repository.segment import (
     insert_segment,
     insert_segments_bulk,
     list_segments,
+    list_my_reviewed_approved_counts_by_document,
     max_segment_index,
     merge_segments_persist,
     refresh_entity,

@@ -92,6 +92,21 @@ export interface OutlinerDocumentListItem {
   rejection_open_segment_count?: number;
 }
 
+export interface MyReviewedSegmentsDocumentGroup {
+  document_id: string;
+  filename: string;
+  approved_count: number;
+}
+
+export interface MyReviewedSegmentsResponse {
+  groups: MyReviewedSegmentsDocumentGroup[];
+  total_approved_segments: number;
+  total_groups: number;
+  page: number;
+  page_size: number;
+  has_next: boolean;
+}
+
 export type SegmentLabel = 'FRONT_MATTER' | 'TOC' | 'TEXT' | 'BACK_MATTER';
 
 /** Latest reviewer on a segment rejection (from users table). */
@@ -340,6 +355,21 @@ export interface RandomReviewedDocumentIdsResponse {
 
 export const getRandomReviewedDocumentIds = async (): Promise<RandomReviewedDocumentIdsResponse> => {
   const response = await outlinerFetch(`${OUTLINER_BASE_URL}/documents/random-reviewed-ids`);
+  return handleApiResponse(response);
+};
+
+/** Approved segments where the current user is ``reviewed_by_id``, grouped by document (paginated). */
+export const getMyReviewedSegments = async (
+  page: number = 1,
+  pageSize: number = 30,
+): Promise<MyReviewedSegmentsResponse> => {
+  const params = new URLSearchParams({
+    page: String(page),
+    page_size: String(pageSize),
+  });
+  const response = await outlinerFetch(
+    `${OUTLINER_BASE_URL}/documents/my-reviewed-segments?${params.toString()}`,
+  );
   return handleApiResponse(response);
 };
 

@@ -34,6 +34,29 @@ def create_document(
 
 
 
+def list_my_reviewed_segments_grouped(
+    db: Session,
+    reviewer_id: str,
+    page: int = 1,
+    page_size: int = 30,
+) -> Dict[str, Any]:
+    """Approved segments attributed to this reviewer, grouped by document (paginated)."""
+    page = max(1, page)
+    page_size = max(1, min(page_size, 100))
+    skip = (page - 1) * page_size
+    groups, total_groups, total_approved = outliner_repo.list_my_reviewed_approved_counts_by_document(
+        db, reviewer_id, skip=skip, limit=page_size
+    )
+    return {
+        "groups": groups,
+        "total_approved_segments": total_approved,
+        "total_groups": total_groups,
+        "page": page,
+        "page_size": page_size,
+        "has_next": skip + len(groups) < total_groups,
+    }
+
+
 def list_documents(
     db: Session,
     user_id: Optional[str] = None,
