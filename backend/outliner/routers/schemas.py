@@ -434,6 +434,13 @@ class ReviewerSegmentActivityRow(BaseModel):
             "(who recorded the review transition)."
         ),
     )
+    reviewed_segments_with_title_or_author: int = Field(
+        0,
+        description=(
+            "Checked or approved segments in scope with matching ``reviewed_by_id`` where "
+            "annotator ``title`` and/or ``author`` is non-empty (same date window as other columns)."
+        ),
+    )
     reviewer_title_author_edits: int = Field(
         0,
         description=(

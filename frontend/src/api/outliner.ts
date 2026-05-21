@@ -768,6 +768,8 @@ export interface ReviewerSegmentActivityRow {
   user_id: string;
   /** Checked/approved segments where this user is recorded as ``reviewed_by_id``. */
   segments_recorded_as_reviewer: number;
+  /** Same scope: reviewed segments where annotator title and/or author is set. */
+  reviewed_segments_with_title_or_author: number;
   /** Approved segments where trimmed reviewer title/author differs from title/author (same ``reviewed_by_id``). */
   reviewer_title_author_edits: number;
   /** Rows in segment_rejections with this user as reviewer_id (same document date scope as dashboard). */

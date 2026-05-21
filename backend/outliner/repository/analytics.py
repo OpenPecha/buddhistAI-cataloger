@@ -98,6 +98,8 @@ def get_reviewer_segment_activity(
 
     ``segments_recorded_as_reviewer``: checked/approved segments where ``reviewed_by_id`` is set.
 
+    ``reviewed_segments_with_title_or_author``: recorded segments where annotator title or author is set.
+
     ``reviewer_title_author_edits``: approved segments with real title/author corrections.
 
     ``reviewer_rejection_count``: rejection rows filed in range (when dates set).
@@ -134,6 +136,28 @@ def get_reviewer_segment_activity(
     )
     recorded: Dict[str, int] = {
         str(rid): int(cnt) for rid, cnt in recorded_rows if rid is not None
+    }
+
+    has_title_or_author = or_(
+        and_(OutlinerSegment.title.isnot(None), OutlinerSegment.title != ""),
+        and_(OutlinerSegment.author.isnot(None), OutlinerSegment.author != ""),
+    )
+    titled_clauses: List[Any] = [
+        doc_scope,
+        reviewed_when,
+        OutlinerSegment.reviewed_by_id.isnot(None),
+        has_title_or_author,
+    ]
+    _append_segment_activity_date_window(titled_clauses, start_date, end_date)
+    titled_rows = (
+        db.query(OutlinerSegment.reviewed_by_id, func.count(OutlinerSegment.id))
+        .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
+        .filter(and_(*titled_clauses))
+        .group_by(OutlinerSegment.reviewed_by_id)
+        .all()
+    )
+    titled_by_reviewer: Dict[str, int] = {
+        str(rid): int(cnt) for rid, cnt in titled_rows if rid is not None
     }
 
     rt = OutlinerSegment.reviewer_title
@@ -204,12 +228,14 @@ def get_reviewer_segment_activity(
     rows: List[Dict[str, Any]] = []
     for uid in reviewer_ids:
         rec = recorded.get(uid, 0)
+        titled = titled_by_reviewer.get(uid, 0)
         corr = corrections.get(uid, 0)
         rej = rejection_by_reviewer.get(uid, 0)
         rows.append(
             {
                 "user_id": uid,
                 "segments_recorded_as_reviewer": rec,
+                "reviewed_segments_with_title_or_author": titled,
                 "reviewer_title_author_edits": corr,
                 "reviewer_rejection_count": rej,
             }

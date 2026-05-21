@@ -530,7 +530,51 @@ function formatReviewerActivityDateHint(
   range: { readonly start: string; readonly end: string } | undefined,
 ): string | undefined {
   if (range == null || range.start === '' || range.end === '') return undefined
-  return `Same scope as dashboard filters: documents created ${range.start}–${range.end}; segment review and rejection timestamps fall in that range.`
+  return ` ${range.start}–${range.end}`
+}
+
+function roundReviewerActivityPct(numerator: number, denominator: number): number {
+  if (denominator <= 0) return 0
+  return Math.round((numerator / denominator) * 1000) / 10
+}
+
+function ReviewerActivityMetricCell({
+  value,
+  pct,
+  barWidthPct,
+  barColor,
+  pctTitle,
+}: {
+  readonly value: number
+  readonly pct: number
+  readonly barWidthPct: number
+  readonly barColor: string
+  readonly pctTitle?: string
+}) {
+  return (
+    <div className="ml-auto flex max-w-[11rem] flex-col items-end gap-1.5">
+      <span className="tabular-nums text-foreground">
+        {value.toLocaleString()}
+        <span className="text-muted-foreground" title={pctTitle}>
+          {' '}
+          ({pct.toFixed(1)}%)
+        </span>
+      </span>
+      <div
+        className="h-1.5 w-full overflow-hidden rounded-full bg-stone-100/90"
+        role="img"
+        aria-label={`${value.toLocaleString()}, ${pct.toFixed(1)} percent`}
+      >
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${Math.min(100, Math.max(0, barWidthPct))}%`,
+            backgroundColor: barColor,
+          }}
+        />
+      </div>
+    </div>
+  )
 }
 
 function OverviewTab({
@@ -843,6 +887,7 @@ function OverviewTab({
     const rows = reviewerActivityRows.filter(
       (r) =>
         r.segments_recorded_as_reviewer > 0 ||
+        (r.reviewed_segments_with_title_or_author ?? 0) > 0 ||
         r.reviewer_title_author_edits > 0 ||
         (r.reviewer_rejection_count ?? 0) > 0,
     )
@@ -872,26 +917,64 @@ function OverviewTab({
           borderRadius: 6,
         },
         {
-          label: 'Title/author updated at review',
+          label: 'With title/author',
+          data: sorted.map((r) => r.reviewed_segments_with_title_or_author ?? 0),
+          backgroundColor: VIOLET,
+          borderRadius: 6,
+        },
+        {
+          label: 'Reviewer title/author edits',
           data: sorted.map((r) => r.reviewer_title_author_edits),
           backgroundColor: ORANGE,
           borderRadius: 6,
         },
         {
-          label: 'Segment rejections logged',
+          label: 'Rejections logged',
           data: sorted.map((r) => r.reviewer_rejection_count ?? 0),
           backgroundColor: RED,
           borderRadius: 6,
         },
       ],
     }
-    const tableRows = sorted.map((r) => ({
-      key: r.user_id ?? '__none__',
-      name: annotatorDisplayName(r.user_id, annotators),
-      segmentsReviewed: r.segments_recorded_as_reviewer,
-      titleAuthorEdits: r.reviewer_title_author_edits,
-      rejections: r.reviewer_rejection_count ?? 0,
-    }))
+    const totalReviewed = sorted.reduce((s, r) => s + r.segments_recorded_as_reviewer, 0)
+    const maxReviewed = Math.max(...sorted.map((r) => r.segments_recorded_as_reviewer), 0)
+    const maxWithTitleAuthor = Math.max(
+      ...sorted.map((r) => r.reviewed_segments_with_title_or_author ?? 0),
+      0,
+    )
+    const maxEdits = Math.max(...sorted.map((r) => r.reviewer_title_author_edits), 0)
+    const maxRejections = Math.max(
+      ...sorted.map((r) => r.reviewer_rejection_count ?? 0),
+      0,
+    )
+    const tableRows = sorted.map((r) => {
+      const segmentsReviewed = r.segments_recorded_as_reviewer
+      const withTitleAuthor = r.reviewed_segments_with_title_or_author ?? 0
+      const titleAuthorEdits = r.reviewer_title_author_edits
+      const rejections = r.reviewer_rejection_count ?? 0
+      return {
+        key: r.user_id ?? '__none__',
+        name: annotatorDisplayName(r.user_id, annotators),
+        segmentsReviewed,
+        withTitleAuthor,
+        titleAuthorEdits,
+        rejections,
+        reviewedSharePct: roundReviewerActivityPct(segmentsReviewed, totalReviewed),
+        withTitleAuthorRatePct: roundReviewerActivityPct(
+          withTitleAuthor,
+          segmentsReviewed,
+        ),
+        editsRatePct: roundReviewerActivityPct(titleAuthorEdits, segmentsReviewed),
+        rejectionsRatePct: roundReviewerActivityPct(rejections, segmentsReviewed),
+        reviewedBarPct:
+          maxReviewed > 0 ? (segmentsReviewed / maxReviewed) * 100 : 0,
+        withTitleAuthorBarPct:
+          maxWithTitleAuthor > 0 ? (withTitleAuthor / maxWithTitleAuthor) * 100 : 0,
+        editsBarPct: maxEdits > 0 ? (titleAuthorEdits / maxEdits) * 100 : 0,
+        rejectionsBarPct:
+          maxRejections > 0 ? (rejections / maxRejections) * 100 : 0,
+      }
+    })
     return { chartData, tableRows }
   }, [reviewerActivityRows, annotators])
 
@@ -1210,13 +1293,7 @@ function OverviewTab({
           title="Reviewers & segment activity"
           description={reviewerActivityScopeHint}
         />
-        {reviewerActivitySignals != null &&
-        reviewerActivitySignals.chartData.labels.length > 1 ? (
-          <p className="-mt-2 mb-4 max-w-2xl text-xs leading-relaxed text-muted-foreground">
-            All reviewers in one view; scroll sideways to compare. Names along the bottom; count
-            scale on the vertical axis.
-          </p>
-        ) : null}
+       
         <div className="mt-6 rounded-lg border border-stone-200/80 bg-white/60 px-3 pb-3 pt-2 sm:px-5">
           {reviewerActivityRows.length === 0 ? (
             <div className="flex items-center gap-3 px-2 py-10 text-sm text-muted-foreground">
@@ -1229,7 +1306,7 @@ function OverviewTab({
               <span>
                 No reviewer activity for the selected dashboard range
                 {reviewerActivityEmptyRangeSuffix}: everyone has zero segments reviewed, zero
-                title/author edits, and zero segment rejections logged.
+                segments with title/author, zero reviewer edits, and zero rejections logged.
               </span>
             </div>
           ) : (
@@ -1287,21 +1364,54 @@ function OverviewTab({
                 </div>
               ) : null}
               {reviewerActivityView === 'table' ? (
+                <>
+                  <p className="mb-3 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+                    Each cell shows count (percent). Bars compare reviewers within the column
+                    (widest bar = highest count). Segments reviewed % is share of the team total in
+                    this range. With title/author, reviewer edits, and rejections % are rates among
+                    that reviewer&apos;s reviewed segments (rejections count events in range).
+                  </p>
                 <div className="max-h-[min(720px,70vh)] overflow-y-auto overflow-x-auto rounded-lg border border-stone-200/80 bg-white/60">
-                  <table className="w-full min-w-[36rem] border-collapse text-sm">
+                  <table className="w-full min-w-[52rem] border-collapse text-sm">
                     <caption className="sr-only">
-                      Reviewer segment activity with full names: segments reviewed, title or author
-                      edits at review, and segment rejections
+                      Reviewer segment activity: count and percent per column, with inline bars.
+                      Segments reviewed percent is share of team total; with title or author,
+                      reviewer edits, and rejections percent are rates among that reviewer&apos;s
+                      reviewed segments.
                       {reviewerActivityEmptyRangeSuffix
-                        ? `. Period${reviewerActivityEmptyRangeSuffix}.`
+                        ? ` Period${reviewerActivityEmptyRangeSuffix}.`
                         : ''}
                     </caption>
                     <thead className="sticky top-0 z-[1] shadow-[0_1px_0_0_rgb(231_229_228)]">
                       <tr className="border-b border-stone-200 bg-stone-50/95 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur-sm">
                         <th className="px-4 py-3">Reviewer</th>
-                        <th className="px-4 py-3 text-right tabular-nums">Segments reviewed</th>
-                        <th className="px-4 py-3 text-right tabular-nums">Title/author at review</th>
-                        <th className="px-4 py-3 text-right tabular-nums">Rejections</th>
+                        <th
+                          className="px-4 py-3 text-right tabular-nums"
+                          title="Count and % of all reviewers' segments reviewed in this range; bar scales to the highest reviewer"
+                        >
+                         Total Segments reviewed
+                        </th>
+                        <th
+                          className="px-4 py-3 text-right tabular-nums"
+                          style={{ color: VIOLET }}
+                          title="Count and % of this reviewer's reviewed segments where annotator title or author is set"
+                        >
+                          With title/author
+                        </th>
+                        <th
+                          className="px-4 py-3 text-right tabular-nums"
+                          style={{ color: ORANGE }}
+                          title="Count and % of this reviewer's reviewed segments where reviewer changed title or author at approval"
+                        >
+                          Reviewer edits
+                        </th>
+                        <th
+                          className="px-4 py-3 text-right tabular-nums"
+                          style={{ color: RED }}
+                          title="Count and % of this reviewer's reviewed segments with a rejection logged in range"
+                        >
+                          Rejections
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1313,20 +1423,48 @@ function OverviewTab({
                           <td className="max-w-[14rem] px-4 py-2.5 font-medium leading-snug text-foreground sm:max-w-none sm:whitespace-normal">
                             <span className="break-words">{row.name}</span>
                           </td>
-                          <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
-                            {row.segmentsReviewed.toLocaleString()}
+                          <td className="px-4 py-2.5 align-middle">
+                            <ReviewerActivityMetricCell
+                              value={row.segmentsReviewed}
+                              pct={row.reviewedSharePct}
+                              barWidthPct={row.reviewedBarPct}
+                              barColor={EMERALD}
+                              pctTitle="Share of all segments reviewed by reviewers in this table"
+                            />
                           </td>
-                          <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
-                            {row.titleAuthorEdits.toLocaleString()}
+                          <td className="px-4 py-2.5 align-middle">
+                            <ReviewerActivityMetricCell
+                              value={row.withTitleAuthor}
+                              pct={row.withTitleAuthorRatePct}
+                              barWidthPct={row.withTitleAuthorBarPct}
+                              barColor={VIOLET}
+                              pctTitle="Percentage of segments reviewed with title/author"
+                            />
                           </td>
-                          <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
-                            {row.rejections.toLocaleString()}
+                          <td className="px-4 py-2.5 align-middle">
+                            <ReviewerActivityMetricCell
+                              value={row.titleAuthorEdits}
+                              pct={row.editsRatePct}
+                              barWidthPct={row.editsBarPct}
+                              barColor={ORANGE}
+                              pctTitle="Percentage of segments reviewed with reviewer edits"
+                            />
+                          </td>
+                          <td className="px-4 py-2.5 align-middle">
+                            <ReviewerActivityMetricCell
+                              value={row.rejections}
+                              pct={row.rejectionsRatePct}
+                              barWidthPct={row.rejectionsBarPct}
+                              barColor={RED}
+                              pctTitle="Percentage of segments reviewed with rejections"
+                            />
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+                </>
               ) : null}
             </>
           )}
