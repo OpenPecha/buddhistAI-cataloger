@@ -1,5 +1,7 @@
 """SQLAlchemy data access for outliner_document rows."""
 import json
+import random
+import statistics
 import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
@@ -223,18 +225,75 @@ def set_document_reviewer_and_refresh(
     db.refresh(document)
 
 
+_COMPLETED_WORK_STATUSES = ("completed", "approved")
+_REVIEW_ASSIGN_TOP_WORKER_FRACTION = 0.70
+
+
+def _completed_document_counts_by_user_id(db: Session) -> Dict[str, int]:
+    rows = (
+        db.query(OutlinerDocument.user_id, func.count(OutlinerDocument.id))
+        .filter(
+            OutlinerDocument.user_id.isnot(None),
+            OutlinerDocument.status.in_(_COMPLETED_WORK_STATUSES),
+        )
+        .group_by(OutlinerDocument.user_id)
+        .all()
+    )
+    return dict(rows)
+
+
+def _random_completed_unassigned_document(
+    db: Session,
+    *,
+    user_ids: Optional[List[str]] = None,
+) -> Optional[OutlinerDocument]:
+    query = db.query(OutlinerDocument).filter(
+        OutlinerDocument.status == "completed",
+        OutlinerDocument.reviewer_id.is_(None),
+    )
+    if user_ids is not None:
+        query = query.filter(OutlinerDocument.user_id.in_(user_ids))
+    return query.order_by(func.random()).first()
+
+
 def fetch_random_completed_unassigned_document(
     db: Session,
 ) -> Optional[OutlinerDocument]:
-    return (
-        db.query(OutlinerDocument)
+    """Pick a completed, unassigned document for reviewer self-assign.
+
+    ~70% of calls favor annotators with the highest completed-work volume
+    (count of completed/approved documents); ~30% are uniformly random.
+    """
+    if random.random() >= _REVIEW_ASSIGN_TOP_WORKER_FRACTION:
+        return _random_completed_unassigned_document(db)
+
+    eligible_user_ids = [
+        row[0]
+        for row in db.query(OutlinerDocument.user_id)
         .filter(
             OutlinerDocument.status == "completed",
             OutlinerDocument.reviewer_id.is_(None),
+            OutlinerDocument.user_id.isnot(None),
         )
-        .order_by(func.random())
-        .first()
-    )
+        .distinct()
+        .all()
+    ]
+    if not eligible_user_ids:
+        return _random_completed_unassigned_document(db)
+
+    work_by_user = _completed_document_counts_by_user_id(db)
+    work_counts = [work_by_user.get(user_id, 0) for user_id in eligible_user_ids]
+    median_work = statistics.median(work_counts)
+    top_user_ids = [
+        user_id
+        for user_id in eligible_user_ids
+        if work_by_user.get(user_id, 0) >= median_work
+    ]
+    if not top_user_ids:
+        return _random_completed_unassigned_document(db)
+
+    document = _random_completed_unassigned_document(db, user_ids=top_user_ids)
+    return document or _random_completed_unassigned_document(db)
 
 
 def fetch_random_reviewed_document_ids(
