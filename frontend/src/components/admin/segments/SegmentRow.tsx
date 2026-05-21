@@ -273,10 +273,13 @@ function SegmentRow({
   }, [titleInput, segment.reviewer_title, patchTitleOrAuthor]);
 
   const commitAuthor = useCallback(() => {
+    const original= segment.author;
     const next = committedReviewerInput(authorInput);
     const prev = storedReviewerNorm(segment.reviewer_author);
     setAuthorEditOpen(false);
     if (next === prev) return;
+    if (original?.trim() === next?.trim()) return;
+    if (next === null || next === undefined || next === '' || next === prev || next?.trim() ==='') return;
     patchTitleOrAuthor({ reviewer_author: next });
   }, [authorInput, segment.reviewer_author, patchTitleOrAuthor]);
 
@@ -544,7 +547,7 @@ function SegmentRow({
             segment.label==='TEXT' && (
               <>
             <div className="flex gap-1 ">
-              <span className="text-xs font-medium text-gray-500 flex gap-1 items-center">
+              <span className="text-xs w-full font-medium text-gray-500 flex gap-1 items-center">
                 <FileText className="w-5 h-5 shrink-0" aria-hidden /> 
 
                 {titleEditOpen && canEditReview ? (
