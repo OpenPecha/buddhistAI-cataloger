@@ -268,7 +268,7 @@ function SegmentRow({
     const prev = storedReviewerTitleNorm(segment.reviewer_title);
     setTitleEditOpen(false);
     if (original?.trim() === next?.trim()) return;
-    if (next === null || next === undefined || next === '' || next === prev || next?.trim() ==='') return;
+    if (next === null || next === undefined || next === prev ) return;
     patchTitleOrAuthor({ reviewer_title: next });
   }, [titleInput, segment.reviewer_title, patchTitleOrAuthor]);
 
@@ -279,7 +279,7 @@ function SegmentRow({
     setAuthorEditOpen(false);
     if (next === prev) return;
     if (original?.trim() === next?.trim()) return;
-    if (next === null || next === undefined || next === '' || next === prev || next?.trim() ==='') return;
+    if (next === null || next === undefined  || next === prev ) return;
     patchTitleOrAuthor({ reviewer_author: next });
   }, [authorInput, segment.reviewer_author, patchTitleOrAuthor]);
 
