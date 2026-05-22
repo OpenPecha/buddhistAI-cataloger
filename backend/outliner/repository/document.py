@@ -225,6 +225,19 @@ def set_document_reviewer_and_refresh(
     db.refresh(document)
 
 
+def set_document_synced_to_bdrc(db: Session, document_id: str, synced: bool) -> None:
+    document = (
+        db.query(OutlinerDocument)
+        .filter(OutlinerDocument.id == document_id)
+        .first()
+    )
+    if not document:
+        return
+    document.synced_to_bdrc = synced
+    document.updated_at = datetime.utcnow()
+    db.commit()
+
+
 _COMPLETED_WORK_STATUSES = ("completed", "approved")
 _REVIEW_ASSIGN_TOP_WORKER_FRACTION = 0.70
 

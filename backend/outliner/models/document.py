@@ -39,5 +39,5 @@ class OutlinerDocument(Base):
         cascade="all, delete-orphan",
         order_by="OutlinerSegment.segment_index",
     )
-    # synced_to_bdrc: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
+    synced_to_bdrc: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
     reviewer_id: Mapped[str | None] = mapped_column(String, ForeignKey("users.id"), nullable=True, index=True)

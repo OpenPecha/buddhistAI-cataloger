@@ -277,10 +277,10 @@ async def sync_outliner_documents_to_bdrc(
     body: BdrcBulkSyncRequest = Body(default_factory=BdrcBulkSyncRequest),
 ):
     """
-    Push every outliner document that is `completed`, has a BDRC volume id (`filename`),
-    has at least one segment, and has all segments `checked` to BDRC with status `in_review`.
-    `modified_by` per volume comes from that document's owner (user email, else user id).
-    Does not change local document status. Returns per-document success and failure lists.
+    Queue a background BDRC push for every eligible outliner document (`completed`, BDRC volume id
+    in `filename`, all segments `checked`) with status `in_review`. Does not change local document
+    status. Returns queued and validation-failure lists; each document's ``synced_to_bdrc`` flag is
+    updated when its worker finishes.
 
     JSON body is optional. Send `{"document_ids": ["<uuid>", ...]}` to restrict to those IDs only
     (they must still satisfy the same eligibility rules). `{}` or omitting `document_ids` syncs all eligible.

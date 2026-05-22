@@ -1,5 +1,7 @@
 """BDRC volume sync and document approval."""
+import asyncio
 import logging
+import threading
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -9,6 +11,7 @@ from sqlalchemy.orm import Session
 from bdrc.main import get_new_volume
 from bdrc.volume import SegmentInput, VolumeInput, get_volume, update_volume, update_volume_status
 
+from core.database import SessionLocal
 from outliner.models.outliner import OutlinerDocument
 from outliner.repository import outliner_repository as outliner_repo
 from outliner.controller.document import (
@@ -20,6 +23,8 @@ from outliner.controller.document import (
 
 # BDRC bulk sync progress: append-only log next to backend package (backend/sync_status.txt).
 _SYNC_STATUS_LOG_PATH = Path(__file__).resolve().parents[2] / "sync_status.txt"
+
+logger = logging.getLogger(__name__)
 
 
 def _bdrc_bulk_sync_file_logger() -> logging.Logger:
@@ -35,9 +40,18 @@ def _bdrc_bulk_sync_file_logger() -> logging.Logger:
     log.propagate = False
     return log
 
+
 def _bdrc_modified_by_from_document(db: Session, document: OutlinerDocument) -> Optional[str]:
     """BDRC OTAPI `modified_by`: prefer catalog user email, else user id (same pattern as frontend BDRC modals)."""
     return outliner_repo.bdrc_modified_by_from_document(db, document)
+
+
+def _validate_document_has_bdrc_volume(document: OutlinerDocument) -> None:
+    if not document.filename or not str(document.filename).strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Document has no BDRC volume ID (filename); cannot sync to BDRC",
+        )
 
 
 async def assign_volume(db: Session, user_id: str) -> OutlinerDocument:
@@ -50,34 +64,28 @@ async def assign_volume(db: Session, user_id: str) -> OutlinerDocument:
     for chunk in chunks:
         if chunk["text_bo"] is not None:
             text += chunk["text_bo"]
-            
-    # create a new document with the text
+
     if text is None or user_id is None:
         raise HTTPException(status_code=400, detail="Text or user_id is required")
-    # check if the document already exists
     volume_id = volume_data["id"]
-    
+
     if outliner_repo.fetch_document_by_filename(db, volume_id):
         raise HTTPException(
             status_code=400,
             detail=f"Document already exists for volume {volume_id}",
         )
-    
+
     document = create_document(
-            db=db,
-            content=text,
-            filename=volume_id,
-            user_id=user_id
-        )
-   
-    # update the volume status to "in_progress"
+        db=db,
+        content=text,
+        filename=volume_id,
+        user_id=user_id,
+    )
+
     await update_volume_status(volume_id, "in_progress")
     return document
-    
-    
-    
-    
-    
+
+
 # ==================== Approval Operations ====================
 
 async def _push_document_segments_to_bdrc(
@@ -86,11 +94,7 @@ async def _push_document_segments_to_bdrc(
     modified_by: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Sync document content and segments to BDRC OTAPI for the volume in document.filename."""
-    if not document.filename or not str(document.filename).strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Document has no BDRC volume ID (filename); cannot sync to BDRC",
-        )
+    _validate_document_has_bdrc_volume(document)
     volume_id = str(document.filename).strip()
     volume = await get_volume(volume_id)
     rep_id = volume["rep_id"]
@@ -128,24 +132,88 @@ async def _push_document_segments_to_bdrc(
     )
 
 
+def _push_document_segments_to_bdrc_background(
+    document_id: str,
+    bdrc_status: str,
+) -> None:
+    """Run BDRC volume push off the request path; updates synced_to_bdrc when done."""
+    db = SessionLocal()
+    try:
+        outliner_repo.set_document_synced_to_bdrc(db, document_id, False)
+        document = get_document(db, document_id, include_segments=True)
+        modified_by = _bdrc_modified_by_from_document(db, document)
+        asyncio.run(
+            _push_document_segments_to_bdrc(
+                document, bdrc_status, modified_by=modified_by
+            )
+        )
+        outliner_repo.set_document_synced_to_bdrc(db, document_id, True)
+        logger.info(
+            "BDRC background sync OK document_id=%s status=%s",
+            document_id,
+            bdrc_status,
+        )
+    except HTTPException as e:
+        logger.warning(
+            "BDRC background sync failed document_id=%s status=%s status_code=%s detail=%s",
+            document_id,
+            bdrc_status,
+            e.status_code,
+            e.detail,
+        )
+        try:
+            outliner_repo.set_document_synced_to_bdrc(db, document_id, False)
+        except Exception:
+            logger.exception(
+                "BDRC background sync: could not persist synced_to_bdrc=false for %s",
+                document_id,
+            )
+            db.rollback()
+    except Exception:
+        logger.exception(
+            "BDRC background sync failed document_id=%s status=%s",
+            document_id,
+            bdrc_status,
+        )
+        try:
+            outliner_repo.set_document_synced_to_bdrc(db, document_id, False)
+        except Exception:
+            logger.exception(
+                "BDRC background sync: could not persist synced_to_bdrc=false for %s",
+                document_id,
+            )
+            db.rollback()
+    finally:
+        db.close()
+
+
+def enqueue_push_document_segments_to_bdrc(
+    document_id: str,
+    bdrc_status: str,
+) -> None:
+    """Queue BDRC push on a daemon thread (same pattern as split auto title/author)."""
+    threading.Thread(
+        target=_push_document_segments_to_bdrc_background,
+        args=(document_id, bdrc_status),
+        daemon=True,
+    ).start()
+
+
 async def submit_document_to_bdrc_in_review(db: Session, document_id: str) -> Dict[str, Any]:
-    """Push current outline to BDRC with status in_review, then set document status to completed."""
+    """Queue BDRC in_review push in background, then set document status to completed."""
     document = get_document(db, document_id, include_segments=True)
-    modified_by = _bdrc_modified_by_from_document(db, document)
-    bdrc_response = await _push_document_segments_to_bdrc(
-        document, "in_review", modified_by=modified_by
-    )
+    _validate_document_has_bdrc_volume(document)
+    enqueue_push_document_segments_to_bdrc(document_id, "in_review")
     update_document_status(db, document_id, "completed")
-    return {"success":True}
+    return {"success": True}
 
 
 async def sync_outliner_document_to_bdrc_in_review(db: Session, document_id: str) -> Dict[str, Any]:
-    """Push outline to BDRC with status in_review; leaves local outliner document status unchanged."""
+    """Queue BDRC in_review push in background; leaves local outliner document status unchanged."""
     document = get_document(db, document_id, include_segments=True)
-    modified_by = _bdrc_modified_by_from_document(db, document)
-    return await _push_document_segments_to_bdrc(
-        document, "in_review", modified_by=modified_by
-    )
+    _validate_document_has_bdrc_volume(document)
+    enqueue_push_document_segments_to_bdrc(document_id, "in_review")
+    return {"success": True, "queued": True}
 
 
 async def sync_completed_documents_to_bdrc_in_review(
@@ -153,8 +221,9 @@ async def sync_completed_documents_to_bdrc_in_review(
     only_document_ids: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
-    For each completed outliner document whose segments are all `checked`, push volume to BDRC as `in_review`.
-    Per-document failures are collected; successful syncs still apply.
+    For each completed outliner document whose segments are all `checked`, queue a background
+    BDRC push as `in_review`. Per-document validation failures are collected; queued documents
+    update ``synced_to_bdrc`` when the worker finishes.
     Progress is appended to backend/sync_status.txt.
 
     If `only_document_ids` is set, only those IDs are considered (must still satisfy completed / filename / all-checked).
@@ -171,23 +240,42 @@ async def sync_completed_documents_to_bdrc_in_review(
         document_ids,
     )
 
-    succeeded: List[Dict[str, str]] = []
+    queued: List[Dict[str, str]] = []
     failed: List[Dict[str, Any]] = []
 
     for i, document_id in enumerate(document_ids, start=1):
         filename = id_to_filename.get(document_id, "")
         sync_log.info(
-            "BDRC bulk sync [%s/%s] pushing document_id=%s filename=%s",
+            "BDRC bulk sync [%s/%s] queueing document_id=%s filename=%s",
             i,
             total,
             document_id,
             filename,
         )
         try:
-            await sync_outliner_document_to_bdrc_in_review(db, document_id)
-            succeeded.append({"document_id": document_id, "filename": filename})
+            document = outliner_repo.fetch_document_by_id(db, document_id)
+            if not document:
+                failed.append(
+                    {
+                        "document_id": document_id,
+                        "filename": filename,
+                        "detail": "Document not found",
+                        "status_code": 404,
+                    }
+                )
+                sync_log.warning(
+                    "BDRC bulk sync [%s/%s] FAILED document_id=%s filename=%s status_code=404 detail=Document not found",
+                    i,
+                    total,
+                    document_id,
+                    filename,
+                )
+                continue
+            _validate_document_has_bdrc_volume(document)
+            enqueue_push_document_segments_to_bdrc(document_id, "in_review")
+            queued.append({"document_id": document_id, "filename": filename})
             sync_log.info(
-                "BDRC bulk sync [%s/%s] OK document_id=%s filename=%s",
+                "BDRC bulk sync [%s/%s] QUEUED document_id=%s filename=%s",
                 i,
                 total,
                 document_id,
@@ -236,20 +324,21 @@ async def sync_completed_documents_to_bdrc_in_review(
             )
 
     sync_log.info(
-        "BDRC bulk sync finished candidate_count=%s succeeded=%s failed=%s",
+        "BDRC bulk sync finished candidate_count=%s queued=%s failed=%s",
         total,
-        len(succeeded),
+        len(queued),
         len(failed),
     )
     return {
         "candidate_count": len(document_ids),
-        "succeeded": succeeded,
+        "queued": queued,
+        "succeeded": queued,
         "failed": failed,
     }
 
 
-async def approve_document(db: Session, document_id: str) -> OutlinerDocument:
-    document = get_document(db, document_id , include_segments=True)
+async def approve_document(db: Session, document_id: str) -> Dict[str, Any]:
+    document = get_document(db, document_id, include_segments=True)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
 
@@ -257,13 +346,11 @@ async def approve_document(db: Session, document_id: str) -> OutlinerDocument:
     if non_approved > 0:
         raise HTTPException(
             status_code=400,
-            detail=f"Cannot approve document: {non_approved} segment(s) are not yet approved"
+            detail=f"Cannot approve document: {non_approved} segment(s) are not yet approved",
         )
 
-    modified_by = _bdrc_modified_by_from_document(db, document)
-    response_bdrc = await _push_document_segments_to_bdrc(
-        document, "reviewed", modified_by=modified_by
-    )
+    _validate_document_has_bdrc_volume(document)
+    enqueue_push_document_segments_to_bdrc(document_id, "reviewed")
     update_document_status(db, document_id, "approved")
     outliner_repo.increment_document_submit_count(db, document_id)
-    return response_bdrc
+    return {"success": True}

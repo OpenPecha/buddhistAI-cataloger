@@ -27,6 +27,7 @@ from outliner.repository.document import (
     replace_segments_and_ai_toc,
     reset_segments,
     set_document_status_and_refresh,
+    set_document_synced_to_bdrc,
     set_document_reviewer_and_refresh,
     update_document_content,
     allow_user_to_assign_volume,
