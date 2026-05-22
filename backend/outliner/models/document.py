@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any
 import uuid
 
-from sqlalchemy import DateTime, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.database import Base
@@ -39,4 +39,5 @@ class OutlinerDocument(Base):
         cascade="all, delete-orphan",
         order_by="OutlinerSegment.segment_index",
     )
+    # synced_to_bdrc: Mapped[bool] = mapped_column(Boolean, default=False, nullable=True)
     reviewer_id: Mapped[str | None] = mapped_column(String, ForeignKey("users.id"), nullable=True, index=True)
