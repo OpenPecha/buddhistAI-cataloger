@@ -1234,10 +1234,8 @@ function OverviewTab({
                   </thead>
                   <tbody>
                     {volumeBatchSection.rows.map((row) => {
-                      const batchNum = Number(row.batchId)
-                      const batchIdNumeric = !Number.isNaN(batchNum)
                       const isActiveRow =
-                        activeBatchId !== null && batchIdNumeric && activeBatchId === batchNum
+                        activeBatchId !== null && String(activeBatchId) === row.batchId
                       return (
                         <tr
                           key={row.batchId}
@@ -1248,12 +1246,11 @@ function OverviewTab({
                               type="checkbox"
                               className="h-4 w-4 cursor-pointer rounded border-stone-300 text-primary accent-primary disabled:cursor-not-allowed disabled:opacity-50"
                               checked={isActiveRow}
-                              disabled={!batchIdNumeric || activeBatchUpdating}
+                              disabled={activeBatchUpdating}
                               onChange={(e) => {
                                 if (!confirm("Are you sure you want to set this batch as active?")) return
-                                if (!batchIdNumeric) return
                                 void setActiveBatch({
-                                  batch_id: e.target.checked ? batchNum : null,
+                                  batch_id: e.target.checked ? row.batchId : null,
                                 })
                               }}
                               aria-label={

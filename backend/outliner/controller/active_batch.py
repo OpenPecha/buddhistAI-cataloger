@@ -14,6 +14,6 @@ def get_active_batch(db: Session) -> Dict[str, Any]:
     return {"batch_id": bid}
 
 
-def update_active_batch(db: Session, batch_id: Optional[int]) -> Dict[str, Any]:
+def update_active_batch(db: Session, batch_id: Optional[str]) -> Dict[str, Any]:
     active_batch_repo.set_active_batch_id(db, batch_id)
     return {"batch_id": batch_id}

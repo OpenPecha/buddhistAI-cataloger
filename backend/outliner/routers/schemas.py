@@ -524,7 +524,7 @@ class DashboardStatsResponse(BaseModel):
 class ActiveBatchResponse(BaseModel):
     """Stored active BEC volume batch id for admin workflow (single row)."""
 
-    batch_id: Optional[int] = Field(
+    batch_id: Optional[str] = Field(
         default=None,
         description="Currently selected batch id, or null if none set.",
     )
@@ -533,7 +533,7 @@ class ActiveBatchResponse(BaseModel):
 class ActiveBatchUpdate(BaseModel):
     """Replace or clear the active batch. Send ``batch_id: null`` to clear."""
 
-    batch_id: Optional[int] = Field(
+    batch_id: Optional[str] = Field(
         default=None,
         description="BEC volume batch id to mark active, or null to clear.",
     )

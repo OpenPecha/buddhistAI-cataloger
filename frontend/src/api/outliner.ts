@@ -836,7 +836,7 @@ export const getDashboardStats = async (
 
 /** GET/PUT …/dashboard/active-batch — admin-selected BEC volume batch. */
 export interface ActiveBatchState {
-  batch_id: number | null;
+  batch_id: string | null;
 }
 
 export const getActiveBatch = async (): Promise<ActiveBatchState> => {
