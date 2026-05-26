@@ -21,7 +21,6 @@ import {
   type SegmentRejection,
 } from '@/api/outliner';
 import { toast } from 'sonner';
-import Highlighter from 'react-highlight-words';
 import { format } from 'date-fns';
 import { Check, FileText, History, Loader2, Undo, User, X } from 'lucide-react';
 import type { Segment } from '../shared/types';
@@ -31,7 +30,9 @@ import { useDocument } from '@/hooks';
 import { getLabelColor, getStatusColor } from '@/components/outliner/utils';
 import ChevronUporDown from '@/components/outliner/utils/ChevronUporDown';
 import { SegmentSearchBar } from '@/components/outliner/SegmentSearchBar';
+import { SegmentHighlightedText } from '@/components/outliner/SegmentHighlightedText';
 import { findAllOccurrences } from '@/features/outliner';
+import { getSegmentMetadataLocalSpans } from '@/utils/segmentMetadataLocalSpans';
 import { Badge } from '@/components/ui/badge';
 
 interface SegmentRowProps {
@@ -91,6 +92,13 @@ function SegmentRow({
   const segmentBodyTextareaRef = useRef<HTMLTextAreaElement>(null);
   const segmentBodyHighlightRef = useRef<HTMLDivElement>(null);
   const hasTextSearch = Boolean(textSearchQuery.trim());
+
+  const metadataLocalSpans = useMemo(
+    () => getSegmentMetadataLocalSpans(segment),
+    [segment]
+  );
+
+  const hasBodyHighlightLayer = hasTextSearch || metadataLocalSpans.length > 0;
 
   const segmentSearchMatchCount = useMemo(
     () => findAllOccurrences(segment.text, textSearchQuery).length,
@@ -157,10 +165,10 @@ function SegmentRow({
   }, []);
 
   useLayoutEffect(() => {
-    if (isExpanded && hasTextSearch) {
+    if (isExpanded && hasBodyHighlightLayer) {
       syncBodyHighlightScroll();
     }
-  }, [isExpanded, hasTextSearch, segment.text, textSearchQuery, syncBodyHighlightScroll]);
+  }, [isExpanded, hasBodyHighlightLayer, segment.text, textSearchQuery, metadataLocalSpans, syncBodyHighlightScroll]);
 
   const statusMutation = useMutation({
     mutationFn: (newStatus: 'approved' | 'unchecked' | 'checked') =>
@@ -478,17 +486,16 @@ function SegmentRow({
            
             {isExpanded ? (
               <div className="relative min-h-[8rem] max-h-[min(24rem,50vh)] rounded-md border border-gray-200 bg-white/80">
-                {hasTextSearch ? (
+                {hasBodyHighlightLayer ? (
                   <div
                     ref={segmentBodyHighlightRef}
                     className="pointer-events-none absolute inset-0 z-0 overflow-auto whitespace-pre-wrap break-words p-3 font-monlam text-sm leading-normal text-gray-800 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                     aria-hidden
                   >
-                    <Highlighter
-                      highlightClassName="highlighter rounded-sm bg-amber-200/90 px-0.5"
-                      searchWords={hasTextSearch ? [textSearchQuery] : []}
-                      autoEscape
-                      textToHighlight={segment.text}
+                    <SegmentHighlightedText
+                      text={segment.text}
+                      metadataSpans={metadataLocalSpans}
+                      searchQuery={textSearchQuery}
                     />
                   </div>
                 ) : null}
@@ -501,12 +508,12 @@ function SegmentRow({
                   onSelect={reportBodyCaret}
                   onClick={reportBodyCaret}
                   onKeyUp={reportBodyCaret}
-                  onScroll={hasTextSearch ? syncBodyHighlightScroll : undefined}
+                  onScroll={hasBodyHighlightLayer ? syncBodyHighlightScroll : undefined}
                   onFocus={reportBodyCaret}
                   onBlur={() => onSegmentBodyCaretChange?.(segment.id, null)}
                   className={
                     'relative z-10  min-h-[8rem] max-h-[min(24rem,50vh)] w-full cursor-text resize-none text-sm whitespace-pre-wrap overflow-y-auto font-monlam rounded-md border-0 bg-transparent p-3 leading-normal focus-visible:ring-2 focus-visible:ring-blue-500/20 ' +
-                    (hasTextSearch
+                    (hasBodyHighlightLayer
                       ? 'text-transparent caret-gray-800 selection:bg-sky-200/50'
                       : 'text-gray-800')
                   }
@@ -518,19 +525,21 @@ function SegmentRow({
                 className="text-left w-full text-gray-700 font-monlam text-sm py-1 rounded px-2 -mx-2 transition-colors max-h-[100px] overflow-hidden whitespace-pre-wrap break-words [display:-webkit-box] [WebkitBoxOrient:vertical] [WebkitLineClamp:4] hover:bg-white/60"
                 onClick={toggleCollapse}
               >
-                {hasTextSearch ? (
-                  <Highlighter
-                    highlightClassName="highlighter rounded-sm bg-amber-200/90 px-0.5"
-                    searchWords={[textSearchQuery]}
-                    autoEscape
-                    textToHighlight={
+                {hasBodyHighlightLayer ? (
+                  <SegmentHighlightedText
+                    text={
                       segment.text.length > 200
                         ? `${segment.text.slice(0, 200)}…`
                         : segment.text
                     }
+                    metadataSpans={metadataLocalSpans
+                      .filter((s) => s.start < 200)
+                      .map((s) => ({ ...s, end: Math.min(s.end, 200) }))}
+                    searchQuery={textSearchQuery}
                   />
-                ) :`${segment?.text?.slice(0, 200)}…`
-              }
+                ) : (
+                  `${segment.text.length > 200 ? `${segment.text.slice(0, 200)}…` : segment.text}`
+                )}
               </button>
             )}
           </div>
