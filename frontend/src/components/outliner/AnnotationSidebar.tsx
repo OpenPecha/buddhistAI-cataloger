@@ -441,7 +441,7 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
     const titleName = formData.title?.name?.trim() || '';
     const authorName = formData.author?.name?.trim() || '';
 
-    if (!titleName && !authorName) {
+    if (!titleName) {
       toast.error(t('outliner.annotation.toastNeedTitleOrAuthor'));
       return;
     }

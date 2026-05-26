@@ -499,7 +499,7 @@
       "authorBadge": "Author",
       "labelBadge": "Label",
       "toastNoSegment": "No segment selected",
-      "toastNeedTitleOrAuthor": "Please provide at least a title or author",
+      "toastNeedTitleOrAuthor": "Please provide a title",
       "toastSaved": "Annotations saved successfully",
       "toastSaveFailed": "Failed to save annotations"
     },

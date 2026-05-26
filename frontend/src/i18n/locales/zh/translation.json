@@ -499,7 +499,7 @@
       "authorBadge": "作者",
       "labelBadge": "标签",
       "toastNoSegment": "未选择片段",
-      "toastNeedTitleOrAuthor": "请至少填写标题或作者",
+      "toastNeedTitleOrAuthor": "请填写标题",
       "toastSaved": "标注已成功保存",
       "toastSaveFailed": "保存标注失败"
     },

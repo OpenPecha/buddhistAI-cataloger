@@ -117,8 +117,7 @@ export function AnnotationMetadataTab() {
                   onClick={() => void onSave()}
                   variant="default"
                   disabled={
-                    !activeSegmentId ||
-                    (formData.title.name.trim() === '' && formData.author.name.trim() === '')
+                    !activeSegmentId || !formData.title?.name?.trim()
                   }
                 >
                   <Save />

@@ -499,7 +499,7 @@
       "authorBadge": "རྩོམ་པ་པོ།",
       "labelBadge": "ཁ་བྱང་།",
       "toastNoSegment": "ཆ་ཤས་འདེམས་མེད།",
-      "toastNeedTitleOrAuthor": "མཚན་ཡང་ན་རྩོམ་པ་པོ་ཤིག་ངེས་པར་སྤྲོད་རོགས།",
+      "toastNeedTitleOrAuthor": "མཚན་ངེས་པར་སྤྲོད་རོགས།",
       "toastSaved": "ཁ་བརྒྱབ་ཉར་ཚགས་ལེགས།",
       "toastSaveFailed": "ཁ་བརྒྱབ་ཉར་ཚགས་མ་ཐུབ།"
     },
