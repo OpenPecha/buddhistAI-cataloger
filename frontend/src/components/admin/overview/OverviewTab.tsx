@@ -61,7 +61,7 @@ const EMERALD = '#0f766e'
 const VIOLET = '#6b21a8'
 const RED = '#b91c1c'
 const ORANGE = '#c2410c'
-/** Dark blue for approved (reviewed) segment counts on the quality chart. */
+/** Dark blue for reviewed segment counts on the quality chart. */
 const BLUE_DARK = '#1e3a8a'
 
 /** Horizontal space per person on the quality & reviewer vertical bar charts (scroll when wider than the card). */
@@ -256,21 +256,21 @@ const ANNOTATOR_QUALITY_SIGNALS_VBAR_OPTIONS: ChartOptions<'bar'> = {
             const meta = (
               tooltipItem.dataset as { metaReject?: { events: number; approved: number }[] }
             ).metaReject?.[i]
-            if (!meta) return `Rejection: ${pct}% of approved`
-            return `${meta.events.toLocaleString()} rejections / ${meta.approved.toLocaleString()} approved (${pct}%)`
+            if (!meta) return `Rejection: ${pct}% of reviewed`
+            return `${meta.events.toLocaleString()} rejections / ${meta.approved.toLocaleString()} reviewed (${pct}%)`
           }
           if (tooltipItem.datasetIndex === 1) {
             const meta = (
               tooltipItem.dataset as { metaEdits?: { edits: number; approved: number }[] }
             ).metaEdits?.[i]
-            if (!meta) return `Corrections at review: ${pct}% of approved`
-            return `${meta.edits.toLocaleString()} corrections / ${meta.approved.toLocaleString()} approved (${pct}%)`
+            if (!meta) return `Corrections at review: ${pct}% of reviewed`
+            return `${meta.edits.toLocaleString()} corrections / ${meta.approved.toLocaleString()} reviewed (${pct}%)`
           }
           const count = typeof raw === 'number' ? raw.toLocaleString() : String(raw)
           if (tooltipItem.datasetIndex === 2) {
             return `Total segments in range: ${count}`
           }
-          return `Approved (reviewed): ${count}`
+          return `Reviewed (in period): ${count}`
         },
       },
     },
@@ -304,7 +304,7 @@ const ANNOTATOR_QUALITY_SIGNALS_VBAR_OPTIONS: ChartOptions<'bar'> = {
       },
       title: {
         display: true,
-        text: 'Rate (% of approved segments)',
+        text: 'Rate (% of reviewed segments)',
         color: MUTED,
         font: { size: 10 },
         padding: { bottom: 4 },
@@ -446,12 +446,12 @@ function formatChartLabel(key: string): string {
   if (key ==='approved') return 'Reviewed'
   if (key ==='checked') return 'Annotated'
   if (key ==='unchecked') return 'Annotating'
-  if (key==='completed') return 'Annotated (not reviewed)'
+  if (key==='completed') return 'Annotated'
   if (key==='active') return 'Annotating'
   return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-/** Total segments footer: human workflow labels for segment status keys. */
+/** Total segments footer: human workflow labels for segment status keys (current snapshot). */
 function segmentStatusLabelForTotalSegments(key: string): string {
   switch (key) {
     case 'unchecked':
@@ -459,7 +459,7 @@ function segmentStatusLabelForTotalSegments(key: string): string {
     case 'checked':
       return 'Annotated'
     case 'approved':
-      return 'Reviewed'
+      return 'Reviewed (current)'
     case 'rejected':
       return 'Rejected'
     default:
@@ -802,7 +802,7 @@ function OverviewTab({
       labels: rows.map((r) => annotatorDisplayName(r.user_id, annotators)),
       datasets: [
         {
-          label: 'Rejection (% of approved)',
+          label: 'Rejection (% of reviewed)',
           yAxisID: 'y',
           data: rows.map((r) => r.rejectionPct),
           metaReject: rows.map((r) => ({ events: r.events, approved: r.approved })),
@@ -810,7 +810,7 @@ function OverviewTab({
           borderRadius: 6,
         },
         {
-          label: 'Corrections at review (% of approved)',
+          label: 'Corrections at review (% of reviewed)',
           yAxisID: 'y',
           data: rows.map((r) => r.editsPct),
           metaEdits: rows.map((r) => ({ edits: r.edits, approved: r.approved })),
@@ -825,7 +825,7 @@ function OverviewTab({
           borderRadius: 6,
         },
         {
-          label: 'Approved (reviewed)',
+          label: 'Reviewed (in period)',
           yAxisID: 'y1',
           data: rows.map((r) => r.approved),
           backgroundColor: BLUE_DARK,
@@ -1084,19 +1084,19 @@ function OverviewTab({
               footer={
                 <div className="space-y-1.5 border-t border-teal-200/80 pt-3 text-xs text-muted-foreground">
                   <div className="flex justify-between gap-2">
-                    <span>reviewed</span>
+                    <span>Reviewed (current)</span>
                     <span className="shrink-0 font-semibold tabular-nums text-foreground">
                       {docApproved.toLocaleString()}
                     </span>
                   </div>
                   <div className="flex justify-between gap-2">
-                    <span>annotated</span>
+                    <span>Annotated</span>
                     <span className="shrink-0 font-semibold tabular-nums text-foreground">
                       {docCompleted.toLocaleString()}
                     </span>
                   </div>
                   <div className="flex justify-between gap-2">
-                    <span>annotating</span>
+                    <span>Annotating</span>
                     <span className="shrink-0 font-semibold tabular-nums text-foreground">
                       {docActive.toLocaleString()}
                     </span>
@@ -1155,7 +1155,7 @@ function OverviewTab({
                       </span>
                     </div>
                     <div className="flex justify-between gap-2">
-                    <span>Reviewed</span>
+                    <span>Reviewed (in period)</span>
                     <span className="font-semibold tabular-nums text-foreground">
                       {stats.reviewed_segments.toLocaleString()}
                     </span>
@@ -1558,7 +1558,7 @@ function OverviewTab({
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
             Segments by status
           </p>
-          <p className="mt-2 text-sm text-muted-foreground">Checked, approved, rejected, and unchecked.</p>
+          <p className="mt-2 text-sm text-muted-foreground">Annotating, annotated, reviewed, and rejected.</p>
           <div className="mt-4 flex h-72 items-center justify-center">
             {segmentStatusChart ? (
               <Doughnut data={segmentStatusChart} options={DOUGHNUT_OPTIONS} />
@@ -1591,7 +1591,7 @@ function OverviewTab({
             {annotatorQualitySignals && annotatorQualitySignals.tableRows.length > 1 ? (
               <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-muted-foreground">
                 All annotators in one view; scroll sideways to compare. Left axis: rejection and
-                correction rates as a percent of approved segments; right axis: segment counts.
+                correction rates as a percent of reviewed segments; right axis: segment counts.
               </p>
             ) : null}
           </div>
@@ -1654,7 +1654,7 @@ function OverviewTab({
             <div className="mt-5 max-h-[min(720px,70vh)] overflow-y-auto overflow-x-auto rounded-lg border border-stone-200/80 bg-white/60">
               <table className="w-full min-w-[36rem] border-collapse text-sm">
                 <caption className="sr-only">
-                  Annotator quality: Rejection % and Corrections % use approved segment count as
+                  Annotator quality: Rejection % and Corrections % use reviewed segment count as
                   denominator. Full names and counts.
                 </caption>
                 <thead className="sticky top-0 z-[1] shadow-[0_1px_0_0_rgb(231_229_228)]">
@@ -1662,19 +1662,19 @@ function OverviewTab({
                     <th className="px-4 py-3">Annotator</th>
                     <th className="px-4 py-3 text-right tabular-nums">Segments</th>
                     <th className="px-4 py-3 text-right tabular-nums" style={{ color: BLUE_DARK }}>
-                      Approved
+                      Reviewed (in period)
                     </th>
-                    <th className="px-4 py-3 text-right tabular-nums">Rejection</th>
+                    <th className="px-4 py-3 text-right tabular-nums">Rejection events</th>
                     <th
                       className="px-4 py-3 text-right tabular-nums"
-                      title="Percent of approved segments in range (rejection events ÷ approved)"
+                      title="Percent of reviewed segments in period (rejection events ÷ reviewed)"
                     >
                       Rejection %
                     </th>
                     <th className="px-4 py-3 text-right tabular-nums">Corrections at review</th>
                     <th
                       className="px-4 py-3 text-right tabular-nums"
-                      title="Percent of approved segments in range (corrections ÷ approved)"
+                      title="Percent of reviewed segments in period (corrections ÷ reviewed)"
                     >
                       Corrections %
                     </th>
