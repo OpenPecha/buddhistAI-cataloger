@@ -1155,7 +1155,7 @@ function OverviewTab({
                       </span>
                     </div>
                     <div className="flex justify-between gap-2">
-                    <span>Reviewed (in period)</span>
+                    <span>Reviewed with title/author (in period)</span>
                     <span className="font-semibold tabular-nums text-foreground">
                       {stats.reviewed_segments.toLocaleString()}
                     </span>
