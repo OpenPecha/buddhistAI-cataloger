@@ -10,10 +10,11 @@ type TaggedRange = {
   kind: RangeKind;
 };
 
+/** Background-only highlights: horizontal padding shifts the mirror layer vs the textarea. */
 const KIND_CLASS: Record<RangeKind, string> = {
-  title: 'segment-highlight-title rounded-sm bg-sky-200/85 px-0.5',
-  author: 'segment-highlight-author rounded-sm bg-violet-200/85 px-0.5',
-  search: 'highlighter rounded-sm bg-amber-200/90 px-0.5',
+  title: 'segment-highlight-title rounded-sm bg-sky-200/85 box-decoration-clone',
+  author: 'segment-highlight-author rounded-sm bg-violet-200/85 box-decoration-clone',
+  search: 'highlighter rounded-sm bg-amber-200/90 box-decoration-clone',
 };
 
 function classForKinds(kinds: RangeKind[]): string {

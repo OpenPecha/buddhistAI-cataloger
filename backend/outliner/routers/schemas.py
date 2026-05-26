@@ -23,6 +23,10 @@ class SegmentRejectionReviewer(BaseModel):
         return {k: v for k, v in data.items() if v is not None}
 
 
+# Same shape as SegmentRejectionReviewer; used for annotator/reviewed-by on segment payloads.
+SegmentAttributionUser = SegmentRejectionReviewer
+
+
 class SegmentRejectionSummary(BaseModel):
     """Bundled rejection fields for segment payloads (avoid flat rejection_* keys)."""
 
@@ -147,6 +151,9 @@ class SegmentResponse(BaseModel):
     comments: Optional[List[CommentResponse]] = None
     created_at: datetime
     updated_at: datetime
+    reviewed_by: Optional[SegmentAttributionUser] = None
+    reviewed_at: Optional[datetime] = None
+    annotator: Optional[SegmentAttributionUser] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -202,6 +209,10 @@ class SegmentResponseDocument(BaseModel):
     is_supplied_title: Optional[bool] = None  # Title supplied by annotator (not from source)
     # Set in enrich_segment_list_rejection_fields
     rejection: Optional[SegmentRejectionSummary] = None
+    reviewed_by: Optional[SegmentAttributionUser] = None
+    reviewed_at: Optional[datetime] = None
+    annotator: Optional[SegmentAttributionUser] = None
+    updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 

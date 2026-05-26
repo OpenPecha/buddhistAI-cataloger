@@ -34,6 +34,7 @@ import { SegmentHighlightedText } from '@/components/outliner/SegmentHighlighted
 import { findAllOccurrences } from '@/features/outliner';
 import { getSegmentMetadataLocalSpans } from '@/utils/segmentMetadataLocalSpans';
 import { Badge } from '@/components/ui/badge';
+import { SegmentAttributionBar } from './SegmentAttributionBar';
 
 interface SegmentRowProps {
   readonly segment: Segment;
@@ -386,6 +387,19 @@ function SegmentRow({
     [onSegmentBodyCaretChange, segment.id]
   );
 
+  /** Mirror highlight layer must not affect layout; copy plain text from segment.text by selection range. */
+  const handleBodyCopy = useCallback(
+    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      const ta = e.currentTarget;
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      if (start === end) return;
+      e.preventDefault();
+      e.clipboardData.setData('text/plain', segment.text.slice(start, end));
+    },
+    [segment.text]
+  );
+
   useEffect(() => {
     if (!isExpanded) {
       onSegmentBodyCaretChange?.(segment.id, null);
@@ -446,9 +460,9 @@ function SegmentRow({
         </div>
 
         <div className="flex-1 min-w-0 space-y-3 font-monlam-2">
-          <div className="flex flex-wrap justify-between items-center gap-2 pb-2 border-b border-gray-200">
-          
-          
+          <div className="space-y-2 pb-2 border-b border-gray-200">
+        
+            <div className="flex flex-wrap justify-between items-center gap-2">
                 {segment.label && (
              <div className="inline-flex  items-center gap-1 mt-2 mb-1">
                <span
@@ -474,6 +488,7 @@ function SegmentRow({
                 scrollBodyToEdge={scrollBodyToEdge}
               />
             </div>
+            </div>
           </div>
 
           {isRejected && segment.rejection?.reason?.trim() ? (
@@ -489,7 +504,7 @@ function SegmentRow({
                 {hasBodyHighlightLayer ? (
                   <div
                     ref={segmentBodyHighlightRef}
-                    className="pointer-events-none absolute inset-0 z-0 overflow-auto whitespace-pre-wrap break-words p-3 font-monlam text-sm leading-normal text-gray-800 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    className="pointer-events-none absolute inset-0 z-0 overflow-auto whitespace-pre-wrap wrap-break-word p-3 font-monlam text-sm leading-normal text-gray-800 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
                     aria-hidden
                   >
                     <SegmentHighlightedText
@@ -508,13 +523,14 @@ function SegmentRow({
                   onSelect={reportBodyCaret}
                   onClick={reportBodyCaret}
                   onKeyUp={reportBodyCaret}
+                  onCopy={handleBodyCopy}
                   onScroll={hasBodyHighlightLayer ? syncBodyHighlightScroll : undefined}
                   onFocus={reportBodyCaret}
                   onBlur={() => onSegmentBodyCaretChange?.(segment.id, null)}
                   className={
                     'relative z-10  min-h-[8rem] max-h-[min(24rem,50vh)] w-full cursor-text resize-none text-sm whitespace-pre-wrap overflow-y-auto font-monlam rounded-md border-0 bg-transparent p-3 leading-normal focus-visible:ring-2 focus-visible:ring-blue-500/20 ' +
                     (hasBodyHighlightLayer
-                      ? 'text-transparent caret-gray-800 selection:bg-sky-200/50'
+                      ? 'wrap-break-word text-transparent caret-gray-800 selection:bg-sky-200/50'
                       : 'text-gray-800')
                   }
                 />
@@ -774,8 +790,17 @@ function SegmentRow({
               </Button>
             )}
           </div>
+          <SegmentAttributionBar
+              annotator={segment.annotator}
+              reviewedBy={segment.reviewed_by}
+              reviewedAt={segment.reviewed_at}
+              updatedAt={segment.updated_at}
+              isAnnotated={segment.is_annotated}
+            />
         </div>
+        
       </div>
+
 
       <Dialog open={rejectionHistoryOpen} onOpenChange={setRejectionHistoryOpen}>
         <DialogContent

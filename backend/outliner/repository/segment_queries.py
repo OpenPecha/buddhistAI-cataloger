@@ -1,11 +1,55 @@
 """Read/query helpers for outliner_segment rows."""
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from sqlalchemy import and_, case, func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentRejection
 from outliner.repository.segment_rejection import update_segment_with_rejection_fields
+from user.models.user import User
+
+
+def _user_attribution_payload(
+    user_id: str, name: Optional[str], picture: Optional[str]
+) -> Dict[str, Any]:
+    pic = picture
+    if pic is not None:
+        pic = str(pic).strip() or None
+    return {"user_id": user_id, "name": name, "picture": pic}
+
+
+def enrich_segment_attribution_fields(
+    db: Session,
+    segment_list: List[dict],
+    *,
+    document_user_id: Optional[str],
+) -> None:
+    """Attach ``annotator``, ``reviewed_by`` (and drop raw ``reviewed_by_id``) on segment dicts."""
+    if not segment_list:
+        return
+    user_ids: set[str] = set()
+    if document_user_id:
+        user_ids.add(document_user_id)
+    for s in segment_list:
+        rid = s.get("reviewed_by_id")
+        if rid:
+            user_ids.add(str(rid))
+    by_id: Dict[str, Dict[str, Any]] = {}
+    if user_ids:
+        rows = (
+            db.query(User.id, User.name, User.picture)
+            .filter(User.id.in_(user_ids))
+            .all()
+        )
+        by_id = {
+            str(uid): _user_attribution_payload(str(uid), name, picture)
+            for uid, name, picture in rows
+        }
+    annotator_payload = by_id.get(document_user_id) if document_user_id else None
+    for s in segment_list:
+        rid = s.pop("reviewed_by_id", None)
+        s["reviewed_by"] = by_id.get(str(rid)) if rid else None
+        s["annotator"] = annotator_payload
 
 
 def _segment_aggregate_counts_by_document_ids(
@@ -108,6 +152,11 @@ def _rejection_open_segments_by_document_ids(
 
 
 def segment_list_for_document(db: Session, document_id: str) -> List[dict]:
+    doc_user_id = (
+        db.query(OutlinerDocument.user_id)
+        .filter(OutlinerDocument.id == document_id)
+        .scalar()
+    )
     segments = (
         db.query(
             OutlinerSegment.id,
@@ -132,6 +181,9 @@ def segment_list_for_document(db: Session, document_id: str) -> List[dict]:
             OutlinerSegment.status,
             OutlinerSegment.is_supplied_title,
             OutlinerSegment.label,
+            OutlinerSegment.reviewed_by_id,
+            OutlinerSegment.reviewed_at,
+            OutlinerSegment.updated_at,
         )
         .filter(OutlinerSegment.document_id == document_id)
         .order_by(OutlinerSegment.segment_index)
@@ -145,6 +197,7 @@ def segment_list_for_document(db: Session, document_id: str) -> List[dict]:
 
     segment_list = [_segment_to_dict(segment) for segment in segments]
     update_segment_with_rejection_fields(db, segment_list)
+    enrich_segment_attribution_fields(db, segment_list, document_user_id=doc_user_id)
     return segment_list
 
 

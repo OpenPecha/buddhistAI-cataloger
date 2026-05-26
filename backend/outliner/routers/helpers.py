@@ -15,9 +15,15 @@ from outliner.utils.outliner_utils import get_comments_list, segment_body_from_d
 
 from outliner.models.outliner import OutlinerDocument
 
+from outliner.repository.segment_queries import (
+    enrich_segment_attribution_fields,
+    get_document_user_id_for_segment,
+)
+
 from .schemas import (
     CommentResponse,
     DocumentResponse,
+    SegmentAttributionUser,
     SegmentRejectionReviewer,
     SegmentRejectionSummary,
     SegmentResponse,
@@ -128,6 +134,36 @@ def build_segment_response(
             document_content, segment.span_start, segment.span_end
         )
 
+    reviewed_by: Optional[SegmentAttributionUser] = None
+    annotator: Optional[SegmentAttributionUser] = None
+    rb_user = getattr(segment, "reviewed_by_user", None)
+    if rb_user is not None and getattr(rb_user, "id", None):
+        pic = getattr(rb_user, "picture", None)
+        if pic is not None:
+            pic = str(pic).strip() or None
+        reviewed_by = SegmentAttributionUser(
+            user_id=str(rb_user.id),
+            name=getattr(rb_user, "name", None),
+            picture=pic,
+        )
+    if db is not None:
+        doc_uid = get_document_user_id_for_segment(db, segment.id)
+        if reviewed_by is None or doc_uid:
+            attr_row: Dict[str, Any] = {
+                "id": segment.id,
+                "reviewed_by_id": getattr(segment, "reviewed_by_id", None),
+            }
+            enrich_segment_attribution_fields(
+                db, [attr_row], document_user_id=doc_uid
+            )
+            if reviewed_by is None:
+                rb_payload = attr_row.get("reviewed_by")
+                if rb_payload:
+                    reviewed_by = SegmentAttributionUser.model_validate(rb_payload)
+            ann_payload = attr_row.get("annotator")
+            if ann_payload:
+                annotator = SegmentAttributionUser.model_validate(ann_payload)
+
     return SegmentResponse(
         id=segment.id,
         text=resolved_text,
@@ -156,6 +192,9 @@ def build_segment_response(
         comments=[CommentResponse(**c) for c in comments_list] if comments_list else None,
         created_at=segment.created_at,
         updated_at=segment.updated_at,
+        reviewed_by=reviewed_by,
+        reviewed_at=getattr(segment, "reviewed_at", None),
+        annotator=annotator,
     )
 
 

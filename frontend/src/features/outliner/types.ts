@@ -109,6 +109,13 @@ export interface Document {
   segments?: Segment[]
 }
 
+/** User attribution on admin/reviewer segment payloads (same shape as rejection reviewer). */
+export interface SegmentAttributionUser {
+  user_id: string
+  name?: string | null
+  picture?: string | null
+}
+
 export interface Segment {
   id: string
   text: string
@@ -133,9 +140,15 @@ export interface Segment {
   status?: string | null
   rejection?: SegmentRejection | null
   comments?: Comment[]
-  created_at: string
-  updated_at: string
+  created_at?: string
+  updated_at?: string
   label?: SegmentLabel | null
+  is_supplied_title?: boolean | null
+  /** Document assignee (who annotates this document). */
+  annotator?: SegmentAttributionUser | null
+  /** User who last marked this segment checked/approved. */
+  reviewed_by?: SegmentAttributionUser | null
+  reviewed_at?: string | null
 }
 
 export interface DocumentStats {

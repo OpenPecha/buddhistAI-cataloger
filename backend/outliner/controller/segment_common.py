@@ -43,6 +43,9 @@ def segment_to_response_dict (seg: OutlinerSegment) -> Dict[str, Any]:
         "status": seg.status,
         "label": seg.label.name if seg.label else None,
         "is_supplied_title": seg.is_supplied_title,
+        "reviewed_by_id": seg.reviewed_by_id,
+        "reviewed_at": seg.reviewed_at,
+        "updated_at": seg.updated_at,
     }
 
 
