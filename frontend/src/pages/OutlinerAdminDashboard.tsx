@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { OverviewTab } from '../components/admin';
 import { SkeletonLarger } from '@/components/ui/skeleton';
-import { useDashboardStats, useOutlinerUsers, type DashboardStatsFilters } from '../hooks';
+import { useDashboardStats, type DashboardStatsFilters } from '../hooks';
 import { UserFilter } from '@/components/admin/documents/UserFilter';
 import { useSearchParams } from 'react-router-dom';
 import { getDefaultDateRange } from '@/components/admin/documents/utils';
@@ -25,8 +25,6 @@ function OutlinerAdminDashboard() {
     startDate: startDate ? dataParse(startDate) : undefined,
     endDate: endDate ? dataParse(endDate) : undefined,
   };
-  const { users: outlinerUsers } = useOutlinerUsers();
-
   const { stats, isLoading } = useDashboardStats({
     userId: searchParams.get('annotator') || undefined,
     startDate: startDate ? new Date(startDate).toISOString() : undefined,
@@ -81,8 +79,6 @@ function OutlinerAdminDashboard() {
       <OverviewTab
         stats={stats ?? null}
         isLoading={isLoading}
-        annotators={outlinerUsers}
-        dashboardUserFilter={selectedUserId || undefined}
         dashboardDateRange={{ start: startDate, end: endDate }}
       />
     </div>

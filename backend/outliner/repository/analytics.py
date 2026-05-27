@@ -9,6 +9,7 @@ from user.models.user import User
 
 from outliner.utils.bec_client.api import fetch_volume_batch_stats
 from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentRejection
+from outliner.repository.dashboard_view import build_dashboard_presentation
 from outliner.repository.segment_rejection import latest_rejection_row_per_segment_subquery
 
 _REVIEWER_WORK_STATS_ROLES = frozenset({"reviewer", "admin"})
@@ -257,6 +258,7 @@ def get_annotator_performance_breakdown(
     db: Session,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
+    user_id: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     doc_filters = [
         (OutlinerDocument.status != "deleted") | (OutlinerDocument.status.is_(None))
@@ -265,6 +267,8 @@ def get_annotator_performance_breakdown(
         doc_filters.append(OutlinerDocument.created_at >= start_date)
     if end_date:
         doc_filters.append(OutlinerDocument.created_at <= end_date)
+    if user_id:
+        doc_filters.append(OutlinerDocument.user_id == user_id)
     doc_scope = and_(*doc_filters)
 
     title_or_author = case(
@@ -295,9 +299,14 @@ def get_annotator_performance_breakdown(
         .group_by(OutlinerDocument.user_id)
         .all()
     )
+    has_title_or_author_seg = or_(
+        and_(OutlinerSegment.title.isnot(None), OutlinerSegment.title != ""),
+        and_(OutlinerSegment.author.isnot(None), OutlinerSegment.author != ""),
+    )
     approved_seg_clauses: List[Any] = [
         doc_scope,
         OutlinerSegment.status == "approved",
+        has_title_or_author_seg,
     ]
     _append_segment_activity_date_window(approved_seg_clauses, start_date, end_date)
     approved_seg_rows = (
@@ -707,7 +716,7 @@ def get_dashboard_stats(
     )
 
     annotator_performance = get_annotator_performance_breakdown(
-        db, start_date=start_date, end_date=end_date
+        db, start_date=start_date, end_date=end_date, user_id=user_id
     )
 
     reviewer_segment_activity = get_reviewer_segment_activity(
@@ -716,7 +725,7 @@ def get_dashboard_stats(
 
     volume_batch_stats = fetch_volume_batch_stats()
 
-    return {
+    raw_stats = {
         "document_count": document_count,
         "total_segments": total_segments,
         "segments_with_title_or_author": segments_with_title_or_author,
@@ -739,3 +748,5 @@ def get_dashboard_stats(
         "reviewer_segment_activity": reviewer_segment_activity,
         "volume_batch_stats": volume_batch_stats,
     }
+    raw_stats["presentation"] = build_dashboard_presentation(db, raw_stats)
+    return raw_stats

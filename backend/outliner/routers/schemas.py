@@ -469,6 +469,136 @@ class ReviewerSegmentActivityRow(BaseModel):
     )
 
 
+class DashboardChartSeries(BaseModel):
+    labels: List[str]
+    values: List[int]
+    keys: List[str] = Field(default_factory=list)
+
+
+class DashboardOverviewBar(BaseModel):
+    labels: List[str]
+    values: List[int]
+
+
+class DashboardLabeledCount(BaseModel):
+    key: str
+    label: str
+    count: int
+
+
+class DashboardDocumentStatusBreakdown(BaseModel):
+    approved: int = 0
+    completed: int = 0
+    active: int = 0
+    skipped: int = 0
+
+
+class AnnotatorQualityTableRow(BaseModel):
+    user_id: Optional[str] = None
+    name: str
+    segments: int
+    segments_approved: int
+    rejection_events: int
+    rejection_pct: float
+    correction_edits: int
+    corrections_pct: float
+
+
+class AnnotatorQualityChartMeta(BaseModel):
+    events: int = 0
+    approved: int = 0
+    edits: int = 0
+
+
+class AnnotatorQualityChart(BaseModel):
+    labels: List[str]
+    rejection_pct: List[float]
+    rejection_meta: List[AnnotatorQualityChartMeta]
+    edits_pct: List[float]
+    edits_meta: List[AnnotatorQualityChartMeta]
+    segment_counts: List[int]
+    approved_counts: List[int]
+
+
+class AnnotatorQualityView(BaseModel):
+    chart: AnnotatorQualityChart
+    table_rows: List[AnnotatorQualityTableRow]
+
+
+class AnnotatorWorkloadSeries(BaseModel):
+    label: str
+    values: List[int]
+
+
+class AnnotatorWorkloadView(BaseModel):
+    labels: List[str]
+    series: List[AnnotatorWorkloadSeries]
+
+
+class ReviewerActivityTableRow(BaseModel):
+    user_id: Optional[str] = None
+    name: str
+    segments_reviewed: int
+    with_title_author: int
+    title_author_edits: int
+    rejections: int
+    reviewed_share_pct: float
+    with_title_author_rate_pct: float
+    edits_rate_pct: float
+    rejections_rate_pct: float
+    reviewed_bar_pct: float
+    with_title_author_bar_pct: float
+    edits_bar_pct: float
+    rejections_bar_pct: float
+
+
+class ReviewerActivityChart(BaseModel):
+    labels: List[str]
+    segments_reviewed: List[int]
+    with_title_author: List[int]
+    title_author_edits: List[int]
+    rejections: List[int]
+
+
+class ReviewerActivityView(BaseModel):
+    has_activity: bool
+    chart: Optional[ReviewerActivityChart] = None
+    table_rows: List[ReviewerActivityTableRow] = Field(default_factory=list)
+
+
+class VolumeBatchTableRow(BaseModel):
+    batch_id: str
+    in_review: int
+    reviewed: int
+    in_progress: int
+    active: int
+
+
+class VolumeBatchView(BaseModel):
+    state: str = Field(
+        ...,
+        description="One of: unavailable, empty, rows",
+    )
+    rows: List[VolumeBatchTableRow] = Field(default_factory=list)
+    total_active: int = 0
+    show_low_batch_warning: bool = False
+
+
+class DashboardPresentation(BaseModel):
+    """Precomputed labels, charts, and table rows for the admin overview UI."""
+
+    overview_bar: DashboardOverviewBar
+    document_status_chart: Optional[DashboardChartSeries] = None
+    segment_status_chart: Optional[DashboardChartSeries] = None
+    segment_status_footer: List[DashboardLabeledCount]
+    segment_label_chart: Optional[DashboardChartSeries] = None
+    document_status_breakdown: DashboardDocumentStatusBreakdown
+    annotator_quality: Optional[AnnotatorQualityView] = None
+    annotator_workload: Optional[AnnotatorWorkloadView] = None
+    reviewer_activity: ReviewerActivityView
+    volume_batches: VolumeBatchView
+
+
 class DashboardStatsResponse(BaseModel):
     document_count: int
     total_segments: int
@@ -529,6 +659,10 @@ class DashboardStatsResponse(BaseModel):
             "Per batch ID from BEC OT API ``/api/v1/stats/volume-batches``. "
             "Not scoped by dashboard date or annotator filters. Null if the upstream request failed."
         ),
+    )
+    presentation: DashboardPresentation = Field(
+        ...,
+        description="Precomputed chart series, table rows, and display labels for the admin overview.",
     )
 
 

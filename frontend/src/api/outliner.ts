@@ -776,6 +776,136 @@ export interface ReviewerSegmentActivityRow {
   reviewer_rejection_count: number;
 }
 
+export interface DashboardChartSeries {
+  labels: string[];
+  values: number[];
+  keys?: string[];
+}
+
+export interface DashboardOverviewBar {
+  labels: string[];
+  values: number[];
+}
+
+export interface DashboardLabeledCount {
+  key: string;
+  label: string;
+  count: number;
+}
+
+export interface DashboardDocumentStatusBreakdown {
+  approved: number;
+  completed: number;
+  active: number;
+  skipped: number;
+}
+
+export interface AnnotatorQualityTableRow {
+  user_id: string | null;
+  name: string;
+  segments: number;
+  segments_approved: number;
+  rejection_events: number;
+  rejection_pct: number;
+  correction_edits: number;
+  corrections_pct: number;
+}
+
+export interface AnnotatorQualityChartMeta {
+  events?: number;
+  approved?: number;
+  edits?: number;
+}
+
+export interface AnnotatorQualityChart {
+  labels: string[];
+  rejection_pct: number[];
+  rejection_meta: AnnotatorQualityChartMeta[];
+  edits_pct: number[];
+  edits_meta: AnnotatorQualityChartMeta[];
+  segment_counts: number[];
+  approved_counts: number[];
+}
+
+/**
+ * Per-annotator quality from `annotator_performance` (all segments on in-range documents).
+ * Rejection/correction % denominators use `segments_approved` (status approved), not
+ * `segments_with_title_or_author` or `reviewed_segments`.
+ */
+export interface AnnotatorQualityView {
+  chart: AnnotatorQualityChart;
+  table_rows: AnnotatorQualityTableRow[];
+}
+
+export interface AnnotatorWorkloadSeries {
+  label: string;
+  values: number[];
+}
+
+export interface AnnotatorWorkloadView {
+  labels: string[];
+  series: AnnotatorWorkloadSeries[];
+}
+
+export interface ReviewerActivityTableRow {
+  user_id: string | null;
+  name: string;
+  segments_reviewed: number;
+  with_title_author: number;
+  title_author_edits: number;
+  rejections: number;
+  reviewed_share_pct: number;
+  with_title_author_rate_pct: number;
+  edits_rate_pct: number;
+  rejections_rate_pct: number;
+  reviewed_bar_pct: number;
+  with_title_author_bar_pct: number;
+  edits_bar_pct: number;
+  rejections_bar_pct: number;
+}
+
+export interface ReviewerActivityChart {
+  labels: string[];
+  segments_reviewed: number[];
+  with_title_author: number[];
+  title_author_edits: number[];
+  rejections: number[];
+}
+
+export interface ReviewerActivityView {
+  has_activity: boolean;
+  chart: ReviewerActivityChart | null;
+  table_rows: ReviewerActivityTableRow[];
+}
+
+export interface VolumeBatchTableRow {
+  batch_id: string;
+  in_review: number;
+  reviewed: number;
+  in_progress: number;
+  active: number;
+}
+
+export interface VolumeBatchView {
+  state: 'unavailable' | 'empty' | 'rows';
+  rows: VolumeBatchTableRow[];
+  total_active: number;
+  show_low_batch_warning: boolean;
+}
+
+export interface DashboardPresentation {
+  overview_bar: DashboardOverviewBar;
+  document_status_chart: DashboardChartSeries | null;
+  segment_status_chart: DashboardChartSeries | null;
+  segment_status_footer: DashboardLabeledCount[];
+  segment_label_chart: DashboardChartSeries | null;
+  document_status_breakdown: DashboardDocumentStatusBreakdown;
+  annotator_quality: AnnotatorQualityView | null;
+  annotator_workload: AnnotatorWorkloadView | null;
+  reviewer_activity: ReviewerActivityView;
+  volume_batches: VolumeBatchView;
+}
+
 export interface DashboardStats {
   document_count: number;
   total_segments: number;
@@ -818,6 +948,7 @@ export interface DashboardStats {
    * Null when the cataloger server could not reach the upstream API.
    */
   volume_batch_stats?: Record<string, VolumeBatchStatusCounts> | null;
+  presentation: DashboardPresentation;
 }
 
 export const getDashboardStats = async (

@@ -2,12 +2,11 @@ import { useMemo, useState, type ReactNode } from 'react'
 import {
   FileText,
   Layers,
-  Link2,
   Library,
   PenLine,
-  PencilLine,
   BarChart3,
   Table2,
+  AlertTriangle,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import {
@@ -24,8 +23,10 @@ import {
 } from 'chart.js'
 import type { ChartOptions, TooltipItem } from 'chart.js'
 import { Bar, Doughnut, Line } from 'react-chartjs-2'
-import StatsCard from '../shared/StatsCard'
-import type { DashboardStats, VolumeBatchStatusCounts } from '@/api/outliner'
+import type {
+  DashboardChartSeries,
+  DashboardStats,
+} from '@/api/outliner'
 import { useActiveBatch } from '@/hooks'
 
 ChartJS.register(
@@ -43,10 +44,7 @@ ChartJS.register(
 interface OverviewTabProps {
   readonly stats: DashboardStats | null
   readonly isLoading?: boolean
-  readonly annotators?: ReadonlyArray<{ id: string; name: string | null; role?: string | null }>
-  /** When set, top self-reviewers list is limited to this user (matches scoped dashboard totals). */
-  readonly dashboardUserFilter?: string
-  /** HTML date inputs from the admin dashboard; reviewer activity uses the same API date scope. */
+  /** HTML date inputs from the admin dashboard; shown in reviewer activity empty-state copy. */
   readonly dashboardDateRange?: { readonly start: string; readonly end: string }
 }
 
@@ -270,7 +268,7 @@ const ANNOTATOR_QUALITY_SIGNALS_VBAR_OPTIONS: ChartOptions<'bar'> = {
           if (tooltipItem.datasetIndex === 2) {
             return `Total segments in range: ${count}`
           }
-          return `Reviewed (in period): ${count}`
+          return `Reviewed with title/author (in period): ${count}`
         },
       },
     },
@@ -395,17 +393,6 @@ const REVIEWER_ACTIVITY_VBAR_OPTIONS: ChartOptions<'bar'> = {
   },
 }
 
-const DOC_STATUS_ORDER = [
-  'active',
-  'completed',
-  'approved',
-  'rejected',
-  'skipped',
-  'deleted',
-  'unknown',
-] as const
-const SEG_STATUS_ORDER = ['unchecked', 'checked', 'approved', 'rejected'] as const
-
 const DOC_STATUS_COLORS: Record<string, string> = {
   active: TEAL,
   completed: EMERALD,
@@ -430,40 +417,25 @@ const CHART_PALETTE = [PRIMARY, TEAL, VIOLET, GOLD, '#0369a1', '#86198f', '#3f62
 const cardPanel =
   'rounded-2xl border border-border/70 bg-card/95 p-6 shadow-elegant backdrop-blur-[2px]'
 
-function sortKeys(keys: string[], preferred: readonly string[]): string[] {
-  const pref = preferred.filter((k) => keys.includes(k))
-  const rest = keys.filter((k) => !preferred.includes(k)).sort()
-  return [...pref, ...rest]
-}
-
 function colorsForKeys(keys: string[], map: Record<string, string>, fallback: string[]): string[] {
   return keys.map((k, i) => map[k] ?? fallback[i % fallback.length])
 }
 
-function formatChartLabel(key: string): string {
-  if (key === 'TOC') return 'TOC'
-  if (key === 'unset' || key === 'unknown') return key === 'unset' ? 'Unset' : 'Unknown'
-  if (key ==='approved') return 'Reviewed'
-  if (key ==='checked') return 'Annotated'
-  if (key ==='unchecked') return 'Annotating'
-  if (key==='completed') return 'Annotated'
-  if (key==='active') return 'Annotating'
-  return key.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
-/** Total segments footer: human workflow labels for segment status keys (current snapshot). */
-function segmentStatusLabelForTotalSegments(key: string): string {
-  switch (key) {
-    case 'unchecked':
-      return 'Annotating'
-    case 'checked':
-      return 'Annotated'
-    case 'approved':
-      return 'Reviewed (current)'
-    case 'rejected':
-      return 'Rejected'
-    default:
-      return formatChartLabel(key)
+function doughnutChartData(
+  series: DashboardChartSeries | null | undefined,
+  colorMap: Record<string, string>,
+): { labels: string[]; datasets: { data: number[]; backgroundColor: string[]; borderWidth: number }[] } | null {
+  if (!series || series.values.length === 0) return null
+  const keys = series.keys ?? []
+  return {
+    labels: series.labels,
+    datasets: [
+      {
+        data: series.values,
+        backgroundColor: colorsForKeys(keys, colorMap, CHART_PALETTE),
+        borderWidth: 0,
+      },
+    ],
   }
 }
 
@@ -493,49 +465,12 @@ function SectionHeading({
   )
 }
 
-function MetricShell({
-  accentClass,
-  children,
-}: {
-  readonly accentClass: string
-  readonly children: ReactNode
-}) {
-  return (
-    <MotionSection  >
-      <div
-        className={`pointer-events-none absolute left-0 top-5 z-10 h-[calc(100%-2.5rem)] w-1 rounded-full bg-gradient-to-b ${accentClass} opacity-[0.92]`}
-        aria-hidden
-      />
-        {children}
-    </MotionSection>
-  )
-}
-
-function isReviewerOrAdminRole(role: string | null | undefined): boolean {
-  const n = (role ?? 'user').trim().toLowerCase()
-  return n === 'reviewer' || n === 'admin'
-}
-
-function annotatorDisplayName(
-  userId: string | null,
-  annotators: ReadonlyArray<{ id: string; name: string | null; role?: string | null }>,
-): string {
-  if (userId == null || userId === '') return 'Unassigned'
-  const u = annotators.find((a) => a.id === userId)
-  const n = u?.name?.trim()
-  return n || userId
-}
 
 function formatReviewerActivityDateHint(
   range: { readonly start: string; readonly end: string } | undefined,
 ): string | undefined {
   if (range == null || range.start === '' || range.end === '') return undefined
   return ` ${range.start}–${range.end}`
-}
-
-function roundReviewerActivityPct(numerator: number, denominator: number): number {
-  if (denominator <= 0) return 0
-  return Math.round((numerator / denominator) * 1000) / 10
 }
 
 function ReviewerActivityMetricCell({
@@ -577,11 +512,45 @@ function ReviewerActivityMetricCell({
   )
 }
 
+const WORKLOAD_SERIES_STYLES: Record<
+  string,
+  { borderColor: string; backgroundColor: string; pointBackgroundColor: string }
+> = {
+  Segments: {
+    borderColor: TEAL,
+    backgroundColor: 'rgba(20, 165, 178, 0.12)',
+    pointBackgroundColor: TEAL,
+  },
+  'Title / author': {
+    borderColor: VIOLET,
+    backgroundColor: 'rgba(107, 33, 168, 0.12)',
+    pointBackgroundColor: VIOLET,
+  },
+  'Unresolved rejected': {
+    borderColor: RED,
+    backgroundColor: 'rgba(185, 28, 28, 0.12)',
+    pointBackgroundColor: RED,
+  },
+  'Reviewed (as reviewer)': {
+    borderColor: EMERALD,
+    backgroundColor: 'rgba(15, 118, 110, 0.12)',
+    pointBackgroundColor: EMERALD,
+  },
+  'Rejections logged': {
+    borderColor: GOLD,
+    backgroundColor: 'rgba(180, 83, 9, 0.12)',
+    pointBackgroundColor: GOLD,
+  },
+  'Reviewer title/author edits': {
+    borderColor: ORANGE,
+    backgroundColor: 'rgba(194, 65, 12, 0.12)',
+    pointBackgroundColor: ORANGE,
+  },
+}
+
 function OverviewTab({
   stats,
   isLoading,
-  annotators = [],
-  dashboardUserFilter,
   dashboardDateRange,
 }: OverviewTabProps) {
   const [annotatorQualityView, setAnnotatorQualityView] = useState<'chart' | 'table'>('chart')
@@ -589,175 +558,80 @@ function OverviewTab({
   const { data: activeBatchData, setActiveBatch, isUpdating: activeBatchUpdating } = useActiveBatch()
   const activeBatchId = activeBatchData?.batch_id ?? null
 
-  const overviewBarData = useMemo(() => {
-    if (!stats) return null
-    const skippedDocs = stats.document_status_counts.skipped ?? 0
-    const reviewerCorrections =
-      stats.segments_reviewer_corrected_title_or_author ?? 0
-    return {
-      labels: [
-        'Documents',
-        'Total segments',
-        'With title/author',
-        'Skipped docs',
-        'Unresolved rejected',
-        'Reviewer title/author edits'
-      ],
-      datasets: [
-        {
-          data: [
-            stats.document_count,
-            stats.total_segments,
-            stats.segments_with_title_or_author,
-            skippedDocs,
-            stats.rejection_count,
-            reviewerCorrections,
-          ],
-          backgroundColor: [TEAL, EMERALD, VIOLET, GOLD, RED, ORANGE],
-          borderColor: [TEAL, EMERALD, VIOLET, GOLD, RED, ORANGE].map((c) => c),
-          borderWidth: 1,
-          borderRadius: 8,
-        },
-      ],
-    }
-  }, [stats])
+  const presentation = stats?.presentation
 
-  const documentStatusChart = useMemo(() => {
-    if (!stats) return null
-    const entries = Object.entries(stats.document_status_counts).filter(([, v]) => v > 0)
-    if (entries.length === 0) return null
-    const keys = sortKeys(entries.map(([k]) => k), [...DOC_STATUS_ORDER])
-    const data = keys.map((k) => stats.document_status_counts[k] ?? 0)
-    return {
-      labels: keys.map(formatChartLabel),
-      datasets: [
-        {
-          data,
-          backgroundColor: colorsForKeys(keys, DOC_STATUS_COLORS, CHART_PALETTE),
-          borderWidth: 0,
-        },
-      ],
-    }
-  }, [stats])
+const documentStatusChart = useMemo(
+    () => doughnutChartData(presentation?.document_status_chart, DOC_STATUS_COLORS),
+    [presentation?.document_status_chart],
+  )
 
-  const segmentStatusChart = useMemo(() => {
-    if (!stats) return null
-    const entries = Object.entries(stats.segment_status_counts).filter(([, v]) => v > 0)
-    if (entries.length === 0) return null
-    const keys = sortKeys(entries.map(([k]) => k), [...SEG_STATUS_ORDER])
-    const data = keys.map((k) => stats.segment_status_counts[k] ?? 0)
-    return {
-      labels: keys.map(formatChartLabel),
-      datasets: [
-        {
-          data,
-          backgroundColor: colorsForKeys(keys, SEG_STATUS_COLORS, CHART_PALETTE),
-          borderWidth: 0,
-        },
-      ],
-    }
-  }, [stats])
+  const segmentStatusChart = useMemo(
+    () => doughnutChartData(presentation?.segment_status_chart, SEG_STATUS_COLORS),
+    [presentation?.segment_status_chart],
+  )
 
-  /** All segment statuses (canonical order, plus any extra keys from API) for Total segments footer. */
-  const segmentStatusFooterRows = useMemo(() => {
-    if (!stats) return []
-    const c = stats.segment_status_counts
-    const keys = sortKeys(
-      [...new Set([...SEG_STATUS_ORDER, ...Object.keys(c)])],
-      [...SEG_STATUS_ORDER],
-    )
-    return keys.map((k) => ({
-      key: k,
-      label: segmentStatusLabelForTotalSegments(k),
-      count: c[k] ?? 0,
-    }))
-  }, [stats])
+  const segmentStatusFooterRows = presentation?.segment_status_footer ?? []
+
+  // Total rejection events in the selected period — sum of per-annotator rows from annotator quality.
+  // This is the same data source as the Annotator quality chart/table, so the two sections always agree.
+  const totalRejectionEventsInPeriod = useMemo(
+    () =>
+      presentation?.annotator_quality?.table_rows?.reduce(
+        (sum, r) => sum + r.rejection_events,
+        0,
+      ) ?? 0,
+    [presentation?.annotator_quality?.table_rows],
+  )
+
+  // Total reviewer corrections in the period — same source as the annotator quality table.
+  const totalReviewerCorrectionsInPeriod = useMemo(
+    () =>
+      presentation?.annotator_quality?.table_rows?.reduce(
+        (sum, r) => sum + r.correction_edits,
+        0,
+      ) ?? 0,
+    [presentation?.annotator_quality?.table_rows],
+  )
 
   const labelBarData = useMemo(() => {
-    if (!stats) return null
-    const entries = Object.entries(stats.segment_label_counts).filter(([, v]) => v > 0)
-    if (entries.length === 0) return null
-    entries.sort((a, b) => b[1] - a[1])
-    const labels = entries.map(([k]) => formatChartLabel(k))
-    const data = entries.map(([, v]) => v)
+    const series = presentation?.segment_label_chart
+    if (!series) return null
     return {
-      labels,
+      labels: series.labels,
       datasets: [
         {
           label: 'Segments',
-          data,
+          data: series.values,
           backgroundColor: PRIMARY,
           borderRadius: 8,
         },
       ],
     }
-  }, [stats])
+  }, [presentation?.segment_label_chart])
 
   const annotatorCompareData = useMemo(() => {
-    if (!stats) return null
-    const perf = stats.annotator_performance ?? []
-    if (perf.length === 0) return null
-
+    const workload = presentation?.annotator_workload
+    if (!workload) return null
     return {
-      labels: perf.map((r) => annotatorDisplayName(r.user_id, annotators)),
-      datasets: [
-        {
-          label: 'Segments',
-          data: perf.map((r) => r.segment_count),
-          borderColor: TEAL,
-          backgroundColor: 'rgba(20, 165, 178, 0.12)',
+      labels: workload.labels,
+      datasets: workload.series.map((s) => {
+        const style = WORKLOAD_SERIES_STYLES[s.label] ?? {
+          borderColor: PRIMARY,
+          backgroundColor: 'rgba(175, 38, 48, 0.12)',
+          pointBackgroundColor: PRIMARY,
+        }
+        return {
+          label: s.label,
+          data: s.values,
+          borderColor: style.borderColor,
+          backgroundColor: style.backgroundColor,
           borderWidth: 2,
           tension: 0.25,
-          pointBackgroundColor: TEAL,
-        },
-        {
-          label: 'Title / author',
-          data: perf.map((r) => r.segments_with_title_or_author),
-          borderColor: VIOLET,
-          backgroundColor: 'rgba(107, 33, 168, 0.12)',
-          borderWidth: 2,
-          tension: 0.25,
-          pointBackgroundColor: VIOLET,
-        },
-        {
-          label: 'Unresolved rejected',
-          data: perf.map((r) => r.rejection_count),
-          borderColor: RED,
-          backgroundColor: 'rgba(185, 28, 28, 0.12)',
-          borderWidth: 2,
-          tension: 0.25,
-          pointBackgroundColor: RED,
-        },
-        {
-          label: 'Reviewed (as reviewer)',
-          data: perf.map((r) => r.segments_reviewed ?? 0),
-          borderColor: EMERALD,
-          backgroundColor: 'rgba(15, 118, 110, 0.12)',
-          borderWidth: 2,
-          tension: 0.25,
-          pointBackgroundColor: EMERALD,
-        },
-        {
-          label: 'Rejections logged',
-          data: perf.map((r) => r.reviewer_rejection_count ?? 0),
-          borderColor: GOLD,
-          backgroundColor: 'rgba(180, 83, 9, 0.12)',
-          borderWidth: 2,
-          tension: 0.25,
-          pointBackgroundColor: GOLD,
-        },
-        {
-          label: 'Reviewer title/author edits',
-          data: perf.map((r) => r.segments_reviewer_corrected_title_or_author ?? 0),
-          borderColor: ORANGE,
-          backgroundColor: 'rgba(194, 65, 12, 0.12)',
-          borderWidth: 2,
-          tension: 0.25,
-          pointBackgroundColor: ORANGE,
-        },
-      ],
+          pointBackgroundColor: style.pointBackgroundColor,
+        }
+      }),
     }
-  }, [stats, annotators])
+  }, [presentation?.annotator_workload])
 
   const annotatorWorkloadLineLayout = useMemo(() => {
     if (!annotatorCompareData) return null
@@ -773,82 +647,51 @@ function OverviewTab({
     }
   }, [annotatorCompareData])
 
-  const annotatorQualitySignals = useMemo(() => {
-    if (!stats) return null
-    let perf = stats.annotator_performance ?? []
-    if (dashboardUserFilter) {
-      perf = perf.filter((r) => r.user_id === dashboardUserFilter)
-    }
-    if (perf.length === 0) return null
-    const rows = perf
-      .map((r) => {
-        const events = r.rejection_event_count ?? 0
-        const edits = r.segments_reviewer_corrected_title_or_author ?? 0
-        const approved = r.segments_approved ?? 0
-        const rejectionPct =
-          approved > 0 ? Math.round((events / approved) * 1000) / 10 : 0
-        const editsPct =
-          approved > 0 ? Math.round((edits / approved) * 1000) / 10 : 0
-        return { ...r, events, edits, approved, rejectionPct, editsPct }
-      })
-      .sort((a, b) => {
-        const ta = a.events + a.edits
-        const tb = b.events + b.edits
-        if (tb !== ta) return tb - ta
-        if (b.rejectionPct !== a.rejectionPct) return b.rejectionPct - a.rejectionPct
-        return b.editsPct - a.editsPct
-      })
-    const chartData = {
-      labels: rows.map((r) => annotatorDisplayName(r.user_id, annotators)),
+  const annotatorQuality = presentation?.annotator_quality ?? null
+
+  const annotatorQualityChartData = useMemo(() => {
+    const chart = annotatorQuality?.chart
+    if (!chart) return null
+    return {
+      labels: chart.labels,
       datasets: [
         {
           label: 'Rejection (% of reviewed)',
           yAxisID: 'y',
-          data: rows.map((r) => r.rejectionPct),
-          metaReject: rows.map((r) => ({ events: r.events, approved: r.approved })),
+          data: chart.rejection_pct,
+          metaReject: chart.rejection_meta,
           backgroundColor: RED,
           borderRadius: 6,
         },
         {
           label: 'Corrections at review (% of reviewed)',
           yAxisID: 'y',
-          data: rows.map((r) => r.editsPct),
-          metaEdits: rows.map((r) => ({ edits: r.edits, approved: r.approved })),
+          data: chart.edits_pct,
+          metaEdits: chart.edits_meta,
           backgroundColor: INK,
           borderRadius: 6,
         },
         {
           label: 'Total segments (in range)',
           yAxisID: 'y1',
-          data: rows.map((r) => r.segment_count),
+          data: chart.segment_counts,
           backgroundColor: TEAL,
           borderRadius: 6,
         },
         {
-          label: 'Reviewed (in period)',
+          label: 'Reviewed with title/author (in period)',
           yAxisID: 'y1',
-          data: rows.map((r) => r.approved),
+          data: chart.approved_counts,
           backgroundColor: BLUE_DARK,
           borderRadius: 6,
         },
       ],
     }
-    const tableRows = rows.map((r) => ({
-      key: r.user_id ?? '__none__',
-      name: annotatorDisplayName(r.user_id, annotators),
-      segments: r.segment_count,
-      segmentsApproved: r.approved,
-      rejectionEvents: r.events,
-      rejectionPct: r.rejectionPct,
-      correctionEdits: r.edits,
-      correctionsPct: r.editsPct,
-    }))
-    return { chartData, tableRows }
-  }, [stats, annotators, dashboardUserFilter])
+  }, [annotatorQuality?.chart])
 
   const annotatorQualityVBarLayout = useMemo(() => {
-    if (!annotatorQualitySignals) return null
-    const n = annotatorQualitySignals.chartData.labels.length
+    if (!annotatorQualityChartData) return null
+    const n = annotatorQualityChartData.labels.length
     return {
       chartMinWidthPx: Math.max(
         ANNOTATOR_QUALITY_VBAR_MIN_WIDTH,
@@ -856,16 +699,10 @@ function OverviewTab({
       ),
       height: ANNOTATOR_QUALITY_VBAR_HEIGHT,
     }
-  }, [annotatorQualitySignals])
+  }, [annotatorQualityChartData])
 
-  const reviewerActivityRows = useMemo(() => {
-    const raw = stats?.reviewer_segment_activity ?? []
-    return raw.filter((row) => {
-      const u = annotators.find((a) => a.id === row.user_id)
-      if (u?.role == null || u.role === '') return true
-      return isReviewerOrAdminRole(u.role)
-    })
-  }, [stats?.reviewer_segment_activity, annotators])
+  const reviewerActivity = presentation?.reviewer_activity
+  const reviewerRosterCount = stats?.reviewer_segment_activity?.length ?? 0
 
   const reviewerActivityScopeHint = useMemo(
     () => formatReviewerActivityDateHint(dashboardDateRange),
@@ -883,104 +720,43 @@ function OverviewTab({
     return ` (${dashboardDateRange.start}–${dashboardDateRange.end})`
   }, [dashboardDateRange])
 
-  const reviewerActivitySignals = useMemo(() => {
-    const rows = reviewerActivityRows.filter(
-      (r) =>
-        r.segments_recorded_as_reviewer > 0 ||
-        (r.reviewed_segments_with_title_or_author ?? 0) > 0 ||
-        r.reviewer_title_author_edits > 0 ||
-        (r.reviewer_rejection_count ?? 0) > 0,
-    )
-    if (rows.length === 0) return null
-    const sorted = [...rows].sort((a, b) => {
-      const ta =
-        a.segments_recorded_as_reviewer +
-        a.reviewer_title_author_edits +
-        (a.reviewer_rejection_count ?? 0)
-      const tb =
-        b.segments_recorded_as_reviewer +
-        b.reviewer_title_author_edits +
-        (b.reviewer_rejection_count ?? 0)
-      if (tb !== ta) return tb - ta
-      if (b.segments_recorded_as_reviewer !== a.segments_recorded_as_reviewer) {
-        return b.segments_recorded_as_reviewer - a.segments_recorded_as_reviewer
-      }
-      return (b.reviewer_rejection_count ?? 0) - (a.reviewer_rejection_count ?? 0)
-    })
-    const chartData = {
-      labels: sorted.map((r) => annotatorDisplayName(r.user_id, annotators)),
+  const reviewerActivityChartData = useMemo(() => {
+    const chart = reviewerActivity?.chart
+    if (!chart) return null
+    return {
+      labels: chart.labels,
       datasets: [
         {
           label: 'Segments reviewed',
-          data: sorted.map((r) => r.segments_recorded_as_reviewer),
+          data: chart.segments_reviewed,
           backgroundColor: EMERALD,
           borderRadius: 6,
         },
         {
           label: 'With title/author',
-          data: sorted.map((r) => r.reviewed_segments_with_title_or_author ?? 0),
+          data: chart.with_title_author,
           backgroundColor: VIOLET,
           borderRadius: 6,
         },
         {
           label: 'Reviewer title/author edits',
-          data: sorted.map((r) => r.reviewer_title_author_edits),
+          data: chart.title_author_edits,
           backgroundColor: ORANGE,
           borderRadius: 6,
         },
         {
           label: 'Rejections logged',
-          data: sorted.map((r) => r.reviewer_rejection_count ?? 0),
+          data: chart.rejections,
           backgroundColor: RED,
           borderRadius: 6,
         },
       ],
     }
-    const totalReviewed = sorted.reduce((s, r) => s + r.segments_recorded_as_reviewer, 0)
-    const maxReviewed = Math.max(...sorted.map((r) => r.segments_recorded_as_reviewer), 0)
-    const maxWithTitleAuthor = Math.max(
-      ...sorted.map((r) => r.reviewed_segments_with_title_or_author ?? 0),
-      0,
-    )
-    const maxEdits = Math.max(...sorted.map((r) => r.reviewer_title_author_edits), 0)
-    const maxRejections = Math.max(
-      ...sorted.map((r) => r.reviewer_rejection_count ?? 0),
-      0,
-    )
-    const tableRows = sorted.map((r) => {
-      const segmentsReviewed = r.segments_recorded_as_reviewer
-      const withTitleAuthor = r.reviewed_segments_with_title_or_author ?? 0
-      const titleAuthorEdits = r.reviewer_title_author_edits
-      const rejections = r.reviewer_rejection_count ?? 0
-      return {
-        key: r.user_id ?? '__none__',
-        name: annotatorDisplayName(r.user_id, annotators),
-        segmentsReviewed,
-        withTitleAuthor,
-        titleAuthorEdits,
-        rejections,
-        reviewedSharePct: roundReviewerActivityPct(segmentsReviewed, totalReviewed),
-        withTitleAuthorRatePct: roundReviewerActivityPct(
-          withTitleAuthor,
-          segmentsReviewed,
-        ),
-        editsRatePct: roundReviewerActivityPct(titleAuthorEdits, segmentsReviewed),
-        rejectionsRatePct: roundReviewerActivityPct(rejections, segmentsReviewed),
-        reviewedBarPct:
-          maxReviewed > 0 ? (segmentsReviewed / maxReviewed) * 100 : 0,
-        withTitleAuthorBarPct:
-          maxWithTitleAuthor > 0 ? (withTitleAuthor / maxWithTitleAuthor) * 100 : 0,
-        editsBarPct: maxEdits > 0 ? (titleAuthorEdits / maxEdits) * 100 : 0,
-        rejectionsBarPct:
-          maxRejections > 0 ? (rejections / maxRejections) * 100 : 0,
-      }
-    })
-    return { chartData, tableRows }
-  }, [reviewerActivityRows, annotators])
+  }, [reviewerActivity?.chart])
 
   const reviewerActivityVBarLayout = useMemo(() => {
-    if (!reviewerActivitySignals) return null
-    const n = reviewerActivitySignals.chartData.labels.length
+    if (!reviewerActivityChartData) return null
+    const n = reviewerActivityChartData.labels.length
     return {
       chartMinWidthPx: Math.max(
         REVIEWER_ACTIVITY_VBAR_MIN_WIDTH,
@@ -988,35 +764,7 @@ function OverviewTab({
       ),
       height: REVIEWER_ACTIVITY_VBAR_HEIGHT,
     }
-  }, [reviewerActivitySignals])
-
-  const volumeBatchSection = useMemo(() => {
-    const raw = stats?.volume_batch_stats
-    if (raw === undefined || raw === null) {
-      return { state: 'unavailable' as const }
-    }
-    const entries = Object.entries(raw) as [string, VolumeBatchStatusCounts][]
-    if (entries.length === 0) {
-      return { state: 'empty' as const }
-    }
-    const rows = entries
-      .map(([batchId, c]) => ({
-        batchId,
-        in_review: c.in_review,
-        reviewed: c.reviewed,
-        in_progress: c.in_progress,
-        active: c.active,
-      }))
-      .sort((a, b) => {
-        const na = Number(a.batchId)
-        const nb = Number(b.batchId)
-        if (!Number.isNaN(na) && !Number.isNaN(nb) && na !== nb) {
-          return na - nb
-        }
-        return a.batchId.localeCompare(b.batchId, undefined, { numeric: true })
-      })
-    return { state: 'rows' as const, rows }
-  }, [stats?.volume_batch_stats])
+  }, [reviewerActivityChartData])
 
   if (isLoading && !stats) {
     return (
@@ -1034,7 +782,7 @@ function OverviewTab({
     )
   }
 
-  if (!stats) {
+  if (!stats?.presentation) {
     return (
       <p
         className={`${cardPanel} border-dashed py-16 text-center text-sm text-muted-foreground`}
@@ -1045,15 +793,11 @@ function OverviewTab({
     )
   }
 
+  const view = stats.presentation
   const coverage = stats.annotation_coverage_pct
-  const skippedDocuments = stats.document_status_counts.skipped ?? 0
-  const docApproved = stats.document_status_counts.approved ?? 0
-  const docCompleted = stats.document_status_counts.completed ?? 0
-  const docActive = stats.document_status_counts.active ?? 0
+  const docBreakdown = view.document_status_breakdown
 
-  const statsCardInner = 'border-0 bg-transparent shadow-none hover:shadow-none'
-
-  return (
+return (
     <div className="relative space-y-12">
       <div
         className="pointer-events-none absolute inset-0 -z-10 rounded-[2rem] opacity-[0.45]"
@@ -1065,122 +809,144 @@ function OverviewTab({
       />
 
     
-      <MotionSection
-      >
+      {/* ─── Pipeline Overview ─────────────────────────────────────────── */}
+      <MotionSection>
         <SectionHeading
-          eyebrow="Volume"
-          title="Key metrics for Annotators"
-          description="this data is only valid for annotator's work"
+          eyebrow="Pipeline"
+          title="Workflow overview"
+          description="Live snapshot of where every document and segment sits in the annotation pipeline. Colour-coded stages let you spot bottlenecks at a glance."
         />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-7">
-          <MetricShell accentClass="from-teal-600 to-teal-400">
-            <StatsCard
-              className={statsCardInner}
-              icon={<FileText className="h-6 w-6 text-teal-600" strokeWidth={1.75} />}
-              title="Documents"
-              value={stats.document_count}
-              colorClass="text-teal-700"
-              hint="In current filters"
-              footer={
-                <div className="space-y-1.5 border-t border-teal-200/80 pt-3 text-xs text-muted-foreground">
-                  <div className="flex justify-between gap-2">
-                    <span>Reviewed (current)</span>
-                    <span className="shrink-0 font-semibold tabular-nums text-foreground">
-                      {docApproved.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span>Annotated</span>
-                    <span className="shrink-0 font-semibold tabular-nums text-foreground">
-                      {docCompleted.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span>Annotating</span>
-                    <span className="shrink-0 font-semibold tabular-nums text-foreground">
-                      {docActive.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span>Skipped</span>
-                    <span className="shrink-0 font-semibold tabular-nums text-foreground">
-                      {skippedDocuments.toLocaleString()}
-                    </span>
-                  </div>
+        <div className="grid gap-5 lg:grid-cols-3">
+
+          {/* ── Tile 1: Document pipeline ── */}
+          <div className="flex flex-col gap-4 rounded-xl border border-stone-200/80 bg-white/70 p-5">
+            <div className="flex items-center gap-2.5">
+              <FileText className="h-5 w-5 shrink-0 text-teal-600" strokeWidth={1.75} />
+              <p className="text-sm font-semibold text-foreground">Documents</p>
+              <span className="ml-auto text-2xl font-bold tabular-nums text-teal-700">
+                {stats.document_count.toLocaleString()}
+              </span>
+            </div>
+            {/* Stacked pipeline bar */}
+            <PipelineBar
+              total={stats.document_count}
+              items={[
+                { label: 'Annotating', value: docBreakdown.active, color: TEAL },
+                { label: 'Annotated', value: docBreakdown.completed, color: EMERALD },
+                { label: 'Reviewed', value: docBreakdown.approved, color: VIOLET },
+                { label: 'Skipped', value: docBreakdown.skipped, color: GOLD },
+              ]}
+            />
+            <div className="space-y-2 text-xs">
+              <PipelineStatRow dot={TEAL}    label="Annotating"         value={docBreakdown.active}     total={stats.document_count} />
+              <PipelineStatRow dot={EMERALD} label="Annotated"          value={docBreakdown.completed}  total={stats.document_count} hint="done by annotator, pending review" />
+              <PipelineStatRow dot={VIOLET}  label="Reviewed"           value={docBreakdown.approved}   total={stats.document_count} hint="approved by reviewer" />
+              <PipelineStatRow dot={GOLD}    label="Skipped"            value={docBreakdown.skipped}    total={stats.document_count} />
+            </div>
+          </div>
+
+          {/* ── Tile 2: Annotation coverage ── */}
+          <div className="flex flex-col gap-4 rounded-xl border border-stone-200/80 bg-white/70 p-5">
+            <div className="flex items-center gap-2.5">
+              <PenLine className="h-5 w-5 shrink-0 text-violet-600" strokeWidth={1.75} />
+              <p className="text-sm font-semibold text-foreground">Annotation coverage</p>
+              <span className="ml-auto text-2xl font-bold tabular-nums text-violet-700">
+                {coverage}%
+              </span>
+            </div>
+            {/* Coverage progress bar */}
+            <div
+              className="h-3 w-full overflow-hidden rounded-full bg-stone-100"
+              role="progressbar"
+              aria-valuenow={coverage}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <motion.div
+                className="h-full rounded-full bg-gradient-to-r from-violet-500 to-violet-700"
+                initial={{ width: 0 }}
+                animate={{ width: `${Math.min(100, Math.max(0, coverage))}%` }}
+                transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {stats.segments_with_title_or_author.toLocaleString()} of{' '}
+              {stats.total_segments.toLocaleString()} segments have a title or author set.
+            </p>
+            {/* Stage breakdown — only segments that have a title/author */}
+            <div className="space-y-2 border-t border-stone-100 pt-3 text-xs">
+              <p className="font-semibold text-muted-foreground uppercase tracking-wide text-[10px]">Segments with title/author</p>
+              <PipelineStatRow dot={TEAL}    label="Annotating"           value={stats.unchecked_segments_with_title_or_author ?? 0} total={stats.segments_with_title_or_author} />
+              <PipelineStatRow dot={GOLD}    label="Annotated (pending review)" value={stats.annotated_segments}                      total={stats.segments_with_title_or_author} />
+              <PipelineStatRow dot={EMERALD} label="Reviewed (in period)" value={stats.reviewed_segments}                            total={stats.segments_with_title_or_author} hint="approved in selected date range" />
+              <PipelineStatRow dot={RED}     label="In rejected state"    value={stats.rejected_segments_with_title_or_author ?? 0}  total={stats.segments_with_title_or_author} hint="current status, not date-filtered" />
+            </div>
+          </div>
+
+          {/* ── Tile 3: Quality health ── */}
+          <div className="flex flex-col gap-4 rounded-xl border border-stone-200/80 bg-white/70 p-5">
+            <div className="flex items-center gap-2.5">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-red-500" strokeWidth={1.75} />
+              <p className="text-sm font-semibold text-foreground">Quality health</p>
+            </div>
+
+            {/* Rejection events — same source as Annotator quality section */}
+            <div className={`rounded-lg px-4 py-3 ${totalRejectionEventsInPeriod > 0 ? 'bg-red-50 border border-red-200' : 'bg-emerald-50 border border-emerald-200'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-widest ${totalRejectionEventsInPeriod > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                Rejection events (in period)
+              </p>
+              <p className={`mt-0.5 text-3xl font-bold tabular-nums ${totalRejectionEventsInPeriod > 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+                {totalRejectionEventsInPeriod.toLocaleString()}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {totalRejectionEventsInPeriod > 0
+                  ? 'Total rejection events filed in the selected period.'
+                  : 'No rejection events in this period — all clear.'}
+              </p>
+            </div>
+
+            <div className="space-y-2.5 text-xs">
+              {/* Unresolved rejections — actionable open items */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: RED }} />
+                  <span className="text-muted-foreground" title="Segments currently in rejected state with an unresolved rejection record in this period — needs annotator re-work.">
+                    Unresolved (open, needs re-work)
+                  </span>
                 </div>
-              }
-            />
-          </MetricShell>
-          <MetricShell accentClass="from-emerald-700 to-emerald-500">
-            <StatsCard
-              className={statsCardInner}
-              icon={<Layers className="h-6 w-6 text-emerald-600" strokeWidth={1.75} />}
-              title="Total segments"
-              value={stats.total_segments}
-              colorClass="text-emerald-800"
-              footer={
-                <div className="space-y-1.5 border-t border-emerald-200/80 pt-3 text-xs text-muted-foreground">
-                  {segmentStatusFooterRows.map((row) => (
-                    <div key={row.key} className="flex justify-between gap-2">
-                      <span className="min-w-0">{row.label}</span>
-                      <span className="shrink-0 font-semibold tabular-nums text-foreground">
-                        {row.count.toLocaleString()}
-                      </span>
-                    </div>
-                  ))}
+                <span className="tabular-nums font-semibold text-foreground">
+                  {stats.rejection_count.toLocaleString()}
+                </span>
+              </div>
+              {/* Reviewer corrections — same source as annotator quality */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: ORANGE }} />
+                  <span className="text-muted-foreground" title="Approved segments where the reviewer changed title or author — same count shown in Annotator quality below.">
+                    Reviewer corrections (in period)
+                  </span>
                 </div>
-              }
-            />
-          </MetricShell>
-          <MetricShell accentClass="from-violet-700 to-violet-500">
-            <StatsCard
-              className={statsCardInner}
-              icon={<PenLine className="h-6 w-6 text-violet-600" strokeWidth={1.75} />}
-              title="With title or author"
-              value={stats.segments_with_title_or_author}
-              colorClass="text-violet-800"
-              footer={
-                <div className="space-y-1.5 border-t border-violet-200/80 pt-3 text-xs text-muted-foreground">
-                  
-                  <div className="flex justify-between gap-2">
-                      <span>Annotating</span>
-                      <span className="font-semibold tabular-nums text-foreground">
-                        {(stats.unchecked_segments_with_title_or_author ?? 0).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <span>Annotated (not reviewed)</span>
-                      <span className="font-semibold tabular-nums text-foreground">
-                        {stats.annotated_segments.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                    <span>Reviewed with title/author (in period)</span>
-                    <span className="font-semibold tabular-nums text-foreground">
-                      {stats.reviewed_segments.toLocaleString()}
-                    </span>
-                  </div>
-                    <div className="flex justify-between gap-2">
-                      <span>Rejected</span>
-                      <span className="font-semibold tabular-nums text-foreground">
-                        {(stats.rejected_segments_with_title_or_author ?? 0).toLocaleString()}
-                      </span>
-                    </div>
+                <span className="tabular-nums font-semibold text-foreground">
+                  {totalReviewerCorrectionsInPeriod.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: '#0369a1' }} />
+                  <span className="text-muted-foreground">BDRC-linked segments</span>
                 </div>
-              }
-            />
-          </MetricShell>        
-          <MetricShell accentClass="from-orange-800 to-orange-500">
-            <StatsCard
-              className={statsCardInner}
-              icon={<PencilLine className="h-6 w-6 text-orange-700" strokeWidth={1.75} />}
-              title="Reviewer title/author edits"
-              value={stats.segments_reviewer_corrected_title_or_author ?? 0}
-              colorClass="text-orange-950"
-              hint="Segments where a reviewer changed title or author at review; per-user % of segments chart below."
-            />
-          </MetricShell>
-          
+                <span className="tabular-nums font-semibold text-foreground">
+                  {stats.segments_with_bdrc_id.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            <p className="mt-auto text-[10px] text-muted-foreground/70 leading-relaxed">
+              "Rejection events" and "Reviewer corrections" match the totals in{' '}
+              <em>Annotator quality</em> below. "Unresolved" counts segments still awaiting re-work.
+            </p>
+          </div>
+
         </div>
       </MotionSection>
 
@@ -1191,7 +957,7 @@ function OverviewTab({
           description="count status of volumes from bdrc ."
         />
         <div className="mt-5 overflow-x-auto rounded-lg border border-stone-200/80 bg-white/60">
-          {volumeBatchSection.state === 'unavailable' && (
+          {view.volume_batches.state === 'unavailable' && (
             <div className="flex items-center gap-3 px-4 py-10 text-sm text-muted-foreground">
               <Library className="h-5 w-5 shrink-0 opacity-60" aria-hidden />
               <span>
@@ -1200,18 +966,15 @@ function OverviewTab({
               </span>
             </div>
           )}
-          {volumeBatchSection.state === 'empty' && (
+          {view.volume_batches.state === 'empty' && (
             <div className="flex items-center gap-3 px-4 py-10 text-sm text-muted-foreground">
               <Library className="h-5 w-5 shrink-0 opacity-60" aria-hidden />
               <span>No volume batches returned for the configured max_batches limit.</span>
             </div>
           )}
-          {volumeBatchSection.state === 'rows' && (() => {
-            // Calculate the sum of all 'active' counts
-            const totalActive = volumeBatchSection.rows.reduce((sum, row) => sum + (row.active || 0), 0);
-            return (
+          {view.volume_batches.state === 'rows' && (
               <>
-                {totalActive < 50 && (
+                {view.volume_batches.show_low_batch_warning && (
                   <div className="mb-4 flex items-center gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-yellow-900">
                     <span className="font-semibold animate-bounce">Warning:</span>
                     <span>
@@ -1233,12 +996,12 @@ function OverviewTab({
                     </tr>
                   </thead>
                   <tbody>
-                    {volumeBatchSection.rows.map((row) => {
+                    {view.volume_batches.rows.map((row) => {
                       const isActiveRow =
-                        activeBatchId !== null && String(activeBatchId) === row.batchId
+                        activeBatchId !== null && String(activeBatchId) === row.batch_id
                       return (
                         <tr
-                          key={row.batchId}
+                          key={row.batch_id}
                           className="border-b border-stone-100 last:border-0 hover:bg-stone-50/80"
                         >
                           <td className="px-2 py-2.5 text-center align-middle">
@@ -1250,17 +1013,17 @@ function OverviewTab({
                               onChange={(e) => {
                                 if (!confirm("Are you sure you want to set this batch as active?")) return
                                 void setActiveBatch({
-                                  batch_id: e.target.checked ? row.batchId : null,
+                                  batch_id: e.target.checked ? row.batch_id : null,
                                 })
                               }}
                               aria-label={
                                 isActiveRow
-                                  ? `Clear active batch (currently ${row.batchId})`
-                                  : `Set batch ${row.batchId} as active`
+                                  ? `Clear active batch (currently ${row.batch_id})`
+                                  : `Set batch ${row.batch_id} as active`
                               }
                             />
                           </td>
-                          <td className="px-4 py-2.5 font-medium text-foreground">{row.batchId}</td>
+                          <td className="px-4 py-2.5 font-medium text-foreground">{row.batch_id}</td>
                           <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
                             {row.active.toLocaleString()}
                           </td>
@@ -1279,8 +1042,7 @@ function OverviewTab({
                   </tbody>
                 </table>
               </>
-            );
-          })()}
+          )}
         </div>
       </MotionSection>
 
@@ -1292,12 +1054,12 @@ function OverviewTab({
         />
        
         <div className="mt-6 rounded-lg border border-stone-200/80 bg-white/60 px-3 pb-3 pt-2 sm:px-5">
-          {reviewerActivityRows.length === 0 ? (
+          {reviewerRosterCount === 0 ? (
             <div className="flex items-center gap-3 px-2 py-10 text-sm text-muted-foreground">
               <BarChart3 className="h-5 w-5 shrink-0 opacity-60" aria-hidden />
               <span>No reviewer or admin accounts found in scope.</span>
             </div>
-          ) : reviewerActivitySignals == null ? (
+          ) : !reviewerActivity?.has_activity ? (
             <div className="flex items-center gap-3 px-2 py-10 text-sm text-muted-foreground">
               <BarChart3 className="h-5 w-5 shrink-0 opacity-60" aria-hidden />
               <span>
@@ -1354,7 +1116,7 @@ function OverviewTab({
                     }}
                   >
                     <Bar
-                      data={reviewerActivitySignals.chartData}
+                      data={reviewerActivityChartData!}
                       options={REVIEWER_ACTIVITY_VBAR_OPTIONS}
                     />
                   </div>
@@ -1412,9 +1174,9 @@ function OverviewTab({
                       </tr>
                     </thead>
                     <tbody>
-                      {reviewerActivitySignals.tableRows.map((row, idx) => (
+                      {(reviewerActivity?.table_rows ?? []).map((row, idx) => (
                         <tr
-                          key={`${row.key}-${idx}`}
+                          key={`${row.user_id ?? '__none__'}-${idx}`}
                           className="border-b border-stone-100 last:border-0 hover:bg-stone-50/80"
                         >
                           <td className="max-w-[14rem] px-4 py-2.5 font-medium leading-snug text-foreground sm:max-w-none sm:whitespace-normal">
@@ -1422,27 +1184,27 @@ function OverviewTab({
                           </td>
                           <td className="px-4 py-2.5 align-middle">
                             <ReviewerActivityMetricCell
-                              value={row.segmentsReviewed}
-                              pct={row.reviewedSharePct}
-                              barWidthPct={row.reviewedBarPct}
+                              value={row.segments_reviewed}
+                              pct={row.reviewed_share_pct}
+                              barWidthPct={row.reviewed_bar_pct}
                               barColor={EMERALD}
                               pctTitle="Share of all segments reviewed by reviewers in this table"
                             />
                           </td>
                           <td className="px-4 py-2.5 align-middle">
                             <ReviewerActivityMetricCell
-                              value={row.withTitleAuthor}
-                              pct={row.withTitleAuthorRatePct}
-                              barWidthPct={row.withTitleAuthorBarPct}
+                              value={row.with_title_author}
+                              pct={row.with_title_author_rate_pct}
+                              barWidthPct={row.with_title_author_bar_pct}
                               barColor={VIOLET}
                               pctTitle="Percentage of segments reviewed with title/author"
                             />
                           </td>
                           <td className="px-4 py-2.5 align-middle">
                             <ReviewerActivityMetricCell
-                              value={row.titleAuthorEdits}
-                              pct={row.editsRatePct}
-                              barWidthPct={row.editsBarPct}
+                              value={row.title_author_edits}
+                              pct={row.edits_rate_pct}
+                              barWidthPct={row.edits_bar_pct}
                               barColor={ORANGE}
                               pctTitle="Percentage of segments reviewed with reviewer edits"
                             />
@@ -1450,8 +1212,8 @@ function OverviewTab({
                           <td className="px-4 py-2.5 align-middle">
                             <ReviewerActivityMetricCell
                               value={row.rejections}
-                              pct={row.rejectionsRatePct}
-                              barWidthPct={row.rejectionsBarPct}
+                              pct={row.rejections_rate_pct}
+                              barWidthPct={row.rejections_bar_pct}
                               barColor={RED}
                               pctTitle="Percentage of segments reviewed with rejections"
                             />
@@ -1468,119 +1230,57 @@ function OverviewTab({
         </div>
       </MotionSection>
 
-      <MotionSection
-      >
+      {/* ─── Status distribution charts ────────────────────────────────── */}
+      <MotionSection>
         <SectionHeading
-          eyebrow="Quality"
-          title="Annotation & linkage"
+          eyebrow="Distribution"
+          title="Status & label breakdown"
+          description="Doughnut charts show the proportion of documents and segments at each stage. The labels bar shows what types of segments exist."
         />
-        <div className="grid gap-5 lg:grid-cols-12">
-          <motion.div
-            className={`relative overflow-hidden lg:col-span-5 ${cardPanel}`}
-            whileHover={{ scale: 1.005 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-          >
-            <div
-              className="gradient-gold absolute -right-16 top-0 h-48 w-48 rounded-full opacity-[0.12] blur-2xl"
-              aria-hidden
-            />
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
-              Annotation coverage
+        <div className="grid gap-5 md:grid-cols-3">
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Documents by stage
             </p>
-            <p className="mt-3 text-4xl font-semibold tabular-nums tracking-tight text-foreground">
-              {coverage}%
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">Share of segments meeting coverage rules.</p>
-            <div
-              className="mt-6 h-3 w-full overflow-hidden rounded-full bg-muted"
-              role="progressbar"
-              aria-valuenow={coverage}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            >
-              <motion.div
-                className="h-full rounded-full bg-gradient-to-r from-primary to-secondary"
-                initial={{ width: 0 }}
-                animate={{ width: `${Math.min(100, Math.max(0, coverage))}%` }}
-                transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-              />
+            <p className="text-[11px] text-muted-foreground/70">Where are documents in the workflow?</p>
+            <div className="flex h-64 items-center justify-center rounded-lg border border-stone-100 bg-white/60 p-2">
+              {documentStatusChart ? (
+                <Doughnut data={documentStatusChart} options={DOUGHNUT_OPTIONS} />
+              ) : (
+                <p className="text-sm text-muted-foreground">No documents in range.</p>
+              )}
             </div>
-          </motion.div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:col-span-7">
-            <MetricShell accentClass="from-sky-700 to-sky-500">
-              <StatsCard
-                className={statsCardInner}
-                icon={<Link2 className="h-6 w-6 text-sky-700" strokeWidth={1.75} />}
-                title="BDRC-linked"
-                value={stats.segments_with_bdrc_id}
-                colorClass="text-sky-900"
-                hint="Title or author BDRC ID"
-              />
-            </MetricShell>
-          
+          </div>
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Segments by stage
+            </p>
+            <p className="text-[11px] text-muted-foreground/70">Annotating → annotated → reviewed → rejected.</p>
+            <div className="flex h-64 items-center justify-center rounded-lg border border-stone-100 bg-white/60 p-2">
+              {segmentStatusChart ? (
+                <Doughnut data={segmentStatusChart} options={DOUGHNUT_OPTIONS} />
+              ) : (
+                <p className="text-sm text-muted-foreground">No segment status data.</p>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Segment labels
+            </p>
+            <p className="text-[11px] text-muted-foreground/70">Front matter, TOC, text body, back matter, etc.</p>
+            <div className="h-64 rounded-lg border border-stone-100 bg-white/60 p-2">
+              {labelBarData ? (
+                <Bar data={labelBarData} options={HBAR_OPTIONS} />
+              ) : (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  No label data.
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </MotionSection>
-
-      {overviewBarData && (
-        <MotionSection
-        >
-          <div
-            className="absolute left-0 top-0 h-1 w-full bg-gradient-to-r from-primary via-secondary to-teal-600"
-            aria-hidden
-          />
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Volume overview</p>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Same core counts as key metrics, shown as bars for at-a-glance comparison.
-          </p>
-          <div className="mt-5 h-64">
-            <Bar data={overviewBarData} options={CHART_OPTIONS} />
-          </div>
-        </MotionSection>
-      )}
-
-      <div className='flex justify-around'
-      >
-        <div className={cardPanel}>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
-            Documents by status
-          </p>
-          <p className="mt-2 text-sm text-muted-foreground">Workflow state from outliner documents.</p>
-          <div className="mt-4 flex h-72 items-center justify-center">
-            {documentStatusChart ? (
-              <Doughnut data={documentStatusChart} options={DOUGHNUT_OPTIONS} />
-            ) : (
-              <p className="text-sm text-muted-foreground">No documents in range.</p>
-            )}
-          </div>
-        </div>
-        <div className={cardPanel}>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
-            Segments by status
-          </p>
-          <p className="mt-2 text-sm text-muted-foreground">Annotating, annotated, reviewed, and rejected.</p>
-          <div className="mt-4 flex h-72 items-center justify-center">
-            {segmentStatusChart ? (
-              <Doughnut data={segmentStatusChart} options={DOUGHNUT_OPTIONS} />
-            ) : (
-              <p className="text-sm text-muted-foreground">No segment status data.</p>
-            )}
-          </div>
-        </div>
-        <div className={cardPanel}>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Segment labels</p>
-          <p className="mt-2 text-sm text-muted-foreground">Front matter, TOC, text, back matter, etc.</p>
-          <div className="mt-4 h-64">
-            {labelBarData ? (
-              <Bar data={labelBarData} options={HBAR_OPTIONS} />
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                No label data.
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
 
       <MotionSection>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
@@ -1588,14 +1288,15 @@ function OverviewTab({
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">
               Annotator quality: rejections & reviewer corrections
             </p>
-            {annotatorQualitySignals && annotatorQualitySignals.tableRows.length > 1 ? (
+            {annotatorQuality && annotatorQuality.table_rows.length > 1 ? (
               <p className="mt-1.5 max-w-2xl text-xs leading-relaxed text-muted-foreground">
                 All annotators in one view; scroll sideways to compare. Left axis: rejection and
-                correction rates as a percent of reviewed segments; right axis: segment counts.
+                correction rates as a percent of reviewed segments with title/author; right axis:
+                segment counts.
               </p>
             ) : null}
           </div>
-          {annotatorQualitySignals ? (
+          {annotatorQuality ? (
             <div className="flex w-full shrink-0 flex-col items-stretch gap-2 sm:w-auto sm:items-end">
               <div
                 className="flex shrink-0 rounded-lg border border-stone-200/90 bg-stone-50/90 p-0.5 shadow-sm"
@@ -1634,7 +1335,7 @@ function OverviewTab({
             </div>
           ) : null}
         </div>
-        {annotatorQualitySignals ? (
+        {annotatorQuality ? (
           annotatorQualityView === 'chart' && annotatorQualityVBarLayout ? (
             <div className="mt-5 w-full overflow-x-auto overflow-y-visible overscroll-x-contain pb-1 [-webkit-overflow-scrolling:touch]">
               <div
@@ -1645,7 +1346,7 @@ function OverviewTab({
                 }}
               >
                 <Bar
-                  data={annotatorQualitySignals.chartData}
+                  data={annotatorQualityChartData!}
                   options={ANNOTATOR_QUALITY_SIGNALS_VBAR_OPTIONS}
                 />
               </div>
@@ -1662,28 +1363,28 @@ function OverviewTab({
                     <th className="px-4 py-3">Annotator</th>
                     <th className="px-4 py-3 text-right tabular-nums">Segments</th>
                     <th className="px-4 py-3 text-right tabular-nums" style={{ color: BLUE_DARK }}>
-                      Reviewed (in period)
+                      Reviewed with title/author (in period)
                     </th>
                     <th className="px-4 py-3 text-right tabular-nums">Rejection events</th>
                     <th
                       className="px-4 py-3 text-right tabular-nums"
-                      title="Percent of reviewed segments in period (rejection events ÷ reviewed)"
+                      title="Rejection events ÷ reviewed segments with title/author in period"
                     >
                       Rejection %
                     </th>
                     <th className="px-4 py-3 text-right tabular-nums">Corrections at review</th>
                     <th
                       className="px-4 py-3 text-right tabular-nums"
-                      title="Percent of reviewed segments in period (corrections ÷ reviewed)"
+                      title="Corrections ÷ reviewed segments with title/author in period"
                     >
                       Corrections %
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {annotatorQualitySignals.tableRows.map((row, idx) => (
+                  {annotatorQuality.table_rows.map((row, idx) => (
                     <tr
-                      key={`${row.key}-${idx}`}
+                      key={`${row.user_id ?? '__none__'}-${idx}`}
                       className="border-b border-stone-100 last:border-0 hover:bg-stone-50/80"
                     >
                       <td className="max-w-[14rem] px-4 py-2.5 font-medium leading-snug text-foreground sm:max-w-none sm:whitespace-normal">
@@ -1696,19 +1397,19 @@ function OverviewTab({
                         className="px-4 py-2.5 text-right tabular-nums font-medium"
                         style={{ color: BLUE_DARK }}
                       >
-                        {row.segmentsApproved.toLocaleString()}
+                        {row.segments_approved.toLocaleString()}
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
-                        {row.rejectionEvents.toLocaleString()}
+                        {row.rejection_events.toLocaleString()}
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
-                        {row.rejectionPct.toFixed(1)}%
+                        {row.rejection_pct.toFixed(1)}%
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
-                        {row.correctionEdits.toLocaleString()}
+                        {row.correction_edits.toLocaleString()}
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
-                        {row.correctionsPct.toFixed(1)}%
+                        {row.corrections_pct.toFixed(1)}%
                       </td>
                     </tr>
                   ))}
@@ -1769,5 +1470,65 @@ function MotionSection({ children }: { children: ReactNode }) {
     >
       {children}
     </motion.section>
+  )
+}
+
+/** Horizontal stacked bar — each item fills a proportion of total width. */
+function PipelineBar({
+  items,
+  total,
+}: {
+  items: { label: string; value: number; color: string }[]
+  total: number
+}) {
+  if (!total) return <div className="h-3 w-full rounded-full bg-stone-100" />
+  return (
+    <div className="flex h-3 w-full overflow-hidden rounded-full" title="Pipeline distribution">
+      {items.map((item) =>
+        item.value > 0 ? (
+          <div
+            key={item.label}
+            className="h-full transition-all duration-700"
+            style={{
+              width: `${Math.max(1, (item.value / total) * 100)}%`,
+              backgroundColor: item.color,
+            }}
+            title={`${item.label}: ${item.value.toLocaleString()} (${Math.round((item.value / total) * 100)}%)`}
+          />
+        ) : null,
+      )}
+    </div>
+  )
+}
+
+/** Single row in a pipeline breakdown list. */
+function PipelineStatRow({
+  dot,
+  label,
+  value,
+  total,
+  hint,
+}: {
+  dot: string
+  label: string
+  value: number
+  total: number
+  hint?: string
+}) {
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0
+  return (
+    <div className="flex items-center gap-2">
+      <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: dot }} />
+      <span className="min-w-0 flex-1 truncate text-muted-foreground" title={hint}>
+        {label}
+        {hint ? <span className="ml-1 text-muted-foreground/60">({hint})</span> : null}
+      </span>
+      <span className="shrink-0 tabular-nums font-medium text-foreground">
+        {value.toLocaleString()}
+      </span>
+      <span className="w-9 shrink-0 text-right tabular-nums text-muted-foreground/70">
+        {pct}%
+      </span>
+    </div>
   )
 }
