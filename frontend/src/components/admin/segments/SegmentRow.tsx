@@ -31,7 +31,7 @@ import ChevronUporDown from '@/components/outliner/utils/ChevronUporDown';
 import { SegmentSearchBar } from '@/components/outliner/SegmentSearchBar';
 import { SegmentHighlightedText } from '@/components/outliner/SegmentHighlightedText';
 import { findAllOccurrences } from '@/features/outliner';
-import { getSegmentMetadataLocalSpans } from '@/utils/segmentMetadataLocalSpans';
+import { getSegmentHighlightWords } from '@/utils/segmentHighlightWords';
 import { SegmentAttributionBar } from './SegmentAttributionBar';
 
 interface SegmentRowProps {
@@ -89,14 +89,18 @@ function SegmentRow({
   const { document: selectedDocument, isLoading: isLoadingDocument } = useDocument(documentId);
   const [textSearchQuery, setTextSearchQuery] = useState('');
   const segmentBodyRef = useRef<HTMLDivElement>(null);
-  const hasTextSearch = Boolean(textSearchQuery.trim());
 
-  const metadataLocalSpans = useMemo(
-    () => getSegmentMetadataLocalSpans(segment),
-    [segment]
+  const highlightWords = useMemo(() => getSegmentHighlightWords(segment), [segment]);
+
+  const searchWords = useMemo(
+    () => (textSearchQuery.trim() ? [textSearchQuery.trim()] : []),
+    [textSearchQuery]
   );
 
-  const hasBodyHighlightLayer = hasTextSearch || metadataLocalSpans.length > 0;
+  const hasBodyHighlightLayer =
+    searchWords.length > 0 ||
+    highlightWords.titleWords.length > 0 ||
+    highlightWords.authorWords.length > 0;
 
   const segmentSearchMatchCount = useMemo(
     () => findAllOccurrences(segment.text, textSearchQuery).length,
@@ -470,8 +474,9 @@ function SegmentRow({
               >
                 <SegmentHighlightedText
                   text={segment.text}
-                  metadataSpans={metadataLocalSpans}
-                  searchQuery={textSearchQuery}
+                  titleWords={highlightWords.titleWords}
+                  authorWords={highlightWords.authorWords}
+                  searchWords={searchWords}
                 />
               </div>
             ) : (
@@ -487,10 +492,9 @@ function SegmentRow({
                         ? `${segment.text.slice(0, 200)}…`
                         : segment.text
                     }
-                    metadataSpans={metadataLocalSpans
-                      .filter((s) => s.start < 200)
-                      .map((s) => ({ ...s, end: Math.min(s.end, 200) }))}
-                    searchQuery={textSearchQuery}
+                    titleWords={highlightWords.titleWords}
+                    authorWords={highlightWords.authorWords}
+                    searchWords={searchWords}
                   />
                 ) : (
                   `${segment.text.length > 200 ? `${segment.text.slice(0, 200)}…` : segment.text}`

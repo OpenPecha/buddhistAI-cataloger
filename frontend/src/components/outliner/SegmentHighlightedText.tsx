@@ -1,111 +1,81 @@
-import React, { useMemo } from 'react';
-import { findAllOccurrences } from '@/features/outliner';
-import type { SegmentMetadataLocalSpan } from '@/utils/segmentMetadataLocalSpans';
+import { useMemo } from 'react';
+import Highlighter from 'react-highlight-words';
 
-type RangeKind = 'title' | 'author' | 'search';
-
-type TaggedRange = {
-  start: number;
-  end: number;
-  kind: RangeKind;
-};
-
-/** Background-only highlights: horizontal padding shifts the mirror layer vs the textarea. */
-const KIND_CLASS: Record<RangeKind, string> = {
+const HIGHLIGHT_CLASS = {
   title: 'segment-highlight-title rounded-sm bg-sky-200/85 box-decoration-clone',
   author: 'segment-highlight-author rounded-sm bg-violet-200/85 box-decoration-clone',
   search: 'highlighter rounded-sm bg-amber-200/90 box-decoration-clone',
-};
-
-function classForKinds(kinds: RangeKind[]): string {
-  return [...new Set(kinds)].map((k) => KIND_CLASS[k]).join(' ');
-}
-
-function buildTaggedRanges(
-  text: string,
-  metadataSpans: SegmentMetadataLocalSpan[],
-  searchQuery: string
-): TaggedRange[] {
-  const ranges: TaggedRange[] = [];
-  const len = text.length;
-
-  for (const s of metadataSpans) {
-    const start = Math.max(0, Math.min(s.start, len));
-    const end = Math.max(0, Math.min(s.end, len));
-    if (start < end) ranges.push({ start, end, kind: s.kind });
-  }
-
-  const q = searchQuery.trim();
-  if (q) {
-    for (const o of findAllOccurrences(text, q)) {
-      ranges.push({ start: o.start, end: o.end, kind: 'search' });
-    }
-  }
-
-  return ranges;
-}
-
-function renderHighlightedText(
-  text: string,
-  metadataSpans: SegmentMetadataLocalSpan[],
-  searchQuery: string
-): React.ReactNode[] {
-  if (!text) return [];
-
-  const ranges = buildTaggedRanges(text, metadataSpans, searchQuery);
-  if (ranges.length === 0) return [text];
-
-  const boundaries = new Set<number>([0, text.length]);
-  for (const r of ranges) {
-    boundaries.add(r.start);
-    boundaries.add(r.end);
-  }
-  const points = [...boundaries].sort((a, b) => a - b);
-  const nodes: React.ReactNode[] = [];
-
-  for (let i = 0; i < points.length - 1; i++) {
-    const start = points[i];
-    const end = points[i + 1];
-    if (start >= end) continue;
-    const slice = text.slice(start, end);
-    const activeKinds = [
-      ...new Set(
-        ranges
-          .filter((r) => r.start < end && r.end > start)
-          .map((r) => r.kind)
-      ),
-    ];
-    if (activeKinds.length === 0) {
-      nodes.push(<React.Fragment key={start}>{slice}</React.Fragment>);
-    } else {
-      nodes.push(
-        <mark key={start} className={classForKinds(activeKinds)}>
-          {slice}
-        </mark>
-      );
-    }
-  }
-
-  return nodes;
-}
+} as const;
 
 export interface SegmentHighlightedTextProps {
   text: string;
-  metadataSpans?: SegmentMetadataLocalSpan[];
-  searchQuery?: string;
+  /** Title substrings to mark in the body (sky blue). */
+  titleWords?: string[];
+  /** Author substrings to mark in the body (violet). */
+  authorWords?: string[];
+  /** In-segment search terms (amber; uses `.highlighter` for match navigation). */
+  searchWords?: string[];
   className?: string;
+}
+
+function removeLastTwoTsek(word: string): string {
+  const TSEK = '་';
+  const parts = word.split(TSEK);
+  // Remove any empty strings from accidental trailing tseks
+  const nonEmptyParts = parts.filter((part) => part.length > 0);
+
+  // Split the word into characters, leave last 2 characters, merge them
+  if (nonEmptyParts.length <= 2) {
+    const chars = Array.from(word.trim());
+    return chars.slice(0, -2).join('');
+  }
+  // Join all but the last two
+  return nonEmptyParts.slice(0, -1).join(TSEK) + TSEK;
+}
+
+
+function nonEmptyWords(words: string[] | undefined): string[] {
+  const value = (words ?? []).map((w) => removeLastTwoTsek(w.trim())).filter(Boolean);
+  return value;
 }
 
 export function SegmentHighlightedText({
   text,
-  metadataSpans = [],
-  searchQuery = '',
+  titleWords = [],
+  authorWords = [],
+  searchWords = [],
   className,
 }: SegmentHighlightedTextProps) {
-  const content = useMemo(
-    () => renderHighlightedText(text, metadataSpans, searchQuery),
-    [text, metadataSpans, searchQuery]
+  const wordClass = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const w of nonEmptyWords(titleWords)) map.set(w, HIGHLIGHT_CLASS.title);
+    for (const w of nonEmptyWords(authorWords)) map.set(w, HIGHLIGHT_CLASS.author);
+    for (const w of nonEmptyWords(searchWords)) map.set(w, HIGHLIGHT_CLASS.search);
+    return map;
+  }, [titleWords, authorWords, searchWords]);
+  const allSearchWords = useMemo(
+    () => [
+      ...nonEmptyWords([...titleWords,...authorWords,...searchWords]),
+    ],
+    [titleWords, authorWords, searchWords]
   );
+  if (!text) return null;
 
-  return <span className={className}>{content}</span>;
+  if (allSearchWords.length === 0) {
+    return <span className={className}>{text}</span>;
+  }
+
+  return (
+    <Highlighter
+      className={className}
+      searchWords={allSearchWords}
+      autoEscape
+      textToHighlight={text}
+      highlightTag={({ children }) => (
+        <mark className={wordClass.get(String(children)) ?? HIGHLIGHT_CLASS.search}>
+          {children}
+        </mark>
+      )}
+    />
+  );
 }
