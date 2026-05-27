@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,8 +24,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Check, FileText, History, Loader2, Undo, User, X } from 'lucide-react';
 import type { Segment } from '../shared/types';
-import type { TextSegment } from '@/components/outliner/types';
-import type { FormDataType, Title, Author } from '@/components/outliner/AnnotationSidebar';
+import type { FormDataType } from '@/components/outliner/AnnotationSidebar';
 import { useDocument } from '@/hooks';
 import { getLabelColor, getStatusColor } from '@/components/outliner/utils';
 import ChevronUporDown from '@/components/outliner/utils/ChevronUporDown';
@@ -33,7 +32,6 @@ import { SegmentSearchBar } from '@/components/outliner/SegmentSearchBar';
 import { SegmentHighlightedText } from '@/components/outliner/SegmentHighlightedText';
 import { findAllOccurrences } from '@/features/outliner';
 import { getSegmentMetadataLocalSpans } from '@/utils/segmentMetadataLocalSpans';
-import { Badge } from '@/components/ui/badge';
 import { SegmentAttributionBar } from './SegmentAttributionBar';
 
 interface SegmentRowProps {
@@ -90,8 +88,7 @@ function SegmentRow({
   const rejectionCount = segment.rejection?.count ?? 0;
   const { document: selectedDocument, isLoading: isLoadingDocument } = useDocument(documentId);
   const [textSearchQuery, setTextSearchQuery] = useState('');
-  const segmentBodyTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const segmentBodyHighlightRef = useRef<HTMLDivElement>(null);
+  const segmentBodyRef = useRef<HTMLDivElement>(null);
   const hasTextSearch = Boolean(textSearchQuery.trim());
 
   const metadataLocalSpans = useMemo(
@@ -106,70 +103,34 @@ function SegmentRow({
     [segment.text, textSearchQuery]
   );
 
-  const syncBodyHighlightScroll = useCallback(() => {
-    const ta = segmentBodyTextareaRef.current;
-    const hi = segmentBodyHighlightRef.current;
-    if (ta && hi) {
-      hi.scrollTop = ta.scrollTop;
-      hi.scrollLeft = ta.scrollLeft;
-    }
-  }, []);
-
-  /** After `scrollIntoView` on a highlight, the backdrop layer scrolls; mirror to the textarea. */
-  const syncTextareaToHighlightScroll = useCallback(() => {
-    const ta = segmentBodyTextareaRef.current;
-    const hi = segmentBodyHighlightRef.current;
-    if (ta && hi) {
-      ta.scrollTop = hi.scrollTop;
-      ta.scrollLeft = hi.scrollLeft;
-    }
-  }, []);
-
   /**
-   * Reviewer body stacks a highlight layer and a textarea. `scrollIntoView` on `.highlighter` scrolls
-   * outer page/list containers instead of the highlight `div`, so match navigation must set scrollTop here.
+   * `scrollIntoView` on `.highlighter` scrolls outer page/list containers instead of the body div,
+   * so match navigation must set scrollTop on the inner scroll container.
    */
   const scrollBodyMatchIntoView = useCallback((matchIndex: number) => {
-    const hi = segmentBodyHighlightRef.current;
-    const ta = segmentBodyTextareaRef.current;
-    if (!hi || !ta) return;
-    const hits = hi.querySelectorAll('.highlighter');
+    const body = segmentBodyRef.current;
+    if (!body) return;
+    const hits = body.querySelectorAll('.highlighter');
     if (hits.length === 0) return;
     const safeIndex = Math.min(Math.max(0, matchIndex), hits.length - 1);
     const el = hits[safeIndex];
     if (!(el instanceof HTMLElement)) return;
 
-    const containerRect = hi.getBoundingClientRect();
+    const containerRect = body.getBoundingClientRect();
     const elRect = el.getBoundingClientRect();
     const deltaTop = elRect.top - containerRect.top;
     const targetScrollTop =
-      hi.scrollTop + deltaTop - hi.clientHeight / 2 + elRect.height / 2;
-    const maxScroll = Math.max(0, hi.scrollHeight - hi.clientHeight);
-    const clamped = Math.max(0, Math.min(targetScrollTop, maxScroll));
-
-    hi.scrollTop = clamped;
-    ta.scrollTop = clamped;
-    ta.scrollLeft = hi.scrollLeft;
+      body.scrollTop + deltaTop - body.clientHeight / 2 + elRect.height / 2;
+    const maxScroll = Math.max(0, body.scrollHeight - body.clientHeight);
+    body.scrollTop = Math.max(0, Math.min(targetScrollTop, maxScroll));
   }, []);
 
   const scrollBodyToEdge = useCallback((edge: 'top' | 'bottom') => {
-    const ta = segmentBodyTextareaRef.current;
-    if (!ta) return;
-    const hi = segmentBodyHighlightRef.current;
-    const scrollEl = hi ?? ta;
-    const maxScroll = Math.max(0, scrollEl.scrollHeight - scrollEl.clientHeight);
-    const top = edge === 'top' ? 0 : maxScroll;
-    if (hi) {
-      hi.scrollTop = top;
-    }
-    ta.scrollTop = top;
+    const body = segmentBodyRef.current;
+    if (!body) return;
+    const maxScroll = Math.max(0, body.scrollHeight - body.clientHeight);
+    body.scrollTop = edge === 'top' ? 0 : maxScroll;
   }, []);
-
-  useLayoutEffect(() => {
-    if (isExpanded && hasBodyHighlightLayer) {
-      syncBodyHighlightScroll();
-    }
-  }, [isExpanded, hasBodyHighlightLayer, segment.text, textSearchQuery, metadataLocalSpans, syncBodyHighlightScroll]);
 
   const statusMutation = useMutation({
     mutationFn: (newStatus: 'approved' | 'unchecked' | 'checked') =>
@@ -377,28 +338,27 @@ function SegmentRow({
     [onToggleExpansion, segment.id]
   );
 
-  const reportBodyCaret = useCallback(
-    (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
-      if (!onSegmentBodyCaretChange) return;
-      const el = e.currentTarget;
-      const offset = Math.min(el.selectionStart, el.selectionEnd);
-      onSegmentBodyCaretChange(segment.id, offset);
-    },
-    [onSegmentBodyCaretChange, segment.id]
-  );
+  const reportBodyCaret = useCallback(() => {
+    if (!onSegmentBodyCaretChange || !segmentBodyRef.current) return;
+    const el = segmentBodyRef.current;
+    const selection = globalThis.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    if (!el.contains(range.commonAncestorContainer)) return;
 
-  /** Mirror highlight layer must not affect layout; copy plain text from segment.text by selection range. */
-  const handleBodyCopy = useCallback(
-    (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-      const ta = e.currentTarget;
-      const start = ta.selectionStart;
-      const end = ta.selectionEnd;
-      if (start === end) return;
-      e.preventDefault();
-      e.clipboardData.setData('text/plain', segment.text.slice(start, end));
-    },
-    [segment.text]
-  );
+    const offsetFromRangePoint = (container: Node, nodeOffset: number) => {
+      const pre = range.cloneRange();
+      pre.selectNodeContents(el);
+      pre.setEnd(container, nodeOffset);
+      return pre.toString().length;
+    };
+
+    const offset = Math.min(
+      offsetFromRangePoint(range.startContainer, range.startOffset),
+      offsetFromRangePoint(range.endContainer, range.endOffset)
+    );
+    onSegmentBodyCaretChange(segment.id, offset);
+  }, [onSegmentBodyCaretChange, segment.id]);
 
   useEffect(() => {
     if (!isExpanded) {
@@ -483,7 +443,6 @@ function SegmentRow({
                 onQueryChange={setTextSearchQuery}
                 matchCount={segmentSearchMatchCount}
                 disableMatchNavigation={!isExpanded}
-                onAfterScrollToMatch={syncTextareaToHighlightScroll}
                 scrollBodyMatchIntoView={scrollBodyMatchIntoView}
                 scrollBodyToEdge={scrollBodyToEdge}
               />
@@ -500,39 +459,19 @@ function SegmentRow({
           <div className="space-y-2">
            
             {isExpanded ? (
-              <div className="relative min-h-[8rem] max-h-[min(24rem,50vh)] rounded-md border border-gray-200 bg-white/80">
-                {hasBodyHighlightLayer ? (
-                  <div
-                    ref={segmentBodyHighlightRef}
-                    className="pointer-events-none absolute inset-0 z-0 overflow-auto whitespace-pre-wrap wrap-break-word p-3 font-monlam text-sm leading-normal text-gray-800 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                    aria-hidden
-                  >
-                    <SegmentHighlightedText
-                      text={segment.text}
-                      metadataSpans={metadataLocalSpans}
-                      searchQuery={textSearchQuery}
-                    />
-                  </div>
-                ) : null}
-                <Textarea
-                  ref={segmentBodyTextareaRef}
-                  readOnly
-                  value={segment.text}
-                  aria-label="Segment text (read-only; use caret for volume image sync)"
-                  spellCheck={false}
-                  onSelect={reportBodyCaret}
-                  onClick={reportBodyCaret}
-                  onKeyUp={reportBodyCaret}
-                  onCopy={handleBodyCopy}
-                  onScroll={hasBodyHighlightLayer ? syncBodyHighlightScroll : undefined}
-                  onFocus={reportBodyCaret}
-                  onBlur={() => onSegmentBodyCaretChange?.(segment.id, null)}
-                  className={
-                    'relative z-10  min-h-[8rem] max-h-[min(24rem,50vh)] w-full cursor-text resize-none text-sm whitespace-pre-wrap overflow-y-auto font-monlam rounded-md border-0 bg-transparent p-3 leading-normal focus-visible:ring-2 focus-visible:ring-blue-500/20 ' +
-                    (hasBodyHighlightLayer
-                      ? 'wrap-break-word text-transparent caret-gray-800 selection:bg-sky-200/50'
-                      : 'text-gray-800')
-                  }
+              <div
+                ref={segmentBodyRef}
+                tabIndex={0}
+                aria-label="Segment text (read-only; click to sync volume image)"
+                onMouseUp={reportBodyCaret}
+                onFocus={reportBodyCaret}
+                onBlur={() => onSegmentBodyCaretChange?.(segment.id, null)}
+                className="min-h-[8rem] max-h-[min(24rem,50vh)] overflow-y-auto whitespace-pre-wrap wrap-break-word p-3 font-monlam text-sm leading-normal text-gray-800 rounded-md border border-gray-200 bg-white/80 cursor-text select-text outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20"
+              >
+                <SegmentHighlightedText
+                  text={segment.text}
+                  metadataSpans={metadataLocalSpans}
+                  searchQuery={textSearchQuery}
                 />
               </div>
             ) : (
