@@ -38,10 +38,16 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({ segmentId }) => {
 
 
 
+  const validation = (text: string) => {
+    // Remove space after tsek: "བོད་ ཡིག" -> "བོད་ཡིག"
+    // Keep space after shad/shey: "། དེ" stays the same
+    return text.replace(/་\s+/g, "་");
+  };
+
   const onSelect = (field: 'title' | 'author') => {
 
-    const clean_selectedText = cleanTibetanText(selectedText.trim());
-
+    const clean_selectedText = validation(cleanTibetanText(selectedText.trim()));
+    
     onBubbleMenuSelect(field, segmentId, clean_selectedText);
   };
 
