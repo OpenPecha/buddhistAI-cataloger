@@ -515,7 +515,7 @@ function SegmentRow({
             segment.label==='TEXT' && (
               <>
             <div className="flex gap-1 ">
-              <span className="text-xs w-full font-medium text-gray-500 flex gap-1 items-center">
+              <span className="text-xs min-w-0 font-medium text-gray-500 flex gap-1 items-center">
                 <FileText className="w-5 h-5 shrink-0" aria-hidden /> 
 
                 {titleEditOpen && canEditReview ? (
@@ -580,7 +580,7 @@ function SegmentRow({
                 )}
               </span>
               {segment.is_supplied_title && (
-                <span className="h-min inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-300 mt-1">
+                <span className="h-min shrink-0 inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-300 mt-1">
                   Supplied title
                 </span>
               )}

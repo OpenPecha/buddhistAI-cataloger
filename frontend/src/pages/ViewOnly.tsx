@@ -8,7 +8,7 @@ import {
   type OutlinerSegment,
 } from '@/api/outliner';
 import { SegmentSearchBar } from '@/components/outliner/SegmentSearchBar';
-import { findAllOccurrences } from '@/features/outliner';
+import { findAllOccurrences, normalizeSearchQuery } from '@/features/outliner';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -189,6 +189,8 @@ function BookPageTurner({
   const bodyText = seg?.text?.trim();
   const hasBodyText = Boolean(bodyText);
 
+  const normalizedQuery = normalizeSearchQuery(searchQuery);
+
   return (
     <section className="flex flex-col gap-3 sm:flex-row sm:items-stretch" aria-label="Document pages">
       <button
@@ -238,7 +240,7 @@ function BookPageTurner({
               {hasBodyText ? (
                 <Highlighter
                   highlightClassName="highlighter rounded-sm bg-amber-200/90 px-0.5"
-                  searchWords={searchQuery.trim() ? [searchQuery] : []}
+                  searchWords={normalizedQuery ? [normalizedQuery] : []}
                   autoEscape
                   textToHighlight={bodyText ?? ''}
                   className="wrap-break-word whitespace-pre-wrap font-monlam"
