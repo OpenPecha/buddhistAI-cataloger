@@ -385,6 +385,16 @@ function SegmentRow({
   const isApproved = segment.status === 'approved';
   const showApproveButton= selectedDocument?.status==='completed';
   const isSaving = statusMutation.isPending || rejectMutation.isPending || titleAuthorSaving || bdrcSaveMutation.isPending;
+  const annotatorTitle = (
+    <span className="flex items-center gap-2 text-xl">
+      {segment.title?.trim() ? segment.title : '— No annotator title —'}
+      {segment.is_supplied_title && (
+        <span className="h-min shrink-0 inline-block px-2 py-0.5 rounded-full text-base font-semibold bg-yellow-100 text-yellow-800 border border-yellow-300">
+          Supplied title
+        </span>
+      )}
+    </span>
+  );
   return (
     <div
       id={segment.id}
@@ -551,9 +561,7 @@ function SegmentRow({
                     disabled={titleAuthorSaving}
                     title="Annotator title; click to edit reviewer suggestion only"
                   >
-                    <span className="block text-xl">
-                      {segment.title?.trim() ? segment.title : '— No annotator title —'}
-                    </span>
+                    {annotatorTitle}
                     {segment.reviewer_title != null ? (
                       <span className="block text-xs font-normal text-sky-800 mt-0.5">
                         Suggestion:{' '}
@@ -567,9 +575,7 @@ function SegmentRow({
                   </button>
                 ) : (
                   <div className="text-left font-medium text-gray-900 font-monlam px-1 py-0.5">
-                    <span className="block text-xl">
-                      {segment.title?.trim() ? segment.title : '— No annotator title —'}
-                    </span>
+                    {annotatorTitle}
                     {segment.reviewer_title != null ? (
                       <span className="block text-xs font-normal text-sky-800 mt-0.5">
                         Suggestion:{' '}
@@ -579,12 +585,6 @@ function SegmentRow({
                   </div>
                 )}
               </span>
-              {segment.is_supplied_title && (
-                <span className="h-min shrink-0 inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-300 mt-1">
-                  Supplied title
-                </span>
-              )}
-         
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-gray-500 flex gap-1 items-center">
