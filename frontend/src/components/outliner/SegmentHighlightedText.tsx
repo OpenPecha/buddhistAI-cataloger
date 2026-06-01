@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import Highlighter from 'react-highlight-words';
+import { normalizeSearchQuery } from '@/features/outliner';
 
 const HIGHLIGHT_CLASS = {
   title: 'segment-highlight-title rounded-sm bg-sky-200/85 box-decoration-clone',
@@ -33,10 +34,14 @@ function removeLastTwoTsek(word: string): string {
   return nonEmptyParts.slice(0, -1).join(TSEK) + TSEK;
 }
 
+/** Title/author words: legacy tsek-trimming highlight behavior (unchanged). */
+function metadataWords(words: string[] | undefined): string[] {
+  return (words ?? []).map((w) => removeLastTwoTsek(w.trim())).filter(Boolean);
+}
 
-function nonEmptyWords(words: string[] | undefined): string[] {
-  const value = (words ?? []).map((w) => removeLastTwoTsek(w.trim())).filter(Boolean);
-  return value;
+/** Search words: shad-aware normalization so the match is exact, not chopped. */
+function normalizedSearchWords(words: string[] | undefined): string[] {
+  return (words ?? []).map((w) => normalizeSearchQuery(w)).filter(Boolean);
 }
 
 export function SegmentHighlightedText({
@@ -48,17 +53,21 @@ export function SegmentHighlightedText({
 }: SegmentHighlightedTextProps) {
   const wordClass = useMemo(() => {
     const map = new Map<string, string>();
-    for (const w of nonEmptyWords(titleWords)) map.set(w, HIGHLIGHT_CLASS.title);
-    for (const w of nonEmptyWords(authorWords)) map.set(w, HIGHLIGHT_CLASS.author);
-    for (const w of nonEmptyWords(searchWords)) map.set(w, HIGHLIGHT_CLASS.search);
+    for (const w of metadataWords(titleWords)) map.set(w, HIGHLIGHT_CLASS.title);
+    for (const w of metadataWords(authorWords)) map.set(w, HIGHLIGHT_CLASS.author);
+    for (const w of normalizedSearchWords(searchWords)) map.set(w, HIGHLIGHT_CLASS.search);
     return map;
   }, [titleWords, authorWords, searchWords]);
+
   const allSearchWords = useMemo(
     () => [
-      ...nonEmptyWords([...titleWords,...authorWords,...searchWords]),
+      ...metadataWords(titleWords),
+      ...metadataWords(authorWords),
+      ...normalizedSearchWords(searchWords),
     ],
     [titleWords, authorWords, searchWords]
   );
+
   if (!text) return null;
 
   if (allSearchWords.length === 0) {

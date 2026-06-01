@@ -1,6 +1,8 @@
 import React, { useRef } from 'react'
 import type { SegmentTextContentProps } from './types'
 import Highlighter from "react-highlight-words";
+import { normalizeSearchQuery } from '@/features/outliner';
+
 export const SegmentTextContent = React.forwardRef<HTMLDivElement, SegmentTextContentProps>(
   (
     {
@@ -18,7 +20,8 @@ export const SegmentTextContent = React.forwardRef<HTMLDivElement, SegmentTextCo
   ) => {
     const contentRef = useRef<HTMLDivElement>(null);
 
-    const searchWords = segmentSearchQuery ? [segmentSearchQuery] : []
+    const normalized = normalizeSearchQuery(segmentSearchQuery)
+    const searchWords = normalized ? [normalized] : []
     return (
       <div
         ref={contentRef}
