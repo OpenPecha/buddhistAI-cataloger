@@ -739,6 +739,7 @@ function SegmentRow({
               reviewedAt={segment.reviewed_at}
               updatedAt={segment.updated_at}
               isAnnotated={segment.is_annotated}
+              canEditReview={canEditReview}
             />
         </div>
         

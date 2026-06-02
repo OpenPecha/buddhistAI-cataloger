@@ -76,6 +76,7 @@ export interface SegmentAttributionBarProps {
   reviewedAt?: string | null;
   updatedAt?: string | null;
   isAnnotated?: boolean;
+  canEditReview?: boolean;
 }
 
 export function SegmentAttributionBar({
@@ -84,16 +85,19 @@ export function SegmentAttributionBar({
   reviewedAt,
   updatedAt,
   isAnnotated,
+  canEditReview = false,
 }: SegmentAttributionBarProps) {
   const showAnnotatorTime = isAnnotated && updatedAt;
   return (
     <div className="flex flex-wrap  items-center justify-end gap-2">
-      <AttributionChip
-        label="Annotator"
-        user={annotator}
-        at={showAnnotatorTime ? updatedAt : null}
-        muted={!isAnnotated}
-      />
+      {canEditReview && (
+        <AttributionChip
+          label="Annotator"
+          user={annotator}
+          at={showAnnotatorTime ? updatedAt : null}
+          muted={!isAnnotated}
+        />
+      )}
       <AttributionChip label="Reviewer" user={reviewedBy} at={reviewedAt} />
     </div>
   );
