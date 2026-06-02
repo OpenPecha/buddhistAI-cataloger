@@ -524,8 +524,8 @@ function SegmentRow({
             {
             segment.label==='TEXT' && (
               <>
-            <div className="flex gap-1 ">
-              <span className="text-xs min-w-0 font-medium text-gray-500 flex gap-1 items-center">
+            <div className="flex w-full min-w-0 gap-1">
+              <span className="text-xs min-w-0 flex-1 font-medium text-gray-500 flex gap-1 items-center">
                 <FileText className="w-5 h-5 shrink-0" aria-hidden /> 
 
                 {titleEditOpen && canEditReview ? (
@@ -545,13 +545,13 @@ function SegmentRow({
                       }
                     }}
                     disabled={titleAuthorSaving}
-                    className="h-8 text-sm font-monlam max-w-full"
+                    className="h-8 flex-1 text-sm font-monlam max-w-full"
                     placeholder="Reviewer suggestion (annotator title unchanged until they apply)"
                   />
                 ) : canEditReview ? (
                   <button
                     type="button"
-                    className="text-left font-medium text-gray-900 font-monlam rounded px-1 py-0.5 -mx-1 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
+                    className="min-w-0 flex-1 text-left font-medium text-gray-900 font-monlam rounded px-1 py-0.5 -mx-1 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
                     onClick={() => {
                       setAuthorEditOpen(false);
                       const rt = segment.reviewer_title;
