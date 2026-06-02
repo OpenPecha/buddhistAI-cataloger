@@ -385,6 +385,16 @@ function SegmentRow({
   const isApproved = segment.status === 'approved';
   const showApproveButton= selectedDocument?.status==='completed';
   const isSaving = statusMutation.isPending || rejectMutation.isPending || titleAuthorSaving || bdrcSaveMutation.isPending;
+  const annotatorTitle = (
+    <span className="flex items-center gap-2 text-xl">
+      {segment.title?.trim() ? segment.title : '— No annotator title —'}
+      {segment.is_supplied_title && (
+        <span className="h-min shrink-0 inline-block px-2 py-0.5 rounded-full text-base font-medium bg-yellow-100 text-yellow-800 border border-yellow-300">
+          Supplied title
+        </span>
+      )}
+    </span>
+  );
   return (
     <div
       id={segment.id}
@@ -514,8 +524,8 @@ function SegmentRow({
             {
             segment.label==='TEXT' && (
               <>
-            <div className="flex gap-1 ">
-              <span className="text-xs min-w-0 font-medium text-gray-500 flex gap-1 items-center">
+            <div className="flex w-full min-w-0 gap-1">
+              <span className="text-xs min-w-0 flex-1 font-medium text-gray-500 flex gap-1 items-center">
                 <FileText className="w-5 h-5 shrink-0" aria-hidden /> 
 
                 {titleEditOpen && canEditReview ? (
@@ -535,13 +545,13 @@ function SegmentRow({
                       }
                     }}
                     disabled={titleAuthorSaving}
-                    className="h-8 text-sm font-monlam max-w-full"
+                    className="h-8 flex-1 text-sm font-monlam max-w-full"
                     placeholder="Reviewer suggestion (annotator title unchanged until they apply)"
                   />
                 ) : canEditReview ? (
                   <button
                     type="button"
-                    className="text-left font-medium text-gray-900 font-monlam rounded px-1 py-0.5 -mx-1 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
+                    className="min-w-0 flex-1 text-left font-medium text-gray-900 font-monlam rounded px-1 py-0.5 -mx-1 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:opacity-50"
                     onClick={() => {
                       setAuthorEditOpen(false);
                       const rt = segment.reviewer_title;
@@ -551,9 +561,7 @@ function SegmentRow({
                     disabled={titleAuthorSaving}
                     title="Annotator title; click to edit reviewer suggestion only"
                   >
-                    <span className="block text-xl">
-                      {segment.title?.trim() ? segment.title : '— No annotator title —'}
-                    </span>
+                    {annotatorTitle}
                     {segment.reviewer_title != null ? (
                       <span className="block text-xs font-normal text-sky-800 mt-0.5">
                         Suggestion:{' '}
@@ -567,9 +575,7 @@ function SegmentRow({
                   </button>
                 ) : (
                   <div className="text-left font-medium text-gray-900 font-monlam px-1 py-0.5">
-                    <span className="block text-xl">
-                      {segment.title?.trim() ? segment.title : '— No annotator title —'}
-                    </span>
+                    {annotatorTitle}
                     {segment.reviewer_title != null ? (
                       <span className="block text-xs font-normal text-sky-800 mt-0.5">
                         Suggestion:{' '}
@@ -579,12 +585,6 @@ function SegmentRow({
                   </div>
                 )}
               </span>
-              {segment.is_supplied_title && (
-                <span className="h-min shrink-0 inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800 border border-yellow-300 mt-1">
-                  Supplied title
-                </span>
-              )}
-         
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-gray-500 flex gap-1 items-center">
@@ -739,6 +739,7 @@ function SegmentRow({
               reviewedAt={segment.reviewed_at}
               updatedAt={segment.updated_at}
               isAnnotated={segment.is_annotated}
+              canEditReview={canEditReview}
             />
         </div>
         

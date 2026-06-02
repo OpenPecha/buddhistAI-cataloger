@@ -1,12 +1,14 @@
-import { useState, useMemo, useCallback, type ReactNode } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SplitPane, Pane } from 'react-split-pane';
 import { EllipsisVertical, PanelRightClose, PanelRightOpen, Undo } from 'lucide-react';
 import {
   List,
   useDynamicRowHeight,
+  useListRef,
   type RowComponentProps,
 } from 'react-window';
+import { useDocumentSegmentNav, useScrollRequest } from './DocumentSegmentNavContext';
 import type { Document, Segment } from '../shared/types';
 import SegmentRow from './SegmentRow';
 import { Button } from '@/components/ui/button';
@@ -98,6 +100,10 @@ function SegmentsTab({
   const { documentId } = useParams<{ documentId: string }>();
   const queryClient = useQueryClient();
   const { user: currentUser } = useUser();
+  const { setActiveSegmentId } = useDocumentSegmentNav();
+  const scrollRequest = useScrollRequest();
+  const listRef = useListRef(null);
+  const handledScrollNonce = useRef<number | null>(null);
   const canEditReview =
     !!currentUser?.id && selectedDocument?.reviewer_id === currentUser.id;
   const isAdminOrReviewer =
@@ -113,11 +119,51 @@ function SegmentsTab({
     [filteredSegments]
   );
 
+  useEffect(() => {
+    if (!scrollRequest || handledScrollNonce.current === scrollRequest.nonce) return;
+    const index = filteredSegments.findIndex((s) => s.id === scrollRequest.segmentId);
+    if (index < 0) {
+      setStatusFilter('all');
+      return;
+    }
+    handledScrollNonce.current = scrollRequest.nonce;
+    const MAX_SETTLE_FRAMES = 30;
+    let raf = 0;
+    let lastTop = -1;
+    let stableFrames = 0;
+    let attempts = 0;
+    const settle = () => {
+      const api = listRef.current;
+      if (!api) return;
+      api.scrollToRow({ index, align: 'start' });
+      const top = api.element?.scrollTop ?? 0;
+      if (top === lastTop) {
+        stableFrames += 1;
+      } else {
+        stableFrames = 0;
+        lastTop = top;
+      }
+      attempts += 1;
+      if (stableFrames < 3 && attempts < MAX_SETTLE_FRAMES) {
+        raf = requestAnimationFrame(settle);
+      }
+    };
+    raf = requestAnimationFrame(settle);
+    return () => cancelAnimationFrame(raf);
+  }, [scrollRequest, filteredSegments, listRef]);
+
   /** Caret in segment body text (document coordinates via span_start + offset), for BDRC image sync. */
   const [segmentBodyCaret, setSegmentBodyCaret] = useState<{
     segmentId: string;
     offset: number;
   } | null>(null);
+
+  const handleRowsRendered = useCallback(
+    (visible: { startIndex: number }) => {
+      setActiveSegmentId(filteredSegments[visible.startIndex]?.id ?? null);
+    },
+    [filteredSegments, setActiveSegmentId]
+  );
 
   const handleSegmentBodyCaretChange = useCallback(
     (segmentId: string, offset: number | null) => {
@@ -509,6 +555,8 @@ function SegmentsTab({
         <div className="relative min-h-0 flex-1 flex flex-col overflow-hidden rounded-md border border-gray-200 bg-white">
           <div className="flex min-h-0 flex-1 flex-col px-2 pt-2">
             <List
+              listRef={listRef}
+              onRowsRendered={handleRowsRendered}
               className="min-h-0 w-full scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 [scrollbar-gutter:stable]"
               style={{ height: '100%' }}
               rowComponent={AdminDocumentSegmentRow}

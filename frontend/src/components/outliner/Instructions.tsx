@@ -7,7 +7,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 const tib = "[font-family:jomo,sans-serif] text-[15px] leading-loose text-foreground";
 
@@ -343,30 +343,26 @@ function InstructionsBody() {
   );
 }
 
-function InstructionsDrawer() {
-  const [instructionsOpen, setInstructionsOpen] = useState(false);
-
+function InstructionsDrawer({
+  open,
+  onOpenChange,
+}: Readonly<{ open: boolean; onOpenChange: (open: boolean) => void }>) {
   return (
-    <>
-      <Button onClick={() => setInstructionsOpen(true)} title="Instructions">
-        Instructions
-      </Button>
-      <Drawer open={instructionsOpen} onOpenChange={setInstructionsOpen} direction="right">
-        <DrawerContent className="data-[vaul-drawer-direction=right]:w-[90vw] data-[vaul-drawer-direction=right]:sm:max-w-2xl">
-          <DrawerHeader className="flex flex-row items-center justify-between gap-3 border-b">
-            <DrawerTitle>Instructions</DrawerTitle>
-            <DrawerClose asChild>
-              <Button variant="outline" size="sm">
-                Close
-              </Button>
-            </DrawerClose>
-          </DrawerHeader>
-          <div className="flex-1 overflow-y-auto px-4 py-4">
-            <InstructionsBody />
-          </div>
-        </DrawerContent>
-      </Drawer>
-    </>
+    <Drawer open={open} onOpenChange={onOpenChange} direction="right">
+      <DrawerContent className="data-[vaul-drawer-direction=right]:w-[90vw] data-[vaul-drawer-direction=right]:sm:max-w-2xl">
+        <DrawerHeader className="flex flex-row items-center justify-between gap-3 border-b">
+          <DrawerTitle>Instructions</DrawerTitle>
+          <DrawerClose asChild>
+            <Button variant="outline" size="sm">
+              Close
+            </Button>
+          </DrawerClose>
+        </DrawerHeader>
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          <InstructionsBody />
+        </div>
+      </DrawerContent>
+    </Drawer>
   );
 }
 
