@@ -389,7 +389,7 @@ function SegmentRow({
     <span className="flex items-center gap-2 text-xl">
       {segment.title?.trim() ? segment.title : '— No annotator title —'}
       {segment.is_supplied_title && (
-        <span className="h-min shrink-0 inline-block px-2 py-0.5 rounded-full text-base font-semibold bg-yellow-100 text-yellow-800 border border-yellow-300">
+        <span className="h-min shrink-0 inline-block px-2 py-0.5 rounded-full text-base font-medium bg-yellow-100 text-yellow-800 border border-yellow-300">
           Supplied title
         </span>
       )}
