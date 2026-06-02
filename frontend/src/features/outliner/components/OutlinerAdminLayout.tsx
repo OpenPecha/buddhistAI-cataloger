@@ -2,7 +2,10 @@ import ChevronUporDown from "@/components/outliner/utils/ChevronUporDown";
 import { useUser } from "@/hooks/useUser";
 import {FileIcon, HomeIcon, UsersIcon } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
+import { SplitPane, Pane } from "react-split-pane";
+import { DocumentSegmentNavProvider } from "@/components/admin/segments/DocumentSegmentNavContext";
+import DocumentSegmentsSidebar from "@/components/admin/segments/DocumentSegmentsSidebar";
 
 type AdminNavSubItem = { to: string; label: string; exact?: boolean };
 type AdminNavItem = {
@@ -39,8 +42,10 @@ const linkActive = "bg-gray-100 text-gray-900";
 
 const OutlinerAdminLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
+  const { documentId } = useParams<{ documentId: string }>();
   const { user } = useUser();
   const isAdmin = user?.role === "admin";
+  const showSegmentSidebar = Boolean(documentId);
 
   const linkIsActive = (to: string, exact?: boolean) =>
     navPathActive(location.pathname, to, exact);
@@ -82,7 +87,36 @@ const OutlinerAdminLayout = ({ children }: { children: React.ReactNode }) => {
     setOpenSections((s) => ({ ...s, [path]: !s[path] }));
   };
   const ADMIN_LABELS=new Set<string>(["Users","BDRC Library","Works","Persons"]);
+
+  const content = (
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-gray-50 ">
+      {children}
+    </div>
+  );
+
+  if (showSegmentSidebar) {
+    return (
+      <DocumentSegmentNavProvider>
+        <div className="flex h-[calc(100vh-4rem)] min-h-0 w-full">
+          <SplitPane
+            direction="horizontal"
+            className="outliner-split-pane min-h-0 w-full flex-1"
+            dividerSize={8}
+          >
+            <Pane defaultSize={288} minSize={200} maxSize={520}>
+              <aside className="flex h-full min-h-0 flex-col border-r border-gray-200 bg-white">
+                <DocumentSegmentsSidebar />
+              </aside>
+            </Pane>
+            <Pane minSize={320}>{content}</Pane>
+          </SplitPane>
+        </div>
+      </DocumentSegmentNavProvider>
+    );
+  }
+
   return (
+    <DocumentSegmentNavProvider>
     <div className="flex h-[calc(100vh-4rem)] min-h-0 w-full">
       <aside className="flex w-56 shrink-0 flex-col border-r border-gray-200 bg-white">
         <nav className="flex flex-col gap-0.5 p-3" aria-label="Outliner admin">
@@ -156,10 +190,9 @@ const OutlinerAdminLayout = ({ children }: { children: React.ReactNode }) => {
           })}
         </nav>
       </aside>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-gray-50 ">
-        {children}
-      </div>
+      {content}
     </div>
+    </DocumentSegmentNavProvider>
   );
 };
 
