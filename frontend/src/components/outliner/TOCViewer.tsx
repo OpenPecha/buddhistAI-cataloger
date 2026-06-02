@@ -104,7 +104,7 @@ export default function TocViewer() {
         onValueChange={(v) => setSideTab(v as SidePanelTab)}
         className="flex flex-1 min-h-0 flex-col gap-0"
       >
-        <header className="shrink-0 border-b border-gray-200 bg-white px-3 py-2">
+        {/* <header className="shrink-0 border-b border-gray-200 bg-white px-3 py-2">
           <TabsList className="grid h-9 w-full grid-cols-2">
             <TabsTrigger value="images" className="text-xs">
               {t('outliner.tocPanel.tabImages')}
@@ -122,7 +122,7 @@ export default function TocViewer() {
               {t('outliner.tocPanel.tabToc')}
             </TabsTrigger>
           </TabsList>
-        </header>
+        </header> */}
 
         <TabsContent
           value="images"
@@ -132,7 +132,7 @@ export default function TocViewer() {
           <VolumeImagePanel panelActive={sideTab === 'images'} />
         </TabsContent>
 
-        <TabsContent
+        {/* <TabsContent
           value="toc"
           className="mt-0 flex min-h-0 overflow-auto flex-1 flex-col px-3 pb-3 pt-2"
         >
@@ -148,7 +148,7 @@ export default function TocViewer() {
               emptyMessage={t('outliner.tocPanel.emptyAiEntries')}
             />
           )}
-        </TabsContent>
+        </TabsContent> */}
       </Tabs>
     </section>
   )
