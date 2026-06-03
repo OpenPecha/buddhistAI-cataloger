@@ -657,6 +657,50 @@ export const submitDocumentToBdrcInReview = async (
   return handleApiResponse(response);
 };
 
+export type SegmentReviewStatus = 'approve' | 'reject';
+
+export interface SegmentReview {
+  id: string;
+  document_id: string;
+  segment_id: string;
+  user_id: string;
+  status: SegmentReviewStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export const submitSegmentReview = async (
+  segmentId: string,
+  status: SegmentReviewStatus
+): Promise<SegmentReview> => {
+  const response = await outlinerFetch(`${OUTLINER_BASE_URL}/segments/${segmentId}/review`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  });
+  return handleApiResponse(response);
+};
+
+export interface SegmentReviewStatusItem {
+  segment_id: string;
+  status: SegmentReviewStatus;
+}
+
+export interface SegmentReviewsResponse {
+  document_id: string;
+  items: SegmentReviewStatusItem[];
+}
+
+export const getSegmentReviews = async (
+  documentId: string
+): Promise<Record<string, SegmentReviewStatus>> => {
+  const response = await outlinerFetch(
+    `${OUTLINER_BASE_URL}/documents/${documentId}/segment-reviews`
+  );
+  const data: SegmentReviewsResponse = await handleApiResponse(response);
+  return Object.fromEntries(data.items.map((item) => [item.segment_id, item.status]));
+};
+
 export const rejectSegment = async (
   segmentId: string,
   comment: string

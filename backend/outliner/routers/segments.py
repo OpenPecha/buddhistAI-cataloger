@@ -22,6 +22,9 @@ from outliner.controller.outliner import (
     update_segment_status as update_segment_status_ctrl,
     update_segments_bulk as update_segments_bulk_ctrl,
 )
+from outliner.controller.segment_review import (
+    submit_segment_review as submit_segment_review_ctrl,
+)
 from outliner.deps import (
     apply_authenticated_segment_reviewer,
     assert_assigned_document_participant,
@@ -50,6 +53,8 @@ from .schemas import (
     SegmentRejectionHistoryItem,
     SegmentRejectionHistoryResponse,
     SegmentResponse,
+    SegmentReviewRequest,
+    SegmentReviewResponse,
     SegmentStatusUpdate,
     SegmentUpdate,
     SplitSegmentRequest,
@@ -303,6 +308,21 @@ async def reject_segment(
         db,
         document_content=document_plain_content(db, segment.document_id),
     )
+
+
+@router.post(
+    "/segments/{segment_id}/review",
+    response_model=SegmentReviewResponse,
+    status_code=201,
+)
+async def submit_segment_review(
+    segment_id: str,
+    body: SegmentReviewRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
+):
+    """Record the current user's approve/reject decision on a segment (view-only review)."""
+    return submit_segment_review_ctrl(db, segment_id, current_user.id, body.status)
 
 
 @router.put("/segments/bulk-reject", response_model=List[SegmentResponse])
