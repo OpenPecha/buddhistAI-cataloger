@@ -9,6 +9,8 @@ export interface BdrcOtVolumesQueryParams {
 
 export interface BdrcOtVolumeRow {
   id?: string;
+  vol_id?: string;
+  pages?: { pname?: string }[];
   [key: string]: unknown;
 }
 

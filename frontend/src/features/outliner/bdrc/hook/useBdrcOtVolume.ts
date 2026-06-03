@@ -35,3 +35,11 @@ export function useBdrcOtVolume(volumeId: string | null | undefined) {
   };
 }
 
+export function useVolumeHasImages(volumeId: string | null | undefined): boolean {
+  const { volume } = useBdrcOtVolume(volumeId);
+  return (
+    !!volume?.vol_id?.trim() &&
+    !!volume?.pages?.some((p) => !!p.pname?.trim())
+  );
+}
+

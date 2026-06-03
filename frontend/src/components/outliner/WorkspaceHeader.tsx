@@ -18,7 +18,7 @@ interface WorkspaceHeaderProps {
   tocPanel: {
     visible: boolean;
     onToggle: () => void;
-  };
+  } | null;
 }
 
 export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
@@ -49,30 +49,32 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
         {/* <AIDetectionButton/> */}
         <WorkSpaceHeaderMenu/>
         <ActionButton/>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="shrink-0 gap-1.5 px-2"
-            onClick={tocPanel.onToggle}
-            aria-pressed={tocPanel.visible}
-            aria-label={
-              tocPanel.visible
-                ? t('outliner.workspace.hideSidePanel')
-                : t('outliner.workspace.showSidePanel')
-            }
-            title={
-              tocPanel.visible
-                ? t('outliner.workspace.hideSidePanel')
-                : t('outliner.workspace.showSidePanel')
-            }
-          >
-            {tocPanel.visible ? (
-              <PanelRightClose className="h-4 w-4" aria-hidden />
-            ) : (
-              <PanelRightOpen className="h-4 w-4" aria-hidden />
-            )}
-          </Button>
+          {tocPanel && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0 gap-1.5 px-2"
+              onClick={tocPanel.onToggle}
+              aria-pressed={tocPanel.visible}
+              aria-label={
+                tocPanel.visible
+                  ? t('outliner.workspace.hideSidePanel')
+                  : t('outliner.workspace.showSidePanel')
+              }
+              title={
+                tocPanel.visible
+                  ? t('outliner.workspace.hideSidePanel')
+                  : t('outliner.workspace.showSidePanel')
+              }
+            >
+              {tocPanel.visible ? (
+                <PanelRightClose className="h-4 w-4" aria-hidden />
+              ) : (
+                <PanelRightOpen className="h-4 w-4" aria-hidden />
+              )}
+            </Button>
+          )}
         </div>
       </div>
     
