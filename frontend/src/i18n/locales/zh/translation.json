@@ -552,6 +552,7 @@
       "contentAria": "文本工作区内容区域",
       "saving": "正在保存...",
       "savedSegmentsTitle": "已保存 {{count}} 个片段",
+      "progressLabel": "{{percent}}% · {{checked}}/{{total}}",
       "revisionBadge": "{{count}} 个片段需要修订",
       "revisionBadge_plural": "{{count}} 个片段需要修订",
       "aiOutlineTitle": "AI 大纲：检测藏文目录并将文档拆分为片段（会替换当前片段）",

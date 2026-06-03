@@ -552,6 +552,7 @@
       "contentAria": "Text workspace content area",
       "saving": "Saving...",
       "savedSegmentsTitle": "{{count}} saved segments",
+      "progressLabel": "{{percent}}% · {{checked}}/{{total}}",
       "revisionBadge": "{{count}} segment needs revision",
       "revisionBadge_plural": "{{count}} segments need revision",
       "aiOutlineTitle": "AI outline: detect Tibetan TOC and split the document into segments (replaces current segments)",

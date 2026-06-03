@@ -552,6 +552,7 @@
       "contentAria": "ཡི་གེ་ལས་སྟེགས་ཁུལ།",
       "saving": "ཉར་བཞིན་པ...",
       "savedSegmentsTitle": "ཆ་ཤས་{{count}} ཉར་ཟིན།",
+      "progressLabel": "{{percent}}% · {{checked}}/{{total}}",
       "revisionBadge": "ཆ་ཤས་{{count}} ལ་བསྐྱར་བཅོས་དགོས།",
       "revisionBadge_plural": "ཆ་ཤས་{{count}} ལ་བསྐྱར་བཅོས་དགོས།",
       "aiOutlineTitle": "AI སྒྲིག་བཀོད། བོད་ཡིག་མུ་ཤུགས་ངོས་འཛིན་དང་ཡིག་ཆ་ཆ་ཤས་སུ་དབྱེ།(ཆ་ཤས་སྔོན་མ་ཚབ་བརྗེ།)",
