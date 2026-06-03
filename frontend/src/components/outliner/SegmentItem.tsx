@@ -84,10 +84,10 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
   
 
   return (
-    <div className="relative" >
+    <div className={isFirstSegment ? 'relative mt-3' : 'relative'} >
      
       {/* Attach Parent Button and Collapse All Button - only for first segment */}
-      {isFirstSegment && (
+      {/* {isFirstSegment && (
         <div className="flex items-center justify-between gap-2 my-3">
           <Button
             type="button"
@@ -106,7 +106,7 @@ const SegmentItem: React.FC<SegmentItemProps> = ({
             {isAttached ? t('outliner.segment.attached') : t('outliner.segment.attachParent')}
           </Button>
         </div>
-      )}
+      )} */}
       
       <div
       id={segment.id}
