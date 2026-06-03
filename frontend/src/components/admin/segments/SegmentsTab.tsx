@@ -21,6 +21,7 @@ import {
 } from '@/api/outliner';
 import { searchUsers } from '@/api/user';
 import { VolumeImagePanelCore } from '@/components/outliner/ImageWrapper';
+import { useVolumeHasImages } from '@/features/outliner/bdrc/hook/useBdrcOtVolume';
 import {  useNavigate, useParams } from 'react-router-dom';
 import {
   DropdownMenu,
@@ -95,6 +96,7 @@ function SegmentsTab({
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState<SegmentStatusFilter>('all');
   const [imagesPanelVisible, setImagesPanelVisible] = useState(false);
+  const hasImages = useVolumeHasImages(selectedDocument?.filename ?? null);
   const [isReassignDialogOpen, setIsReassignDialogOpen] = useState(false);
   const [userSearch, setUserSearch] = useState('');
   const { documentId } = useParams<{ documentId: string }>();
@@ -473,30 +475,32 @@ function SegmentsTab({
                   {undoSkippedMutation.isPending ? 'Restoring...' : 'Undo skipped'}
                 </Button>
               )}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0 gap-1.5 px-2"
-                onClick={() => setImagesPanelVisible((v) => !v)}
-                aria-pressed={imagesPanelVisible}
-                aria-label={
-                  imagesPanelVisible
-                    ? t('outliner.workspace.hideSidePanel')
-                    : t('outliner.workspace.showSidePanel')
-                }
-                title={
-                  imagesPanelVisible
-                    ? t('outliner.workspace.hideSidePanel')
-                    : t('outliner.workspace.showSidePanel')
-                }
-              >
-                {imagesPanelVisible ? (
-                  <PanelRightClose className="h-4 w-4" aria-hidden />
-                ) : (
-                  <PanelRightOpen className="h-4 w-4" aria-hidden />
-                )}
-              </Button>
+              {hasImages && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 gap-1.5 px-2"
+                  onClick={() => setImagesPanelVisible((v) => !v)}
+                  aria-pressed={imagesPanelVisible}
+                  aria-label={
+                    imagesPanelVisible
+                      ? t('outliner.workspace.hideSidePanel')
+                      : t('outliner.workspace.showSidePanel')
+                  }
+                  title={
+                    imagesPanelVisible
+                      ? t('outliner.workspace.hideSidePanel')
+                      : t('outliner.workspace.showSidePanel')
+                  }
+                >
+                  {imagesPanelVisible ? (
+                    <PanelRightClose className="h-4 w-4" aria-hidden />
+                  ) : (
+                    <PanelRightOpen className="h-4 w-4" aria-hidden />
+                  )}
+                </Button>
+              )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
@@ -593,9 +597,9 @@ function SegmentsTab({
         </div>
       )}
 
-      {segmentsPanel && !imagesPanelVisible && segmentsPanel}
+      {segmentsPanel && !(imagesPanelVisible && hasImages) && segmentsPanel}
 
-      {segmentsPanel && imagesPanelVisible && selectedDocument && (
+      {segmentsPanel && imagesPanelVisible && hasImages && selectedDocument && (
         <SplitPane
           direction="horizontal"
           className="outliner-split-pane min-h-0 flex-1 w-full"

@@ -11,6 +11,7 @@ import { SegmentItemMemo as SegmentItem } from './SegmentItem'
 import { WorkspaceHeader } from './WorkspaceHeader'
 import { useDocument, useSelection } from './contexts'
 import { useOutlinerDocument } from '@/hooks/useOutlinerDocument'
+import { useVolumeHasImages } from '@/features/outliner/bdrc/hook/useBdrcOtVolume'
 import type { TextSegment } from './types'
 import TocViewer from './TOCViewer'
 
@@ -21,7 +22,8 @@ export const Workspace: React.FC<{ listRef: React.RefObject<ListImperativeAPI | 
   const { segments} = useDocument()
   const { onTextSelection } = useSelection()
 
-  const { isLoading: isLoadingDocument } = useOutlinerDocument()
+  const { isLoading: isLoadingDocument, document } = useOutlinerDocument()
+  const hasImages = useVolumeHasImages(document?.filename ?? null)
   const containerRef = useRef<HTMLDivElement>(null)
   const parentContainerRef = useRef<HTMLDivElement>(null)
   const scrollPositionRef = useRef<number | null>(null)
@@ -39,7 +41,7 @@ export const Workspace: React.FC<{ listRef: React.RefObject<ListImperativeAPI | 
       className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden"
     >
       <WorkspaceHeader
-        tocPanel={{ visible: showToc, onToggle:()=>setShowToc(v=>!v) }}
+        tocPanel={hasImages ? { visible: showToc, onToggle:()=>setShowToc(v=>!v) } : null}
       />
       {isLoadingDocument && (
         <div className="flex shrink-0 items-center justify-center py-12">
@@ -78,7 +80,7 @@ export const Workspace: React.FC<{ listRef: React.RefObject<ListImperativeAPI | 
     </div>
   )
 
-  const bottomPane = showToc ? (
+  const bottomPane = showToc && hasImages ? (
     <SplitPane
       direction="horizontal"
       className="outliner-split-pane h-full min-h-0"

@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,13 @@ import { SegmentHighlightedText } from '@/components/outliner/SegmentHighlighted
 import { findAllOccurrences } from '@/features/outliner';
 import { getSegmentHighlightWords } from '@/utils/segmentHighlightWords';
 import { SegmentAttributionBar } from './SegmentAttributionBar';
+
+const REJECTION_REASONS = [
+  'reconstructed ལ་འགྲིག་རྟགས་བཀོད་དགོས།',
+  'reconstructed ལ་འགྲིག་རྟགས་བཀོད་མི་དགོས།',
+  'ཆོས་ཚན་གཅོད་ལྷག་བྱུང་འདུག',
+  'ཆོས་ཚན་འདི་གོང་དང་སྦྲེལ་དགོས།',
+];
 
 interface SegmentRowProps {
   readonly segment: Segment;
@@ -84,6 +92,7 @@ function SegmentRow({
   const { user: reviewerAccount, isLoading: reviewerAccountLoading } = useUser();
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectComment, setRejectComment] = useState('');
+  const [selectedRejectReasons, setSelectedRejectReasons] = useState<string[]>([]);
   const [rejectionHistoryOpen, setRejectionHistoryOpen] = useState(false);
   const rejectionCount = segment.rejection?.count ?? 0;
   const { document: selectedDocument, isLoading: isLoadingDocument } = useDocument(documentId);
@@ -171,6 +180,7 @@ function SegmentRow({
       toast.success('Segment rejected');
       setRejectDialogOpen(false);
       setRejectComment('');
+      setSelectedRejectReasons([]);
     },
     onError: (error: Error) => {
       toast.error(`Failed to reject segment: ${error.message}`);
@@ -179,6 +189,16 @@ function SegmentRow({
 
   const handleSave = () => {
     statusMutation.mutate('approved');
+  };
+
+  const toggleRejectReason = (reason: string) => {
+    setSelectedRejectReasons((prev) => {
+      const next = prev.includes(reason)
+        ? prev.filter((r) => r !== reason)
+        : [...prev, reason];
+      setRejectComment(next.join('\n'));
+      return next;
+    });
   };
 
   const handleConfirmReject = () => {
@@ -681,6 +701,7 @@ function SegmentRow({
                   size="sm"
                   onClick={() => {
                     setRejectComment('');
+                    setSelectedRejectReasons([]);
                     setRejectDialogOpen(true);
                   }}
                   disabled={isSaving}
@@ -820,6 +841,19 @@ function SegmentRow({
               Explain what needs to change. The annotator will see this on the rejected segment.
             </DialogDescription>
           </DialogHeader>
+          <div className="flex flex-col gap-2">
+            {REJECTION_REASONS.map((reason) => (
+              <label key={reason} className="flex items-start gap-2 text-sm cursor-pointer">
+                <Checkbox
+                  checked={selectedRejectReasons.includes(reason)}
+                  onCheckedChange={() => toggleRejectReason(reason)}
+                  disabled={rejectMutation.isPending}
+                  className="mt-0.5"
+                />
+                <span className="font-monlam">{reason}</span>
+              </label>
+            ))}
+          </div>
           <Textarea
             value={rejectComment}
             onChange={(e) => setRejectComment(e.target.value)}
@@ -827,7 +861,7 @@ function SegmentRow({
             className="min-h-[100px] text-sm"
             disabled={rejectMutation.isPending}
           />
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="gap-2 sm:gap-2">
             <Button
               type="button"
               variant="outline"
