@@ -90,7 +90,7 @@ export function SegmentAttributionBar({
   const showAnnotatorTime = isAnnotated && updatedAt;
   return (
     <div className="flex flex-wrap  items-center justify-end gap-2">
-      {canEditReview && (
+      {!canEditReview && (
         <AttributionChip
           label="Annotator"
           user={annotator}
