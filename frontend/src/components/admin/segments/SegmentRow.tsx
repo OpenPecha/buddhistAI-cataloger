@@ -850,7 +850,7 @@ function SegmentRow({
                   disabled={rejectMutation.isPending}
                   className="mt-0.5"
                 />
-                <span>{reason}</span>
+                <span className="font-monlam">{reason}</span>
               </label>
             ))}
           </div>
