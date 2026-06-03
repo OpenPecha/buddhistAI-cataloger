@@ -8,3 +8,4 @@ from outliner.models.active_batch import ActiveBatch
 from outliner.models.document import OutlinerDocument
 from outliner.models.segment import OutlinerSegment
 from outliner.models.segment_rejection import SegmentRejection
+from outliner.models.segment_review import SegmentReview

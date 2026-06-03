@@ -17,6 +17,7 @@ from outliner.models.outliner import (
     OutlinerDocument,
     OutlinerSegment,
     SegmentRejection,
+    SegmentReview,
 )
 
 import os

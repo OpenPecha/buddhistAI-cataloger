@@ -6,6 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from core.database import get_db
+from outliner.controller.segment_review import (
+    get_segment_review_statuses as get_segment_review_statuses_ctrl,
+)
 from outliner.repository.document import fetch_document_by_id, fetch_document_reviewer_id
 from outliner.controller.outliner import (
     approve_document as approve_document_ctrl,
@@ -62,6 +65,8 @@ from .schemas import (
     DocumentWorkspaceResponse,
     SegmentCreate,
     SegmentResponse,
+    SegmentReviewsResponse,
+    SegmentReviewStatusItem,
 )
 
 router = APIRouter()
@@ -458,6 +463,22 @@ async def get_document_progress(
 ):
     """Get progress statistics for a document"""
     return get_document_progress_ctrl(db, document_id)
+
+
+@router.get("/documents/{document_id}/segment-reviews", response_model=SegmentReviewsResponse)
+async def get_segment_reviews(
+    document_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
+):
+    statuses = get_segment_review_statuses_ctrl(db, document_id, current_user.id)
+    return SegmentReviewsResponse(
+        document_id=document_id,
+        items=[
+            SegmentReviewStatusItem(segment_id=segment_id, status=status)
+            for segment_id, status in statuses.items()
+        ],
+    )
 
 
 @router.post("/documents/{document_id}/submit-bdrc-in-review")
