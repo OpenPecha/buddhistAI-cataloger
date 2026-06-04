@@ -657,6 +657,50 @@ export const submitDocumentToBdrcInReview = async (
   return handleApiResponse(response);
 };
 
+export type SegmentReviewStatus = 'approve' | 'reject';
+
+export interface SegmentReview {
+  id: string;
+  document_id: string;
+  segment_id: string;
+  user_id: string;
+  status: SegmentReviewStatus;
+  created_at: string;
+  updated_at: string;
+}
+
+export const submitSegmentReview = async (
+  segmentId: string,
+  status: SegmentReviewStatus
+): Promise<SegmentReview> => {
+  const response = await outlinerFetch(`${OUTLINER_BASE_URL}/segments/${segmentId}/review`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  });
+  return handleApiResponse(response);
+};
+
+export interface SegmentReviewStatusItem {
+  segment_id: string;
+  status: SegmentReviewStatus;
+}
+
+export interface SegmentReviewsResponse {
+  document_id: string;
+  items: SegmentReviewStatusItem[];
+}
+
+export const getSegmentReviews = async (
+  documentId: string
+): Promise<Record<string, SegmentReviewStatus>> => {
+  const response = await outlinerFetch(
+    `${OUTLINER_BASE_URL}/documents/${documentId}/segment-reviews`
+  );
+  const data: SegmentReviewsResponse = await handleApiResponse(response);
+  return Object.fromEntries(data.items.map((item) => [item.segment_id, item.status]));
+};
+
 export const rejectSegment = async (
   segmentId: string,
   comment: string
@@ -986,18 +1030,13 @@ export const updateActiveBatch = async (body: ActiveBatchState): Promise<ActiveB
 
 // ==================== AI Endpoints ====================
 
-/** Result of POST …/documents/:id/ai/outline — same shape as a full document with segments. */
-export type AiOutlineResponse = Pick<
-  OutlinerDocument,
-  'id' | 'content' | 'filename' | 'user_id' | 'status' | 'created_at' | 'updated_at'
-> & {
-  is_supplied_title?: boolean | null;
-  segments: OutlinerSegment[];
-};
+/** Result of POST /outliner/ai-outline — segments are refetched via the document query. */
+export interface AiOutlineResponse {
+  segment_count: number;
+}
 
 /**
- * Run AI TOC detection on the full document and replace segments with splits at detected indices
- * (`POST /outliner/ai-outline?document_id=…`; backend: ai_text_outline.extract_toc_indices).
+ * Run AI outline detection on the full document and replace segments with splits at detected indices.
  */
 export const runAiOutline = async (
   documentId: string,
@@ -1010,8 +1049,7 @@ export const runAiOutline = async (
     signal,
   });
 
-  const data = await handleApiResponse(response);
-  return withResolvedSegmentTexts(data);
+  return handleApiResponse(response);
 };
 
 export interface GenerateTitleAuthorRequest {

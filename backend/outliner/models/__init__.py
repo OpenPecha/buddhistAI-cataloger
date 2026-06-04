@@ -7,12 +7,14 @@ from outliner.models.segment_enums import (
 from outliner.models.document import OutlinerDocument
 from outliner.models.segment import OutlinerSegment
 from outliner.models.segment_rejection import SegmentRejection
+from outliner.models.segment_review import SegmentReview
 
 __all__ = [
     "OutlinerDocument",
     "OutlinerSegment",
     "SegmentLabels",
     "SegmentRejection",
+    "SegmentReview",
     "SegmentStatus",
     "SEGMENT_STATUS_TRANSITIONS",
 ]

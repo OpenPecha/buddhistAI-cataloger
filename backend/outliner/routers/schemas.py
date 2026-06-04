@@ -1,7 +1,7 @@
 """Pydantic models for legacy ``/outliner/*`` routes."""
 
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_serializer
 
@@ -169,6 +169,36 @@ class RejectSegmentRequest(BaseModel):
     comment: str = Field(..., min_length=1, description="Required explanation for the annotator")
 
 
+class SegmentReviewRequest(BaseModel):
+    """Reviewer's approve/reject decision on a segment from the view-only page."""
+
+    status: Literal["approve", "reject"]
+
+
+class SegmentReviewResponse(BaseModel):
+    id: str
+    document_id: str
+    segment_id: str
+    user_id: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SegmentReviewStatusItem(BaseModel):
+
+    segment_id: str
+    status: str
+
+
+class SegmentReviewsResponse(BaseModel):
+
+    document_id: str
+    items: List[SegmentReviewStatusItem] = Field(default_factory=list)
+
+
 class BulkRejectRequest(BaseModel):
     segment_ids: List[str]
     comment: str = Field(
@@ -250,6 +280,10 @@ class DocumentWorkspaceResponse(BaseModel):
     segments: List[SegmentResponseDocument] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AiOutlineResponse(BaseModel):
+    segment_count: int
 
 
 class AiTocEntryItem(BaseModel):

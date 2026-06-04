@@ -1,17 +1,66 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Highlighter from 'react-highlight-words';
+import { toast } from 'sonner';
 
 import {
   getOutlinerDocument,
   getRandomReviewedDocumentIds,
+  getSegmentReviews,
+  submitSegmentReview,
   type OutlinerSegment,
+  type SegmentReviewStatus,
 } from '@/api/outliner';
 import { SegmentSearchBar } from '@/components/outliner/SegmentSearchBar';
 import { findAllOccurrences, normalizeSearchQuery } from '@/features/outliner';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
+
+function sortSegments(list: OutlinerSegment[] | undefined): OutlinerSegment[] {
+  return [...(list ?? [])].sort((a, b) => a.segment_index - b.segment_index);
+}
+
+function ReviewActions({
+  decision,
+  isPending,
+  onReview,
+}: Readonly<{
+  decision: SegmentReviewStatus | undefined;
+  isPending: boolean;
+  onReview: (status: SegmentReviewStatus) => void;
+}>) {
+  return (
+    <div className="flex shrink-0 gap-2 border-t border-gray-200 pt-4">
+      <button
+        type="button"
+        disabled={isPending}
+        onClick={() => onReview('reject')}
+        className={cn(
+          'flex-1 cursor-pointer rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+          decision === 'reject'
+            ? 'border-red-600 bg-red-600 text-white hover:bg-red-700'
+            : 'border-red-200 bg-white text-red-700 hover:bg-red-50',
+        )}
+      >
+        Reject
+      </button>
+      <button
+        type="button"
+        disabled={isPending}
+        onClick={() => onReview('approve')}
+        className={cn(
+          'flex-1 cursor-pointer rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+          decision === 'approve'
+            ? 'border-emerald-600 bg-emerald-600 text-white hover:bg-emerald-700'
+            : 'border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-50',
+        )}
+      >
+        Approve
+      </button>
+    </div>
+  );
+}
 
 function effectiveTitle(s: OutlinerSegment): string {
   const v =
@@ -63,10 +112,61 @@ function ViewOnly() {
     bodyText: string;
   } | null>(null);
 
+  const [pageIndex, setPageIndex] = useState(0);
+
   useEffect(() => {
     setPageSearchQuery('');
     setSearchBarContext(null);
+    setPageIndex(0);
   }, [selectedId]);
+
+  // Same query key as EachDocument: a cache hit, so the footer can read the
+  // current segment without a child→parent effect callback or an extra request.
+  const { data: selectedDoc } = useQuery({
+    queryKey: ['outliner', 'document', selectedId],
+    queryFn: () => getOutlinerDocument(selectedId as string, true),
+    enabled: Boolean(selectedId),
+  });
+  const selectedSegments = useMemo(
+    () => sortSegments(selectedDoc?.segments),
+    [selectedDoc?.segments],
+  );
+  const currentSeg = selectedSegments[pageIndex];
+
+  const reviewsQueryKey = ['outliner', 'segment-reviews', selectedId];
+  const { data: reviewStatuses } = useQuery({
+    queryKey: reviewsQueryKey,
+    queryFn: () => getSegmentReviews(selectedId as string),
+    enabled: Boolean(selectedId),
+  });
+  const currentDecision = currentSeg ? reviewStatuses?.[currentSeg.id] : undefined;
+
+  const queryClient = useQueryClient();
+  const reviewMutation = useMutation({
+    mutationFn: ({ segmentId, status }: { segmentId: string; status: SegmentReviewStatus }) =>
+      submitSegmentReview(segmentId, status),
+    onSuccess: (_data, { segmentId, status }) => {
+      queryClient.setQueryData<Record<string, SegmentReviewStatus>>(
+        reviewsQueryKey,
+        (prev) => ({ ...prev, [segmentId]: status }),
+      );
+      toast.success(status === 'approve' ? 'Segment approved' : 'Segment rejected');
+    },
+    onError: (err) =>
+      toast.error(err instanceof Error ? err.message : 'Could not save your review'),
+  });
+
+  const handleReview = useCallback(
+    (status: SegmentReviewStatus) => {
+      if (!currentSeg) return;
+      const totalPages = selectedSegments.length;
+      reviewMutation.mutate(
+        { segmentId: currentSeg.id, status },
+        { onSuccess: () => setPageIndex((i) => Math.min(i + 1, totalPages - 1)) },
+      );
+    },
+    [currentSeg, selectedSegments.length, reviewMutation],
+  );
 
   const segmentSearchMatchCount = useMemo(
     () => findAllOccurrences(searchBarContext?.bodyText ?? '', pageSearchQuery).length,
@@ -97,13 +197,13 @@ function ViewOnly() {
             <>
               <aside
                 className={cn(
-                  'flex w-full shrink-0 flex-col border-b border-gray-200 bg-gray-50/95 pb-4 backdrop-blur-sm',
-                  'sticky top-6 z-10 max-h-[calc(100dvh-5rem)] self-start overflow-y-auto',
-                  'md:w-64 md:border-b-0 md:border-r md:pb-0 md:pr-4 lg:w-72',
+                  'flex w-full shrink-0 flex-col gap-4 border-b border-gray-200 bg-gray-50/95 py-4 backdrop-blur-sm',
+                  'sticky top-6 z-10 max-h-[calc(100dvh-5rem)] self-start overflow-hidden md:h-[calc(100dvh-5rem)]',
+                  'md:w-64 md:border-t md:border-r md:pr-4 lg:w-72',
                 )}
               >
                 {searchBarContext ? (
-                  <div className="mb-4 shrink-0">
+                  <div className="shrink-0">
                     <SegmentSearchBar
                       key={searchBarContext.searchRootId}
                       segmentId={searchBarContext.searchRootId}
@@ -113,33 +213,44 @@ function ViewOnly() {
                     />
                   </div>
                 ) : null}
-                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Documents
-                </h2>
-                <nav className="flex flex-col gap-1 pr-0.5 md:pr-1" aria-label="Documents">
-                  {documents.map((doc) => (
-                    <button
-                      key={doc.id}
-                      type="button"
-                      onClick={() => setSelectedId(doc.id)}
-                      title={`${doc.filename || '—'}\n${doc.id}`}
-                      className={cn(
-                        'w-full min-w-0 cursor-pointer rounded-lg border px-3 py-2.5 text-left text-sm transition-colors',
-                        selectedId === doc.id
-                          ? 'border-gray-900 bg-gray-900 text-white'
-                          : 'border-gray-200 bg-white text-gray-900 hover:border-gray-400',
-                      )}
-                    >
-                      <div className="truncate font-medium">{doc.filename?.trim() || '—'}</div>
-                    </button>
-                  ))}
-                </nav>
+                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pr-0.5 md:pr-1">
+                  <h2 className="mb-2 shrink-0 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    Documents
+                  </h2>
+                  <nav className="flex flex-col gap-1" aria-label="Documents">
+                    {documents.map((doc) => (
+                      <button
+                        key={doc.id}
+                        type="button"
+                        onClick={() => setSelectedId(doc.id)}
+                        title={`${doc.filename || '—'}\n${doc.id}`}
+                        className={cn(
+                          'w-full min-w-0 cursor-pointer rounded-lg border px-3 py-2.5 text-left text-sm transition-colors',
+                          selectedId === doc.id
+                            ? 'border-gray-900 bg-gray-900 text-white'
+                            : 'border-gray-200 bg-white text-gray-900 hover:border-gray-400',
+                        )}
+                      >
+                        <div className="truncate font-medium">{doc.filename?.trim() || '—'}</div>
+                      </button>
+                    ))}
+                  </nav>
+                </div>
+                {currentSeg ? (
+                  <ReviewActions
+                    decision={currentDecision}
+                    isPending={reviewMutation.isPending}
+                    onReview={handleReview}
+                  />
+                ) : null}
               </aside>
               <main className="min-w-0 flex-1">
                 {selectedId ? (
                   <EachDocument
                     documentId={selectedId}
                     pageSearchQuery={pageSearchQuery}
+                    pageIndex={pageIndex}
+                    onPageIndexChange={setPageIndex}
                     onSearchBarContextChange={onSearchBarContextChange}
                   />
                 ) : null}
@@ -274,10 +385,14 @@ function BookPageTurner({
 function EachDocument({
   documentId,
   pageSearchQuery,
+  pageIndex,
+  onPageIndexChange,
   onSearchBarContextChange,
 }: Readonly<{
   documentId: string;
   pageSearchQuery: string;
+  pageIndex: number;
+  onPageIndexChange: (index: number) => void;
   onSearchBarContextChange: (ctx: { searchRootId: string; bodyText: string } | null) => void;
 }>) {
   const { data, isPending, error } = useQuery({
@@ -286,24 +401,13 @@ function EachDocument({
     enabled: Boolean(documentId),
   });
 
-  const [pageIndex, setPageIndex] = useState(0);
+  const segments = useMemo(() => sortSegments(data?.segments), [data?.segments]);
 
   useEffect(() => {
-    setPageIndex(0);
-  }, [documentId]);
-
-  const segments = useMemo(
-    () => [...(data?.segments ?? [])].sort((a, b) => a.segment_index - b.segment_index),
-    [data?.segments],
-  );
-
-  useEffect(() => {
-    if (segments.length === 0) {
-      setPageIndex(0);
-      return;
+    if (segments.length > 0 && pageIndex > segments.length - 1) {
+      onPageIndexChange(segments.length - 1);
     }
-    setPageIndex((i) => Math.min(i, segments.length - 1));
-  }, [segments.length]);
+  }, [segments.length, pageIndex, onPageIndexChange]);
 
   const currentSeg = segments[pageIndex];
   const searchRootId = currentSeg
@@ -360,7 +464,7 @@ function EachDocument({
         <BookPageTurner
           segments={segments}
           pageIndex={pageIndex}
-          onPageIndexChange={setPageIndex}
+          onPageIndexChange={onPageIndexChange}
           searchRootId={searchRootId}
           searchQuery={pageSearchQuery}
         />

@@ -7,7 +7,7 @@ import { useOutlinerDocument } from '@/hooks/useOutlinerDocument';
 import {  useDocument } from './contexts';
 
 import WorkSpaceHeaderMenu from './workspace/WorkSpaceHeaderMenu';
-// import AIDetectionButton from './workspace/AIDetectionButton';
+import AIDetectionButton from './workspace/AIDetectionButton';
 import ActionButton from './workspace/ActionButton';
 
 
@@ -50,7 +50,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
           </div>
         </div>
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-        {/* <AIDetectionButton/> */}
+        <AIDetectionButton/>
         <WorkSpaceHeaderMenu/>
         <ActionButton/>
           {tocPanel && (

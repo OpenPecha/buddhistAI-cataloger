@@ -2,7 +2,7 @@
 BoSegmenter @git+https://github.com/OpenPecha/BoSegmenter.git@d31da9d9cc913ddb01e006446f66191078875d95
 fast_antx @git+https://github.com/OpenPecha/fast-antx.git@4dad71a8340c3e400e59ab70027347698648f1b0
 ai-text-outline @git+https://github.com/OpenPecha/ai-text-outline.git
-
+outline_detection @git+https://github.com/OpenPecha/outline-detection.git
 # --- Core web stack ---
 fastapi
 uvicorn[standard]
