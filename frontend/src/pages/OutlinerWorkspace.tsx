@@ -117,9 +117,12 @@ const OutlinerWorkspace: React.FC = () => {
     }
   }, [isAllSegmentsExpanded, collapseAllSegments, expandAllSegments]);
 
-  // Set initial activeSegmentId from URL or first segment
+  // Set active segment to the first segment when none is selected or the URL points to a replaced segment.
   useEffect(() => {
-    if (currentSegments.length > 0 && !activeSegmentId) {
+    if (
+      currentSegments.length > 0 &&
+      (!activeSegmentId || !currentSegments.some((segment) => segment.id === activeSegmentId))
+    ) {
       setSearchParams({ segmentId: currentSegments[0].id }, { replace: true });
     }
   }, [currentSegments, activeSegmentId, setSearchParams]);
@@ -739,15 +742,10 @@ const OutlinerWorkspace: React.FC = () => {
     aiTextEndingAbortControllerRef.current = abortController;
 
     try {
-      const data = await aiTextEndings.runAiOutline({
+      await aiTextEndings.runAiOutline({
         document_id: documentId,
         signal: abortController.signal,
       });
-
-      const firstId = data.segments?.[0]?.id;
-      if (firstId) {
-        setSearchParams({ segmentId: firstId }, { replace: true });
-      }
     } catch (error) {
       if (error instanceof Error && error.name !== 'AbortError') {
         console.error('AI outline failed:', error);

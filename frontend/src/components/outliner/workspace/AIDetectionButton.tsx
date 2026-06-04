@@ -16,7 +16,7 @@ function AIDetectionButton() {
   const disableAIButton = isLoadingOrSaving || aiTextEndingLoading || !documentId;
 
   return (
-    <div>
+    <div className="flex items-center gap-2">
       {aiTextEndingLoading && (
         <Button
           variant="outline"

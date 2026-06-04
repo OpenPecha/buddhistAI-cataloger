@@ -27,8 +27,8 @@ export const useAITextEndings = (options?: UseAITextEndingsOptions) => {
         });
       }
       toast.success(
-        data.segments?.length
-          ? i18n.t('outliner.aiOutline.segmentsCreated', { count: data.segments.length })
+        data.segment_count
+          ? i18n.t('outliner.aiOutline.segmentsCreated', { count: data.segment_count })
           : i18n.t('outliner.aiOutline.complete'),
       );
       options?.onSuccess?.(data);
