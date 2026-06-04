@@ -24,6 +24,12 @@ i18n
     debug: false,
     interpolation: {
       escapeValue: false, // React already escapes values
+      alwaysFormat: true,
+      format: (value, _format, lng) => {
+        if (typeof value !== 'number') return value;
+        if (lng === 'bo') return value.toString().replace(/\d/g, (d) => '༠༡༢༣༤༥༦༧༨༩'[Number(d)]);
+        return value;
+      },
     },
     detection: {
       order: ['localStorage', 'navigator'],

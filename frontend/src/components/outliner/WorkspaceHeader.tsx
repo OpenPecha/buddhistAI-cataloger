@@ -25,27 +25,31 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
   tocPanel,
 }) => {
   const { t } = useTranslation();
-  const { rejectedSegmentsCount,checked_percentage,checkedSegmentsCount  } = useDocument();
+  const { rejectedSegmentsCount,checked_percentage,checkedSegmentsCount,segmentsCount  } = useDocument();
   const { isBusy:isLoadingOrSaving} = useOutlinerDocument();
 
   return (
-      <div className="bg-white border-b py-2 border-gray-200 px-6  flex items-center justify-between">
-        <div>
+      <div className="bg-white border-b py-2 border-gray-200 px-3 sm:px-6 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+        <div className="flex items-center justify-between gap-3 min-w-max sm:min-w-0">
+        <div className="shrink-0">
           <div className="flex items-center gap-2">
             {isLoadingOrSaving && (
               <span className="text-sm text-gray-600">{t('outliner.workspace.saving')}</span>
             )}
           </div>
-          <div className="text-sm text-gray-600">
-            <Progress value={checked_percentage} title={t('outliner.workspace.savedSegmentsTitle', { count: checkedSegmentsCount })} className="w-40"/>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <Progress value={checked_percentage} title={t('outliner.workspace.savedSegmentsTitle', { count: checkedSegmentsCount })} className="w-32 sm:w-40 shrink-0"/>
+            <span className="tabular-nums whitespace-nowrap">
+              {t('outliner.workspace.progressLabel', { percent: Math.round(checked_percentage), checked: checkedSegmentsCount, total: segmentsCount })}
+            </span>
             {rejectedSegmentsCount > 0 && (
-              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+              <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 whitespace-nowrap">
                 {t('outliner.workspace.revisionBadge', { count: rejectedSegmentsCount })}
               </span>
             )}
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         <AIDetectionButton/>
         <WorkSpaceHeaderMenu/>
         <ActionButton/>
@@ -75,6 +79,7 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
               )}
             </Button>
           )}
+        </div>
         </div>
       </div>
     

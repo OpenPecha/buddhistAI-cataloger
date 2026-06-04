@@ -384,7 +384,7 @@ const SegmentLabelSelector = ({
     onValueChange={handleLabelChange}
       disabled={!documentId  || segment.status==='checked'}
     >
-      <SelectTrigger className="h-8 text-xs flex-1 max-w-[180px]" id={`segment-label-${segment.id}`}>
+      <SelectTrigger className="h-8 text-xs flex-1 max-w-[180px] [&_[data-slot=select-value]]:line-clamp-none" id={`segment-label-${segment.id}`}>
         <SelectValue placeholder={t('outliner.segment.noLabelPlaceholder')} />
       </SelectTrigger>
       <SelectContent>

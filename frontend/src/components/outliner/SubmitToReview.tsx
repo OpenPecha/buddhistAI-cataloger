@@ -50,7 +50,7 @@ function SubmitToReview({ disabled, disabledReason }: SubmitToReviewProps) {
         ) : (
           <Send className="w-4 h-4" />
         )}
-        {t('outliner.submitReview.submit')}
+        <span className="hidden sm:inline">{t('outliner.submitReview.submit')}</span>
       </Button>
     );
 }
