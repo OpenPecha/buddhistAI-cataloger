@@ -282,6 +282,10 @@ class DocumentWorkspaceResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class AiOutlineResponse(BaseModel):
+    segment_count: int
+
+
 class AiTocEntryItem(BaseModel):
     page_no: int
     title: str

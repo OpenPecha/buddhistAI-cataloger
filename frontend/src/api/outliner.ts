@@ -1030,18 +1030,13 @@ export const updateActiveBatch = async (body: ActiveBatchState): Promise<ActiveB
 
 // ==================== AI Endpoints ====================
 
-/** Result of POST …/documents/:id/ai/outline — same shape as a full document with segments. */
-export type AiOutlineResponse = Pick<
-  OutlinerDocument,
-  'id' | 'content' | 'filename' | 'user_id' | 'status' | 'created_at' | 'updated_at'
-> & {
-  is_supplied_title?: boolean | null;
-  segments: OutlinerSegment[];
-};
+/** Result of POST /outliner/ai-outline — segments are refetched via the document query. */
+export interface AiOutlineResponse {
+  segment_count: number;
+}
 
 /**
- * Run AI TOC detection on the full document and replace segments with splits at detected indices
- * (`POST /outliner/ai-outline?document_id=…`; backend: ai_text_outline.extract_toc_indices).
+ * Run AI outline detection on the full document and replace segments with splits at detected indices.
  */
 export const runAiOutline = async (
   documentId: string,
@@ -1054,8 +1049,7 @@ export const runAiOutline = async (
     signal,
   });
 
-  const data = await handleApiResponse(response);
-  return withResolvedSegmentTexts(data);
+  return handleApiResponse(response);
 };
 
 export interface GenerateTitleAuthorRequest {
