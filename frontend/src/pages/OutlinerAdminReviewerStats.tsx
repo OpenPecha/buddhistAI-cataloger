@@ -47,8 +47,8 @@ function OutlinerAdminReviewerStats() {
   const [sortField, setSortField] = useState<SortField>('rejections');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
-  const startDateParsed = dataParse(filters.startDate || '');
-  const endDateParsed = dataParse(filters.endDate || '');
+  const startDateParsed = filters.startDate ? dataParse(filters.startDate) : '';
+  const endDateParsed = filters.endDate ? dataParse(filters.endDate) : '';
 
   const applyFilters = () => {
     setSearchParams((params) => {
@@ -200,13 +200,13 @@ function OutlinerAdminReviewerStats() {
                         key={row.user_id}
                         className="border-b border-stone-100 last:border-0 hover:bg-stone-50/80"
                       >
-                        <td className="max-w-[14rem] px-4 py-2.5 font-medium leading-snug text-foreground sm:max-w-none sm:whitespace-normal">
+                        <td className="max-w-[14rem] px-4 py-3 font-medium leading-snug text-foreground sm:max-w-none sm:whitespace-normal">
                           <span className="break-words">{row.reviewer}</span>
                         </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-emerald-700">
+                        <td className="px-4 py-3 text-right tabular-nums text-emerald-700">
                           {row.approvals.toLocaleString()}
                         </td>
-                        <td className="px-4 py-2.5 text-right tabular-nums text-red-700">
+                        <td className="px-4 py-3 text-right tabular-nums text-red-700">
                           {row.rejections.toLocaleString()}
                         </td>
                       </tr>
