@@ -702,10 +702,12 @@ class DashboardStatsResponse(BaseModel):
     )
 
 
-class ReviewerStatsSegmentSummary(BaseModel):
+class ReviewVerifierBreakdownRow(BaseModel):
+    user_id: str
+    reviewer: str
     total_segments: int = 0
-    approved: int = 0
-    rejected: int = 0
+    approvals: int = 0
+    rejections: int = 0
 
 
 class ReviewerStatsBreakdownRow(BaseModel):
@@ -716,7 +718,7 @@ class ReviewerStatsBreakdownRow(BaseModel):
 
 
 class ReviewerStatsResponse(BaseModel):
-    segment_summary: ReviewerStatsSegmentSummary
+    review_verifier_breakdown: List[ReviewVerifierBreakdownRow] = Field(default_factory=list)
     reviewer_breakdown: List[ReviewerStatsBreakdownRow] = Field(default_factory=list)
 
 

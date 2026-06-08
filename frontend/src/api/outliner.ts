@@ -1032,10 +1032,12 @@ export const updateActiveBatch = async (body: ActiveBatchState): Promise<ActiveB
 
 // ==================== Reviewer Stats ====================
 
-export interface ReviewerStatsSegmentSummary {
+export interface ReviewVerifierBreakdownRow {
+  user_id: string;
+  reviewer: string;
   total_segments: number;
-  approved: number;
-  rejected: number;
+  approvals: number;
+  rejections: number;
 }
 
 export interface ReviewerStatsBreakdownRow {
@@ -1046,7 +1048,7 @@ export interface ReviewerStatsBreakdownRow {
 }
 
 export interface ReviewerStatsData {
-  segment_summary: ReviewerStatsSegmentSummary;
+  review_verifier_breakdown: ReviewVerifierBreakdownRow[];
   reviewer_breakdown: ReviewerStatsBreakdownRow[];
 }
 

@@ -44,7 +44,7 @@ async def reviewer_stats(
     end_date: Optional[datetime] = Query(None, description="End of date range (ISO format)"),
     db: Session = Depends(get_db),
 ):
-    """Segment summary and per-reviewer breakdown from view-only spot-check reviews."""
+    """Segment summary and per-reviewer breakdown from view-only review-verification reviews."""
     return get_reviewer_stats_ctrl(db, user_id=user_id, start_date=start_date, end_date=end_date)
 
 
