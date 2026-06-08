@@ -12,8 +12,10 @@ def upsert_segment_review(
     document_id: str,
     user_id: str,
     status: str,
+    comment: str | None = None,
 ) -> SegmentReview:
     """Insert or update this user's decision for a segment (one row per user + segment)."""
+    comment = (comment or "").strip() or None
     review = (
         db.query(SegmentReview)
         .filter(
@@ -28,10 +30,12 @@ def upsert_segment_review(
             segment_id=segment_id,
             user_id=user_id,
             status=status,
+            comment=comment,
         )
         db.add(review)
     else:
         review.status = status
+        review.comment = comment
     db.commit()
     db.refresh(review)
     return review

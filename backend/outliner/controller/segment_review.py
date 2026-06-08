@@ -16,6 +16,7 @@ def submit_segment_review(
     segment_id: str,
     user_id: str,
     status: str,
+    comment: str | None = None,
 ) -> SegmentReview:
     """Record the reviewer's approve/reject decision for a segment."""
     segment = get_segment_plain(db, segment_id)
@@ -27,6 +28,7 @@ def submit_segment_review(
         document_id=segment.document_id,
         user_id=user_id,
         status=status,
+        comment=comment,
     )
 
 

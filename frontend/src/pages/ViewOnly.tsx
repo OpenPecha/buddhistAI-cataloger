@@ -26,14 +26,26 @@ function sortSegments(list: OutlinerSegment[] | undefined): OutlinerSegment[] {
 function ReviewActions({
   decision,
   isPending,
+  rejectComment,
+  onRejectCommentChange,
   onReview,
 }: Readonly<{
   decision: SegmentReviewStatus | undefined;
   isPending: boolean;
+  rejectComment: string;
+  onRejectCommentChange: (value: string) => void;
   onReview: (status: SegmentReviewStatus) => void;
 }>) {
   return (
-    <div className="flex shrink-0 gap-2 border-t border-gray-200 pt-4">
+    <div className="flex shrink-0 flex-col gap-2 border-t border-gray-200 pt-4">
+      <textarea
+        value={rejectComment}
+        onChange={(e) => onRejectCommentChange(e.target.value)}
+        placeholder="Reason for rejection (optional)"
+        rows={2}
+        className="w-full resize-none rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-gray-400 focus:outline-none"
+      />
+      <div className="flex gap-2">
       <button
         type="button"
         disabled={isPending}
@@ -60,6 +72,7 @@ function ReviewActions({
       >
         Approve
       </button>
+      </div>
     </div>
   );
 }
@@ -159,10 +172,23 @@ function ViewOnly() {
   });
   const currentDecision = currentSeg ? reviewStatuses?.[currentSeg.id] : undefined;
 
+  const [rejectComment, setRejectComment] = useState('');
+
+  useEffect(() => {
+    setRejectComment('');
+  }, [currentSeg?.id]);
+
   const queryClient = useQueryClient();
   const reviewMutation = useMutation({
-    mutationFn: ({ segmentId, status }: { segmentId: string; status: SegmentReviewStatus }) =>
-      submitSegmentReview(segmentId, status),
+    mutationFn: ({
+      segmentId,
+      status,
+      comment,
+    }: {
+      segmentId: string;
+      status: SegmentReviewStatus;
+      comment?: string;
+    }) => submitSegmentReview(segmentId, status, comment),
     onSuccess: (_data, { segmentId, status }) => {
       queryClient.setQueryData<Record<string, SegmentReviewStatus>>(
         reviewsQueryKey,
@@ -177,13 +203,21 @@ function ViewOnly() {
   const handleReview = useCallback(
     (status: SegmentReviewStatus) => {
       if (!currentSeg) return;
+      if (status === 'approve' && rejectComment.trim()) {
+        toast.error('Comments are only saved for rejections. Clear it to approve, or click Reject.');
+        return;
+      }
       const totalPages = selectedSegments.length;
       reviewMutation.mutate(
-        { segmentId: currentSeg.id, status },
+        {
+          segmentId: currentSeg.id,
+          status,
+          comment: status === 'reject' ? rejectComment : undefined,
+        },
         { onSuccess: () => setPageIndex((i) => Math.min(i + 1, totalPages - 1)) },
       );
     },
-    [currentSeg, selectedSegments.length, reviewMutation],
+    [currentSeg, selectedSegments.length, reviewMutation, rejectComment],
   );
 
   const segmentSearchMatchCount = useMemo(
@@ -266,6 +300,8 @@ function ViewOnly() {
                   <ReviewActions
                     decision={currentDecision}
                     isPending={reviewMutation.isPending}
+                    rejectComment={rejectComment}
+                    onRejectCommentChange={setRejectComment}
                     onReview={handleReview}
                   />
                 ) : null}

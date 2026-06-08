@@ -665,18 +665,20 @@ export interface SegmentReview {
   segment_id: string;
   user_id: string;
   status: SegmentReviewStatus;
+  comment?: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export const submitSegmentReview = async (
   segmentId: string,
-  status: SegmentReviewStatus
+  status: SegmentReviewStatus,
+  comment?: string
 ): Promise<SegmentReview> => {
   const response = await outlinerFetch(`${OUTLINER_BASE_URL}/segments/${segmentId}/review`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, comment }),
   });
   return handleApiResponse(response);
 };
