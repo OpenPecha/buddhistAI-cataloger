@@ -31,6 +31,7 @@ const OutlinerAdminDashboardLazy = lazy(() => import('@/features/outliner').then
 const OutlinerAdminDocumentLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminDocument })));
 const OutlinerAdminSegmentLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminSegment })));
 const OutlinerAdminUsersLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminUsers })));
+const OutlinerAdminReviewerStatsLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminReviewerStats })));
 const OutlinerAdminBDRCWorksLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminBDRCWorks })));
 const OutlinerAdminBDRCPersonsLazy = lazy(() => import('@/features/outliner').then((m) => ({ default: m.AdminBDRCPersons })));
 
@@ -149,6 +150,13 @@ function App() {
             <ProtectedRoute>
               <OutlinerAdminLayout >
                 <OutlinerAdminDashboardLazy />
+              </OutlinerAdminLayout>
+            </ProtectedRoute>
+          } />
+          <Route path="/outliner-admin/reviewer-stats" element={
+            <ProtectedRoute>
+              <OutlinerAdminLayout>
+                <OutlinerAdminReviewerStatsLazy />
               </OutlinerAdminLayout>
             </ProtectedRoute>
           } />

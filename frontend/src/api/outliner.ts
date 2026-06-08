@@ -1030,6 +1030,40 @@ export const updateActiveBatch = async (body: ActiveBatchState): Promise<ActiveB
   return handleApiResponse(response);
 };
 
+// ==================== Reviewer Stats ====================
+
+export interface ReviewerStatsSegmentSummary {
+  total_segments: number;
+  approved: number;
+  rejected: number;
+}
+
+export interface ReviewerStatsBreakdownRow {
+  user_id: string;
+  reviewer: string;
+  approvals: number;
+  rejections: number;
+}
+
+export interface ReviewerStatsData {
+  segment_summary: ReviewerStatsSegmentSummary;
+  reviewer_breakdown: ReviewerStatsBreakdownRow[];
+}
+
+export const getReviewerStats = async (
+  user_id?: string,
+  start_date?: string,
+  end_date?: string,
+): Promise<ReviewerStatsData> => {
+  const params = new URLSearchParams();
+  if (user_id) params.append('user_id', user_id);
+  if (start_date) params.append('start_date', start_date);
+  if (end_date) params.append('end_date', end_date);
+  const qs = params.toString();
+  const response = await outlinerFetch(`${OUTLINER_BASE_URL}/dashboard/reviewer-stats${qs ? `?${qs}` : ''}`);
+  return handleApiResponse(response);
+};
+
 // ==================== AI Endpoints ====================
 
 /** Result of POST /outliner/ai-outline — segments are refetched via the document query. */

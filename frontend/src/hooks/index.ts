@@ -10,4 +10,5 @@ export { useOutlinerUsers } from './useOutlinerUsers';
 export type { OutlinerUser } from './useOutlinerUsers';
 export { useDashboardStats } from './useDashboardStats';
 export type { DashboardStatsFilters } from './useDashboardStats';
+export { useReviewerStats } from './useReviewerStats';
 export { useActiveBatch } from './useActiveBatch';
