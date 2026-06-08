@@ -173,6 +173,7 @@ class SegmentReviewRequest(BaseModel):
     """Reviewer's approve/reject decision on a segment from the view-only page."""
 
     status: Literal["approve", "reject"]
+    comment: str | None = None
 
 
 class SegmentReviewResponse(BaseModel):
@@ -181,6 +182,7 @@ class SegmentReviewResponse(BaseModel):
     segment_id: str
     user_id: str
     status: str
+    comment: str | None = None
     created_at: datetime
     updated_at: datetime
 

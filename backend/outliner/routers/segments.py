@@ -322,7 +322,9 @@ async def submit_segment_review(
     current_user: User = Depends(require_outliner_access),
 ):
     """Record the current user's approve/reject decision on a segment (view-only review)."""
-    return submit_segment_review_ctrl(db, segment_id, current_user.id, body.status)
+    return submit_segment_review_ctrl(
+        db, segment_id, current_user.id, body.status, body.comment
+    )
 
 
 @router.put("/segments/bulk-reject", response_model=List[SegmentResponse])
