@@ -9,10 +9,12 @@ import {
   getSegmentReviews,
   submitSegmentReview,
   type OutlinerSegment,
+  type RandomReviewedDocumentSummary,
   type SegmentReviewStatus,
 } from '@/api/outliner';
 import { SegmentSearchBar } from '@/components/outliner/SegmentSearchBar';
 import { findAllOccurrences, normalizeSearchQuery } from '@/features/outliner';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -78,33 +80,49 @@ function effectiveAuthor(s: OutlinerSegment): string {
   return v || '—';
 }
 
+function errorText(error: unknown): string | null {
+  if (!error) return null;
+  return error instanceof Error ? error.message : 'Could not load document ids';
+}
+
 function ViewOnly() {
-  const { data, isPending, error } = useQuery({
+  const [documents, setDocuments] = useLocalStorage<RandomReviewedDocumentSummary[] | null>(
+    'outliner:random-reviewed-documents',
+    null,
+  );
+
+  const { isFetching, error, refetch } = useQuery({
     queryKey: ['outliner', 'random-reviewed-document-ids'],
-    queryFn: () => getRandomReviewedDocumentIds(),
+    queryFn: async () => {
+      const result = await getRandomReviewedDocumentIds();
+      setDocuments(result.documents);
+      return result.documents;
+    },
+    enabled: documents === null,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
   });
 
-  const documents = data?.documents ?? [];
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!data?.documents?.length) {
+    if (!documents?.length) {
       setSelectedId(null);
       return;
     }
     setSelectedId((prev) => {
-      if (prev && data.documents.some((d) => d.id === prev)) return prev;
-      return data.documents[0].id;
+      if (prev && documents.some((d) => d.id === prev)) return prev;
+      return documents[0].id;
     });
-  }, [data]);
+  }, [documents]);
 
-  const loading = isPending;
-  let errorMessage: string | null = null;
-  if (error) {
-    errorMessage = error instanceof Error ? error.message : 'Could not load document ids';
-  }
+  const documentList = documents ?? [];
+  const loading = isFetching && documents === null;
+  const errorMessage = errorText(error);
 
-  const hasSidebar = !loading && !errorMessage && documents.length > 0;
+  const hasSidebar = !loading && !errorMessage && documentList.length > 0;
 
   const [pageSearchQuery, setPageSearchQuery] = useState('');
   const [searchBarContext, setSearchBarContext] = useState<{
@@ -191,7 +209,7 @@ function ViewOnly() {
       {errorMessage && <p className="text-red-600">{errorMessage}</p>}
       {!loading && !errorMessage && (
         <>
-          {documents.length === 0 ? (
+          {documentList.length === 0 ? (
             <p className="text-sm text-gray-600">No approved documents in the database.</p>
           ) : (
             <>
@@ -218,7 +236,7 @@ function ViewOnly() {
                     Documents
                   </h2>
                   <nav className="flex flex-col gap-1" aria-label="Documents">
-                    {documents.map((doc) => (
+                    {documentList.map((doc) => (
                       <button
                         key={doc.id}
                         type="button"
@@ -235,6 +253,14 @@ function ViewOnly() {
                       </button>
                     ))}
                   </nav>
+                  <button
+                    type="button"
+                    onClick={() => refetch()}
+                    disabled={isFetching}
+                    className="mt-3 w-full shrink-0 cursor-pointer rounded-lg border border-dashed border-gray-300 px-3 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:border-gray-400 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isFetching ? 'Loading…' : 'Show 5 more random documents'}
+                  </button>
                 </div>
                 {currentSeg ? (
                   <ReviewActions
