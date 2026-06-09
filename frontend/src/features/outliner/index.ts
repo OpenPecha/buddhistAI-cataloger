@@ -12,4 +12,5 @@ export {
   AdminReviewerStats,
   AdminBDRCWorks,
   AdminBDRCPersons,
+  AdminStatistics,
 } from './pages'

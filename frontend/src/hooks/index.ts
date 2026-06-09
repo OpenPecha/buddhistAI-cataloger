@@ -12,3 +12,4 @@ export { useDashboardStats } from './useDashboardStats';
 export type { DashboardStatsFilters } from './useDashboardStats';
 export { useReviewerStats } from './useReviewerStats';
 export { useActiveBatch } from './useActiveBatch';
+export { useStatistics } from './useStatistics';

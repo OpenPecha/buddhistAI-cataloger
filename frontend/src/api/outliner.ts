@@ -1011,6 +1011,42 @@ export const getDashboardStats = async (
   return handleApiResponse(response);
 };
 
+// ==================== Statistics ====================
+
+export interface AnnotatorApprovedRow {
+  user_id: string | null;
+  name: string;
+  segments_approved: number;
+  rejection_count: number;
+}
+
+export interface ReviewerApprovedRow {
+  user_id: string | null;
+  name: string;
+  segments_reviewed: number;
+  rejection_count: number;
+}
+
+export interface StatisticsData {
+  annotators: AnnotatorApprovedRow[];
+  reviewers: ReviewerApprovedRow[];
+}
+
+export const getStatistics = async (
+  user_id?: string,
+  start_date?: string,
+  end_date?: string,
+): Promise<StatisticsData> => {
+  const params = new URLSearchParams();
+  if (user_id) params.append('user_id', user_id);
+  if (start_date) params.append('start_date', start_date);
+  if (end_date) params.append('end_date', end_date);
+  const qs = params.toString();
+  const url = qs ? `${OUTLINER_BASE_URL}/dashboard/statistics?${qs}` : `${OUTLINER_BASE_URL}/dashboard/statistics`;
+  const response = await outlinerFetch(url);
+  return handleApiResponse(response);
+};
+
 /** GET/PUT …/dashboard/active-batch — admin-selected BEC volume batch. */
 export interface ActiveBatchState {
   batch_id: string | null;
