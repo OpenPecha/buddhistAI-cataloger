@@ -702,6 +702,26 @@ class DashboardStatsResponse(BaseModel):
     )
 
 
+class ReviewVerifierBreakdownRow(BaseModel):
+    user_id: str
+    reviewer: str
+    total_segments: int = 0
+    approvals: int = 0
+    rejections: int = 0
+
+
+class ReviewerStatsBreakdownRow(BaseModel):
+    user_id: str
+    reviewer: str
+    approvals: int = 0
+    rejections: int = 0
+
+
+class ReviewerStatsResponse(BaseModel):
+    review_verifier_breakdown: List[ReviewVerifierBreakdownRow] = Field(default_factory=list)
+    reviewer_breakdown: List[ReviewerStatsBreakdownRow] = Field(default_factory=list)
+
+
 class ActiveBatchResponse(BaseModel):
     """Stored active BEC volume batch id for admin workflow (single row)."""
 

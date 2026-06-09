@@ -12,8 +12,16 @@ from outliner.controller.active_batch import (
     update_active_batch as update_active_batch_ctrl,
 )
 from outliner.controller.outliner import get_dashboard_stats as get_dashboard_stats_ctrl
+from outliner.controller.segment_review import (
+    get_reviewer_stats as get_reviewer_stats_ctrl,
+)
 
-from .schemas import ActiveBatchResponse, ActiveBatchUpdate, DashboardStatsResponse
+from .schemas import (
+    ActiveBatchResponse,
+    ActiveBatchUpdate,
+    DashboardStatsResponse,
+    ReviewerStatsResponse,
+)
 
 router = APIRouter()
 
@@ -27,6 +35,17 @@ async def get_dashboard_stats(
 ):
     """Return aggregate stats for the admin overview dashboard."""
     return get_dashboard_stats_ctrl(db, user_id=user_id, start_date=start_date, end_date=end_date)
+
+
+@router.get("/dashboard/reviewer-stats", response_model=ReviewerStatsResponse)
+async def reviewer_stats(
+    user_id: Optional[str] = Query(None, description="Filter by reviewer user ID"),
+    start_date: Optional[datetime] = Query(None, description="Start of date range (ISO format)"),
+    end_date: Optional[datetime] = Query(None, description="End of date range (ISO format)"),
+    db: Session = Depends(get_db),
+):
+    """Segment summary and per-reviewer breakdown from view-only review-verification reviews."""
+    return get_reviewer_stats_ctrl(db, user_id=user_id, start_date=start_date, end_date=end_date)
 
 
 @router.get("/dashboard/active-batch", response_model=ActiveBatchResponse)

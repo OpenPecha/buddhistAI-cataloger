@@ -203,10 +203,6 @@ function ViewOnly() {
   const handleReview = useCallback(
     (status: SegmentReviewStatus) => {
       if (!currentSeg) return;
-      if (status === 'approve' && rejectComment.trim()) {
-        toast.error('Comments are only saved for rejections. Clear it to approve, or click Reject.');
-        return;
-      }
       const totalPages = selectedSegments.length;
       reviewMutation.mutate(
         {

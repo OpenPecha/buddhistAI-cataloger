@@ -9,6 +9,7 @@ export {
   AdminDocument,
   AdminSegment,
   AdminUsers,
+  AdminReviewerStats,
   AdminBDRCWorks,
   AdminBDRCPersons,
 } from './pages'

@@ -10,7 +10,7 @@ from sqlalchemy import and_, case, exists, func, not_, or_, select
 from sqlalchemy.orm import Session
 
 from user.models.user import User
-from outliner.models.outliner import OutlinerDocument, OutlinerSegment
+from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentReview
 from outliner.repository.segment import (
     _rejection_comment_counts_by_document_ids,
     _rejection_open_segments_by_document_ids,
@@ -312,10 +312,27 @@ def fetch_random_completed_unassigned_document(
 def fetch_random_reviewed_document_ids(
     db: Session, limit: int = 5
 ) -> List[Tuple[str, Optional[str]]]:
-    """Return up to ``limit`` random (id, filename) pairs with status ``approved`` (fully reviewed)."""
+    """Return up to ``limit`` random (id, filename) pairs with status ``approved`` (fully reviewed).
+
+    Excludes legacy "Unknown" documents that have no reviewer on the document,
+    no reviewed_by_id on any segment, and no segment_reviews rows.
+    """
+    has_doc_reviewer = OutlinerDocument.reviewer_id.isnot(None)
+    has_segment_reviewer = exists(
+        select(OutlinerSegment.id)
+        .where(OutlinerSegment.document_id == OutlinerDocument.id)
+        .where(OutlinerSegment.reviewed_by_id.isnot(None))
+    )
+    has_review_decision = exists(
+        select(SegmentReview.id)
+        .where(SegmentReview.document_id == OutlinerDocument.id)
+    )
     rows = (
         db.query(OutlinerDocument.id, OutlinerDocument.filename)
-        .filter(OutlinerDocument.status == "approved")
+        .filter(
+            OutlinerDocument.status == "approved",
+            or_(has_doc_reviewer, has_segment_reviewer, has_review_decision),
+        )
         .order_by(func.random())
         .limit(limit)
         .all()

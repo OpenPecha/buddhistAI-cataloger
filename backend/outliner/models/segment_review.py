@@ -1,4 +1,4 @@
-"""ORM model for segment_reviews (view-only reviewer spot-check decisions)."""
+"""ORM model for segment_reviews (view-only review-verification decisions)."""
 from __future__ import annotations
 
 from datetime import datetime

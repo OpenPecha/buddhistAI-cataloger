@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from outliner.models.outliner import SegmentReview
 from outliner.repository.segment_queries import get_segment_plain
 from outliner.repository.segment_review_decision import (
+    get_reviewer_stats as get_reviewer_stats_repo,
     get_user_segment_review_statuses,
     upsert_segment_review,
 )
@@ -39,4 +40,15 @@ def get_segment_review_statuses(
 ) -> dict[str, str]:
     return get_user_segment_review_statuses(
         db, document_id=document_id, user_id=user_id
+    )
+
+
+def get_reviewer_stats(
+    db: Session,
+    user_id: str | None = None,
+    start_date=None,
+    end_date=None,
+) -> dict:
+    return get_reviewer_stats_repo(
+        db, user_id=user_id, start_date=start_date, end_date=end_date
     )
