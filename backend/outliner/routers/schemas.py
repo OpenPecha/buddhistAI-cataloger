@@ -722,6 +722,25 @@ class ReviewerStatsResponse(BaseModel):
     reviewer_breakdown: List[ReviewerStatsBreakdownRow] = Field(default_factory=list)
 
 
+class AnnotatorApprovedRow(BaseModel):
+    user_id: Optional[str] = None
+    name: str
+    segments_approved: int
+    rejection_count: int = 0
+
+
+class ReviewerApprovedRow(BaseModel):
+    user_id: Optional[str] = None
+    name: str
+    segments_reviewed: int
+    rejection_count: int = 0
+
+
+class StatisticsResponse(BaseModel):
+    annotators: List[AnnotatorApprovedRow] = Field(default_factory=list)
+    reviewers: List[ReviewerApprovedRow] = Field(default_factory=list)
+
+
 class ActiveBatchResponse(BaseModel):
     """Stored active BEC volume batch id for admin workflow (single row)."""
 
