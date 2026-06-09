@@ -1001,11 +1001,13 @@ export const getDashboardStats = async (
   user_id?: string,
   start_date?: string,
   end_date?: string,
+  date_basis: 'created' | 'reviewed' = 'reviewed',
 ): Promise<DashboardStats> => {
   const params = new URLSearchParams();
   if (user_id) params.append('user_id', user_id);
   if (start_date) params.append('start_date', start_date);
   if (end_date) params.append('end_date', end_date);
+  params.append('date_basis', date_basis);
   const qs = params.toString();
   const response = await outlinerFetch(`${OUTLINER_BASE_URL}/dashboard/stats${qs ? `?${qs}` : ''}`);
   return handleApiResponse(response);

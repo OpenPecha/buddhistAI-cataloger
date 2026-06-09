@@ -5,10 +5,11 @@ export interface DashboardStatsFilters {
   userId?: string;
   startDate?: string;
   endDate?: string;
+  dateBasis?: 'created' | 'reviewed';
 }
 
 export function useDashboardStats(filters: DashboardStatsFilters = {}) {
-  const { userId, startDate, endDate } = filters;
+  const { userId, startDate, endDate, dateBasis = 'reviewed' } = filters;
 
   const {
     data: stats,
@@ -16,8 +17,8 @@ export function useDashboardStats(filters: DashboardStatsFilters = {}) {
     error,
     refetch,
   } = useQuery<DashboardStats>({
-    queryKey: ['dashboard-stats', { userId, startDate, endDate }],
-    queryFn: () => getDashboardStats(userId, startDate, endDate),
+    queryKey: ['dashboard-stats', { userId, startDate, endDate, dateBasis }],
+    queryFn: () => getDashboardStats(userId, startDate, endDate, dateBasis),
     staleTime: 2 * 60 * 1000,
   });
 

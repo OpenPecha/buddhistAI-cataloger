@@ -1,7 +1,7 @@
 """Routes under ``/outliner/dashboard``."""
 
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
@@ -31,10 +31,11 @@ async def get_dashboard_stats(
     user_id: Optional[str] = Query(None, description="Filter by annotator user ID"),
     start_date: Optional[datetime] = Query(None, description="Start of date range (ISO format)"),
     end_date: Optional[datetime] = Query(None, description="End of date range (ISO format)"),
+    date_basis: Literal["created", "reviewed"] = Query("reviewed", description="Which date field to apply the range to: 'created' uses document created_at, 'reviewed' uses segment reviewed_at"),
     db: Session = Depends(get_db),
 ):
     """Return aggregate stats for the admin overview dashboard."""
-    return get_dashboard_stats_ctrl(db, user_id=user_id, start_date=start_date, end_date=end_date)
+    return get_dashboard_stats_ctrl(db, user_id=user_id, start_date=start_date, end_date=end_date, date_basis=date_basis)
 
 
 @router.get("/dashboard/reviewer-stats", response_model=ReviewerStatsResponse)

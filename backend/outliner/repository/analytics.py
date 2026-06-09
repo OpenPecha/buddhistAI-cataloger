@@ -1,8 +1,8 @@
 """Cross-table aggregates for dashboard and annotator performance."""
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
-from sqlalchemy import and_, case, func, or_
+from sqlalchemy import and_, case, exists, func, or_
 from sqlalchemy.orm import Session
 
 from user.models.user import User
@@ -503,14 +503,25 @@ def get_dashboard_stats(
     user_id: Optional[str] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
+    date_basis: Literal["created", "reviewed"] = "reviewed",
 ) -> Dict[str, Any]:
     doc_query_base = db.query(OutlinerDocument.id).filter(
         (OutlinerDocument.status != "deleted") | (OutlinerDocument.status.is_(None))
     )
-    if start_date:
-        doc_query_base = doc_query_base.filter(OutlinerDocument.created_at >= start_date)
-    if end_date:
-        doc_query_base = doc_query_base.filter(OutlinerDocument.created_at <= end_date)
+    if date_basis == "reviewed":
+        t = _segment_review_activity_time()
+        clauses = [OutlinerSegment.document_id == OutlinerDocument.id]
+        if start_date:
+            clauses.append(t >= start_date)
+        if end_date:
+            clauses.append(t <= end_date)
+        if start_date or end_date:
+            doc_query_base = doc_query_base.filter(exists().where(*clauses))
+    else:
+        if start_date:
+            doc_query_base = doc_query_base.filter(OutlinerDocument.created_at >= start_date)
+        if end_date:
+            doc_query_base = doc_query_base.filter(OutlinerDocument.created_at <= end_date)
 
     doc_query = doc_query_base
     if user_id:

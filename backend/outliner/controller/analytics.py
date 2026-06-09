@@ -1,6 +1,6 @@
 """Dashboard and annotator performance aggregates."""
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
 from sqlalchemy.orm import Session
 
@@ -32,8 +32,9 @@ def get_dashboard_stats(
     user_id: Optional[str] = None,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
+    date_basis: Literal["created", "reviewed"] = "reviewed",
 ) -> Dict[str, Any]:
     """Aggregate dashboard statistics, optionally scoped by user and date range."""
     return outliner_repo.get_dashboard_stats(
-        db, user_id=user_id, start_date=start_date, end_date=end_date
+        db, user_id=user_id, start_date=start_date, end_date=end_date, date_basis=date_basis
     )
