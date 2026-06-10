@@ -574,26 +574,12 @@ const AnnotationSidebarInner = forwardRef<AnnotationSidebarRef, AnnotationSideba
   );
 
   const handleAnnotationsReset = useCallback(async () => {
-    resetMetadataForm();
-    aiBaselineTitleRef.current = null;
-    aiBaselineAuthorRef.current = null;
+    // Re-enable edit mode without erasing the saved title/author values.
     if (!activeSegmentId) return;
     await updateSegmentMutation(activeSegmentId, {
-      title: '',
-      author: '',
-      title_bdrc_id: '',
-      author_bdrc_id: '',
-      title_span_start: null,
-      title_span_end: null,
-      updated_title: null,
-      author_span_start: null,
-      author_span_end: null,
-      updated_author: null,
-      reviewer_title: null,
-      reviewer_author: null,
       status: 'unchecked',
     });
-  }, [activeSegmentId, resetMetadataForm, updateSegmentMutation]);
+  }, [activeSegmentId, updateSegmentMutation]);
 
   const handleNotApplicable = useCallback(async () => {
     aiBaselineTitleRef.current = null;
