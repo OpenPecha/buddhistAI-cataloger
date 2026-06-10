@@ -11,7 +11,7 @@ from user.models.user import User
 
 
 def _activity_time():
-    return func.coalesce(OutlinerSegment.reviewed_at, OutlinerSegment.updated_at)
+    return OutlinerSegment.reviewed_at
 
 
 def get_annotator_approved_counts(

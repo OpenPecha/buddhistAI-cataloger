@@ -16,8 +16,7 @@ _REVIEWER_WORK_STATS_ROLES = frozenset({"reviewer", "admin"})
 
 
 def _segment_review_activity_time():
-    """When review landed (approved/checked); ``updated_at`` fallback for legacy rows."""
-    return func.coalesce(OutlinerSegment.reviewed_at, OutlinerSegment.updated_at)
+    return OutlinerSegment.reviewed_at
 
 
 def _append_segment_activity_date_window(
