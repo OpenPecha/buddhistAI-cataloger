@@ -97,6 +97,26 @@ function SegmentRow({
   const rejectionCount = segment.rejection?.count ?? 0;
   const { document: selectedDocument, isLoading: isLoadingDocument } = useDocument(documentId);
   const [textSearchQuery, setTextSearchQuery] = useState('');
+  const textBgColorStorageKey = `segment-text-bg-color:${segment.id}`;
+  const [textBgColor, setTextBgColor] = useState('#ffffff');
+  useEffect(() => {
+    try {
+      setTextBgColor(localStorage.getItem(textBgColorStorageKey) ?? '#ffffff');
+    } catch {
+      setTextBgColor('#ffffff');
+    }
+  }, [textBgColorStorageKey]);
+  const handleTextBgColorChange = useCallback(
+    (color: string) => {
+      setTextBgColor(color);
+      try {
+        localStorage.setItem(textBgColorStorageKey, color);
+      } catch {
+      }
+      if (!isExpanded) onToggleExpansion(segment.id);
+    },
+    [textBgColorStorageKey, isExpanded, onToggleExpansion, segment.id]
+  );
   const segmentBodyRef = useRef<HTMLDivElement>(null);
 
   const highlightWords = useMemo(() => getSegmentHighlightWords(segment), [segment]);
@@ -479,6 +499,8 @@ function SegmentRow({
                 disableMatchNavigation={!isExpanded}
                 scrollBodyMatchIntoView={scrollBodyMatchIntoView}
                 scrollBodyToEdge={scrollBodyToEdge}
+                bgColor={textBgColor}
+                onBgColorChange={handleTextBgColorChange}
               />
             </div>
             </div>
@@ -500,7 +522,8 @@ function SegmentRow({
                 onMouseUp={reportBodyCaret}
                 onFocus={reportBodyCaret}
                 onBlur={() => onSegmentBodyCaretChange?.(segment.id, null)}
-                className="min-h-[8rem] max-h-[min(24rem,50vh)] overflow-y-auto whitespace-pre-wrap wrap-break-word p-3 font-monlam text-sm leading-normal text-gray-800 rounded-md border border-gray-200 bg-white/80 cursor-text select-text outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20"
+                style={{ backgroundColor: textBgColor }}
+                className="min-h-[8rem] max-h-[min(24rem,50vh)] overflow-y-auto whitespace-pre-wrap wrap-break-word p-3 font-monlam text-sm leading-normal text-gray-800 rounded-md border border-gray-200 cursor-text select-text outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20"
               >
                 <SegmentHighlightedText
                   text={segment.text}

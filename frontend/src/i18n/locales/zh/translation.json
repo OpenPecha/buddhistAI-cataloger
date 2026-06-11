@@ -527,6 +527,7 @@
       "nextMatch": "下一处匹配",
       "firstMatch": "第一处匹配",
       "lastMatch": "最后一处匹配",
+      "textBgColor": "文本背景颜色",
       "subsegmentWarning": "请勿在章节、品（bampo）等子层级上再分片段",
       "analyzingToc": "正在分析目录…",
       "syncingFromServer": "正在与服务器同步…"

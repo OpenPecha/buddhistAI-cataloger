@@ -22,6 +22,8 @@ export const SegmentSearchBar = memo(function SegmentSearchBar({
   scrollBodyMatchIntoView,
   /** When set, top/bottom buttons scroll the inner body (textarea + highlight layer) instead of the segment card. */
   scrollBodyToEdge,
+  bgColor,
+  onBgColorChange,
 }: {
   segmentId: string;
   query: string;
@@ -33,6 +35,8 @@ export const SegmentSearchBar = memo(function SegmentSearchBar({
   disableMatchNavigation?: boolean;
   scrollBodyMatchIntoView?: (matchIndex: number) => void;
   scrollBodyToEdge?: (edge: 'top' | 'bottom') => void;
+  bgColor?: string;
+  onBgColorChange?: (color: string) => void;
 }) {
   const { t } = useTranslation();
   const [activeMatchIndex, setActiveMatchIndex] = useState(0);
@@ -159,6 +163,16 @@ export const SegmentSearchBar = memo(function SegmentSearchBar({
           <span className="rounded bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground tabular-nums whitespace-nowrap">
             {matchCount === 0 ? '0/0' : `${activeMatchIndex + 1}/${matchCount}`}
           </span>
+        )}
+        {onBgColorChange && (
+          <input
+            type="color"
+            value={bgColor ?? '#ffffff'}
+            onChange={(e) => onBgColorChange(e.target.value)}
+            className="h-8 w-8 shrink-0 cursor-pointer rounded-md border bg-background p-0.5"
+            title={t('outliner.segment.textBgColor')}
+            aria-label={t('outliner.segment.textBgColor')}
+          />
         )}
       </div>
       <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
