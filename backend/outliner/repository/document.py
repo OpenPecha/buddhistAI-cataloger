@@ -259,6 +259,7 @@ def _random_completed_unassigned_document(
     db: Session,
     *,
     user_ids: Optional[List[str]] = None,
+    exclude_user_id: Optional[str] = None,
 ) -> Optional[OutlinerDocument]:
     query = db.query(OutlinerDocument).filter(
         OutlinerDocument.status == "completed",
@@ -266,19 +267,26 @@ def _random_completed_unassigned_document(
     )
     if user_ids is not None:
         query = query.filter(OutlinerDocument.user_id.in_(user_ids))
+    if exclude_user_id is not None:
+        # A reviewer must not review a document they annotated.
+        query = query.filter(OutlinerDocument.user_id != exclude_user_id)
     return query.order_by(func.random()).first()
 
 
 def fetch_random_completed_unassigned_document(
     db: Session,
+    exclude_user_id: Optional[str] = None,
 ) -> Optional[OutlinerDocument]:
     """Pick a completed, unassigned document for reviewer self-assign.
 
     ~70% of calls favor annotators with the highest completed-work volume
     (count of completed/approved documents); ~30% are uniformly random.
+
+    Documents annotated by ``exclude_user_id`` (the requesting reviewer) are
+    never returned, so a reviewer cannot be assigned their own work.
     """
     if random.random() >= _REVIEW_ASSIGN_TOP_WORKER_FRACTION:
-        return _random_completed_unassigned_document(db)
+        return _random_completed_unassigned_document(db, exclude_user_id=exclude_user_id)
 
     eligible_user_ids = [
         row[0]
@@ -287,12 +295,13 @@ def fetch_random_completed_unassigned_document(
             OutlinerDocument.status == "completed",
             OutlinerDocument.reviewer_id.is_(None),
             OutlinerDocument.user_id.isnot(None),
+            *([OutlinerDocument.user_id != exclude_user_id] if exclude_user_id else []),
         )
         .distinct()
         .all()
     ]
     if not eligible_user_ids:
-        return _random_completed_unassigned_document(db)
+        return _random_completed_unassigned_document(db, exclude_user_id=exclude_user_id)
 
     work_by_user = _completed_document_counts_by_user_id(db)
     work_counts = [work_by_user.get(user_id, 0) for user_id in eligible_user_ids]
@@ -303,10 +312,14 @@ def fetch_random_completed_unassigned_document(
         if work_by_user.get(user_id, 0) >= median_work
     ]
     if not top_user_ids:
-        return _random_completed_unassigned_document(db)
+        return _random_completed_unassigned_document(db, exclude_user_id=exclude_user_id)
 
-    document = _random_completed_unassigned_document(db, user_ids=top_user_ids)
-    return document or _random_completed_unassigned_document(db)
+    document = _random_completed_unassigned_document(
+        db, user_ids=top_user_ids, exclude_user_id=exclude_user_id
+    )
+    return document or _random_completed_unassigned_document(
+        db, exclude_user_id=exclude_user_id
+    )
 
 
 def fetch_random_reviewed_document_ids(

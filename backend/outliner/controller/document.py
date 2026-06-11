@@ -363,7 +363,9 @@ def assign_reviewr(
     db: Session,
     reviewer_id: str,
 ) -> Dict[str, str]:
-    document = outliner_repo.fetch_random_completed_unassigned_document(db)
+    document = outliner_repo.fetch_random_completed_unassigned_document(
+        db, exclude_user_id=reviewer_id
+    )
     if not document:
         raise HTTPException(
             status_code=404,
@@ -387,6 +389,12 @@ def assign_document_reviewer(
     document = outliner_repo.fetch_document_by_id(db, document_id)
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
+
+    if document.user_id and document.user_id == reviewer_id:
+        raise HTTPException(
+            status_code=403,
+            detail="You cannot review a document you annotated",
+        )
 
     if document.reviewer_id and document.reviewer_id != reviewer_id:
         raise HTTPException(
