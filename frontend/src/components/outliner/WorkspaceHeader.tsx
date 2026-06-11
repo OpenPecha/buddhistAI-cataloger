@@ -38,10 +38,14 @@ export const WorkspaceHeader: React.FC<WorkspaceHeaderProps> = ({
             )}
           </div>
           <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Progress value={checked_percentage} title={t('outliner.workspace.savedSegmentsTitle', { count: checkedSegmentsCount })} className="w-32 sm:w-40 shrink-0"/>
-            <span className="tabular-nums whitespace-nowrap">
-              {t('outliner.workspace.progressLabel', { percent: Math.round(checked_percentage), checked: checkedSegmentsCount, total: segmentsCount })}
-            </span>
+            {checkedSegmentsCount > 0 && (
+              <>
+                <Progress value={checked_percentage} title={t('outliner.workspace.savedSegmentsTitle', { count: checkedSegmentsCount })} className="w-32 sm:w-40 shrink-0"/>
+                <span className="tabular-nums whitespace-nowrap">
+                  {t('outliner.workspace.progressLabel', { percent: Math.round(checked_percentage), checked: checkedSegmentsCount, total: segmentsCount })}
+                </span>
+              </>
+            )}
             {rejectedSegmentsCount > 0 && (
               <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 whitespace-nowrap">
                 {t('outliner.workspace.revisionBadge', { count: rejectedSegmentsCount })}
