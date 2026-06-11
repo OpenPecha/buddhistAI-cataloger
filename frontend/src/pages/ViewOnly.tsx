@@ -396,6 +396,7 @@ function BookPageTurner({
             <dl className="mb-8 grid gap-4 border-b border-amber-900/10 pb-6 sm:grid-cols-2">
               <div>
                 <dt className="text-xs font-semibold uppercase tracking-wider text-amber-900/55">Title</dt>
+                {seg.is_supplied_title && <span className="text-xs font-semibold uppercase tracking-wider text-amber-900/55">Supplied</span>}
                 <dd className="mt-1.5 text-lg leading-snug text-amber-950 font-monlam">{effectiveTitle(seg)}</dd>
               </div>
               <div>
