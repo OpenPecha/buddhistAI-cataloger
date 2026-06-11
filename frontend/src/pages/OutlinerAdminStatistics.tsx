@@ -97,6 +97,7 @@ function OutlinerAdminStatistics() {
   );
 
   const annotatorTotal = sortedAnnotators.reduce((s, r) => s + r.segments_approved, 0);
+  const annotatorRejectedTotal = sortedAnnotators.reduce((s, r) => s + r.rejection_count, 0);
   const reviewerTotal = sortedReviewers.reduce((s, r) => s + r.segments_reviewed, 0);
 
   return (
@@ -165,6 +166,7 @@ function OutlinerAdminStatistics() {
                           />
                         </button>
                       </th>
+                      <th className="px-4 py-3 text-right tabular-nums">Rejected</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -180,6 +182,9 @@ function OutlinerAdminStatistics() {
                         <td className="px-4 py-3 text-right tabular-nums text-emerald-700">
                           {row.segments_approved.toLocaleString()}
                         </td>
+                        <td className="px-4 py-3 text-right tabular-nums text-red-600">
+                          {row.rejection_count.toLocaleString()}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -188,6 +193,9 @@ function OutlinerAdminStatistics() {
                       <td className="px-4 py-3" colSpan={2}>Total</td>
                       <td className="px-4 py-3 text-right tabular-nums font-semibold text-emerald-700">
                         {annotatorTotal.toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums font-semibold text-red-600">
+                        {annotatorRejectedTotal.toLocaleString()}
                       </td>
                     </tr>
                   </tfoot>
