@@ -527,6 +527,7 @@
       "nextMatch": "Next search match",
       "firstMatch": "First search match",
       "lastMatch": "Last search match",
+      "textBgColor": "Text background color",
       "subsegmentWarning": "Don't segment on text subsegments (chapters, bampo, etc.)",
       "analyzingToc": "Analyzing TOC…",
       "syncingFromServer": "Syncing with server…"
