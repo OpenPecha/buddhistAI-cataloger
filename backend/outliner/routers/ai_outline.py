@@ -8,7 +8,10 @@ from core.database import get_db
 from outliner.controller.outliner import (
     get_document,
     replace_segments_and_toc,
+    save_ai_outline_run,
 )
+from outliner.deps import require_outliner_access
+from user.models.user import User
 
 from .helpers import spans_from_toc_indices
 from .schemas import AiOutlineResponse
@@ -20,6 +23,7 @@ router = APIRouter()
 async def ai_outline(
     document_id: str,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_outliner_access),
 ):
     """Split document text into segments using boundary character indices from outline_detection."""
     document = get_document(db, document_id, include_segments=False)
@@ -35,4 +39,5 @@ async def ai_outline(
     _, segment_payload = replace_segments_and_toc(
         db, document_id, segments_data, toc
     )
+    save_ai_outline_run(db, document_id, segments_data, current_user.id)
     return AiOutlineResponse(segment_count=len(segment_payload))

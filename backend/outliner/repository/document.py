@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from user.models.user import User
 from outliner.models.outliner import OutlinerDocument, OutlinerSegment, SegmentReview
+from outliner.models.ai_outline_run import OutlinerAiOutlineRun
 from outliner.repository.segment import (
     _rejection_comment_counts_by_document_ids,
     _rejection_open_segments_by_document_ids,
@@ -426,6 +427,52 @@ def replace_segments_and_ai_toc(
     document.updated_at = datetime.utcnow()
     db.add_all(db_segments)
     db.commit()
+
+
+def insert_ai_outline_run(
+    db: Session,
+    document_id: str,
+    segments: List[Dict[str, Any]],
+    created_by_id: Optional[str] = None,
+) -> OutlinerAiOutlineRun:
+    """Insert a frozen snapshot of the AI's predicted segment split (one row per AI click)."""
+    run = OutlinerAiOutlineRun(
+        document_id=document_id,
+        segments=segments,
+        created_by_id=created_by_id,
+    )
+    db.add(run)
+    db.commit()
+    db.refresh(run)
+    return run
+
+
+def save_annotator_ai_final_segments(
+    db: Session,
+    document_id: str,
+    segments: List[Dict[str, Any]],
+) -> bool:
+    """Overwrite the annotator's final submitted segment snapshot on the document."""
+    document = db.query(OutlinerDocument).filter(OutlinerDocument.id == document_id).first()
+    if not document:
+        return False
+    document.annotator_ai_final_segments = segments
+    document.updated_at = datetime.utcnow()
+    db.commit()
+    return True
+
+
+def list_ai_outline_runs_for_document(
+    db: Session,
+    document_id: str,
+) -> List[OutlinerAiOutlineRun]:
+    """All AI outline runs for a document, newest first."""
+    return (
+        db.query(OutlinerAiOutlineRun)
+        .filter(OutlinerAiOutlineRun.document_id == document_id)
+        .order_by(OutlinerAiOutlineRun.created_at.desc())
+        .all()
+    )
 
 
 def bdrc_modified_by_from_document(

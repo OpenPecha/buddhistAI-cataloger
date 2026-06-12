@@ -39,6 +39,8 @@ from outliner.controller.document import (
     random_reviewed_document_ids,
     replace_segments_and_toc ,
     reset_segments,
+    save_ai_outline_run,
+    save_annotator_ai_final_segments,
     update_document_assignee,
     update_document_content,
     update_document_status,
