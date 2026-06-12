@@ -475,6 +475,15 @@ def list_ai_outline_runs_for_document(
     )
 
 
+def document_has_ai_outline_run(db: Session, document_id: str) -> bool:
+    """True if the AI outline button was used on this document at least once."""
+    return db.query(
+        db.query(OutlinerAiOutlineRun)
+        .filter(OutlinerAiOutlineRun.document_id == document_id)
+        .exists()
+    ).scalar()
+
+
 def bdrc_modified_by_from_document(
     db: Session, document: OutlinerDocument
 ) -> Optional[str]:

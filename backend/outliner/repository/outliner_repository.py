@@ -11,6 +11,7 @@ from outliner.repository.analytics import (
 from outliner.repository.document import (
     bdrc_modified_by_from_document,
     delete_document,
+    document_has_ai_outline_run,
     fetch_document_by_filename,
     fetch_document_by_id,
     fetch_document_reviewer_id,

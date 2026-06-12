@@ -495,7 +495,12 @@ def save_ai_outline_run(
 
 
 def save_annotator_ai_final_segments(db: Session, document_id: str) -> None:
-    """Snapshot the document's current segments as the annotator's final submission."""
+    """Snapshot the annotator's final segments — only for documents where the AI outline was used.
+
+    Manual documents (no AI run) have nothing to benchmark against, so the column stays NULL.
+    """
+    if not outliner_repo.document_has_ai_outline_run(db, document_id):
+        return
     segments = outliner_repo.segment_list_for_document(db, document_id)
     outliner_repo.save_annotator_ai_final_segments(
         db, document_id, _benchmark_spans(segments)
