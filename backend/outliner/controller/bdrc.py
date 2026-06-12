@@ -18,6 +18,7 @@ from outliner.controller.document import (
     create_document,
     get_document,
     list_completed_document_ids_all_segments_checked,
+    save_annotator_ai_final_segments,
     update_document_status,
 )
 
@@ -205,6 +206,7 @@ async def submit_document_to_bdrc_in_review(db: Session, document_id: str) -> Di
     _validate_document_has_bdrc_volume(document)
     enqueue_push_document_segments_to_bdrc(document_id, "in_review")
     update_document_status(db, document_id, "completed")
+    save_annotator_ai_final_segments(db, document_id)
     return {"success": True}
 
 
