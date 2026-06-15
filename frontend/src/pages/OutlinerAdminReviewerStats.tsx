@@ -10,9 +10,14 @@ import { Button } from '@/components/ui/button';
 import { getDefaultDateRange } from '@/components/admin/documents/utils';
 import type { ReviewVerifierBreakdownRow, ReviewerStatsBreakdownRow } from '@/api/outliner';
 
-type SortField = 'approvals' | 'rejections';
-type ReviewVerifierSortField = SortField | 'total_segments';
+type SortField = 'approvals' | 'rejections' | 'rejection_rate';
+type ReviewVerifierSortField = 'approvals' | 'rejections' | 'total_segments';
 type SortDir = 'asc' | 'desc';
+
+// Rejection % = rejections / approvals * 100 (0 when no approvals)
+const rejectionRate = (row: { approvals: number; rejections: number }) =>
+  row.approvals > 0 ? (row.rejections / row.approvals) * 100 : 0;
+const REJECTION_RATE_FORMULA = 'Rejection % = (No. of Rejections / No. of Approvals) × 100';
 
 const cardPanel =
   'rounded-2xl border border-border/70 bg-card/95 p-6 shadow-elegant backdrop-blur-[2px]';
@@ -90,8 +95,10 @@ function OutlinerAdminReviewerStats() {
 
   const sortedReviewers = useMemo(() => {
     const rows = data?.reviewer_breakdown ?? [];
+    const valueOf = (r: ReviewerStatsBreakdownRow) =>
+      rvSortField === 'rejection_rate' ? rejectionRate(r) : r[rvSortField];
     return [...rows].sort((a: ReviewerStatsBreakdownRow, b: ReviewerStatsBreakdownRow) =>
-      (rvSortDir === 'desc' ? -1 : 1) * (a[rvSortField] - b[rvSortField]),
+      (rvSortDir === 'desc' ? -1 : 1) * (valueOf(a) - valueOf(b)),
     );
   }, [data?.reviewer_breakdown, rvSortField, rvSortDir]);
 
@@ -242,6 +249,16 @@ function OutlinerAdminReviewerStats() {
                           <SortIcon field="rejections" active={rvSortField} dir={rvSortDir} />
                         </button>
                       </th>
+                      <th className="px-4 py-3 text-right tabular-nums" title={REJECTION_RATE_FORMULA}>
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-0.5 hover:text-foreground transition-colors"
+                          onClick={() => toggleRvSort('rejection_rate')}
+                        >
+                          Rejection %
+                          <SortIcon field="rejection_rate" active={rvSortField} dir={rvSortDir} />
+                        </button>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -258,6 +275,12 @@ function OutlinerAdminReviewerStats() {
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-red-700">
                           {row.rejections.toLocaleString()}
+                        </td>
+                        <td
+                          className="px-4 py-3 text-right tabular-nums text-foreground"
+                          title={REJECTION_RATE_FORMULA}
+                        >
+                          {rejectionRate(row).toFixed(1)}%
                         </td>
                       </tr>
                     ))}
