@@ -727,6 +727,7 @@ class AnnotatorApprovedRow(BaseModel):
     name: str
     segments_approved: int
     rejection_count: int = 0
+    rejected_segments: int = 0
 
 
 class ReviewerApprovedRow(BaseModel):

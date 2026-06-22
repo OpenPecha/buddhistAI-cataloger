@@ -1018,6 +1018,8 @@ export interface AnnotatorApprovedRow {
   name: string;
   segments_approved: number;
   rejection_count: number;
+  /** Distinct segments that were rejected (collapses repeat rejections). */
+  rejected_segments: number;
 }
 
 export interface ReviewerApprovedRow {

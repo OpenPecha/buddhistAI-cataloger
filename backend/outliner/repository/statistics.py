@@ -72,6 +72,21 @@ def get_annotator_approved_counts(
         str(uid): int(cnt) for uid, cnt in rej_rows if uid is not None
     }
 
+    # Distinct rejected segments per annotator (collapses repeat rejections of the
+    # same segment). Used for a true rejection rate; same filters as rejection_count.
+    rej_seg_rows = (
+        db.query(
+            SegmentRejection.user_id,
+            func.count(func.distinct(SegmentRejection.segment_id)),
+        )
+        .filter(and_(*rej_clauses))
+        .group_by(SegmentRejection.user_id)
+        .all()
+    )
+    uid_to_rejected_segments: Dict[str, int] = {
+        str(uid): int(cnt) for uid, cnt in rej_seg_rows if uid is not None
+    }
+
     all_uids = uid_to_approved.keys() | uid_to_rejected.keys()
 
     user_rows = (
@@ -89,6 +104,7 @@ def get_annotator_approved_counts(
             "name": uid_to_name.get(uid, uid),
             "segments_approved": uid_to_approved.get(uid, 0),
             "rejection_count": uid_to_rejected.get(uid, 0),
+            "rejected_segments": uid_to_rejected_segments.get(uid, 0),
         }
         for uid in all_uids
     ]
