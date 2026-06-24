@@ -78,18 +78,21 @@ function ReviewActions({
   );
 }
 
+// Mirror what is published to BDRC: the reviewer's correction wins (see
+// _push_document_segments_to_bdrc, which sends reviewer_title/author when set).
+// Fall back to the annotator's manual edit (updated_*), then the original.
 function effectiveTitle(s: OutlinerSegment): string {
   const v =
-    s.updated_title?.trim() ||
     s.reviewer_title?.trim() ||
+    s.updated_title?.trim() ||
     s.title?.trim();
   return v || '—';
 }
 
 function effectiveAuthor(s: OutlinerSegment): string {
   const v =
-    s.updated_author?.trim() ||
     s.reviewer_author?.trim() ||
+    s.updated_author?.trim() ||
     s.author?.trim();
   return v || '—';
 }
