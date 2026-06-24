@@ -351,6 +351,12 @@ def update_document_assignee(
     if not user_exists:
         raise HTTPException(status_code=404, detail="User not found")
 
+    if document.reviewer_id and document.reviewer_id == clean_user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Cannot assign this annotator: they are the document's reviewer",
+        )
+
     outliner_repo.set_document_user_and_refresh(db, document, clean_user_id)
     return {
         "message": "Document assignee updated",
