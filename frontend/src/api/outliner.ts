@@ -1026,6 +1026,7 @@ export interface ReviewerApprovedRow {
   user_id: string | null;
   name: string;
   segments_reviewed: number;
+  edited_segments: number;
   rejection_count: number;
 }
 

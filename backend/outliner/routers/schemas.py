@@ -735,6 +735,7 @@ class ReviewerApprovedRow(BaseModel):
     user_id: Optional[str] = None
     name: str
     segments_reviewed: int
+    edited_segments: int = 0
     rejection_count: int = 0
 
 

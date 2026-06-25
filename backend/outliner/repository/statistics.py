@@ -171,6 +171,26 @@ def get_reviewer_approved_counts(
         str(rid): int(cnt) for rid, cnt in rows if rid is not None
     }
 
+    rt_trim = func.trim(func.coalesce(OutlinerSegment.reviewer_title, ""))
+    ra_trim = func.trim(func.coalesce(OutlinerSegment.reviewer_author, ""))
+    t_trim = func.trim(func.coalesce(OutlinerSegment.title, ""))
+    au_trim = func.trim(func.coalesce(OutlinerSegment.author, ""))
+    title_is_real_correction = and_(func.length(rt_trim) > 0, rt_trim != t_trim)
+    author_is_real_correction = and_(func.length(ra_trim) > 0, ra_trim != au_trim)
+    edited_clauses = clauses + [
+        or_(title_is_real_correction, author_is_real_correction)
+    ]
+    edited_rows = (
+        db.query(OutlinerSegment.reviewed_by_id, func.count(OutlinerSegment.id))
+        .join(OutlinerDocument, OutlinerSegment.document_id == OutlinerDocument.id)
+        .filter(and_(*edited_clauses))
+        .group_by(OutlinerSegment.reviewed_by_id)
+        .all()
+    )
+    rid_to_edited: Dict[str, int] = {
+        str(rid): int(cnt) for rid, cnt in edited_rows if rid is not None
+    }
+
     # Rejections filed by each reviewer, date-filtered by segment_rejections.created_at.
     rej_clauses = [SegmentRejection.reviewer_id.isnot(None)]
     if start_date:
@@ -197,7 +217,7 @@ def get_reviewer_approved_counts(
         str(rid): int(cnt) for rid, cnt in rej_query.all() if rid is not None
     }
 
-    all_rids = rid_to_reviewed.keys() | rid_to_rejected.keys()
+    all_rids = rid_to_reviewed.keys() | rid_to_edited.keys() | rid_to_rejected.keys()
 
     user_rows = (
         db.query(User.id, User.name)
@@ -213,6 +233,7 @@ def get_reviewer_approved_counts(
             "user_id": rid,
             "name": rid_to_name.get(rid, rid),
             "segments_reviewed": rid_to_reviewed.get(rid, 0),
+            "edited_segments": rid_to_edited.get(rid, 0),
             "rejection_count": rid_to_rejected.get(rid, 0),
         }
         for rid in all_rids

@@ -10,8 +10,8 @@ import { Button } from '@/components/ui/button';
 import { getDefaultDateRange } from '@/components/admin/documents/utils';
 import type { ReviewVerifierBreakdownRow, ReviewerStatsBreakdownRow } from '@/api/outliner';
 
-type SortField = 'approvals' | 'rejections' | 'rejection_rate';
-type ReviewVerifierSortField = 'approvals' | 'rejections' | 'total_segments';
+type SortField = 'reviewer' | 'approvals' | 'rejections' | 'rejection_rate';
+type ReviewVerifierSortField = 'reviewer' | 'approvals' | 'rejections' | 'total_segments';
 type SortDir = 'asc' | 'desc';
 
 // Rejection % = rejections / approvals * 100 (0 when no approvals)
@@ -90,15 +90,23 @@ function OutlinerAdminReviewerStats() {
 
   const sortedReviewVerifiers = useMemo(() => {
     const rows = data?.review_verifier_breakdown ?? [];
-    return [...rows].sort((a, b) => (vfSortDir === 'desc' ? -1 : 1) * (a[vfSortField] - b[vfSortField]));
+    const dir = vfSortDir === 'desc' ? -1 : 1;
+    return [...rows].sort((a, b) =>
+      vfSortField === 'reviewer'
+        ? dir * a.reviewer.localeCompare(b.reviewer)
+        : dir * (a[vfSortField] - b[vfSortField]),
+    );
   }, [data?.review_verifier_breakdown, vfSortField, vfSortDir]);
 
   const sortedReviewers = useMemo(() => {
     const rows = data?.reviewer_breakdown ?? [];
+    const dir = rvSortDir === 'desc' ? -1 : 1;
     const valueOf = (r: ReviewerStatsBreakdownRow) =>
-      rvSortField === 'rejection_rate' ? rejectionRate(r) : r[rvSortField];
+      rvSortField === 'rejection_rate' ? rejectionRate(r) : r[rvSortField as 'approvals' | 'rejections'];
     return [...rows].sort((a: ReviewerStatsBreakdownRow, b: ReviewerStatsBreakdownRow) =>
-      (rvSortDir === 'desc' ? -1 : 1) * (valueOf(a) - valueOf(b)),
+      rvSortField === 'reviewer'
+        ? dir * a.reviewer.localeCompare(b.reviewer)
+        : dir * (valueOf(a) - valueOf(b)),
     );
   }, [data?.reviewer_breakdown, rvSortField, rvSortDir]);
 
@@ -149,7 +157,16 @@ function OutlinerAdminReviewerStats() {
                 <table className="w-full min-w-[28rem] border-collapse text-sm">
                   <thead className="sticky top-0 z-[1] shadow-[0_1px_0_0_rgb(231_229_228)]">
                     <tr className="border-b border-stone-200 bg-stone-50/95 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur-sm">
-                      <th className="px-4 py-3">Review Verifier</th>
+                      <th className="px-4 py-3">
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-0.5 hover:text-foreground transition-colors"
+                          onClick={() => toggleVfSort('reviewer')}
+                        >
+                          Review Verifier
+                          <SortIcon field="reviewer" active={vfSortField} dir={vfSortDir} />
+                        </button>
+                      </th>
                       <th className="px-4 py-3 text-right tabular-nums">
                         <button
                           type="button"
@@ -228,7 +245,16 @@ function OutlinerAdminReviewerStats() {
                 <table className="w-full min-w-[28rem] border-collapse text-sm">
                   <thead className="sticky top-0 z-[1] shadow-[0_1px_0_0_rgb(231_229_228)]">
                     <tr className="border-b border-stone-200 bg-stone-50/95 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground backdrop-blur-sm">
-                      <th className="px-4 py-3">Reviewer</th>
+                      <th className="px-4 py-3">
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-0.5 hover:text-foreground transition-colors"
+                          onClick={() => toggleRvSort('reviewer')}
+                        >
+                          Reviewer
+                          <SortIcon field="reviewer" active={rvSortField} dir={rvSortDir} />
+                        </button>
+                      </th>
                       <th className="px-4 py-3 text-right tabular-nums">
                         <button
                           type="button"
