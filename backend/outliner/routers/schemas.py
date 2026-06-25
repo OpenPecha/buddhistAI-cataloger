@@ -726,6 +726,7 @@ class AnnotatorApprovedRow(BaseModel):
     user_id: Optional[str] = None
     name: str
     segments_approved: int
+    edited_segments: int = 0
     rejection_count: int = 0
     rejected_segments: int = 0
 

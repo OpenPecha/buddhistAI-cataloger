@@ -2,7 +2,7 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from sqlalchemy import and_, func
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
 
 from outliner.models.outliner import OutlinerDocument, OutlinerSegment
@@ -51,6 +51,26 @@ def get_annotator_approved_counts(
 
     uid_to_approved: Dict[str, int] = {
         str(uid): int(cnt) for uid, cnt in rows if uid is not None
+    }
+
+    rt_trim = func.trim(func.coalesce(OutlinerSegment.reviewer_title, ""))
+    ra_trim = func.trim(func.coalesce(OutlinerSegment.reviewer_author, ""))
+    t_trim = func.trim(func.coalesce(OutlinerSegment.title, ""))
+    au_trim = func.trim(func.coalesce(OutlinerSegment.author, ""))
+    title_is_real_correction = and_(func.length(rt_trim) > 0, rt_trim != t_trim)
+    author_is_real_correction = and_(func.length(ra_trim) > 0, ra_trim != au_trim)
+    edited_clauses = clauses + [
+        or_(title_is_real_correction, author_is_real_correction)
+    ]
+    edited_rows = (
+        db.query(OutlinerDocument.user_id, func.count(OutlinerSegment.id))
+        .join(OutlinerSegment, OutlinerSegment.document_id == OutlinerDocument.id)
+        .filter(and_(*edited_clauses))
+        .group_by(OutlinerDocument.user_id)
+        .all()
+    )
+    uid_to_edited: Dict[str, int] = {
+        str(uid): int(cnt) for uid, cnt in edited_rows if uid is not None
     }
 
     # Rejection counts from segment_rejections.user_id, date-filtered by created_at.
@@ -103,6 +123,7 @@ def get_annotator_approved_counts(
             "user_id": uid,
             "name": uid_to_name.get(uid, uid),
             "segments_approved": uid_to_approved.get(uid, 0),
+            "edited_segments": uid_to_edited.get(uid, 0),
             "rejection_count": uid_to_rejected.get(uid, 0),
             "rejected_segments": uid_to_rejected_segments.get(uid, 0),
         }

@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { getDefaultDateRange } from '@/components/admin/documents/utils';
 import type { AnnotatorApprovedRow, ReviewerApprovedRow } from '@/api/outliner';
 
-type AnnotatorSortField = 'segments_approved' | 'rejection_rate';
+type AnnotatorSortField = 'segments_approved' | 'edited_segments' | 'rejection_rate';
 type ReviewerSortField = 'segments_reviewed' | 'rejection_rate';
 type SortDir = 'asc' | 'desc';
 
@@ -111,10 +111,12 @@ function OutlinerAdminStatistics() {
   const reviewerRows: ReviewerApprovedRow[] = data?.reviewers ?? [];
 
   const sortedAnnotators = useMemo(() => {
-    const valueOf = (r: AnnotatorApprovedRow) =>
-      annotatorSortField === 'rejection_rate'
-        ? annotatorRejectionRate(r.segments_approved, r.rejected_segments)
-        : r.segments_approved;
+    const valueOf = (r: AnnotatorApprovedRow) => {
+      if (annotatorSortField === 'rejection_rate')
+        return annotatorRejectionRate(r.segments_approved, r.rejected_segments);
+      if (annotatorSortField === 'edited_segments') return r.edited_segments;
+      return r.segments_approved;
+    };
     return [...annotatorRows].sort(
       (a, b) => (annotatorSortDir === 'desc' ? -1 : 1) * (valueOf(a) - valueOf(b)),
     );
@@ -131,6 +133,7 @@ function OutlinerAdminStatistics() {
   }, [reviewerRows, reviewerSortField, reviewerSortDir]);
 
   const annotatorTotal = sortedAnnotators.reduce((s, r) => s + r.segments_approved, 0);
+  const annotatorEditedTotal = sortedAnnotators.reduce((s, r) => s + r.edited_segments, 0);
   const annotatorRejectedTotal = sortedAnnotators.reduce((s, r) => s + r.rejection_count, 0);
   const annotatorRejectedSegmentsTotal = sortedAnnotators.reduce(
     (s, r) => s + r.rejected_segments,
@@ -203,6 +206,23 @@ function OutlinerAdminStatistics() {
                           />
                         </button>
                       </th>
+                      <th
+                        className="px-4 py-3 text-right tabular-nums"
+                        title="Approved segments where the reviewer corrected the title or author. A subset of Approved."
+                      >
+                        <button
+                          type="button"
+                          className="inline-flex items-center gap-0.5 transition-colors hover:text-foreground"
+                          onClick={() => toggleAnnotatorSort('edited_segments')}
+                        >
+                          Edited
+                          <SortIcon<AnnotatorSortField>
+                            field="edited_segments"
+                            active={annotatorSortField}
+                            dir={annotatorSortDir}
+                          />
+                        </button>
+                      </th>
                       <th className="px-4 py-3 text-right tabular-nums">Rejected</th>
                       <th
                         className="px-4 py-3 text-right tabular-nums"
@@ -236,6 +256,9 @@ function OutlinerAdminStatistics() {
                         <td className="px-4 py-3 text-right tabular-nums text-emerald-700">
                           {row.segments_approved.toLocaleString()}
                         </td>
+                        <td className="px-4 py-3 text-right tabular-nums text-amber-600">
+                          {row.edited_segments.toLocaleString()}
+                        </td>
                         <td className="px-4 py-3 text-right tabular-nums text-red-600">
                           {row.rejection_count.toLocaleString()}
                         </td>
@@ -257,6 +280,9 @@ function OutlinerAdminStatistics() {
                       <td className="px-4 py-3" colSpan={2}>Total</td>
                       <td className="px-4 py-3 text-right tabular-nums font-semibold text-emerald-700">
                         {annotatorTotal.toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-600">
+                        {annotatorEditedTotal.toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-semibold text-red-600">
                         {annotatorRejectedTotal.toLocaleString()}

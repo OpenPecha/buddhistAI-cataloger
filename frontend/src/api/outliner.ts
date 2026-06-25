@@ -1017,8 +1017,8 @@ export interface AnnotatorApprovedRow {
   user_id: string | null;
   name: string;
   segments_approved: number;
+  edited_segments: number;
   rejection_count: number;
-  /** Distinct segments that were rejected (collapses repeat rejections). */
   rejected_segments: number;
 }
 
