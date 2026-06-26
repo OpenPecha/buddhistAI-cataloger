@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { SplitPane, Pane } from 'react-split-pane';
 import { toast } from 'sonner';
-import { Check, FileText, User, X } from 'lucide-react';
+import { Check, FileText, PanelRightClose, PanelRightOpen, User, X } from 'lucide-react';
 
 import {
   getOutlinerDocument,
@@ -12,6 +13,8 @@ import {
   type RandomReviewedDocumentSummary,
   type SegmentReviewStatus,
 } from '@/api/outliner';
+import { VolumeImagePanelCore } from '@/components/outliner/ImageWrapper';
+import { useVolumeHasImages } from '@/features/outliner/bdrc/hook/useBdrcOtVolume';
 import { SegmentSearchBar } from '@/components/outliner/SegmentSearchBar';
 import { SegmentHighlightedText } from '@/components/outliner/SegmentHighlightedText';
 import { getLabelColor, getStatusColor } from '@/components/outliner/utils';
@@ -89,15 +92,20 @@ function SegmentCard({
   listIndex,
   decision,
   isPending,
+  isExpanded,
+  onToggleExpanded,
+  onBodyCaretChange,
   onReview,
 }: Readonly<{
   segment: OutlinerSegment;
   listIndex: number;
   decision: SegmentReviewStatus | undefined;
   isPending: boolean;
+  isExpanded: boolean;
+  onToggleExpanded: (expanded: boolean) => void;
+  onBodyCaretChange: (segmentId: string, offset: number | null) => void;
   onReview: (status: SegmentReviewStatus, comment?: string) => void;
 }>) {
-  const [isExpanded, setIsExpanded] = useState(false);
   const [textSearchQuery, setTextSearchQuery] = useState('');
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectComment, setRejectComment] = useState('');
@@ -120,9 +128,9 @@ function SegmentCard({
       } catch {
         // ignore storage write failures
       }
-      if (!isExpanded) setIsExpanded(true);
+      if (!isExpanded) onToggleExpanded(true);
     },
-    [textBgColorStorageKey, isExpanded]
+    [textBgColorStorageKey, isExpanded, onToggleExpanded]
   );
 
   const highlightWords = useMemo(() => getSegmentHighlightWords(segment), [segment]);
@@ -167,6 +175,40 @@ function SegmentCard({
     body.scrollTop = edge === 'top' ? 0 : maxScroll;
   }, []);
 
+  // Report the click/caret offset within the segment body so the image panel can
+  // follow the reader into later pages of a multi-page segment (mirrors the
+  // reviewer SegmentRow: documentCharIndex = span_start + offset).
+  const reportBodyCaret = useCallback(() => {
+    const el = segmentBodyRef.current;
+    if (!el) return;
+    const selection = globalThis.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+    const range = selection.getRangeAt(0);
+    if (!el.contains(range.commonAncestorContainer)) return;
+
+    const offsetFromRangePoint = (container: Node, nodeOffset: number) => {
+      const pre = range.cloneRange();
+      pre.selectNodeContents(el);
+      pre.setEnd(container, nodeOffset);
+      return pre.toString().length;
+    };
+
+    const offset = Math.min(
+      offsetFromRangePoint(range.startContainer, range.startOffset),
+      offsetFromRangePoint(range.endContainer, range.endOffset)
+    );
+    onBodyCaretChange(segment.id, offset);
+  }, [onBodyCaretChange, segment.id]);
+
+  // Clear the reported caret when the segment collapses or unmounts.
+  useEffect(() => {
+    if (!isExpanded) onBodyCaretChange(segment.id, null);
+  }, [isExpanded, segment.id, onBodyCaretChange]);
+
+  useEffect(() => {
+    return () => onBodyCaretChange(segment.id, null);
+  }, [segment.id, onBodyCaretChange]);
+
   const isApproved = decision === 'approve';
   const isRejected = decision === 'reject';
 
@@ -197,7 +239,7 @@ function SegmentCard({
         <div className="shrink-0 flex flex-col items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsExpanded((v) => !v)}
+            onClick={() => onToggleExpanded(!isExpanded)}
             className="p-1 rounded hover:bg-gray-200 transition-colors"
             aria-label={isExpanded ? 'Collapse segment' : 'Expand segment'}
           >
@@ -254,8 +296,13 @@ function SegmentCard({
             {isExpanded ? (
               <div
                 ref={segmentBodyRef}
+                tabIndex={0}
+                aria-label="Segment text (read-only; click to sync volume image)"
+                onMouseUp={reportBodyCaret}
+                onFocus={reportBodyCaret}
+                onBlur={() => onBodyCaretChange(segment.id, null)}
                 style={{ backgroundColor: textBgColor }}
-                className="min-h-[8rem] max-h-[min(24rem,50vh)] overflow-y-auto whitespace-pre-wrap wrap-break-word p-3 font-monlam text-sm leading-normal text-gray-800 rounded-md border border-gray-200"
+                className="min-h-[8rem] max-h-[min(24rem,50vh)] overflow-y-auto whitespace-pre-wrap wrap-break-word p-3 font-monlam text-sm leading-normal text-gray-800 rounded-md border border-gray-200 cursor-text select-text outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20"
               >
                 <SegmentHighlightedText
                   text={bodyText}
@@ -268,7 +315,7 @@ function SegmentCard({
               <button
                 type="button"
                 className="text-left w-full text-gray-700 font-monlam text-sm py-1 rounded px-2 -mx-2 transition-colors max-h-[100px] overflow-hidden whitespace-pre-wrap break-words [display:-webkit-box] [WebkitBoxOrient:vertical] [WebkitLineClamp:4] hover:bg-white/60"
-                onClick={() => setIsExpanded(true)}
+                onClick={() => onToggleExpanded(true)}
               >
                 {hasBodyHighlightLayer ? (
                   <SegmentHighlightedText
@@ -401,6 +448,9 @@ function ViewOnly() {
   });
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Lifted from EachDocument so the container can widen (drop max-w cap) while
+  // the image side panel is open, reclaiming the empty space on wide screens.
+  const [imagesPanelVisible, setImagesPanelVisible] = useState(false);
 
   useEffect(() => {
     if (!documents?.length) {
@@ -424,7 +474,12 @@ function ViewOnly() {
       className={cn(
         'mx-auto p-6',
         hasSidebar
-          ? 'flex max-w-7xl min-h-[min(100dvh,56rem)] flex-col gap-6 md:flex-row md:items-start'
+          ? cn(
+              'flex h-[calc(100dvh-3rem)] flex-col gap-6 overflow-hidden md:flex-row md:items-stretch',
+              // Use the full width while the image panel is open so the segments +
+              // image fill the screen instead of leaving empty space on the right.
+              imagesPanelVisible ? 'max-w-none' : 'max-w-7xl',
+            )
           : 'max-w-5xl',
       )}
     >
@@ -438,9 +493,9 @@ function ViewOnly() {
             <>
               <aside
                 className={cn(
-                  'flex w-full shrink-0 flex-col gap-4 border-b border-gray-200 bg-gray-50/95 py-4 backdrop-blur-sm',
-                  'sticky top-6 z-10 max-h-[calc(100dvh-5rem)] self-start overflow-hidden md:h-[calc(100dvh-5rem)]',
-                  'md:w-64 md:border-t md:border-r md:pr-4 lg:w-72',
+                  'flex min-h-0 w-full shrink-0 flex-col gap-4 border-b border-gray-200 bg-gray-50/95 py-4 backdrop-blur-sm',
+                  'overflow-hidden md:h-full md:max-h-full',
+                  'md:w-64 md:border-b-0 md:border-r md:pr-4 lg:w-72',
                 )}
               >
                 <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pr-0.5 md:pr-1">
@@ -475,8 +530,15 @@ function ViewOnly() {
                   </button>
                 </div>
               </aside>
-              <main className="min-w-0 flex-1">
-                {selectedId ? <EachDocument key={selectedId} documentId={selectedId} /> : null}
+              <main className="flex min-h-0 min-w-0 flex-1 flex-col">
+                {selectedId ? (
+                  <EachDocument
+                    key={selectedId}
+                    documentId={selectedId}
+                    imagesPanelVisible={imagesPanelVisible}
+                    onToggleImagesPanel={() => setImagesPanelVisible((v) => !v)}
+                  />
+                ) : null}
               </main>
             </>
           )}
@@ -486,7 +548,15 @@ function ViewOnly() {
   );
 }
 
-function EachDocument({ documentId }: Readonly<{ documentId: string }>) {
+function EachDocument({
+  documentId,
+  imagesPanelVisible,
+  onToggleImagesPanel,
+}: Readonly<{
+  documentId: string;
+  imagesPanelVisible: boolean;
+  onToggleImagesPanel: () => void;
+}>) {
   const queryClient = useQueryClient();
 
   // Same query key as the sidebar prefetch in the original ViewOnly: a cache hit.
@@ -497,6 +567,53 @@ function EachDocument({ documentId }: Readonly<{ documentId: string }>) {
   });
 
   const segments = useMemo(() => sortSegments(data?.segments), [data?.segments]);
+
+  const hasImages = useVolumeHasImages(data?.filename ?? null);
+
+  const [expandedSegments, setExpandedSegments] = useState<Set<string>>(new Set());
+  const [lastExpandedId, setLastExpandedId] = useState<string | null>(null);
+
+  const [segmentBodyCaret, setSegmentBodyCaret] = useState<{
+    segmentId: string;
+    offset: number;
+  } | null>(null);
+
+  const handleToggleExpanded = useCallback((segmentId: string, expanded: boolean) => {
+    setExpandedSegments((prev) => {
+      const next = new Set(prev);
+      if (expanded) next.add(segmentId);
+      else next.delete(segmentId);
+      return next;
+    });
+    if (expanded) setLastExpandedId(segmentId);
+  }, []);
+
+  const handleBodyCaretChange = useCallback(
+    (segmentId: string, offset: number | null) => {
+      setSegmentBodyCaret((prev) => {
+        if (offset == null) {
+          return prev?.segmentId === segmentId ? null : prev;
+        }
+        if (prev?.segmentId === segmentId && prev.offset === offset) return prev;
+        return { segmentId, offset };
+      });
+    },
+    []
+  );
+
+  const documentCharIndexForImage = useMemo((): number | null => {
+    if (segmentBodyCaret) {
+      const s = segments.find((seg) => seg.id === segmentBodyCaret.segmentId);
+      if (s && expandedSegments.has(s.id) && typeof s.span_start === 'number') {
+        return s.span_start + Math.max(0, segmentBodyCaret.offset);
+      }
+    }
+    const target =
+      lastExpandedId && expandedSegments.has(lastExpandedId)
+        ? segments.find((s) => s.id === lastExpandedId)
+        : segments.find((s) => expandedSegments.has(s.id));
+    return target && typeof target.span_start === 'number' ? target.span_start : null;
+  }, [segments, expandedSegments, lastExpandedId, segmentBodyCaret]);
 
   const reviewsQueryKey = ['outliner', 'segment-reviews', documentId];
   const { data: reviewStatuses } = useQuery({
@@ -550,6 +667,66 @@ function EachDocument({ documentId }: Readonly<{ documentId: string }>) {
     return null;
   }
 
+  const showImagePanel = hasImages && imagesPanelVisible;
+
+  const segmentCards = segments.map((segment, index) => (
+    <SegmentCard
+      key={segment.id}
+      segment={segment}
+      listIndex={index + 1}
+      decision={reviewStatuses?.[segment.id]}
+      isPending={reviewMutation.isPending}
+      isExpanded={expandedSegments.has(segment.id)}
+      onToggleExpanded={(expanded) => handleToggleExpanded(segment.id, expanded)}
+      onBodyCaretChange={handleBodyCaretChange}
+      onReview={(status, comment) =>
+        reviewMutation.mutate({ segmentId: segment.id, status, comment })
+      }
+    />
+  ));
+
+  const scrollableSegments = (
+    <div className="relative h-full min-h-0 min-w-0 flex flex-col overflow-hidden rounded-md border border-gray-200 bg-white">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-2">
+        {segmentCards}
+      </div>
+    </div>
+  );
+
+  const imagePanel = (
+    <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-md border border-gray-200 bg-white">
+      <VolumeImagePanelCore
+        panelActive={showImagePanel}
+        volumeFilename={data.filename?.trim() ? data.filename : null}
+        documentCharIndexForImage={documentCharIndexForImage}
+      />
+    </div>
+  );
+
+  let body: React.ReactNode;
+  if (segments.length === 0) {
+    body = (
+      <div className="relative min-h-0 flex-1 flex flex-col overflow-hidden rounded-md border border-gray-200 bg-white">
+        <p className="p-4 text-sm text-gray-600">This document has no segments.</p>
+      </div>
+    );
+  } else if (showImagePanel) {
+    body = (
+      <SplitPane
+        direction="horizontal"
+        className="outliner-split-pane min-h-0 flex-1 w-full"
+        dividerSize={8}
+      >
+        <Pane minSize={280}>{scrollableSegments}</Pane>
+        <Pane defaultSize="35%" minSize={220} maxSize="60%">
+          {imagePanel}
+        </Pane>
+      </SplitPane>
+    );
+  } else {
+    body = scrollableSegments;
+  }
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <header className="shrink-0 flex flex-col gap-4 pb-4">
@@ -557,7 +734,25 @@ function EachDocument({ documentId }: Readonly<{ documentId: string }>) {
           <h2 className="text-base font-semibold text-gray-900 truncate">
             {data.filename?.trim() || '—'}
           </h2>
-          <div className="flex gap-2 text-xs px-2 flex-wrap">
+          <div className="flex items-center gap-2 text-xs px-2 flex-wrap">
+            {hasImages && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 gap-1.5 px-2"
+                onClick={onToggleImagesPanel}
+                aria-pressed={imagesPanelVisible}
+                aria-label={imagesPanelVisible ? 'Hide image panel' : 'Show image panel'}
+                title={imagesPanelVisible ? 'Hide image panel' : 'Show image panel'}
+              >
+                {imagesPanelVisible ? (
+                  <PanelRightClose className="h-4 w-4" aria-hidden />
+                ) : (
+                  <PanelRightOpen className="h-4 w-4" aria-hidden />
+                )}
+              </Button>
+            )}
             <span className="inline-block px-2 py-1 rounded bg-blue-100 text-blue-700">
               Approved: {statusCounts.approve}
             </span>
@@ -571,26 +766,7 @@ function EachDocument({ documentId }: Readonly<{ documentId: string }>) {
         </div>
       </header>
 
-      <div className="relative min-h-0 flex-1 flex flex-col overflow-hidden rounded-md border border-gray-200 bg-white">
-        {segments.length === 0 ? (
-          <p className="p-4 text-sm text-gray-600">This document has no segments.</p>
-        ) : (
-          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-2">
-            {segments.map((segment, index) => (
-              <SegmentCard
-                key={segment.id}
-                segment={segment}
-                listIndex={index + 1}
-                decision={reviewStatuses?.[segment.id]}
-                isPending={reviewMutation.isPending}
-                onReview={(status, comment) =>
-                  reviewMutation.mutate({ segmentId: segment.id, status, comment })
-                }
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      {body}
     </div>
   );
 }
