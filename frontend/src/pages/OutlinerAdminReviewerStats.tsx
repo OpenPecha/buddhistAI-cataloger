@@ -14,10 +14,20 @@ type SortField = 'reviewer' | 'approvals' | 'rejections' | 'rejection_rate';
 type ReviewVerifierSortField = 'reviewer' | 'approvals' | 'rejections' | 'total_segments';
 type SortDir = 'asc' | 'desc';
 
-// Rejection % = rejections / approvals * 100 (0 when no approvals)
-const rejectionRate = (row: { approvals: number; rejections: number }) =>
-  row.approvals > 0 ? (row.rejections / row.approvals) * 100 : 0;
-const REJECTION_RATE_FORMULA = 'Rejection % = (No. of Rejections / No. of Approvals) × 100';
+// Rejection % = rejections / (approvals + rejections) * 100 (0 when no decisions)
+const rejectionRate = (row: { approvals: number; rejections: number }) => {
+  const denom = row.approvals + row.rejections;
+  return denom > 0 ? (row.rejections / denom) * 100 : 0;
+};
+const REJECTION_RATE_FORMULA =
+  'Rejection % = No. of Rejections / (No. of Approvals + No. of Rejections) × 100';
+
+const shareRate = (part: number, total: number) =>
+  total > 0 ? (part / total) * 100 : 0;
+const VF_APPROVALS_RATE_FORMULA = 'Approvals % = No. of Approvals / Total Segments × 100';
+const VF_REJECTIONS_RATE_FORMULA = 'Rejections % = No. of Rejections / Total Segments × 100';
+const RV_APPROVALS_RATE_FORMULA =
+  'Approvals % = No. of Approvals / (No. of Approvals + No. of Rejections) × 100';
 
 const cardPanel =
   'rounded-2xl border border-border/70 bg-card/95 p-6 shadow-elegant backdrop-blur-[2px]';
@@ -212,10 +222,16 @@ function OutlinerAdminReviewerStats() {
                           {row.total_segments.toLocaleString()}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-emerald-700">
-                          {row.approvals.toLocaleString()}
+                          {row.approvals.toLocaleString()}{' '}
+                          <span className="text-muted-foreground" title={VF_APPROVALS_RATE_FORMULA}>
+                            ({shareRate(row.approvals, row.total_segments).toFixed(1)}%)
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-red-700">
-                          {row.rejections.toLocaleString()}
+                          {row.rejections.toLocaleString()}{' '}
+                          <span className="text-muted-foreground" title={VF_REJECTIONS_RATE_FORMULA}>
+                            ({shareRate(row.rejections, row.total_segments).toFixed(1)}%)
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -265,23 +281,13 @@ function OutlinerAdminReviewerStats() {
                           <SortIcon field="approvals" active={rvSortField} dir={rvSortDir} />
                         </button>
                       </th>
-                      <th className="px-4 py-3 text-right tabular-nums">
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-0.5 hover:text-foreground transition-colors"
-                          onClick={() => toggleRvSort('rejections')}
-                        >
-                          No. of Rejections
-                          <SortIcon field="rejections" active={rvSortField} dir={rvSortDir} />
-                        </button>
-                      </th>
                       <th className="px-4 py-3 text-right tabular-nums" title={REJECTION_RATE_FORMULA}>
                         <button
                           type="button"
                           className="inline-flex items-center gap-0.5 hover:text-foreground transition-colors"
                           onClick={() => toggleRvSort('rejection_rate')}
                         >
-                          Rejection %
+                          No. of Rejections
                           <SortIcon field="rejection_rate" active={rvSortField} dir={rvSortDir} />
                         </button>
                       </th>
@@ -297,16 +303,16 @@ function OutlinerAdminReviewerStats() {
                           <span className="break-words">{row.reviewer}</span>
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-emerald-700">
-                          {row.approvals.toLocaleString()}
+                          {row.approvals.toLocaleString()}{' '}
+                          <span className="text-muted-foreground" title={RV_APPROVALS_RATE_FORMULA}>
+                            ({shareRate(row.approvals, row.approvals + row.rejections).toFixed(1)}%)
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-red-700">
-                          {row.rejections.toLocaleString()}
-                        </td>
-                        <td
-                          className="px-4 py-3 text-right tabular-nums text-foreground"
-                          title={REJECTION_RATE_FORMULA}
-                        >
-                          {rejectionRate(row).toFixed(1)}%
+                          {row.rejections.toLocaleString()}{' '}
+                          <span className="text-muted-foreground" title={REJECTION_RATE_FORMULA}>
+                            ({rejectionRate(row).toFixed(1)}%)
+                          </span>
                         </td>
                       </tr>
                     ))}

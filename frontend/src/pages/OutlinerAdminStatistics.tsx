@@ -26,6 +26,19 @@ const annotatorRejectionRate = (approved: number, rejectedSegments: number) => {
 const ANNOTATOR_REJECTION_RATE_FORMULA =
   'Rejection % = rejected_segments / (segments_approved + rejected_segments) × 100';
 
+const editedRate = (edited: number, denom: number) =>
+  denom > 0 ? (edited / denom) * 100 : 0;
+const annotatorApprovalRate = (approved: number, rejectedSegments: number) => {
+  const denom = approved + rejectedSegments;
+  return denom > 0 ? (approved / denom) * 100 : 0;
+};
+const ANNOTATOR_APPROVAL_RATE_FORMULA =
+  'Approved % = segments_approved / (segments_approved + rejected_segments) × 100';
+const ANNOTATOR_EDITED_RATE_FORMULA =
+  'Edited % = edited_segments / segments_approved × 100';
+const REVIEWER_EDITED_RATE_FORMULA =
+  'Edited % = edited_segments / segments_reviewed × 100';
+
 const cardPanel =
   'rounded-2xl border border-border/70 bg-card/95 p-6 shadow-elegant backdrop-blur-[2px]';
 
@@ -228,10 +241,7 @@ function OutlinerAdminStatistics() {
                           />
                         </button>
                       </th>
-                      <th
-                        className="px-4 py-3 text-right tabular-nums"
-                        title="Approved segments where the reviewer corrected the title or author. A subset of Approved."
-                      >
+                      <th className="px-4 py-3 text-right tabular-nums">
                         <button
                           type="button"
                           className="inline-flex items-center gap-0.5 transition-colors hover:text-foreground"
@@ -245,7 +255,6 @@ function OutlinerAdminStatistics() {
                           />
                         </button>
                       </th>
-                      <th className="px-4 py-3 text-right tabular-nums">Rejected</th>
                       <th
                         className="px-4 py-3 text-right tabular-nums"
                         title={ANNOTATOR_REJECTION_RATE_FORMULA}
@@ -255,7 +264,7 @@ function OutlinerAdminStatistics() {
                           className="inline-flex items-center gap-0.5 transition-colors hover:text-foreground"
                           onClick={() => toggleAnnotatorSort('rejection_rate')}
                         >
-                          Rejection %
+                          Rejected
                           <SortIcon<AnnotatorSortField>
                             field="rejection_rate"
                             active={annotatorSortField}
@@ -275,24 +284,42 @@ function OutlinerAdminStatistics() {
                         <td className="max-w-[14rem] px-4 py-3 font-medium leading-snug text-foreground sm:max-w-none sm:whitespace-normal">
                           <span className="break-words">{row.name}</span>
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-emerald-700">
-                          {row.segments_approved.toLocaleString()}
+                        <td
+                          className="px-4 py-3 text-right tabular-nums text-emerald-700"
+                          title={ANNOTATOR_APPROVAL_RATE_FORMULA}
+                        >
+                          {row.segments_approved.toLocaleString()}{' '}
+                          <span className="text-muted-foreground">
+                            (
+                            {annotatorApprovalRate(
+                              row.segments_approved,
+                              row.rejected_segments,
+                            ).toFixed(1)}
+                            %)
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-amber-600">
-                          {row.edited_segments.toLocaleString()}
-                        </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-red-600">
-                          {row.rejection_count.toLocaleString()}
+                          {row.edited_segments.toLocaleString()}{' '}
+                          <span
+                            className="text-muted-foreground"
+                            title={ANNOTATOR_EDITED_RATE_FORMULA}
+                          >
+                            ({editedRate(row.edited_segments, row.segments_approved).toFixed(1)}%)
+                          </span>
                         </td>
                         <td
-                          className="px-4 py-3 text-right tabular-nums text-foreground"
+                          className="px-4 py-3 text-right tabular-nums text-red-600"
                           title={ANNOTATOR_REJECTION_RATE_FORMULA}
                         >
-                          {annotatorRejectionRate(
-                            row.segments_approved,
-                            row.rejected_segments,
-                          ).toFixed(1)}
-                          %
+                          {row.rejection_count.toLocaleString()}{' '}
+                          <span className="text-muted-foreground">
+                            (
+                            {annotatorRejectionRate(
+                              row.segments_approved,
+                              row.rejected_segments,
+                            ).toFixed(1)}
+                            %)
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -300,24 +327,42 @@ function OutlinerAdminStatistics() {
                   <tfoot className="sticky bottom-0 bg-stone-50/95 shadow-[0_-1px_0_0_rgb(231_229_228)]">
                     <tr className="border-t border-stone-200 text-xs font-semibold text-muted-foreground">
                       <td className="px-4 py-3" colSpan={2}>Total</td>
-                      <td className="px-4 py-3 text-right tabular-nums font-semibold text-emerald-700">
-                        {annotatorTotal.toLocaleString()}
+                      <td
+                        className="px-4 py-3 text-right tabular-nums font-semibold text-emerald-700"
+                        title={ANNOTATOR_APPROVAL_RATE_FORMULA}
+                      >
+                        {annotatorTotal.toLocaleString()}{' '}
+                        <span className="font-normal text-muted-foreground">
+                          (
+                          {annotatorApprovalRate(
+                            annotatorTotal,
+                            annotatorRejectedSegmentsTotal,
+                          ).toFixed(1)}
+                          %)
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-600">
-                        {annotatorEditedTotal.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums font-semibold text-red-600">
-                        {annotatorRejectedTotal.toLocaleString()}
+                        {annotatorEditedTotal.toLocaleString()}{' '}
+                        <span
+                          className="font-normal text-muted-foreground"
+                          title={ANNOTATOR_EDITED_RATE_FORMULA}
+                        >
+                          ({editedRate(annotatorEditedTotal, annotatorTotal).toFixed(1)}%)
+                        </span>
                       </td>
                       <td
-                        className="px-4 py-3 text-right tabular-nums font-semibold text-foreground"
+                        className="px-4 py-3 text-right tabular-nums font-semibold text-red-600"
                         title={ANNOTATOR_REJECTION_RATE_FORMULA}
                       >
-                        {annotatorRejectionRate(
-                          annotatorTotal,
-                          annotatorRejectedSegmentsTotal,
-                        ).toFixed(1)}
-                        %
+                        {annotatorRejectedTotal.toLocaleString()}{' '}
+                        <span className="font-normal text-muted-foreground">
+                          (
+                          {annotatorRejectionRate(
+                            annotatorTotal,
+                            annotatorRejectedSegmentsTotal,
+                          ).toFixed(1)}
+                          %)
+                        </span>
                       </td>
                     </tr>
                   </tfoot>
@@ -375,10 +420,7 @@ function OutlinerAdminStatistics() {
                           />
                         </button>
                       </th>
-                      <th
-                        className="px-4 py-3 text-right tabular-nums"
-                        title="Approved segments where this reviewer corrected the title or author. A subset of Segments Reviewed."
-                      >
+                      <th className="px-4 py-3 text-right tabular-nums">
                         <button
                           type="button"
                           className="inline-flex items-center gap-0.5 transition-colors hover:text-foreground"
@@ -392,14 +434,13 @@ function OutlinerAdminStatistics() {
                           />
                         </button>
                       </th>
-                      <th className="px-4 py-3 text-right tabular-nums">Rejected</th>
                       <th className="px-4 py-3 text-right tabular-nums" title={REJECTION_RATE_FORMULA}>
                         <button
                           type="button"
                           className="inline-flex items-center gap-0.5 transition-colors hover:text-foreground"
                           onClick={() => toggleReviewerSort('rejection_rate')}
                         >
-                          Rejection %
+                          Rejected
                           <SortIcon<ReviewerSortField>
                             field="rejection_rate"
                             active={reviewerSortField}
@@ -423,16 +464,22 @@ function OutlinerAdminStatistics() {
                           {row.segments_reviewed.toLocaleString()}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-amber-600">
-                          {row.edited_segments.toLocaleString()}
-                        </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-red-600">
-                          {row.rejection_count.toLocaleString()}
+                          {row.edited_segments.toLocaleString()}{' '}
+                          <span
+                            className="text-muted-foreground"
+                            title={REVIEWER_EDITED_RATE_FORMULA}
+                          >
+                            ({editedRate(row.edited_segments, row.segments_reviewed).toFixed(1)}%)
+                          </span>
                         </td>
                         <td
-                          className="px-4 py-3 text-right tabular-nums text-foreground"
+                          className="px-4 py-3 text-right tabular-nums text-red-600"
                           title={REJECTION_RATE_FORMULA}
                         >
-                          {rejectionRate(row.segments_reviewed, row.rejection_count).toFixed(1)}%
+                          {row.rejection_count.toLocaleString()}{' '}
+                          <span className="text-muted-foreground">
+                            ({rejectionRate(row.segments_reviewed, row.rejection_count).toFixed(1)}%)
+                          </span>
                         </td>
                       </tr>
                     ))}
@@ -444,16 +491,22 @@ function OutlinerAdminStatistics() {
                         {reviewerTotal.toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-600">
-                        {reviewerEditedTotal.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 text-right tabular-nums font-semibold text-red-600">
-                        {reviewerRejectedTotal.toLocaleString()}
+                        {reviewerEditedTotal.toLocaleString()}{' '}
+                        <span
+                          className="font-normal text-muted-foreground"
+                          title={REVIEWER_EDITED_RATE_FORMULA}
+                        >
+                          ({editedRate(reviewerEditedTotal, reviewerTotal).toFixed(1)}%)
+                        </span>
                       </td>
                       <td
-                        className="px-4 py-3 text-right tabular-nums font-semibold text-foreground"
+                        className="px-4 py-3 text-right tabular-nums font-semibold text-red-600"
                         title={REJECTION_RATE_FORMULA}
                       >
-                        {rejectionRate(reviewerTotal, reviewerRejectedTotal).toFixed(1)}%
+                        {reviewerRejectedTotal.toLocaleString()}{' '}
+                        <span className="font-normal text-muted-foreground">
+                          ({rejectionRate(reviewerTotal, reviewerRejectedTotal).toFixed(1)}%)
+                        </span>
                       </td>
                     </tr>
                   </tfoot>
