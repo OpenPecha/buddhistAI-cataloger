@@ -38,10 +38,6 @@ const ANNOTATOR_EDITED_RATE_FORMULA =
   'Edited % = edited_segments / segments_approved × 100';
 const REVIEWER_EDITED_RATE_FORMULA =
   'Edited % = edited_segments / segments_reviewed × 100';
-const ANNOTATOR_EDITED_COUNT_TOOLTIP =
-  'Approved segments where the reviewer corrected the title or author. A subset of Approved.';
-const REVIEWER_EDITED_COUNT_TOOLTIP =
-  'Approved segments where this reviewer corrected the title or author. A subset of Segments Reviewed.';
 
 const cardPanel =
   'rounded-2xl border border-border/70 bg-card/95 p-6 shadow-elegant backdrop-blur-[2px]';
@@ -245,10 +241,7 @@ function OutlinerAdminStatistics() {
                           />
                         </button>
                       </th>
-                      <th
-                        className="px-4 py-3 text-right tabular-nums"
-                        title={ANNOTATOR_EDITED_COUNT_TOOLTIP}
-                      >
+                      <th className="px-4 py-3 text-right tabular-nums">
                         <button
                           type="button"
                           className="inline-flex items-center gap-0.5 transition-colors hover:text-foreground"
@@ -306,9 +299,7 @@ function OutlinerAdminStatistics() {
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-amber-600">
-                          <span title={ANNOTATOR_EDITED_COUNT_TOOLTIP}>
-                            {row.edited_segments.toLocaleString()}
-                          </span>{' '}
+                          {row.edited_segments.toLocaleString()}{' '}
                           <span
                             className="text-muted-foreground"
                             title={ANNOTATOR_EDITED_RATE_FORMULA}
@@ -351,9 +342,7 @@ function OutlinerAdminStatistics() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-600">
-                        <span title={ANNOTATOR_EDITED_COUNT_TOOLTIP}>
-                          {annotatorEditedTotal.toLocaleString()}
-                        </span>{' '}
+                        {annotatorEditedTotal.toLocaleString()}{' '}
                         <span
                           className="font-normal text-muted-foreground"
                           title={ANNOTATOR_EDITED_RATE_FORMULA}
@@ -431,10 +420,7 @@ function OutlinerAdminStatistics() {
                           />
                         </button>
                       </th>
-                      <th
-                        className="px-4 py-3 text-right tabular-nums"
-                        title={REVIEWER_EDITED_COUNT_TOOLTIP}
-                      >
+                      <th className="px-4 py-3 text-right tabular-nums">
                         <button
                           type="button"
                           className="inline-flex items-center gap-0.5 transition-colors hover:text-foreground"
@@ -478,9 +464,7 @@ function OutlinerAdminStatistics() {
                           {row.segments_reviewed.toLocaleString()}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-amber-600">
-                          <span title={REVIEWER_EDITED_COUNT_TOOLTIP}>
-                            {row.edited_segments.toLocaleString()}
-                          </span>{' '}
+                          {row.edited_segments.toLocaleString()}{' '}
                           <span
                             className="text-muted-foreground"
                             title={REVIEWER_EDITED_RATE_FORMULA}
@@ -507,9 +491,7 @@ function OutlinerAdminStatistics() {
                         {reviewerTotal.toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-600">
-                        <span title={REVIEWER_EDITED_COUNT_TOOLTIP}>
-                          {reviewerEditedTotal.toLocaleString()}
-                        </span>{' '}
+                        {reviewerEditedTotal.toLocaleString()}{' '}
                         <span
                           className="font-normal text-muted-foreground"
                           title={REVIEWER_EDITED_RATE_FORMULA}
