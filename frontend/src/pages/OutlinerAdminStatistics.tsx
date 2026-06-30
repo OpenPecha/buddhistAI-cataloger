@@ -28,6 +28,12 @@ const ANNOTATOR_REJECTION_RATE_FORMULA =
 
 const editedRate = (edited: number, denom: number) =>
   denom > 0 ? (edited / denom) * 100 : 0;
+const annotatorApprovalRate = (approved: number, rejectedSegments: number) => {
+  const denom = approved + rejectedSegments;
+  return denom > 0 ? (approved / denom) * 100 : 0;
+};
+const ANNOTATOR_APPROVAL_RATE_FORMULA =
+  'Approved % = segments_approved / (segments_approved + rejected_segments) × 100';
 const ANNOTATOR_EDITED_RATE_FORMULA =
   'Edited % = edited_segments / segments_approved × 100';
 const REVIEWER_EDITED_RATE_FORMULA =
@@ -285,8 +291,19 @@ function OutlinerAdminStatistics() {
                         <td className="max-w-[14rem] px-4 py-3 font-medium leading-snug text-foreground sm:max-w-none sm:whitespace-normal">
                           <span className="break-words">{row.name}</span>
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-emerald-700">
-                          {row.segments_approved.toLocaleString()}
+                        <td
+                          className="px-4 py-3 text-right tabular-nums text-emerald-700"
+                          title={ANNOTATOR_APPROVAL_RATE_FORMULA}
+                        >
+                          {row.segments_approved.toLocaleString()}{' '}
+                          <span className="text-muted-foreground">
+                            (
+                            {annotatorApprovalRate(
+                              row.segments_approved,
+                              row.rejected_segments,
+                            ).toFixed(1)}
+                            %)
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-amber-600">
                           <span title={ANNOTATOR_EDITED_COUNT_TOOLTIP}>
@@ -319,8 +336,19 @@ function OutlinerAdminStatistics() {
                   <tfoot className="sticky bottom-0 bg-stone-50/95 shadow-[0_-1px_0_0_rgb(231_229_228)]">
                     <tr className="border-t border-stone-200 text-xs font-semibold text-muted-foreground">
                       <td className="px-4 py-3" colSpan={2}>Total</td>
-                      <td className="px-4 py-3 text-right tabular-nums font-semibold text-emerald-700">
-                        {annotatorTotal.toLocaleString()}
+                      <td
+                        className="px-4 py-3 text-right tabular-nums font-semibold text-emerald-700"
+                        title={ANNOTATOR_APPROVAL_RATE_FORMULA}
+                      >
+                        {annotatorTotal.toLocaleString()}{' '}
+                        <span className="font-normal text-muted-foreground">
+                          (
+                          {annotatorApprovalRate(
+                            annotatorTotal,
+                            annotatorRejectedSegmentsTotal,
+                          ).toFixed(1)}
+                          %)
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-600">
                         <span title={ANNOTATOR_EDITED_COUNT_TOOLTIP}>
