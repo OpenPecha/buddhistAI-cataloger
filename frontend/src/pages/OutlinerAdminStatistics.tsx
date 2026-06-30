@@ -26,6 +26,17 @@ const annotatorRejectionRate = (approved: number, rejectedSegments: number) => {
 const ANNOTATOR_REJECTION_RATE_FORMULA =
   'Rejection % = rejected_segments / (segments_approved + rejected_segments) × 100';
 
+const editedRate = (edited: number, denom: number) =>
+  denom > 0 ? (edited / denom) * 100 : 0;
+const ANNOTATOR_EDITED_RATE_FORMULA =
+  'Edited % = edited_segments / segments_approved × 100';
+const REVIEWER_EDITED_RATE_FORMULA =
+  'Edited % = edited_segments / segments_reviewed × 100';
+const ANNOTATOR_EDITED_COUNT_TOOLTIP =
+  'Approved segments where the reviewer corrected the title or author. A subset of Approved.';
+const REVIEWER_EDITED_COUNT_TOOLTIP =
+  'Approved segments where this reviewer corrected the title or author. A subset of Segments Reviewed.';
+
 const cardPanel =
   'rounded-2xl border border-border/70 bg-card/95 p-6 shadow-elegant backdrop-blur-[2px]';
 
@@ -230,7 +241,7 @@ function OutlinerAdminStatistics() {
                       </th>
                       <th
                         className="px-4 py-3 text-right tabular-nums"
-                        title="Approved segments where the reviewer corrected the title or author. A subset of Approved."
+                        title={ANNOTATOR_EDITED_COUNT_TOOLTIP}
                       >
                         <button
                           type="button"
@@ -278,7 +289,15 @@ function OutlinerAdminStatistics() {
                           {row.segments_approved.toLocaleString()}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-amber-600">
-                          {row.edited_segments.toLocaleString()}
+                          <span title={ANNOTATOR_EDITED_COUNT_TOOLTIP}>
+                            {row.edited_segments.toLocaleString()}
+                          </span>{' '}
+                          <span
+                            className="text-muted-foreground"
+                            title={ANNOTATOR_EDITED_RATE_FORMULA}
+                          >
+                            ({editedRate(row.edited_segments, row.segments_approved).toFixed(1)}%)
+                          </span>
                         </td>
                         <td
                           className="px-4 py-3 text-right tabular-nums text-red-600"
@@ -304,7 +323,15 @@ function OutlinerAdminStatistics() {
                         {annotatorTotal.toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-600">
-                        {annotatorEditedTotal.toLocaleString()}
+                        <span title={ANNOTATOR_EDITED_COUNT_TOOLTIP}>
+                          {annotatorEditedTotal.toLocaleString()}
+                        </span>{' '}
+                        <span
+                          className="font-normal text-muted-foreground"
+                          title={ANNOTATOR_EDITED_RATE_FORMULA}
+                        >
+                          ({editedRate(annotatorEditedTotal, annotatorTotal).toFixed(1)}%)
+                        </span>
                       </td>
                       <td
                         className="px-4 py-3 text-right tabular-nums font-semibold text-red-600"
@@ -378,7 +405,7 @@ function OutlinerAdminStatistics() {
                       </th>
                       <th
                         className="px-4 py-3 text-right tabular-nums"
-                        title="Approved segments where this reviewer corrected the title or author. A subset of Segments Reviewed."
+                        title={REVIEWER_EDITED_COUNT_TOOLTIP}
                       >
                         <button
                           type="button"
@@ -423,7 +450,15 @@ function OutlinerAdminStatistics() {
                           {row.segments_reviewed.toLocaleString()}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums text-amber-600">
-                          {row.edited_segments.toLocaleString()}
+                          <span title={REVIEWER_EDITED_COUNT_TOOLTIP}>
+                            {row.edited_segments.toLocaleString()}
+                          </span>{' '}
+                          <span
+                            className="text-muted-foreground"
+                            title={REVIEWER_EDITED_RATE_FORMULA}
+                          >
+                            ({editedRate(row.edited_segments, row.segments_reviewed).toFixed(1)}%)
+                          </span>
                         </td>
                         <td
                           className="px-4 py-3 text-right tabular-nums text-red-600"
@@ -444,7 +479,15 @@ function OutlinerAdminStatistics() {
                         {reviewerTotal.toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-right tabular-nums font-semibold text-amber-600">
-                        {reviewerEditedTotal.toLocaleString()}
+                        <span title={REVIEWER_EDITED_COUNT_TOOLTIP}>
+                          {reviewerEditedTotal.toLocaleString()}
+                        </span>{' '}
+                        <span
+                          className="font-normal text-muted-foreground"
+                          title={REVIEWER_EDITED_RATE_FORMULA}
+                        >
+                          ({editedRate(reviewerEditedTotal, reviewerTotal).toFixed(1)}%)
+                        </span>
                       </td>
                       <td
                         className="px-4 py-3 text-right tabular-nums font-semibold text-red-600"
