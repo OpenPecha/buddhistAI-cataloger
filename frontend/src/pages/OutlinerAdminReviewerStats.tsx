@@ -265,23 +265,13 @@ function OutlinerAdminReviewerStats() {
                           <SortIcon field="approvals" active={rvSortField} dir={rvSortDir} />
                         </button>
                       </th>
-                      <th className="px-4 py-3 text-right tabular-nums">
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-0.5 hover:text-foreground transition-colors"
-                          onClick={() => toggleRvSort('rejections')}
-                        >
-                          No. of Rejections
-                          <SortIcon field="rejections" active={rvSortField} dir={rvSortDir} />
-                        </button>
-                      </th>
                       <th className="px-4 py-3 text-right tabular-nums" title={REJECTION_RATE_FORMULA}>
                         <button
                           type="button"
                           className="inline-flex items-center gap-0.5 hover:text-foreground transition-colors"
                           onClick={() => toggleRvSort('rejection_rate')}
                         >
-                          Rejection %
+                          No. of Rejections
                           <SortIcon field="rejection_rate" active={rvSortField} dir={rvSortDir} />
                         </button>
                       </th>
@@ -299,14 +289,14 @@ function OutlinerAdminReviewerStats() {
                         <td className="px-4 py-3 text-right tabular-nums text-emerald-700">
                           {row.approvals.toLocaleString()}
                         </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-red-700">
-                          {row.rejections.toLocaleString()}
-                        </td>
                         <td
-                          className="px-4 py-3 text-right tabular-nums text-foreground"
+                          className="px-4 py-3 text-right tabular-nums text-red-700"
                           title={REJECTION_RATE_FORMULA}
                         >
-                          {rejectionRate(row).toFixed(1)}%
+                          {row.rejections.toLocaleString()}{' '}
+                          <span className="text-muted-foreground">
+                            ({rejectionRate(row).toFixed(1)}%)
+                          </span>
                         </td>
                       </tr>
                     ))}
