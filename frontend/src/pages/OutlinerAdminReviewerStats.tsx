@@ -101,18 +101,27 @@ function OutlinerAdminReviewerStats() {
   const sortedReviewVerifiers = useMemo(() => {
     const rows = data?.review_verifier_breakdown ?? [];
     const dir = vfSortDir === 'desc' ? -1 : 1;
+    // Approvals/Rejections sort by their displayed % (share of total segments).
+    const valueOf = (r: ReviewVerifierBreakdownRow) =>
+      vfSortField === 'approvals' || vfSortField === 'rejections'
+        ? shareRate(r[vfSortField], r.total_segments)
+        : r[vfSortField as 'total_segments'];
     return [...rows].sort((a, b) =>
       vfSortField === 'reviewer'
         ? dir * a.reviewer.localeCompare(b.reviewer)
-        : dir * (a[vfSortField] - b[vfSortField]),
+        : dir * (valueOf(a) - valueOf(b)),
     );
   }, [data?.review_verifier_breakdown, vfSortField, vfSortDir]);
 
   const sortedReviewers = useMemo(() => {
     const rows = data?.reviewer_breakdown ?? [];
     const dir = rvSortDir === 'desc' ? -1 : 1;
-    const valueOf = (r: ReviewerStatsBreakdownRow) =>
-      rvSortField === 'rejection_rate' ? rejectionRate(r) : r[rvSortField as 'approvals' | 'rejections'];
+    // Approvals/Rejections sort by their displayed % (share of approvals + rejections).
+    const valueOf = (r: ReviewerStatsBreakdownRow) => {
+      if (rvSortField === 'rejection_rate') return rejectionRate(r);
+      if (rvSortField === 'approvals') return shareRate(r.approvals, r.approvals + r.rejections);
+      return r[rvSortField as 'rejections'];
+    };
     return [...rows].sort((a: ReviewerStatsBreakdownRow, b: ReviewerStatsBreakdownRow) =>
       rvSortField === 'reviewer'
         ? dir * a.reviewer.localeCompare(b.reviewer)
