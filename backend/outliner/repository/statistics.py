@@ -11,16 +11,7 @@ from user.models.user import User
 
 
 def _activity_time():
-    """Effective approval date: reviewed_at, or April 1 of the segment's updated_at year."""
-    april_default = func.make_timestamp(
-        func.extract("year", OutlinerSegment.updated_at),
-        4,
-        1,
-        0,
-        0,
-        0,
-    )
-    return func.coalesce(OutlinerSegment.reviewed_at, april_default)
+    return OutlinerSegment.reviewed_at
 
 
 def get_annotator_approved_counts(
@@ -33,7 +24,7 @@ def get_annotator_approved_counts(
     Per-annotator count of approved segments on that annotator's documents.
 
     Approved = status 'approved' (reviewer assignment not required).
-    Date window: reviewed_at, or April 1 (updated_at year) when reviewed_at is null.
+    Date window scoped by reviewed_at on the segment.
     Annotator identity is the document owner (document.user_id).
     """
     clauses = [
@@ -150,7 +141,7 @@ def get_reviewer_approved_counts(
     """
     Per-reviewer count of segments they approved (status 'approved', reviewed_by_id = reviewer).
 
-    Date window: reviewed_at, or April 1 (updated_at year) when reviewed_at is null.
+    Date window scoped by coalesce(reviewed_at, updated_at).
     user_id filter here scopes by document.user_id (annotator), matching the page filter.
     """
     clauses = [

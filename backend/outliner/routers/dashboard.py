@@ -67,7 +67,7 @@ async def get_statistics(
 
     Annotator approved rule: status='approved' (no reviewed_by_id requirement).
     Reviewer approved rule: status='approved' AND reviewed_by_id set.
-    Date window: reviewed_at, or April 1 (updated_at year) when reviewed_at is null.
+    Date window: reviewed_at on the segment.
     """
     annotator_rows = get_annotator_approved_counts(
         db, start_date=start_date, end_date=end_date, user_id=user_id
