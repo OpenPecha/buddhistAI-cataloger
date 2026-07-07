@@ -29,8 +29,7 @@ def get_annotator_approved_counts(
     """
     clauses = [
         (OutlinerDocument.status != "deleted") | (OutlinerDocument.status.is_(None)),
-        OutlinerSegment.status == "approved",
-        OutlinerSegment.reviewed_by_id.isnot(None),
+        OutlinerSegment.status == "approved"
     ]
 
     t = _activity_time()
