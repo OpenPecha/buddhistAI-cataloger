@@ -351,6 +351,12 @@ def update_document_assignee(
     if not user_exists:
         raise HTTPException(status_code=404, detail="User not found")
 
+    if document.reviewer_id and document.reviewer_id == clean_user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Cannot assign this annotator: they are the document's reviewer",
+        )
+
     outliner_repo.set_document_user_and_refresh(db, document, clean_user_id)
     return {
         "message": "Document assignee updated",
@@ -468,4 +474,41 @@ def replace_segments_and_toc (
     segment_payload = [segment_to_response_dict (s) for s in db_segments]
     outliner_repo.replace_segments_and_ai_toc(db, document, db_segments, normalized)
     return document, segment_payload
+
+
+def _benchmark_spans(segments: List[Dict[str, Any]]) -> List[Dict[str, int]]:
+    """Reduce segment dicts to the benchmark shape: segment_index, span_start, span_end."""
+    return [
+        {
+            "segment_index": s["segment_index"],
+            "span_start": s["span_start"],
+            "span_end": s["span_end"],
+        }
+        for s in segments
+    ]
+
+
+def save_ai_outline_run(
+    db: Session,
+    document_id: str,
+    segments_data: List[Dict[str, Any]],
+    created_by_id: Optional[str] = None,
+) -> None:
+    """Freeze the AI's predicted split as a new run row (one per AI-button click)."""
+    outliner_repo.insert_ai_outline_run(
+        db, document_id, _benchmark_spans(segments_data), created_by_id
+    )
+
+
+def save_annotator_ai_final_segments(db: Session, document_id: str) -> None:
+    """Snapshot the annotator's final segments — only for documents where the AI outline was used.
+
+    Manual documents (no AI run) have nothing to benchmark against, so the column stays NULL.
+    """
+    if not outliner_repo.document_has_ai_outline_run(db, document_id):
+        return
+    segments = outliner_repo.segment_list_for_document(db, document_id)
+    outliner_repo.save_annotator_ai_final_segments(
+        db, document_id, _benchmark_spans(segments)
+    )
 

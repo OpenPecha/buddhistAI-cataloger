@@ -1017,13 +1017,16 @@ export interface AnnotatorApprovedRow {
   user_id: string | null;
   name: string;
   segments_approved: number;
+  edited_segments: number;
   rejection_count: number;
+  rejected_segments: number;
 }
 
 export interface ReviewerApprovedRow {
   user_id: string | null;
   name: string;
   segments_reviewed: number;
+  edited_segments: number;
   rejection_count: number;
 }
 
