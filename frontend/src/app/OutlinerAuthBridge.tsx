@@ -2,6 +2,7 @@ import { useCallback, useEffect } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
 import { setOutlinerAccessTokenGetter } from '@/api/outliner'
 import { getAuth0AccessToken } from '@/lib/auth0AccessToken'
+import { setClarityUserId } from '@/lib/clarity'
 
 /**
  * Wires Auth0 into `outlinerFetch` and `fetchWithAccessToken` so catalog, settings, and outliner
@@ -9,7 +10,7 @@ import { getAuth0AccessToken } from '@/lib/auth0AccessToken'
  * Must render under `Auth0Provider` with the same API audience as the backend `AUTH0_AUDIENCE`.
  */
 export function OutlinerAuthBridge() {
-  const { getAccessTokenSilently, isAuthenticated, logout } = useAuth0()
+  const { getAccessTokenSilently, isAuthenticated, logout, user } = useAuth0()
 
   const resolveToken = useCallback(
     () => getAuth0AccessToken(getAccessTokenSilently),
@@ -41,8 +42,14 @@ export function OutlinerAuthBridge() {
       refreshToken,
       logout: handleLogout,
     })
+
+    // Set user ID in Clarity for session tracking
+    if (user?.sub) {
+      setClarityUserId(user.sub)
+    }
+
     return () => setOutlinerAccessTokenGetter(null)
-  }, [isAuthenticated, resolveToken, refreshToken, handleLogout])
+  }, [isAuthenticated, resolveToken, refreshToken, handleLogout, user?.sub])
 
   return null
 }
