@@ -766,32 +766,9 @@ const documentStatusChart = useMemo(
     }
   }, [reviewerActivityChartData])
 
-  if (isLoading && !stats) {
-    return (
-      <div
-        className={`flex items-center justify-center ${cardPanel} py-20`}
-        role="status"
-        aria-live="polite"
-      >
-        <div
-          className="h-10 w-10 animate-spin rounded-full border-2 border-muted border-t-primary"
-          aria-hidden
-        />
-        <span className="ml-3 text-sm font-medium text-muted-foreground">Loading stats…</span>
-      </div>
-    )
-  }
 
-  if (!stats?.presentation) {
-    return (
-      <p
-        className={`${cardPanel} border-dashed py-16 text-center text-sm text-muted-foreground`}
-        role="status"
-      >
-        No data available.
-      </p>
-    )
-  }
+
+  if (!stats?.presentation) return null
 
   const view = stats.presentation
   const coverage = stats.annotation_coverage_pct
