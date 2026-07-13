@@ -220,7 +220,7 @@ const OutlinerUpload: React.FC = () => {
         <div className="mb-6 flex justify-end">
             <p className="text-sm text-gray-600 flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-red-600" />
-              Some documents have rejected segments. Please review them and{' '}
+              Please review the rejected segments {' '}
               <Link to={rejectedLinkHref} className="text-sm text-blue-600 underline">fix them.</Link>
               </p>
         </div>
@@ -263,7 +263,6 @@ const OutlinerUpload: React.FC = () => {
                 <TableRow>
                   <TableHead className="font-semibold">Document</TableHead>
                   <TableHead className="font-semibold">Progress</TableHead>
-                  <TableHead className="font-semibold">Last Updated</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -282,6 +281,8 @@ const OutlinerUpload: React.FC = () => {
                         return <FileText className="w-5 h-5 shrink-0 text-blue-600" />;
                       case 'approved':
                         return <CheckCircle2 className="w-5 h-5 shrink-0 text-blue-600" />;
+                      case 'rejected':
+                        return <AlertTriangle className="w-5 h-5 shrink-0 text-red-600" />;
                       default:
                         return <FileText className="w-5 h-5 shrink-0 text-blue-600" />;
                     }
@@ -305,8 +306,12 @@ const OutlinerUpload: React.FC = () => {
                           {Icon(doc.status || '')}
                           <div className="font-medium flex min-w-0 flex-col text-gray-900">
                             {doc.filename}
-                          
                           </div>
+                          <p className='text-xs text-gray-500'
+                          >
+                          {formatDistanceToNow(new Date(timestamp), { addSuffix: true })}
+
+                          </p>
                           {doc.rejected_segment && (
                             <div className="flex items-start gap-2">
                               <AlertTriangle className="mt-0.5 animate-bounce h-4 w-4 shrink-0 text-red-600" aria-hidden />
@@ -352,14 +357,6 @@ const OutlinerUpload: React.FC = () => {
                         <div className='flex gap-2 items-center'>
                         <Progress value={checked_percentage} />
                         </div>
-                      </div>
-                    </TableCell>
-              
-                    <TableCell>
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Calendar className="w-4 h-4" />
-                        {formatDistanceToNow(new Date(timestamp), { addSuffix: true })}
-
                       </div>
                     </TableCell>
                   </TableRow>
