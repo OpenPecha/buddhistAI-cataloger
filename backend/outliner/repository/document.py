@@ -66,7 +66,19 @@ def list_documents(
     if not include_skipped:
         query = query.filter(OutlinerDocument.status != "skipped")
 
-    documents = query.order_by(OutlinerDocument.updated_at.desc()).offset(skip).limit(limit).all()
+    # Annotator list: surface docs with open segment rejections first (then newest).
+    has_rejected_segment = exists().where(
+        and_(
+            OutlinerSegment.document_id == OutlinerDocument.id,
+            OutlinerSegment.status == "rejected",
+        )
+    )
+    documents = (
+        query.order_by(has_rejected_segment.desc(), OutlinerDocument.updated_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     doc_ids = [d.id for d in documents]
     latest_rejection_by_doc = latest_rejection_notice_by_document_ids(db, doc_ids)
     resolved_rejection_doc_ids = document_ids_with_resolved_reviewer_rejection(db, doc_ids)

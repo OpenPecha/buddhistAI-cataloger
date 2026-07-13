@@ -149,7 +149,7 @@ const OutlinerUpload: React.FC = () => {
         {/* Header */}
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Outliner Documents</h1>
+            <h1 className="text-3xl font-bold text-gray-600 mb-2">Outliner Documents</h1>
             <div className="relative mt-4 max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden />
               <Input
@@ -162,7 +162,7 @@ const OutlinerUpload: React.FC = () => {
               />
             </div>
             <div className="mt-3 max-w-md">
-              <p className="mb-1 block text-sm font-medium text-gray-700">
+              <p className="mb-1 block text-sm font-medium text-gray-500">
                 Include statuses
               </p>
               <div className="flex items-center gap-4 rounded-md border border-input bg-background px-3 py-2 text-sm">
