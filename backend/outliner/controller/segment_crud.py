@@ -211,8 +211,12 @@ def update_segment(
             annotated_delta=annotated_delta
         )
 
-    if old_status == "rejected":
-        outliner_repo.mark_latest_rejection_resolved(db, segment_id)
+    if old_status == "rejected" and segment.status != "rejected":
+        outliner_repo.handle_segment_leaving_rejected_status(
+            db,
+            segment_id,
+            reviewer_undo=bool(patch.get("reviewer_id")),
+        )
 
     return segment
 
@@ -243,7 +247,11 @@ def update_segment_status(
 
     outliner_repo.update_segment_status_persist(db, segment, status, reviewer_id)
 
-    if old_status == "rejected":
-        outliner_repo.mark_latest_rejection_resolved(db, segment_id)
+    if old_status == "rejected" and status != "rejected":
+        outliner_repo.handle_segment_leaving_rejected_status(
+            db,
+            segment_id,
+            reviewer_undo=bool(reviewer_id),
+        )
 
     return {"message": "Segment status updated", "segment_id": segment_id, "status": status}

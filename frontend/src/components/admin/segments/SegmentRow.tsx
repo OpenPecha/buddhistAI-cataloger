@@ -172,6 +172,9 @@ function SegmentRow({
       }),
     onSuccess: (_data, newStatus) => {
       queryClient.invalidateQueries({ queryKey: ['outliner-admin-document', documentId] });
+      if (newStatus === 'checked' && segment.status === 'rejected') {
+        queryClient.invalidateQueries({ queryKey: ['segment-rejection-history', segment.id] });
+      }
       if (newStatus === 'approved') toast.success('Segment approved');
       else if (newStatus === 'checked') toast.success('Segment marked done again');
       else toast.success('Segment reset');

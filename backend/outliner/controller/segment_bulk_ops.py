@@ -103,8 +103,12 @@ def update_segments_bulk(
 
         segment.update_annotation_status()
         segment.updated_at = datetime.utcnow()
-        if old_status == "rejected":
-            outliner_repo.mark_latest_rejection_resolved(db, segment.id)
+        if old_status == "rejected" and segment.status != "rejected":
+            outliner_repo.handle_segment_leaving_rejected_status(
+                db,
+                segment.id,
+                reviewer_undo=bool(segment_update.get("reviewer_id")),
+            )
         updated_segments.append(segment)
 
     outliner_repo.commit_and_refresh_segments(db, updated_segments)

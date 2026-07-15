@@ -290,6 +290,33 @@ def mark_latest_rejection_resolved(db: Session, segment_id: str) -> None:
         row.resolved = True
 
 
+def delete_latest_rejection(db: Session, segment_id: str) -> bool:
+    """Remove the newest rejection row when a reviewer undoes their rejection."""
+    row = (
+        db.query(SegmentRejection)
+        .filter(SegmentRejection.segment_id == segment_id)
+        .order_by(SegmentRejection.created_at.desc())
+        .first()
+    )
+    if row is None:
+        return False
+    db.delete(row)
+    return True
+
+
+def handle_segment_leaving_rejected_status(
+    db: Session,
+    segment_id: str,
+    *,
+    reviewer_undo: bool,
+) -> None:
+    """Annotator fix keeps history (resolved); reviewer undo removes the latest rejection."""
+    if reviewer_undo:
+        delete_latest_rejection(db, segment_id)
+    else:
+        mark_latest_rejection_resolved(db, segment_id)
+
+
 def latest_rejection_reviewer_for_orm_segment(
     db: Optional[Session], segment: OutlinerSegment
 ) -> Optional[Dict[str, Any]]:

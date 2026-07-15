@@ -11,7 +11,7 @@ from outliner.repository.segment_queries import (
     fetch_segments_for_bulk_update,
     max_segment_index,
 )
-from outliner.repository.segment_rejection import mark_latest_rejection_resolved
+from outliner.repository.segment_rejection import handle_segment_leaving_rejected_status
 from outliner.repository.segment_review import (
     apply_segment_review_metadata,
     apply_segment_review_title_author_tracking,
@@ -110,8 +110,12 @@ def run_bulk_segment_ops(
 
             segment.update_annotation_status()
             segment.updated_at = datetime.utcnow()
-            if old_status == "rejected":
-                mark_latest_rejection_resolved(db, segment.id)
+            if old_status == "rejected" and segment.status != "rejected":
+                handle_segment_leaving_rejected_status(
+                    db,
+                    segment.id,
+                    reviewer_undo=bool(update_data.get("reviewer_id")),
+                )
             result_segments.append(segment)
 
     if create:
