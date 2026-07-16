@@ -128,8 +128,9 @@ function OutlinerAdminStatistics() {
     const valueOf = (r: AnnotatorApprovedRow) => {
       if (annotatorSortField === 'rejection_rate')
         return annotatorRejectionRate(r.segments_approved, r.rejected_segments);
-      if (annotatorSortField === 'edited_segments') return r.edited_segments;
-      return r.segments_approved;
+      if (annotatorSortField === 'edited_segments')
+        return editedRate(r.edited_segments, r.segments_approved);
+      return annotatorApprovalRate(r.segments_approved, r.rejected_segments);
     };
     return [...annotatorRows].sort((a, b) =>
       annotatorSortField === 'name'
@@ -143,7 +144,8 @@ function OutlinerAdminStatistics() {
     const valueOf = (r: ReviewerApprovedRow) => {
       if (reviewerSortField === 'rejection_rate')
         return rejectionRate(r.segments_reviewed, r.rejection_count);
-      if (reviewerSortField === 'edited_segments') return r.edited_segments;
+      if (reviewerSortField === 'edited_segments')
+        return editedRate(r.edited_segments, r.segments_reviewed);
       return r.segments_reviewed;
     };
     return [...reviewerRows].sort((a, b) =>
