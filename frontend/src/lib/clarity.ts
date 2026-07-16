@@ -50,26 +50,39 @@ function isClarityAvailable(): boolean {
 }
 
 /**
- * Set user identifier for Clarity sessions
- * Call this after user authentication
+ * Identify a logged-in user in Clarity via the Identify API.
+ * Call after authentication (and ideally on each page load).
  *
- * @param userId - Unique user identifier (e.g., Auth0 sub)
+ * @see https://learn.microsoft.com/en-us/clarity/setup-and-installation/identify-api
+ *
+ * @param userId - Stable unique ID (user email)
+ * @param friendlyName - Optional display name shown in the Clarity dashboard
  */
-export function setClarityUserId(userId: string) {
+export function identifyClarityUser(userId: string, friendlyName?: string) {
+  if (!userId) return;
+
   if (!isClarityAvailable()) {
-    console.warn('Clarity not available yet, retrying in 100ms...');
-    setTimeout(() => setClarityUserId(userId), 100);
+    console.warn('Clarity not available yet, retrying identify in 100ms...');
+    setTimeout(() => identifyClarityUser(userId, friendlyName), 100);
     return;
   }
 
   try {
-    // Clarity API: window.clarity('setUserId', userId)
+    // window.clarity("identify", custom-id, custom-session-id, custom-page-id, friendly-name)
     const w = window as any;
-    w.clarity('setUserId', userId);
-    console.log(`✓ Clarity user ID set to: ${userId}`);
+    w.clarity('identify', userId, undefined, undefined, friendlyName);
+    console.log(
+      `✓ Clarity identify: id=${userId}` +
+        (friendlyName ? `, name=${friendlyName}` : ''),
+    );
   } catch (error) {
-    console.error('Failed to set Clarity user ID:', error);
+    console.error('Failed to identify Clarity user:', error);
   }
+}
+
+/** @deprecated Prefer identifyClarityUser — kept for any remaining callers */
+export function setClarityUserId(userId: string, friendlyName?: string) {
+  identifyClarityUser(userId, friendlyName);
 }
 
 /**

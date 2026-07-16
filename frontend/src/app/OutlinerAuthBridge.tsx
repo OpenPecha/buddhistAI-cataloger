@@ -2,7 +2,7 @@ import { useCallback, useEffect } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
 import { setOutlinerAccessTokenGetter } from '@/api/outliner'
 import { getAuth0AccessToken } from '@/lib/auth0AccessToken'
-import { setClarityUserId, setClarityMetadata } from '@/lib/clarity'
+import { identifyClarityUser, setClarityMetadata } from '@/lib/clarity'
 
 /**
  * Wires Auth0 into `outlinerFetch` and `fetchWithAccessToken` so catalog, settings, and outliner
@@ -43,19 +43,12 @@ export function OutlinerAuthBridge() {
       logout: handleLogout,
     })
 
-    // Set user ID in Clarity for session tracking
-    // Use a small delay to ensure Clarity is fully initialized
-    if (user?.sub) {
+    // Identify logged-in user in Clarity (email as custom-id + friendly name in dashboard)
+    if (user?.email) {
+      const friendlyName = user.name || user.nickname || undefined
       const timeout = setTimeout(() => {
-        setClarityUserId(user.sub)
-        // Also set email as metadata if available
-        if (user?.email) {
-          setClarityMetadata('email', user.email)
-        }
-        // Set user name as metadata if available
-        if (user?.name) {
-          setClarityMetadata('name', user.name)
-        }
+        identifyClarityUser(user.email!, friendlyName)
+        if (friendlyName) setClarityMetadata('name', friendlyName)
       }, 500)
 
       return () => {
@@ -65,7 +58,7 @@ export function OutlinerAuthBridge() {
     }
 
     return () => setOutlinerAccessTokenGetter(null)
-  }, [isAuthenticated, resolveToken, refreshToken, handleLogout, user?.sub, user?.email, user?.name])
+  }, [isAuthenticated, resolveToken, refreshToken, handleLogout, user?.email, user?.name, user?.nickname])
 
   return null
 }

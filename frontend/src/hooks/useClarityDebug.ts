@@ -66,9 +66,9 @@ export function logClarityInfo() {
     console.log(
       'Usage examples:',
       `
-      window.clarity('setUserId', 'user-id-here')
-      window.clarity('tag', 'key', 'value')
-      window.clarity('event', 'event-name', 'optional-value')
+      window.clarity('identify', 'user-id', undefined, undefined, 'Friendly Name')
+      window.clarity('set', 'key', 'value')
+      window.clarity('event', 'event-name')
     `
     );
   } else {
