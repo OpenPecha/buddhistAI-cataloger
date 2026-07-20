@@ -807,6 +807,7 @@ export interface VolumeBatchStatusCounts {
   reviewed: number;
   in_progress: number;
   active: number;
+  skipped: number;
 }
 
 /** Per reviewer/admin user; same document + date scope as dashboard stats (including optional annotator filter). */
@@ -930,6 +931,7 @@ export interface VolumeBatchTableRow {
   reviewed: number;
   in_progress: number;
   active: number;
+  skipped: number;
 }
 
 export interface VolumeBatchView {

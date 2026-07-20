@@ -432,6 +432,7 @@ def _build_volume_batches(
                 "reviewed": int(counts.get("reviewed") or 0),
                 "in_progress": int(counts.get("in_progress") or 0),
                 "active": int(counts.get("active") or 0),
+                "skipped": int(counts.get("skipped") or 0),
             }
         )
 

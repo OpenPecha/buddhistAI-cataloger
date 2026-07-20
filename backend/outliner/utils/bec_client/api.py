@@ -16,7 +16,7 @@ def fetch_volume_batch_stats(max_batches: int = 5000) -> Optional[Dict[str, Dict
     """
     GET ``/api/v1/stats/volume-batches``.
 
-    Returns ``{ batch_id: { in_review, reviewed, in_progress, active } }`` or ``None`` on failure.
+    Returns ``{ batch_id: { in_review, reviewed, in_progress, active, skipped } }`` or ``None`` on failure.
     """
     base = BEC_OTAPI_BASE_URL.rstrip("/")
     url = f"{base}/api/v1/stats/volume-batches"
@@ -46,6 +46,7 @@ def fetch_volume_batch_stats(max_batches: int = 5000) -> Optional[Dict[str, Dict
                 "reviewed": int(counts.get("reviewed") or 0),
                 "in_progress": int(counts.get("in_progress") or 0),
                 "active": int(counts.get("active") or 0),
+                "skipped": int(counts.get("skipped") or 0),
             }
         except (TypeError, ValueError):
             continue

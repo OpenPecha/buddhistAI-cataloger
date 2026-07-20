@@ -967,7 +967,8 @@ return (
                       </th>
                       <th className="px-4 py-3">Batch ID</th>
                       <th className="px-4 py-3 text-right tabular-nums">Available</th>
-                      <th className="px-4 py-3 text-right tabular-nums">Annotating+skipped</th>
+                      <th className="px-4 py-3 text-right tabular-nums">Annotating</th>
+                      <th className="px-4 py-3 text-right tabular-nums">Skipped</th>
                       <th className="px-4 py-3 text-right tabular-nums">Annotated</th>
                       <th className="px-4 py-3 text-right tabular-nums">Reviewed</th>
                     </tr>
@@ -1006,6 +1007,9 @@ return (
                           </td>
                           <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
                             {row.in_progress.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
+                            {(row.skipped ?? 0).toLocaleString()}
                           </td>
                           <td className="px-4 py-2.5 text-right tabular-nums text-foreground">
                             {row.in_review.toLocaleString()}

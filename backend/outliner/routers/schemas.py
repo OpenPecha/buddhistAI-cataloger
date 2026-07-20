@@ -470,6 +470,7 @@ class VolumeBatchStatusCounts(BaseModel):
     reviewed: int
     in_progress: int
     active: int
+    skipped: int = 0
 
 
 class ReviewerSegmentActivityRow(BaseModel):
@@ -608,6 +609,7 @@ class VolumeBatchTableRow(BaseModel):
     reviewed: int
     in_progress: int
     active: int
+    skipped: int = 0
 
 
 class VolumeBatchView(BaseModel):
