@@ -10,7 +10,7 @@ BDRC_BACKEND_URL = os.getenv("BDRC_BACKEND_URL", "")
 APPLICATION_JSON = "application/json"
 TIMEOUT_ERROR_MSG = "Request to BDRC API timed out"
 
-STATUS = Literal["active", "in_progress","in_review", "reviewed"]
+STATUS = Literal["active", "in_progress", "in_review", "reviewed", "skipped"]
 # Pydantic models for volume update
 class SegmentInput(BaseModel):
     cstart: int

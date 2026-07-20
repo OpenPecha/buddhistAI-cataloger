@@ -1,11 +1,13 @@
 """Outliner document controller."""
 import json
+import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from types import SimpleNamespace
 
+from bdrc.volume import update_volume_status
 from core.redis import invalidate_document_content_cache, set_document_content_in_cache
 from outliner.models.outliner import OutlinerDocument
 from outliner.repository import outliner_repository as outliner_repo
@@ -18,6 +20,8 @@ from outliner.controller.segment import (
     segment_to_response_dict ,
 )
 from user.models.user import User
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -291,7 +295,37 @@ def delete_document(db: Session, document_id: str) -> None:
     invalidate_document_content_cache(document_id)
 
 
-def update_document_status(
+async def _sync_skip_status_to_bdrc(
+    document: OutlinerDocument,
+    previous_status: Optional[str],
+    status: str,
+) -> None:
+    """Mirror skip/unskip on the BDRC volume when the document has a volume id."""
+    volume_id = (document.filename or "").strip()
+    if not volume_id:
+        return
+
+    try:
+        if status == "skipped":
+            await update_volume_status(volume_id, "skipped")
+        elif status == "active" and previous_status == "skipped":
+            await update_volume_status(volume_id, "in_progress")
+    except (TimeoutError, ConnectionError, RuntimeError) as e:
+        bdrc_status = "skipped" if status == "skipped" else "in_progress"
+        logger.warning(
+            "BDRC volume status sync failed document_id=%s volume_id=%s bdrc_status=%s error=%s",
+            document.id,
+            volume_id,
+            bdrc_status,
+            e,
+        )
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to update BDRC volume status to '{bdrc_status}': {e}",
+        ) from e
+
+
+async def update_document_status(
     db: Session,
     document_id: str,
     status: str,
@@ -303,6 +337,8 @@ def update_document_status(
     When restoring a deleted document (changing status from 'deleted' to 'active'),
     the user_id parameter must be provided and must match the document's user_id
     to ensure only the document owner can restore it.
+
+    Skip/unskip also updates the linked BDRC volume status (skipped ↔ in_progress).
     """
     # Validate status value
     valid_statuses = ['active', 'completed', 'deleted', 'approved', 'rejected','skipped']
@@ -316,8 +352,10 @@ def update_document_status(
     if not document:
         raise HTTPException(status_code=404, detail="Document not found")
 
+    previous_status = document.status
+
     # If restoring a deleted document (changing to 'active'), verify ownership
-    if document.status == 'deleted' and status == 'active':
+    if previous_status == 'deleted' and status == 'active':
         if not user_id:
             raise HTTPException(
                 status_code=400,
@@ -328,6 +366,9 @@ def update_document_status(
                 status_code=403,
                 detail="You can only restore documents that belong to you"
             )
+
+    # Sync BDRC before local commit so a BDRC failure leaves DB unchanged
+    await _sync_skip_status_to_bdrc(document, previous_status, status)
     
     outliner_repo.set_document_status_and_refresh(db, document, status)
 

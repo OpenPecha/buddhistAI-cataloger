@@ -205,7 +205,7 @@ async def submit_document_to_bdrc_in_review(db: Session, document_id: str) -> Di
     document = get_document(db, document_id, include_segments=True)
     _validate_document_has_bdrc_volume(document)
     enqueue_push_document_segments_to_bdrc(document_id, "in_review")
-    update_document_status(db, document_id, "completed")
+    await update_document_status(db, document_id, "completed")
     save_annotator_ai_final_segments(db, document_id)
     return {"success": True}
 
@@ -353,6 +353,6 @@ async def approve_document(db: Session, document_id: str) -> Dict[str, Any]:
 
     _validate_document_has_bdrc_volume(document)
     enqueue_push_document_segments_to_bdrc(document_id, "reviewed")
-    update_document_status(db, document_id, "approved")
+    await update_document_status(db, document_id, "approved")
     outliner_repo.increment_document_submit_count(db, document_id)
     return {"success": True}

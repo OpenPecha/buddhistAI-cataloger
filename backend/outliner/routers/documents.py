@@ -417,7 +417,7 @@ async def update_document_status(
         assert_assigned_document_participant(
             doc.user_id, doc.reviewer_id, current_user
         )
-    return update_document_status_ctrl(
+    return await update_document_status_ctrl(
         db=db,
         document_id=document_id,
         status=status_update.status,
