@@ -534,10 +534,15 @@ def save_ai_outline_run(
     document_id: str,
     segments_data: List[Dict[str, Any]],
     created_by_id: Optional[str] = None,
+    detector: str = "rule",
 ) -> None:
     """Freeze the AI's predicted split as a new run row (one per AI-button click)."""
     outliner_repo.insert_ai_outline_run(
-        db, document_id, _benchmark_spans(segments_data), created_by_id
+        db,
+        document_id,
+        _benchmark_spans(segments_data),
+        created_by_id,
+        detector=detector,
     )
 
 

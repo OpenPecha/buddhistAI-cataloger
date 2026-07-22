@@ -730,8 +730,8 @@ const OutlinerWorkspace: React.FC = () => {
     setActiveSegmentSearchQuery('');
   }, [activeSegmentId]);
 
-  // AI outline: full-document TOC indices → replace segments (POST …/documents/:id/ai/outline)
-  const handleAIDetectTextEndings = async () => {
+  // AI outline: full-document TOC indices → replace segments (POST …/ai-outline)
+  const handleAIDetectTextEndings = async (detector: 'rule' | 'mmbert') => {
     if (!documentId) return;
 
     if (aiTextEndingAbortControllerRef.current) {
@@ -744,6 +744,7 @@ const OutlinerWorkspace: React.FC = () => {
     try {
       await aiTextEndings.runAiOutline({
         document_id: documentId,
+        detector,
         signal: abortController.signal,
       });
     } catch (error) {

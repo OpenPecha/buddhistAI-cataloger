@@ -1109,6 +1109,9 @@ export const getReviewerStats = async (
 
 // ==================== AI Endpoints ====================
 
+/** Boundary detector for POST /outliner/ai-outline. */
+export type OutlineDetector = 'rule' | 'mmbert';
+
 /** Result of POST /outliner/ai-outline — segments are refetched via the document query. */
 export interface AiOutlineResponse {
   segment_count: number;
@@ -1119,13 +1122,14 @@ export interface AiOutlineResponse {
  */
 export const runAiOutline = async (
   documentId: string,
-  signal?: AbortSignal
+  options?: { detector?: OutlineDetector; signal?: AbortSignal }
 ): Promise<AiOutlineResponse> => {
   const params = new URLSearchParams({ document_id: documentId });
+  if (options?.detector) params.set('detector', options.detector);
   const response = await outlinerFetch(`${OUTLINER_BASE_URL}/ai-outline?${params.toString()}`, {
     method: 'POST',
     headers: { accept: 'application/json' },
-    signal,
+    signal: options?.signal,
   });
 
   return handleApiResponse(response);

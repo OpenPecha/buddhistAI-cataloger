@@ -1,4 +1,5 @@
 import React, { createContext, useContext } from 'react'
+import type { OutlineDetector } from '@/api/outliner'
 
 interface ActionsContextValue {
   onFileUpload: (content: string) => void
@@ -10,7 +11,7 @@ interface ActionsContextValue {
   onAttachParent: () => void
   onMergeWithPrevious: (segmentId: string) => void
   onSplitSegment: () => void
-  onAIDetectTextEndings: () => void
+  onAIDetectTextEndings: (detector: OutlineDetector) => void
   onAITextEndingStop: () => void
   onUndoTextEndingDetection: () => void
   onLoadNewFile: () => void

@@ -557,6 +557,8 @@
       "revisionBadge": "{{count}} 个片段需要修订",
       "revisionBadge_plural": "{{count}} 个片段需要修订",
       "aiOutlineTitle": "AI 大纲：检测藏文目录并将文档拆分为片段（会替换当前片段）",
+      "detectorRule": "基于规则检测",
+      "detectorMmbert": "mmBERT 神经检测",
       "detecting": "正在检测...",
       "stopDetection": "停止检测",
       "undoAiTitle": "撤销 AI 分段",

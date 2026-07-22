@@ -16,7 +16,8 @@ class OutlinerAiOutlineRun(Base):
 
     One row per AI-button click; never overwritten. ``segments`` holds the predicted
     spans as ``[{"segment_index": int, "span_start": int, "span_end": int}, ...]`` —
-    character offsets into ``outliner_documents.content``. Compared against the
+    character offsets into ``outliner_documents.content``. ``detector`` records which
+    backend produced the split (``"rule"`` or ``"mmbert"``). Compared against the
     annotator's final submission for benchmarking the outline model.
     """
 
@@ -30,6 +31,7 @@ class OutlinerAiOutlineRun(Base):
         index=True,
     )
     segments: Mapped[Any | None] = mapped_column(JSON, nullable=True)
+    detector: Mapped[str] = mapped_column(String, nullable=False, default="rule")
     created_by_id: Mapped[str | None] = mapped_column(
         String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )

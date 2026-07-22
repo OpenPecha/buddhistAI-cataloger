@@ -393,11 +393,13 @@ def insert_ai_outline_run(
     document_id: str,
     segments: List[Dict[str, Any]],
     created_by_id: Optional[str] = None,
+    detector: str = "rule",
 ) -> OutlinerAiOutlineRun:
     """Insert a frozen snapshot of the AI's predicted segment split (one row per AI click)."""
     run = OutlinerAiOutlineRun(
         document_id=document_id,
         segments=segments,
+        detector=detector,
         created_by_id=created_by_id,
     )
     db.add(run)

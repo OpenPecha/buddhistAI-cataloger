@@ -1,5 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { runAiOutline, type AiOutlineResponse } from '@/api/outliner';
+import {
+  runAiOutline,
+  type AiOutlineResponse,
+  type OutlineDetector,
+} from '@/api/outliner';
 import { outlinerDocumentAiTocQueryKey } from '@/hooks/useOutlinerDocumentAiTocEntries';
 import { toast } from 'sonner';
 import i18n from '@/i18n/config';
@@ -17,8 +21,15 @@ export const useAITextEndings = (options?: UseAITextEndingsOptions) => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: ({ document_id, signal }: { document_id: string; signal?: AbortSignal }) =>
-      runAiOutline(document_id, signal),
+    mutationFn: ({
+      document_id,
+      detector,
+      signal,
+    }: {
+      document_id: string;
+      detector?: OutlineDetector;
+      signal?: AbortSignal;
+    }) => runAiOutline(document_id, { detector, signal }),
     onSuccess: (data, variables) => {
       if (variables.document_id) {
         queryClient.invalidateQueries({ queryKey: ['outliner-document', variables.document_id] });
