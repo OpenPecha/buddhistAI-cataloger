@@ -17,7 +17,7 @@ jobs:
           script: |
             cd ~/buddhistAI-cataloger
             git pull origin main
-            docker compose -f docker-compose.prod.yml build --no-cache
+            docker compose -f docker-compose.prod.yml build --pull --build-arg CACHEBUST=$(date +%s)
             docker compose -f docker-compose.prod.yml run --rm backend alembic upgrade head
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker compose -f docker-compose.prod.yml up -d --force-recreate --remove-orphans
             docker image prune -f

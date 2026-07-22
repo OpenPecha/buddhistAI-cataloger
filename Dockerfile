@@ -15,10 +15,11 @@ RUN python -m pip install --upgrade pip && \
     pip install "setuptools<81" wheel
 
 # Install pyewts first with --no-build-isolation to use system setuptools
-RUN pip install --no-build-isolation pyewts
+RUN pip install --no-cache-dir --no-build-isolation pyewts
 
-# Install remaining deps
-RUN pip install -r requirements.txt
+# Bust cache every deploy so unpinned git deps (ai-text-outline, etc.) re-fetch
+ARG CACHEBUST=1
+RUN pip install --no-cache-dir --upgrade --force-reinstall -r requirements.txt
 
 # Copy code
 COPY backend/ .
