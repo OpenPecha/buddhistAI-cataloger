@@ -8,10 +8,9 @@ from collections.abc import Sequence
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import func
-from sqlalchemy.orm import Session
 
 from core.auth0_access_token import email_from_access_token_claims, verify_auth0_access_token
-from core.database import get_db
+from core.database import SessionLocal
 from user.models.user import User
 
 OUTLINER_PERMISSION = "outliner"
@@ -31,9 +30,12 @@ def _parse_permissions(permissions_raw: str | None) -> list[str]:
 
 def require_outliner_access(
     creds: HTTPAuthorizationCredentials | None = Depends(_outliner_bearer),
-    db: Session = Depends(get_db),
 ) -> User:
-    """Validate Auth0 access token (Bearer) and ensure the user may use outliner APIs."""
+    """Validate Auth0 access token (Bearer) and ensure the user may use outliner APIs.
+
+    Uses a short-lived session so auth does not hold a pool connection for the
+    rest of the request (important for long handlers like ai-outline).
+    """
     if (
         not creds
         or creds.scheme.lower() != "bearer"
@@ -51,19 +53,24 @@ def require_outliner_access(
             detail="Token is missing an email claim (add email to the access token via an Auth0 Action if needed)",
         )
 
-    user = db.query(User).filter(func.lower(User.email) == email).first()
-    if not user:
-        raise HTTPException(status_code=401, detail="User not found")
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(func.lower(User.email) == email).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
 
-    perms = _parse_permissions(user.permissions)
-    if OUTLINER_PERMISSION not in perms:
-        raise HTTPException(status_code=403, detail="Unauthorized")
+        perms = _parse_permissions(user.permissions)
+        if OUTLINER_PERMISSION not in perms:
+            raise HTTPException(status_code=403, detail="Unauthorized")
 
-    role = (user.role or "user").strip().lower()
-    if role not in _ALLOWED_OUTLINER_ROLES:
-        raise HTTPException(status_code=403, detail="Unauthorized")
+        role = (user.role or "user").strip().lower()
+        if role not in _ALLOWED_OUTLINER_ROLES:
+            raise HTTPException(status_code=403, detail="Unauthorized")
 
-    return user
+        db.expunge(user)
+        return user
+    finally:
+        db.close()
 
 
 

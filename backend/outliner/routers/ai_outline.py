@@ -1,12 +1,12 @@
 """Top-level ``/outliner/ai-outline`` route."""
 
+import asyncio
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.orm import Session
 from outline_detection.api import detect_breakpoints
 
-from core.database import get_db
+from core.database import SessionLocal
 from outliner.controller.outliner import (
     get_document,
     replace_segments_and_toc,
@@ -30,29 +30,46 @@ async def ai_outline(
         "rule",
         description='Boundary detector: "rule" (pattern-based) or "mmbert" (neural).',
     ),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(require_outliner_access)
+    current_user: User = Depends(require_outliner_access),
 ):
     """Split document text into segments using boundary character indices from outline_detection."""
-    document = get_document(db, document_id, include_segments=False)
-    result = detect_breakpoints(
-        text=document.content,
+    user_id = current_user.id
+
+    db = SessionLocal()
+    try:
+        document = get_document(db, document_id, include_segments=False)
+        content = document.content or ""
+    finally:
+        db.close()
+
+    # Run detection without holding a DB connection (or blocking the event loop).
+    result = await asyncio.to_thread(
+        detect_breakpoints,
+        text=content,
         detector=detector,
         profile="balanced",
-        
     )
 
     indices = result["breakpoints"]
     toc = None
-    spans = spans_from_toc_indices(document.content, indices)
+    spans = spans_from_toc_indices(content, indices)
     segments_data = [
         {"segment_index": i, "span_start": start, "span_end": end}
         for i, (start, end) in enumerate(spans)
     ]
-    _, segment_payload = replace_segments_and_toc(
-        db, document_id, segments_data, toc
-    )
-    save_ai_outline_run(
-        db, document_id, segments_data, current_user.id, detector=detector
-    )
+
+    db = SessionLocal()
+    try:
+        _, segment_payload = replace_segments_and_toc(
+            db, document_id, segments_data, toc
+        )
+        save_ai_outline_run(
+            db, document_id, segments_data, user_id, detector=detector
+        )
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
     return AiOutlineResponse(segment_count=len(segment_payload))
